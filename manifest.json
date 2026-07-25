@@ -1,0 +1,34 @@
+{
+  "id": "/",
+  "name": "إدارة المؤتمر",
+  "short_name": "المؤتمر",
+  "description": "نظام لإدارة تفاصيل المؤتمرات والنزلاء والمواصلات والحسابات.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#123E7A",
+  "theme_color": "#123E7A",
+  "categories": ["business", "productivity", "utilities"],
+  "lang": "ar",
+  "dir": "rtl",
+  "icons": [
+    {
+      "src": "icons/icon-192x192.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-512x512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-maskable-512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "maskable"
+    }
+  ]
+}

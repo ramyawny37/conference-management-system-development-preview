@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<link rel="manifest" href="./manifest.json">
+<meta name="theme-color" content="#1F4E79">
+<link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192x192.png">
+<link rel="apple-touch-icon" href="./icons/icon-192x192.png">
+
+<title>إدارة المؤتمر</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div id="splash-screen">
+  <img src="assets/logo.jpg" alt="Logo">
+  <h1>إدارة المؤتمرات</h1>
+  <h2>Conference Management System</h2>
+  <p>Loading...</p>
+</div>
+
+
+<div class="topbar" id="applicationTopbar">
+  <div class="logo" id="logo-text">🏨 إدارة المؤتمر</div>
+  <div class="main-tabs">
+    <div class="main-tab" id="homeTabButton" onclick="showHomePage()"><span class="main-tab-icon">🏠</span><span class="main-tab-label">الرئيسية</span></div>
+    <div class="tab main-tab active" onclick="switchTab(0)"><span class="main-tab-icon">🏨</span><span class="main-tab-label">التسكين</span></div>
+    <div class="tab main-tab" onclick="switchTab(1)"><span class="main-tab-icon">🚌</span><span class="main-tab-label">المواصلات</span></div>
+    <div class="tab main-tab" onclick="switchTab(2)"><span class="main-tab-icon">💰</span><span class="main-tab-label">الحسابات</span></div>
+    <div class="tab main-tab" onclick="switchTab(3)"><span class="main-tab-icon">📊</span><span class="main-tab-label">التقارير</span></div>
+    <div class="tab main-tab" onclick="switchTab(4)"><span class="main-tab-icon">🪪</span><span class="main-tab-label">كروت</span></div>
+    <div class="tab main-tab" onclick="switchTab(5)"><span class="main-tab-icon">🔍</span><span class="main-tab-label">بحث</span></div>
+    <div class="tab main-tab" data-tab-id="6" data-tab-name="settings" onclick="switchTab(6)"><span class="main-tab-icon">⚙️</span><span class="main-tab-label">إعدادات</span></div>
+  </div>
+  <div style="margin-right:auto;display:flex;gap:6px;padding:6px 0;align-items:center">
+    <div class="sync-bar live" id="syncBar">✔</div>
+    <button class="btn btn-green" style="font-size:10px;padding:4px 9px" onclick="saveToFile()">💾</button>
+    <button id="install-app-btn" class="btn btn-green btn-sm" style="display:none;">تثبيت البرنامج</button>
+    <button class="btn btn-blue" style="font-size:10px;padding:4px 9px" onclick="exportJsonFile()">📄</button>
+    <label class="btn btn-orange" style="font-size:10px;padding:4px 9px;cursor:pointer;margin:0">📂<input type="file" accept=".html,.json" style="display:none" onchange="loadFromFile(event)"></label>
+  </div>
+</div>
+
+<div class="body" id="applicationBody">
+  <div id="globalConferenceHeader"></div>
+  <div id="tab0"></div><div id="tab1" style="display:none"></div>
+  <div id="tab2" style="display:none"></div><div id="tab3" style="display:none"></div>
+  <div id="tab4" style="display:none"></div><div id="tab5" style="display:none"></div>
+  <div id="tab6" style="display:none"></div>
+</div>
+
+<div id="startupScreen" class="startup-dashboard" style="display:none">
+  <div class="startup-shell">
+    <section class="startup-column startup-active-column">
+      <div class="startup-glass startup-conference-panel">
+        <div class="startup-panel-title startup-green">
+          <span class="startup-panel-icon">👥</span>
+          <span>المؤتمرات النشطة</span>
+          <span class="startup-count" id="startupActiveCount">0</span>
+        </div>
+        <div class="startup-conference-list" id="startupActiveList"></div>
+        <button class="startup-list-action startup-list-action-green" onclick="showStartupConferenceList()">← عرض جميع المؤتمرات النشطة</button>
+      </div>
+    </section>
+
+    <main class="startup-column startup-center-column">
+      <div class="startup-date-card startup-glass">
+        <div><span class="startup-date-icon">📅</span><strong id="startupDayName">—</strong><small id="startupDateText">—</small></div>
+        <div class="startup-time"><span>◷</span><strong id="startupTimeText">—</strong></div>
+      </div>
+
+      <header class="startup-brand">
+        <img src="assets/logo.jpg" alt="إرسالية اصنع فرق" class="startup-logo">
+        <h1>إدارة المؤتمرات</h1>
+        <p>تنظيم أفضل... خدمة أرقى</p>
+        <div class="startup-brand-divider"><span></span><i></i><span></span></div>
+        <strong>لِوَقْتٍ مِثْلِ هذَا</strong>
+        <small>(أس 4 : 14)</small>
+      </header>
+
+      <div class="startup-actions">
+        <button class="startup-action startup-action-green" onclick="openNewConferenceModal('create')">
+          <span class="startup-action-icon">▣+</span>
+          <strong>إنشاء مؤتمر جديد</strong>
+          <small>إنشاء مؤتمر جديد من البداية</small>
+          <b>‹</b>
+        </button>
+        <button class="startup-action startup-action-blue" onclick="openCompletedConferencesModal()">
+          <span class="startup-action-icon">📂</span>
+          <strong>فتح مؤتمر سابق</strong>
+          <small>فتح مؤتمر موجود والعمل عليه</small>
+          <b>‹</b>
+        </button>
+        <button class="startup-action startup-action-purple" onclick="ge('startupImportInput').click()">
+          <span class="startup-action-icon">☁</span>
+          <strong>استيراد ملف</strong>
+          <small>استيراد بيانات مؤتمر من ملف محفوظ</small>
+          <b>‹</b>
+        </button>
+        <button class="startup-action startup-action-settings" onclick="openSettingsFromHome()">
+          <span class="startup-action-icon">⚙️</span>
+          <strong>الإعدادات</strong>
+          <small>فتح إعدادات المؤتمر الحالي</small>
+          <b>‹</b>
+        </button>
+        <input id="startupImportInput" type="file" accept=".html,.json" style="display:none" onchange="loadFromFile(event)">
+      </div>
+
+      <div class="startup-stats startup-glass">
+        <div class="startup-stat startup-stat-green"><strong id="startupActiveStat">0</strong><span>👥 مؤتمرات نشطة</span></div>
+        <div class="startup-stat startup-stat-purple"><strong id="startupCompletedStat">0</strong><span>✓ مؤتمرات مكتملة</span></div>
+        <div class="startup-stat startup-stat-blue"><strong id="startupPeopleStat">0</strong><span>👥 إجمالي المشاركين</span><small>في جميع المؤتمرات</small></div>
+      </div>
+    </main>
+
+    <section class="startup-column startup-completed-column">
+      <blockquote class="startup-verse startup-glass">
+        <span class="startup-quote startup-quote-open">“</span>
+        <p>«لأَنَّكِ إِنْ سَكَتِّ سُكُوتًا فِي هذَا الْوَقْتِ يَكُونُ الْفَرَجُ وَالنَّجَاةُ لِلْيَهُودِ مِنْ مَكَانٍ آخَرَ، وَأَمَّا أَنْتِ وَبَيْتُ أَبِيكِ فَتَبِيدُونَ. وَمَنْ يَعْلَمُ إِنْ كُنْتِ لِوَقْتٍ مِثْلِ هذَا وَصَلْتِ إِلَى الْمُلْكِ؟»</p>
+        <cite>(أس 4 : 14)</cite>
+        <span class="startup-quote startup-quote-close">”</span>
+      </blockquote>
+
+      <div class="startup-glass startup-conference-panel startup-completed-panel">
+        <div class="startup-panel-title startup-purple">
+          <span class="startup-panel-icon">✓</span>
+          <span>المؤتمرات المكتملة</span>
+          <span class="startup-count" id="startupCompletedCount">0</span>
+        </div>
+        <div class="startup-conference-list" id="startupCompletedList"></div>
+        <button class="startup-list-action startup-list-action-purple" onclick="showStartupConferenceList()">← عرض جميع المؤتمرات المكتملة</button>
+      </div>
+    </section>
+  </div>
+</div>
+
+<input type="file" id="peopleExcelInput" accept=".xlsx,.xls" style="display:none" onchange="importPeopleExcelFile(event)">
+
+<!-- Room Modal -->
+<div class="overlay app-modal" id="roomModal" style="display:none" onclick="if(event.target===this)closeRM()">
+<div class="modal"><div class="mhead"><span id="rmTitle">غرفة</span><span style="cursor:pointer" onclick="closeRM()">✕</span></div>
+<div class="mbody">
+  <div class="row" style="margin-bottom:9px">
+    <div style="flex:1"><label class="lbl">رقم الغرفة</label><input id="m_num" placeholder="305"></div>
+    <div style="flex:1"><label class="lbl">عدد الأسرة</label><input id="m_beds" type="number" min="1" value="1"></div>
+  </div>
+  <div class="row" style="margin-bottom:9px">
+    <div style="flex:1"><label class="lbl">أسرة إضافية</label><input id="m_extra_beds" type="number" min="0" value="0"></div>
+  </div>
+  <div class="row" style="margin-bottom:9px;align-items:center;gap:8px">
+    <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:#1F4E79;font-weight:700"><input type="checkbox" id="m_closed" style="width:auto"> الغرفة مغلقة مؤقتًا</label>
+    <div style="flex:1"><label class="lbl">من يوم</label><input id="m_closed_day" type="number" min="1" placeholder="اختياري"></div>
+  </div>
+  <div style="margin-bottom:9px"><label class="lbl">ملاحظات الغرفة</label><input id="m_notes" placeholder="ملاحظات إدارية للغرفة"></div>
+  
+  <hr style="border:0; border-top:1px solid #eef3f8; margin: 15px 0;">
+  
+  <div id="m_guests_sec" style="margin-bottom:9px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
+      <label class="lbl" style="color:#1F4E79;margin:0">👥 البالغون</label>
+      <div style="font-size:10px;color:#5a7a9a">السرائر تُدار تلقائيًا حسب السعة</div>
+    </div>
+    <div id="m_guests"></div>
+  </div>
+
+  <datalist id="people_datalist"></datalist>
+  <datalist id="people_datalist_guardian"></datalist>
+  
+  <div style="margin-bottom:9px">
+    <div class="row" style="justify-content:space-between;margin-bottom:5px">
+      <label class="lbl" style="color:#E67E22;margin:0">🧒 أطفال</label>
+      <button class="btn btn-orange btn-sm" onclick="addCI()">+ طفل</button>
+    </div>
+    <div id="m_children"></div>
+  </div>
+  <div class="row">
+    <button class="btn btn-blue" id="moveRoomBtn" onclick="return false">↔️ نقل الغرفة</button>
+    <button class="btn btn-green" style="flex:1" onclick="saveRoomData()">💾 حفظ</button>
+    <button class="btn btn-gray" onclick="closeRM()">إلغاء</button>
+  </div>
+</div></div></div>
+
+<!-- House Modal -->
+<div class="overlay app-modal" id="houseModal" style="display:none" onclick="if(event.target===this)closeHouseModal()">
+<div class="modal"><div class="mhead"><span id="houseTitle">البيت</span><span style="cursor:pointer" onclick="closeHouseModal()">✕</span></div>
+<div class="mbody">
+  <div style="margin-bottom:9px"><label class="lbl">اسم البيت</label><input id="house_name" placeholder="اسم البيت"></div>
+  <div style="margin-bottom:9px"><label class="lbl">الوصف</label><input id="house_desc" placeholder="وصف اختياري"></div>
+  <div class="row"><button class="btn btn-green" style="flex:1" onclick="saveHouse()">💾 حفظ</button><button class="btn btn-red" id="delHouseBtn" style="display:none" onclick="deleteHouse()">🗑️ حذف</button><button class="btn btn-gray" onclick="closeHouseModal()">إلغاء</button></div>
+</div></div></div>
+
+<!-- Transport Modal -->
+<div class="overlay app-modal" id="transportModal" style="display:none" onclick="if(event.target===this)closeTM()">
+<div class="modal"><div class="mhead"><span id="tmTitle">وسيلة</span><span style="cursor:pointer" onclick="closeTM()">✕</span></div>
+<div class="mbody">
+  <div class="row" style="margin-bottom:9px">
+    <div style="flex:2"><label class="lbl">الاسم</label><input id="t_name" placeholder="أتوبيس 1"></div>
+    <div style="flex:1"><label class="lbl">أيقونة</label>
+      <select id="t_icon"><option>🚌</option><option>🚐</option><option>🚎</option><option>🚑</option><option>✈️</option><option>🚢</option><option>🚂</option></select>
+    </div>
+  </div>
+  <div style="margin-bottom:9px"><label class="lbl">عدد الكراسي</label><input id="t_cap" type="number" min="1" max="300" placeholder="مثال: 50"></div>
+  <div class="row">
+    <button class="btn btn-green" style="flex:1" onclick="saveTransport()">💾 حفظ</button>
+    <button class="btn btn-red" id="delTransBtn" style="display:none" onclick="deleteTransport()">🗑️</button>
+    <button class="btn btn-gray" onclick="closeTM()">إلغاء</button>
+  </div>
+</div></div></div>
+
+<!-- Seat Modal -->
+<div class="overlay app-modal" id="seatModal" style="display:none" onclick="if(event.target===this)closeSM()">
+<div class="modal"><div class="mhead"><span id="smTitle">كرسي</span><span style="cursor:pointer" onclick="closeSM()">✕</span></div>
+<div class="mbody" style="display:flex;flex-direction:column;gap:9px">
+  <div><label class="lbl">اختيار شخص مسجل</label>
+    <select id="s_pick" onchange="pickGuest()"><option value="">— اختر —</option></select></div>
+  <input type="hidden" id="s_person_id">
+  <div><label class="lbl">أو كتابة اسم يدويًا</label><input id="s_name" placeholder="الاسم" oninput="handleSeatPersonInput()"></div>
+  <div><label class="lbl">رقم الغرفة</label><input id="s_room"></div>
+  <div><label class="lbl">نوع الراكب</label>
+    <select id="s_type" onchange="toggleSeatNote()">
+      <option value="adult">👤 بالغ</option>
+      <option value="child_seat">🧒 كرسي مستقل — يحتسب كرسيًا</option>
+      <option value="child_shared">🧒 مع المرافق — لا يحتسب كرسيًا</option>
+      <option value="infant">👶 رضيع — مع والده</option>
+      <option value="special">♿ ذوو احتياجات</option>
+    </select></div>
+  <div id="s_note_row" style="display:none">
+    <label class="lbl">اسم ولي الأمر / رقم كرسيه</label>
+    <input id="s_note" placeholder="مع والده — كرسي 5" style="border-color:#F39C12"></div>
+  <div id="s_guardian_row" style="display:none">
+    <label class="lbl">المرافق الذي سيشارك الطفل معه</label>
+    <select id="s_guardian_select"></select>
+  </div>
+  <div id="s_child_seat_row" style="display:none">
+    <label class="lbl">رقم الكرسي المستقل</label>
+    <select id="s_child_seat_number"><option value="">اختر كرسيًا متاحًا</option></select>
+  </div>
+  <div id="s_shared_children_section" class="modal-section" style="display:none">
+    <label class="lbl">أطفال مشاركون مع المرافق</label>
+    <div id="s_shared_children_list"></div>
+    <div class="transport-manual-child-entry"><input id="s_manual_child_name" placeholder="اسم طفل يدوي"><button type="button" class="btn btn-blue btn-sm" onclick="addManualSharedChildToSeat()">إضافة</button></div>
+    <div id="s_manual_children_list"></div>
+  </div>
+  <div class="row">
+    <button class="btn btn-green" style="flex:1" onclick="saveSeat()">💾 حفظ</button>
+    <button class="btn btn-red" id="clearSeatBtn" style="display:none" onclick="clearSeat()">🗑️</button>
+    <button class="btn btn-gray" onclick="closeSM()">إلغاء</button>
+  </div>
+</div></div></div>
+
+<!-- Bulk Assign Modal -->
+<div class="overlay app-modal" id="bulkModal" style="display:none" onclick="if(event.target===this)closeBulk()">
+<div class="modal" style="max-width:560px">
+  <div class="mhead"><span>⚡ تسكين جماعي</span><span style="cursor:pointer" onclick="closeBulk()">✕</span></div>
+  <div class="mbody">
+    <div style="margin-bottom:10px">
+      <label class="lbl">اختر وسيلة المواصلات</label>
+      <select id="bulk_trans" onchange="renderBulkGuests()">
+        <option value="">— اختر —</option>
+      </select>
+    </div>
+    <div id="bulk_info" style="font-size:11px;color:#5a7a9a;margin-bottom:8px"></div>
+    <div style="display:flex;gap:6px;margin-bottom:8px">
+      <button class="btn btn-blue btn-sm" onclick="bulkSelectAll(true)">✔️ تحديد الكل</button>
+      <button class="btn btn-gray btn-sm" onclick="bulkSelectAll(false)">✖️ إلغاء</button>
+      <span style="font-size:10px;color:#5a7a9a;align-self:center" id="bulk_count"></span>
+    </div>
+    <div id="bulk_guests" style="max-height:320px;overflow-y:auto;border:1px solid #EEF3F8;border-radius:8px;padding:6px"></div>
+    <div class="row" style="margin-top:12px">
+      <button class="btn btn-green" style="flex:1" onclick="doBulkAssign()">⚡ تسكين المحدد تلقائياً</button>
+      <button class="btn btn-gray" onclick="closeBulk()">إلغاء</button>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- House Template Editor Modal -->
+<div class="overlay app-modal" id="houseTemplateModal" style="display:none" onclick="if(event.target===this)closeHouseTemplateEditor()">
+<div class="modal" style="max-width:700px">
+  <div class="mhead">
+    <span id="ht_title">🏠 تعديل خريطة البيت</span>
+    <span style="cursor:pointer" onclick="closeHouseTemplateEditor()">✕</span>
+  </div>
+  <div class="mbody">
+    <div class="row" style="margin-bottom:12px;gap:10px;align-items:flex-end">
+      <div style="flex:2"><label class="lbl">اسم البيت</label><input id="ht_name" placeholder="اسم البيت"></div>
+      <div style="flex:3"><label class="lbl">الوصف</label><input id="ht_desc" placeholder="وصف اختياري (مثلاً: خاص بالشباب)"></div>
+    </div>
+    <div id="ht_floors_container" style="max-height: 50vh; overflow-y: auto; padding: 8px; background: #f7f9fc; border-radius: 8px; border: 1px solid #eef3f8;">
+      <!-- Floors will be rendered here -->
+    </div>
+    <div class="row" style="margin-top:12px;gap:8px;justify-content:space-between">
+      <button class="btn btn-blue" onclick="openFloorFromHouseEditor()">➕ إضافة دور</button>
+      <button class="btn btn-green" style="flex:1" onclick="saveHouseTemplate()">💾 حفظ الخريطة</button>
+      <button class="btn btn-gray" onclick="closeHouseTemplateEditor()">إلغاء</button>
+    </div>
+  </div>
+</div>
+</div>
+
+  <!-- Floor Modal -->
+  <div class="overlay app-modal" id="houseFloorModal" style="display:none" onclick="if(event.target===this)closeTemplateFloorModal()">
+  <div class="modal" style="max-width:520px">
+    <div class="mhead"><span id="tf_title">إضافة دور</span><span style="cursor:pointer" onclick="closeTemplateFloorModal()">✕</span></div>
+    <div class="mbody">
+      <div style="margin-bottom:9px"><label class="lbl">البيت</label><div id="tf_house_name" style="padding:8px 10px;border:1px solid #eef3f8;border-radius:8px;background:#f7fbff;font-weight:700;color:#1F4E79"></div></div>
+      <div style="margin-bottom:9px"><label class="lbl">اسم الدور</label><input id="tf_floor_name" placeholder="مثال: الدور الأول"></div>
+      <div class="row">
+        <button class="btn btn-green" style="flex:1" onclick="saveTemplateFloor()">💾 حفظ</button>
+        <button class="btn btn-gray" onclick="closeTemplateFloorModal()">إلغاء</button>
+      </div>
+    </div>
+  </div>
+  </div>
+
+  <!-- Room Modal -->
+  <div class="overlay app-modal" id="houseRoomModal" style="display:none" onclick="if(event.target===this)closeTemplateRoomModal()">
+  <div class="modal" style="max-width:620px">
+    <div class="mhead"><span id="tr_title">إضافة غرفة</span><span style="cursor:pointer" onclick="closeTemplateRoomModal()">✕</span></div>
+    <div class="mbody">
+      <div class="row" style="margin-bottom:9px;gap:8px">
+        <div style="flex:1"><label class="lbl">البيت</label><select id="tr_house" onchange="renderTemplateRoomModal()"></select></div>
+        <div style="flex:1"><label class="lbl">الدور</label><select id="tr_floor"></select></div>
+      </div>
+      <div class="row" style="margin-bottom:9px;gap:8px">
+        <div style="flex:2"><label class="lbl">رقم الغرفة</label><input id="tr_room_number" placeholder="مثال: 101"></div>
+        <div style="flex:1"><label class="lbl">عدد الأسرة</label><input id="tr_room_beds" type="number" min="1" value="1"></div>
+      </div>
+      <div style="margin-bottom:9px"><label class="lbl">الملاحظات</label><input id="tr_room_notes" placeholder="ملاحظات الغرفة"></div>
+      <div class="row" style="margin-bottom:9px">
+        <div style="flex:1"><label class="lbl">أسرة إضافية</label><input id="tr_room_extra_beds" type="number" min="0" value="0"></div>
+      </div>
+      <div class="row" id="tr_room_closed_row" style="margin-bottom:9px;gap:8px;align-items:center;display:none">
+        <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:#1F4E79;font-weight:700"><input type="checkbox" id="tr_room_closed" onchange="ge('tr_room_closed_row').style.display=this.checked?'flex':'none'" style="width:auto"> الغرفة مغلقة</label>
+        <div style="flex:1"><label class="lbl">إغلاق من يوم</label><input id="tr_room_closed_day" type="number" min="1" placeholder="مثال: 3"></div>
+      </div>
+      <div class="row">
+        <button class="btn btn-green" style="flex:1" onclick="saveTemplateRoom()">💾 حفظ</button>
+        <button class="btn btn-gray" onclick="closeTemplateRoomModal()">إلغاء</button>
+      </div>
+    </div>
+  </div>
+  </div>
+
+  <!-- New Conference Modal -->
+  <div class="overlay app-modal" id="newConferenceModal" style="display:none" onclick="if(event.target===this)closeNewConferenceModal()">
+  <div class="modal" style="max-width:900px">
+    <div class="mhead"><span id="nc_modal_title">➕ مؤتمر جديد</span><span style="cursor:pointer" onclick="closeNewConferenceModal()">✕</span></div>
+    <div class="mbody">
+      <div class="row" style="margin-bottom:10px;gap:8px">
+        <div style="flex:2"><label class="lbl">اسم الحدث / المؤتمر</label><input id="cfg_name" placeholder="اسم المؤتمر"></div>
+        <div style="flex:1"><label class="lbl">عدد أيام الإقامة</label><input id="cfg_days" type="number" min="1" max="30" value="1" readonly></div>
+      </div>
+      <div style="margin-bottom:10px"><label class="lbl">المكان</label><input id="cfg_place" placeholder="مكان المؤتمر"></div>
+      <div class="row" style="margin-bottom:10px;gap:8px">
+        <div style="flex:1"><label class="lbl">تاريخ البداية</label><input id="cfg_start" type="date" onclick="openNativeDatePicker(this)" onchange="updateConferencePeriodPreview()" oninput="updateConferencePeriodPreview()"></div>
+        <div style="flex:1"><label class="lbl">تاريخ النهاية</label><input id="cfg_end" type="date" onclick="openNativeDatePicker(this)" onchange="updateConferencePeriodPreview()" oninput="updateConferencePeriodPreview()"></div>
+      </div>
+      <div id="conferencePeriodPreview" style="margin-bottom:10px;padding:9px 11px;border-radius:8px;background:#F4F8FB;color:#1F4E79;font-size:11px"></div>
+      <div class="row" style="margin-top:12px">
+        <button class="btn btn-green" style="flex:1" id="nc_save_btn" onclick="createConferenceFromSelection()">💾 إنشاء المؤتمر</button>
+        <button class="btn btn-gray" onclick="closeNewConferenceModal()">إلغاء</button>
+      </div>
+    </div>
+  </div>
+  </div>
+
+<!-- Import House Modal -->
+<div class="overlay app-modal" id="importHouseModal" style="display:none" onclick="if(event.target===this)closeImportHouseModal()">
+<div class="modal" style="max-width:500px">
+  <div class="mhead">
+    <span id="ih_title">📥 استيراد بيت من المكتبة</span>
+    <span style="cursor:pointer" onclick="closeImportHouseModal()">✕</span>
+  </div>
+  <div class="mbody">
+    <div id="ih_list_container" style="max-height: 50vh; overflow-y: auto; padding: 5px;">
+      <!-- House templates will be rendered here -->
+    </div>
+    <button class="btn btn-gray" style="width:100%; margin-top:10px" onclick="closeImportHouseModal()">إلغاء</button>
+  </div>
+</div>
+</div>
+
+<!-- Add Existing Room Modal -->
+<div class="overlay app-modal" id="addRoomFromTemplateModal" style="display:none" onclick="if(event.target===this)closeAddRoomPickerModal()">
+<div class="modal" style="max-width:520px">
+  <div class="mhead"><span>إدارة الغرف النشطة</span><span style="cursor:pointer" onclick="closeAddRoomPickerModal()">✕</span></div>
+  <div class="mbody">
+    <div id="active_rooms_container"></div>
+    <div class="row">
+      <button class="btn btn-green" style="flex:1" onclick="confirmAddRoomFromTemplate()">تأكيد</button>
+      <button class="btn btn-gray" onclick="closeAddRoomPickerModal()">إلغاء</button>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- Reusable Searchable Selection Modal -->
+<div class="overlay app-modal" id="searchableSelectModal" style="display:none" onclick="if(event.target===this)closeSearchableSelectDialog()">
+<div class="modal" style="max-width:620px">
+  <div class="mhead"><span id="searchableSelectTitle">اختيار</span><span style="cursor:pointer" onclick="closeSearchableSelectDialog()">✕</span></div>
+  <div class="mbody">
+    <div style="margin-bottom:10px"><input id="searchableSelectSearch" placeholder="بحث..." oninput="renderSearchableSelectList()"></div>
+    <div id="searchableSelectList" style="max-height:50vh;overflow-y:auto"></div>
+    <div class="row" style="margin-top:8px"><button class="btn btn-gray" style="width:100%" onclick="closeSearchableSelectDialog()">إلغاء</button></div>
+  </div>
+</div>
+</div>
+
+<!-- Person Modal -->
+<div class="overlay app-modal" id="personModal" style="display:none" onclick="if(event.target===this)closePersonDialog()">
+<div class="modal" style="max-width:560px">
+  <div class="mhead"><span id="personModalTitle">➕ إضافة شخص جديد</span><span style="cursor:pointer" onclick="closePersonDialog()">✕</span></div>
+  <div class="mbody">
+    <input type="hidden" id="personDialogId">
+    <div style="margin-bottom:9px"><label class="lbl">الاسم الكامل *</label><input id="person_full_name" placeholder="الاسم الكامل"></div>
+    <div class="row" style="margin-bottom:9px;gap:8px">
+      <div style="flex:1"><label class="lbl">الكنيسة</label><input id="person_church" placeholder="الكنيسة"></div>
+      <div style="flex:1"><label class="lbl">الهاتف</label><input id="person_phone" placeholder="الهاتف"></div>
+    </div>
+    <div class="row" style="margin-bottom:9px;gap:8px">
+      <div style="flex:1"><label class="lbl">النوع</label><input id="person_gender" placeholder="ذكر/أنثى"></div>
+      <div style="flex:1"><label class="lbl">العمر</label><input id="person_age" type="number" min="0" placeholder="العمر"></div>
+    </div>
+    <div style="margin-bottom:9px"><label class="lbl">ملاحظات</label><input id="person_notes" placeholder="ملاحظات"></div>
+    <div class="row">
+      <button class="btn btn-green" style="flex:1" onclick="savePersonDialog()">💾 حفظ</button>
+      <button class="btn btn-gray" onclick="closePersonDialog()">إلغاء</button>
+    </div>
+  </div>
+</div>
+</div>
+
+<div class="toast" id="toast"></div>
+<!-- Partial Transfer Modal -->
+<div class="overlay app-modal" id="partialTransferModal" style="display:none" onclick="if(event.target===this)closePartialTransferModal()">
+  <div class="modal" style="max-width:640px">
+    <div class="mhead"><span>نقل جزئي</span><span style="cursor:pointer" onclick="closePartialTransferModal()">✕</span></div>
+    <div class="mbody">
+      <div id="partialTransferContent" style="min-width:320px"></div>
+    </div>
+  </div>
+</div>
+<div id="update-bar" class="update-bar">
+  <span id="update-message">يوجد تحديث جديد للبرنامج.</span>
+  <div>
+    <button id="update-now" class="btn btn-green btn-sm">تحديث الآن</button>
+    <button id="update-later" class="btn btn-gray btn-sm">لاحقًا</button>
+  </div>
+</div>
+<script src="utils.js"></script>
+<script src="core.js"></script>
+<script src="people.js"></script>
+<script src="houses.js"></script>
+<script src="transport.js"></script>
+<script src="houseTemplates.js"></script>
+<script src="state.js"></script>
+<script src="js/conference/accounts.js"></script>
+<script src="cards.js"></script>
+<script src="libs/html2canvas.min.js"></script>
+<script src="script.js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(function() { document.getElementById('splash-screen').style.opacity = '0'; }, 250);
+    setTimeout(function() { document.getElementById('splash-screen').style.display = 'none'; }, 500);
+  });
+</script>
+<script src="pwa.js"></script>
+</body>
+</html>
