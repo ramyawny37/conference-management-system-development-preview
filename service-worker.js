@@ -1,4 +1,4 @@
-const APP_VERSION = '3.1.0';
+const APP_VERSION = '3.1.1';
 const CACHE_PREFIX = 'conference-manager-core-';
 const CACHE_NAME = CACHE_PREFIX + 'v' + APP_VERSION;
 const CORE_ASSETS = [

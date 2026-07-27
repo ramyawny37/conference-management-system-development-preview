@@ -62,13 +62,24 @@ function ht_deleteRoomFromTemplate(houseId, floorId, roomId) {
     ? 'حذف الغرفة "' + (targetRoom.number || 'بدون رقم') + '"؟ تحتوي على ' + occupantCount + ' نزيل، وسيتم حذفها من خريطة البيت.'
     : 'حذف الغرفة "' + (targetRoom.number || 'بدون رقم') + '" من خريطة البيت؟';
   if (!confirm(message)) return;
+  var previousAppData = deepClone(appData);
+  var previousSelectedHouseTemplateId = selectedHouseTemplateId;
   var rooms = [];
   (floor.rooms || []).forEach(function(room) {
     if (room.id !== roomId) rooms.push(room);
   });
   floor.rooms = rooms;
   selectedHouseTemplateId = house.id;
-  save();
+  if (!save()) {
+    appData = previousAppData;
+    selectedHouseTemplateId = previousSelectedHouseTemplateId;
+    var restoredHouse = getHouseTemplateById(houseId);
+    if (editHouseTemplateId === houseId && ge('houseTemplateModal').style.display !== 'none') {
+      ht_renderTemplate(restoredHouse);
+    }
+    renderSettings();
+    return false;
+  }
   if (editHouseTemplateId === house.id && ge('houseTemplateModal').style.display !== 'none') {
     ht_renderTemplate(house);
   }
@@ -128,13 +139,24 @@ function ht_deleteFloorFromTemplate(houseId, floorId) {
     ? 'حذف الدور "' + (targetFloor.name || 'دور غير مسمى') + '"؟ يحتوي على ' + roomCount + ' غرفة، وسيتم حذف هذه الغرف من خريطة البيت.'
     : 'حذف الدور "' + (targetFloor.name || 'دور غير مسمى') + '" من خريطة البيت؟';
   if (!confirm(message)) return;
+  var previousAppData = deepClone(appData);
+  var previousSelectedHouseTemplateId = selectedHouseTemplateId;
   var floors = [];
   house.floors.forEach(function(floor) {
     if (floor.id !== floorId) floors.push(floor);
   });
   house.floors = floors;
   selectedHouseTemplateId = house.id;
-  save();
+  if (!save()) {
+    appData = previousAppData;
+    selectedHouseTemplateId = previousSelectedHouseTemplateId;
+    var restoredHouse = getHouseTemplateById(houseId);
+    if (editHouseTemplateId === houseId && ge('houseTemplateModal').style.display !== 'none') {
+      ht_renderTemplate(restoredHouse);
+    }
+    renderSettings();
+    return false;
+  }
   if (editHouseTemplateId === house.id && ge('houseTemplateModal').style.display !== 'none') {
     ht_renderTemplate(house);
   }

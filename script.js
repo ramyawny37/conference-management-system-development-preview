@@ -832,6 +832,11 @@ function restoreLastApplicationTab(){
 function switchTab(n){
   var tabId = typeof n === 'number' ? n : parseInt(n, 10);
   if (!isValidApplicationTab(tabId)) return false;
+  var settingsTabId=getApplicationTabIdByName('settings');
+  if(!getCurrentConference()&&tabId!==settingsTabId){
+    showToast('يرجى اختيار مؤتمر أو إنشاء مؤتمر جديد أولًا.','#E67E22');
+    return false;
+  }
   var previousTab=currentTab;
   currentTab=tabId;
   if(tabId===2&&previousTab!==2)v3AccordionOpenSection='';
@@ -858,10 +863,6 @@ function getApplicationTabIdByName(tabName){
 من خلال setApplicationMode() ثم يفتح التبويب عبر switchTab().
 */
 function openSettingsFromHome(){
-  if(!getCurrentConference()){
-    showToast('اختر مؤتمرًا أولًا لفتح الإعدادات.','#E67E22');
-    return false;
-  }
   var settingsTabId=getApplicationTabIdByName('settings');
   if(settingsTabId===null)return false;
   setApplicationMode('application');
@@ -6322,12 +6323,6 @@ function renderAirConditioningV3Settings(conference){
 
 function renderSettings(){
   var current = getCurrentConference();
-  if (!current) {
-    ge('tab6').innerHTML = '<div class="settings-dashboard"><div class="settings-empty-state">لا توجد بيانات مؤتمر جاهزة حالياً.</div></div>';
-    return;
-  }
-  conferenceBrandingDraft=getConferenceBrandingSettings(current);
-  var conf = (current || {}).conf || {};
   var activeSettingsTab = settingsTab || 'general';
   var h='<div class="settings-dashboard" dir="rtl">';
   h+='<div class="settings-nav">';
@@ -6339,6 +6334,13 @@ function renderSettings(){
     ge('tab6').innerHTML = h;
     return;
   }
+  if (!current) {
+    h += '<div class="settings-empty-state">يرجى اختيار مؤتمر أو إنشاء مؤتمر جديد أولًا لعرض هذا القسم.</div></div>';
+    ge('tab6').innerHTML = h;
+    return;
+  }
+  conferenceBrandingDraft=getConferenceBrandingSettings(current);
+  var conf = (current || {}).conf || {};
   var peopleCount = getPeopleList().length;
   h+='<div class="settings-summary-grid">';
   h+='<div class="settings-summary-card"><strong>'+appData.conferences.length+'</strong><span>عدد المؤتمرات</span></div>';
@@ -7050,6 +7052,9 @@ function saveHouseTemplate() {
   var name = ge('ht_name').value.trim();
   if (!name) { alert('الرجاء إدخال اسم للبيت.'); return; }
 
+  var previousAppData = deepClone(appData);
+  var previousSelectedHouseTemplateId = selectedHouseTemplateId;
+  var previousEditHouseTemplateId = editHouseTemplateId;
   var template = editHouseTemplateId ? getHouseTemplateById(editHouseTemplateId) : null;
   if (!template) {
     template = { id: editHouseTemplateId || uid(), name: '', description: '', floors: [] };
@@ -7115,7 +7120,12 @@ function saveHouseTemplate() {
   }
   selectedHouseTemplateId = template.id;
 
-  if(!save())return false;
+  if(!save()){
+    appData = previousAppData;
+    selectedHouseTemplateId = previousSelectedHouseTemplateId;
+    editHouseTemplateId = previousEditHouseTemplateId;
+    return false;
+  }
   closeHouseTemplateEditor();
   renderSettings();
   showToast('✅ تم حفظ خريطة البيت بنجاح');
@@ -7126,12 +7136,20 @@ function deleteHouseTemplate(id) {
   (appData.houseTemplates || []).forEach(function(ht){ if (!target && ht.id === id) target = ht; });
   if (!target) return;
   if (!confirm('حذف خريطة البيت "' + (target.name || 'بيت غير مسمى') + '"؟ يمكن استعادتها من سلة المحذوفات.')) return;
+  var previousAppData = deepClone(appData);
+  var previousSelectedHouseTemplateId = selectedHouseTemplateId;
+  var previousEditHouseTemplateId = editHouseTemplateId;
   pushTrashItem('houseTemplates', target);
   appData.houseTemplates = removeByIdFromArray(appData.houseTemplates, id);
   if (selectedHouseTemplateId === id) {
     selectedHouseTemplateId = appData.houseTemplates.length ? appData.houseTemplates[0].id : null;
   }
-  if(!save())return false;
+  if(!save()){
+    appData = previousAppData;
+    selectedHouseTemplateId = previousSelectedHouseTemplateId;
+    editHouseTemplateId = previousEditHouseTemplateId;
+    return false;
+  }
   renderSettings();
   showToast('🗑️ تم نقل خريطة البيت إلى سلة المحذوفات', '#E74C3C');
 }
