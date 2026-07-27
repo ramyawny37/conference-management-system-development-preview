@@ -88,6 +88,11 @@ function save(){
     var json=JSON.stringify(appData);
     localStorage.setItem(SK,json);
     var b=ge('syncBar');if(b){b.textContent='✔ '+new Date().toLocaleTimeString('ar-EG');}
+    if(window.AppIndexedDB&&typeof window.AppIndexedDB.saveAppSnapshot==='function'){
+      window.AppIndexedDB.saveAppSnapshot(appData).catch(function(indexedDbError){
+        console.warn('تعذر حفظ النسخة الاحتياطية في IndexedDB:',indexedDbError);
+      });
+    }
     return true;
   }catch(e){
     console.error('تعذر حفظ بيانات التطبيق:',e);
