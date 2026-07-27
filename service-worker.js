@@ -1,4 +1,6 @@
-const CORE_CACHE_NAME = 'conference-manager-core-v3';
+const APP_VERSION = '3.1.0';
+const CACHE_PREFIX = 'conference-manager-core-';
+const CACHE_NAME = CACHE_PREFIX + 'v' + APP_VERSION;
 const CORE_ASSETS = [
   './',
   './index.html',
@@ -13,6 +15,7 @@ const CORE_ASSETS = [
   './js/conference/accounts.js',
   './cards.js',
   './script.js',
+  './version.js',
   './pwa.js',
   './libs/html2canvas.min.js',
   './assets/logo.jpg',
@@ -24,35 +27,77 @@ const CORE_ASSETS = [
 
 self.addEventListener('install', event => {
   event.waitUntil(
-    caches.open(CORE_CACHE_NAME)
+    caches.open(CACHE_NAME)
       .then(cache => {
         console.log('Opened cache');
         return cache.addAll(CORE_ASSETS);
+      })
+      .catch(error => {
+        return caches.delete(CACHE_NAME).then(() => {
+          throw error;
+        });
       })
       // Do not call self.skipWaiting() here. Wait for user action.
   );
 });
 
+function handleNavigationRequest(request) {
+  const homeCacheKey = './';
+
+  return fetch(request)
+    .then(response => {
+      const responseUrl = new URL(response.url);
+      const canCacheResponse = response.ok &&
+        responseUrl.origin === self.location.origin;
+
+      if (!canCacheResponse) {
+        return response;
+      }
+
+      const responseToCache = response.clone();
+      return caches.open(CACHE_NAME)
+        .then(cache => cache.put(homeCacheKey, responseToCache))
+        .catch(() => null)
+        .then(() => response);
+    })
+    .catch(() => {
+      return caches.open(CACHE_NAME)
+        .then(cache => cache.match(homeCacheKey));
+    });
+}
+
 self.addEventListener('fetch', event => {
+  const request = event.request;
+  const requestUrl = new URL(request.url);
+
+  if (
+    request.method !== 'GET' ||
+    (requestUrl.protocol !== 'http:' && requestUrl.protocol !== 'https:') ||
+    requestUrl.origin !== self.location.origin
+  ) {
+    return;
+  }
+
+  if (request.mode === 'navigate') {
+    event.respondWith(handleNavigationRequest(request));
+    return;
+  }
+
   event.respondWith(
-    caches.match(event.request)
-      .then(response => {
-        // Cache hit - return response
-        if (response) {
-          return response;
-        }
-        return fetch(event.request);
-      })
+    caches.open(CACHE_NAME).then(cache => {
+      return cache.match(request).then(response => {
+        return response || fetch(request);
+      });
+    })
   );
 });
 
 self.addEventListener('activate', event => {
-  const cacheWhitelist = [CORE_CACHE_NAME];
   event.waitUntil(
     caches.keys().then(cacheNames => {
       return Promise.all(
         cacheNames.map(cacheName => {
-          if (cacheWhitelist.indexOf(cacheName) === -1) {
+          if (cacheName.startsWith(CACHE_PREFIX) && cacheName !== CACHE_NAME) {
             return caches.delete(cacheName);
           }
         })
@@ -62,7 +107,17 @@ self.addEventListener('activate', event => {
 });
 
 self.addEventListener('message', event => {
-  if (event.data && event.data.action === 'skipWaiting') {
+  if (!event.data || !event.data.action) return;
+
+  if (event.data.action === 'skipWaiting') {
     self.skipWaiting();
+    return;
+  }
+
+  if (event.data.action === 'getVersion' && event.ports && event.ports[0]) {
+    event.ports[0].postMessage({
+      action: 'versionInfo',
+      version: APP_VERSION
+    });
   }
 });

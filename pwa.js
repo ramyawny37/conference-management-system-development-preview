@@ -1,5 +1,20 @@
 let deferredInstallPrompt = null;
 const installButton = document.getElementById('install-app-btn');
+const updateButton = document.getElementById('update-now');
+const updateMessage = document.getElementById('update-message');
+const originalUpdateButtonText = updateButton ? updateButton.textContent : '';
+const originalUpdateMessageText = updateMessage ? updateMessage.textContent : '';
+const UPDATE_TIMEOUT_MS = 12000;
+const UPDATE_CHECK_INTERVAL_MS = 5 * 60 * 1000;
+let updateInProgress = false;
+let reloadTriggered = false;
+let updateTimeoutId = null;
+let serviceWorkerRegistration = null;
+let updateCheckInProgress = false;
+let lastUpdateCheckAt = 0;
+let versionRequestWorker = null;
+let versionRequestPromise = null;
+let displayedUpdateWorker = null;
 
 window.addEventListener('beforeinstallprompt', (e) => {
   // Prevent the mini-infobar from appearing on mobile
@@ -35,18 +50,157 @@ window.addEventListener('appinstalled', () => {
   }
 });
 
-function showUpdateBar() {
+function restoreUpdateUi(message) {
+  if (updateTimeoutId !== null) {
+    clearTimeout(updateTimeoutId);
+    updateTimeoutId = null;
+  }
+  updateInProgress = false;
+  if (updateButton) {
+    updateButton.disabled = false;
+    updateButton.textContent = originalUpdateButtonText;
+  }
+  if (updateMessage) {
+    updateMessage.textContent = message || originalUpdateMessageText;
+    if (message) {
+      setTimeout(() => {
+        if (!updateInProgress && updateMessage.textContent === message) {
+          updateMessage.textContent = originalUpdateMessageText;
+        }
+      }, 5000);
+    }
+  }
+}
+
+function checkForServiceWorkerUpdate() {
+  if (!serviceWorkerRegistration) {
+    return Promise.resolve();
+  }
+  if (serviceWorkerRegistration.waiting) {
+    showUpdateBar(serviceWorkerRegistration.waiting);
+    return Promise.resolve();
+  }
+  if (!navigator.onLine || updateCheckInProgress) {
+    return Promise.resolve();
+  }
+
+  const now = Date.now();
+  if (now - lastUpdateCheckAt < UPDATE_CHECK_INTERVAL_MS) {
+    return Promise.resolve();
+  }
+
+  updateCheckInProgress = true;
+  lastUpdateCheckAt = now;
+
+  return Promise.resolve()
+    .then(() => serviceWorkerRegistration.update())
+    .catch(() => null)
+    .then(() => {
+      updateCheckInProgress = false;
+    });
+}
+
+function getWorkerVersion(worker) {
+  if (!worker) {
+    return Promise.resolve('');
+  }
+  if (versionRequestWorker === worker && versionRequestPromise) {
+    return versionRequestPromise;
+  }
+
+  versionRequestWorker = worker;
+  versionRequestPromise = new Promise(resolve => {
+    let channel;
+    try {
+      channel = new MessageChannel();
+    } catch (error) {
+      resolve('');
+      return;
+    }
+
+    let settled = false;
+    let timeoutId = null;
+
+    const finish = version => {
+      if (settled) return;
+      settled = true;
+      if (timeoutId !== null) {
+        clearTimeout(timeoutId);
+      }
+      channel.port1.onmessage = null;
+      channel.port1.close();
+      resolve(version);
+    };
+
+    timeoutId = setTimeout(() => {
+      finish('');
+    }, 2500);
+
+    channel.port1.onmessage = event => {
+      const data = event.data;
+      const version = data &&
+        data.action === 'versionInfo' &&
+        typeof data.version === 'string'
+        ? data.version.trim()
+        : '';
+      finish(version);
+    };
+
+    try {
+      worker.postMessage({ action: 'getVersion' }, [channel.port2]);
+    } catch (error) {
+      finish('');
+    }
+  });
+
+  return versionRequestPromise;
+}
+
+function showUpdateBar(worker) {
   const updateBar = document.getElementById('update-bar');
   if (updateBar) {
     updateBar.classList.add('show');
-    document.getElementById('update-now').onclick = () => {
-      navigator.serviceWorker.getRegistration().then(reg => {
-        if (reg && reg.waiting) {
-          reg.waiting.postMessage({ action: 'skipWaiting' });
+    if (!updateInProgress && updateMessage) {
+      updateMessage.textContent = originalUpdateMessageText;
+    }
+    if (worker) {
+      displayedUpdateWorker = worker;
+      getWorkerVersion(worker).then(version => {
+        if (
+          version &&
+          displayedUpdateWorker === worker &&
+          updateBar.classList.contains('show') &&
+          updateMessage
+        ) {
+          updateMessage.textContent = 'يتوفر الإصدار ' + version + ' من البرنامج';
         }
+      });
+    }
+    updateButton.onclick = () => {
+      if (updateInProgress) return;
+      updateInProgress = true;
+      updateButton.disabled = true;
+      updateButton.textContent = 'جارٍ التحديث…';
+
+      const registrationPromise = serviceWorkerRegistration
+        ? Promise.resolve(serviceWorkerRegistration)
+        : navigator.serviceWorker.getRegistration();
+
+      registrationPromise.then(reg => {
+        if (!reg || !reg.waiting) {
+          restoreUpdateUi('لا يوجد تحديث جاهز الآن. يرجى المحاولة مرة أخرى.');
+          return;
+        }
+        reg.waiting.postMessage({ action: 'skipWaiting' });
+        updateTimeoutId = setTimeout(() => {
+          restoreUpdateUi('لم يكتمل التحديث. يرجى المحاولة مرة أخرى.');
+        }, UPDATE_TIMEOUT_MS);
+      }).catch(() => {
+        restoreUpdateUi('تعذر بدء التحديث. يرجى المحاولة مرة أخرى.');
       });
     };
     document.getElementById('update-later').onclick = () => {
+      if (updateInProgress) return;
       updateBar.classList.remove('show');
     };
   }
@@ -55,11 +209,12 @@ function showUpdateBar() {
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('./service-worker.js').then(registration => {
+      serviceWorkerRegistration = registration;
       console.log('ServiceWorker registration successful with scope: ', registration.scope);
 
       // Check if there's a waiting service worker to show the update bar immediately
       if (registration.waiting && navigator.serviceWorker.controller) {
-        showUpdateBar();
+        showUpdateBar(registration.waiting);
       }
 
       registration.addEventListener('updatefound', () => {
@@ -67,20 +222,35 @@ if ('serviceWorker' in navigator) {
         if (newWorker) {
           newWorker.addEventListener('statechange', () => {
             if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-              showUpdateBar();
+              showUpdateBar(registration.waiting || newWorker);
             }
           });
         }
       });
+
+      checkForServiceWorkerUpdate();
     }).catch(err => {
       console.log('ServiceWorker registration failed: ', err);
     });
 
-    let refreshing;
     navigator.serviceWorker.addEventListener('controllerchange', () => {
-      if (refreshing) return;
+      if (!updateInProgress || reloadTriggered) return;
+      reloadTriggered = true;
+      if (updateTimeoutId !== null) {
+        clearTimeout(updateTimeoutId);
+        updateTimeoutId = null;
+      }
       window.location.reload();
-      refreshing = true;
     });
+  });
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+      checkForServiceWorkerUpdate();
+    }
+  });
+
+  window.addEventListener('online', () => {
+    checkForServiceWorkerUpdate();
   });
 }
