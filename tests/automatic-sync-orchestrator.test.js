@@ -116,6 +116,30 @@ async function run(){
     disabled.window.SyncSchedulerState.isConnectivity('online'),
     true
   );
+  var preferenceValues={};
+  var preferenceCalls=[];
+  var preferenceStorage={
+    getItem:function(key){return preferenceValues[key]||null;},
+    setItem:function(key,value){preferenceValues[key]=value;},
+    removeItem:function(key){delete preferenceValues[key];}
+  };
+  disabled.window.AutomaticSyncOrchestrator={
+    start:function(){preferenceCalls.push('start');},
+    stop:function(){preferenceCalls.push('stop');},
+    schedule:function(reason){preferenceCalls.push(reason);}
+  };
+  disabled.window.AutomaticSyncPreferences.set({
+    cloudSyncEnabled:true,
+    automaticSyncEnabled:true
+  },{storage:preferenceStorage});
+  disabled.window.AutomaticSyncPreferences.set({
+    cloudSyncEnabled:false,
+    automaticSyncEnabled:true
+  },{storage:preferenceStorage});
+  assert.deepStrictEqual(preferenceCalls,[
+    'start','preferences_changed','stop'
+  ]);
+  disabled=load({authenticated:true,configured:true,available:true});
   disabled.window.AutomaticSyncOrchestrator.start({debounceMs:0});
   await delay(5);
   assert.strictEqual(

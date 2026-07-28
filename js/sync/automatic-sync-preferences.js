@@ -33,11 +33,27 @@
   }
 
   function set(input,options){
+    var previous=get(options);
     var value=normalize(input);
     var target=storage(options);
     if(!target)return {ok:false,status:'storage_unavailable'};
     try{
       target.setItem(STORAGE_KEY,JSON.stringify(value));
+      var orchestrator=global.AutomaticSyncOrchestrator;
+      if(orchestrator){
+        if(previous.cloudSyncEnabled&&!value.cloudSyncEnabled&&
+          typeof orchestrator.stop==='function'){
+          orchestrator.stop();
+        }else if(value.cloudSyncEnabled){
+          if(!previous.cloudSyncEnabled&&
+            typeof orchestrator.start==='function'){
+            orchestrator.start();
+          }
+          if(typeof orchestrator.schedule==='function'){
+            orchestrator.schedule('preferences_changed');
+          }
+        }
+      }
       return {ok:true,status:'saved',data:value};
     }catch(error){
       return {ok:false,status:'storage_failed'};
@@ -48,6 +64,10 @@
     var target=storage(options);
     if(target){
       try{target.removeItem(STORAGE_KEY);}catch(error){}
+    }
+    if(global.AutomaticSyncOrchestrator&&
+      typeof global.AutomaticSyncOrchestrator.stop==='function'){
+      global.AutomaticSyncOrchestrator.stop();
     }
     return {ok:true,status:'reset',data:normalize(DEFAULTS)};
   }

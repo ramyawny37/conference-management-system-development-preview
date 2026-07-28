@@ -4,7 +4,8 @@
   var DEBOUNCE_MS=2000;
   var ALLOWED_REASONS=Object.freeze([
     'startup','local_save','online_event','offline_event','auth_changed',
-    'conference_changed','manual_retry','backoff_elapsed'
+    'conference_changed','manual_retry','backoff_elapsed',
+    'preferences_changed'
   ]);
   var state=global.SyncSchedulerState.create();
   var listeners=[];
@@ -20,7 +21,12 @@
   }
 
   function publicState(){
-    return copy(state);
+    var snapshot=copy(state);
+    var runner=global.AutomaticQueueRunner;
+    if(runner&&typeof runner.getState==='function'){
+      Object.assign(snapshot,runner.getState());
+    }
+    return snapshot;
   }
 
   function notify(){
@@ -161,11 +167,25 @@
   function evaluateScheduled(options){
     if(evaluationPromise)return evaluationPromise;
     var generation=state.generation;
+    var reasons=state.scheduledReasons.slice();
     state.evaluating=true;
     var flight=Promise.resolve().then(function(){
       if(generation!==state.generation||!state.started)return publicState();
       state.scheduledReasons=[];
-      return evaluateConnectivity(options);
+      return evaluateConnectivity(options).then(function(connectivityState){
+        if(generation!==state.generation||!state.started||
+          connectivityState.connectivity!=='online'||
+          reasons.indexOf('offline_event')>=0&&reasons.length===1){
+          return connectivityState;
+        }
+        var runner=options.queueRunner||global.AutomaticQueueRunner;
+        if(!runner||typeof runner.run!=='function')return connectivityState;
+        return runner.run(Object.assign({},options.queueRunnerOptions||{},{
+          connectivity:connectivityState.connectivity,
+          reasons:reasons,
+          orchestrator:global.AutomaticSyncOrchestrator
+        })).then(function(){return publicState();});
+      });
     }).then(function(result){
       if(generation===state.generation){
         state.lastEvaluationAt=new Date().toISOString();
@@ -250,6 +270,10 @@
     state.evaluating=false;
     state.checkingConnectivity=false;
     state.connectivity='stopped';
+    if(global.AutomaticQueueRunner&&
+      typeof global.AutomaticQueueRunner.stop==='function'){
+      global.AutomaticQueueRunner.stop();
+    }
     notify();
     return {ok:true,status:'stopped'};
   }

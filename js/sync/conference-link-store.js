@@ -33,6 +33,24 @@
     var value=all(options)[String(localId||'')];
     return value?copy(value):null;
   }
+  function list(options){
+    var links=all(options);
+    return Object.keys(links).sort().map(function(localId){
+      return copy(links[localId]);
+    });
+  }
+  function findByRemoteId(remoteId,options){
+    remoteId=String(remoteId||'');
+    var links=all(options);
+    var localIds=Object.keys(links);
+    for(var index=0;index<localIds.length;index++){
+      var link=links[localIds[index]];
+      if(link&&String(link.remoteConferenceId||'')===remoteId){
+        return copy(link);
+      }
+    }
+    return null;
+  }
   function save(input,options){
     input=input&&typeof input==='object'?input:{};
     var localId=String(input.localConferenceId||'');
@@ -84,6 +102,6 @@
   }
   global.ConferenceLinkStore=Object.freeze({
     statuses:Object.freeze(STATUSES.slice()),
-    get:get,save:save,remove:remove
+    get:get,list:list,findByRemoteId:findByRemoteId,save:save,remove:remove
   });
 })(window);
