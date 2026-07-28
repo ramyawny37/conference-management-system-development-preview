@@ -2,7 +2,20 @@
   'use strict';
 
   function saveAppSnapshot(appData){
-    return global.AppIndexedDB.saveAppSnapshot(appData);
+    return global.AppIndexedDB.saveAppSnapshot(appData)
+      .then(function(saveResult){
+        var integration=global.OfflineFirstIntegration;
+        if(!integration||
+          typeof integration.handleLocalSave!=='function'){
+          return saveResult;
+        }
+        return Promise.resolve()
+          .then(function(){
+            return integration.handleLocalSave(appData);
+          })
+          .catch(function(){ return null; })
+          .then(function(){ return saveResult; });
+      });
   }
 
   function getAppSnapshot(){

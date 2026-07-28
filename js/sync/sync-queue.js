@@ -239,6 +239,168 @@
     });
   }
 
+  function coalesceSnapshotOperation(input,options){
+    var validation = validateEnqueueInput(input);
+    if(validation){
+      return Promise.resolve(result(false,'error',null,validation));
+    }
+    var repository = getRepository();
+    if(!repository){
+      return Promise.resolve(result(false,'error',null,safeError(
+        'SYNC_QUEUE_UNAVAILABLE',
+        'The sync queue is unavailable.'
+      )));
+    }
+    var snapshot;
+    var now;
+    try{
+      snapshot = cloneValue(input.snapshot);
+      now = resolveNow(options).toISOString();
+    }catch(error){
+      return Promise.resolve(result(false,'error',null,safeError(
+        'QUEUE_DATA_PREPARATION_FAILED',
+        'The queue operation could not be prepared.'
+      )));
+    }
+    var storedOperation;
+    var coalescedOperationIds=[];
+    var wasCoalesced=false;
+    return repository.runTransaction(STORE_NAME,'readwrite',function(stores){
+      var store=stores[STORE_NAME];
+      return requestToPromise(store.getAll()).then(function(operations){
+        var candidates=operations.filter(function(operation){
+          return operation.conferenceId===String(input.conferenceId)&&
+            operation.deviceId===String(input.deviceId)&&
+            (operation.status==='pending'||
+              (operation.status==='failed'&&operation.attempts===0));
+        }).sort(function(first,second){
+          return String(first.createdAt).localeCompare(
+            String(second.createdAt)
+          )||String(first.operationId).localeCompare(
+            String(second.operationId)
+          );
+        });
+        if(!candidates.length){
+          var operationId=input.operationId
+            ?String(input.operationId)
+            :createUuid();
+          storedOperation={
+            operationId:operationId,
+            conferenceId:String(input.conferenceId),
+            deviceId:String(input.deviceId),
+            baseRevision:input.baseRevision,
+            snapshot:snapshot,
+            schemaVersion:String(input.schemaVersion).trim(),
+            appVersion:String(input.appVersion).trim(),
+            status:'pending',
+            attempts:0,
+            createdAt:now,
+            updatedAt:now,
+            lastAttemptAt:null,
+            nextAttemptAt:null,
+            lastError:null,
+            result:null,
+            conflict:null
+          };
+          return requestToPromise(store.add(storedOperation));
+        }
+        wasCoalesced=true;
+        storedOperation=candidates[0];
+        storedOperation.snapshot=snapshot;
+        storedOperation.schemaVersion=String(input.schemaVersion).trim();
+        storedOperation.appVersion=String(input.appVersion).trim();
+        storedOperation.status='pending';
+        storedOperation.updatedAt=now;
+        storedOperation.nextAttemptAt=null;
+        storedOperation.lastError=null;
+        coalescedOperationIds=candidates.slice(1).map(function(operation){
+          return operation.operationId;
+        });
+        return requestToPromise(store.put(storedOperation)).then(function(){
+          return Promise.all(coalescedOperationIds.map(function(operationId){
+            return requestToPromise(store.delete(operationId));
+          }));
+        });
+      });
+    }).then(function(){
+      return result(true,wasCoalesced?'coalesced':'enqueued',{
+        operation:cloneValue(storedOperation),
+        removedOperationIds:coalescedOperationIds
+      },null);
+    }).catch(function(error){
+      return result(false,'error',null,normalizeStorageError(error));
+    });
+  }
+
+  function rebasePendingOperations(
+    conferenceId,
+    deviceId,
+    baseRevision,
+    options
+  ){
+    conferenceId=String(conferenceId||'');
+    deviceId=String(deviceId||'');
+    if(!isUuid(conferenceId)){
+      return Promise.resolve(result(false,'error',null,safeError(
+        'INVALID_CONFERENCE_ID',
+        'conferenceId must be a valid UUID.'
+      )));
+    }
+    if(!isUuid(deviceId)){
+      return Promise.resolve(result(false,'error',null,safeError(
+        'INVALID_DEVICE_ID',
+        'deviceId must be a valid UUID.'
+      )));
+    }
+    if(!Number.isInteger(baseRevision)||baseRevision<0){
+      return Promise.resolve(result(false,'error',null,safeError(
+        'INVALID_BASE_REVISION',
+        'baseRevision must be a non-negative integer.'
+      )));
+    }
+    var repository=getRepository();
+    if(!repository){
+      return Promise.resolve(result(false,'error',null,safeError(
+        'SYNC_QUEUE_UNAVAILABLE',
+        'The sync queue is unavailable.'
+      )));
+    }
+    var now;
+    try{
+      now=resolveNow(options).toISOString();
+    }catch(error){
+      return Promise.resolve(result(false,'error',null,safeError(
+        'INVALID_DATE',
+        'A valid current time is required.'
+      )));
+    }
+    var rebasedOperationIds=[];
+    return repository.runTransaction(STORE_NAME,'readwrite',function(stores){
+      var store=stores[STORE_NAME];
+      return requestToPromise(store.getAll()).then(function(operations){
+        return Promise.all(operations.filter(function(operation){
+          return operation.conferenceId===conferenceId&&
+            operation.deviceId===deviceId&&
+            operation.status==='pending'&&
+            operation.attempts===0;
+        }).map(function(operation){
+          operation.baseRevision=baseRevision;
+          operation.updatedAt=now;
+          rebasedOperationIds.push(operation.operationId);
+          return requestToPromise(store.put(operation));
+        }));
+      });
+    }).then(function(){
+      return result(true,'rebased',{
+        baseRevision:baseRevision,
+        operationIds:rebasedOperationIds,
+        count:rebasedOperationIds.length
+      },null);
+    }).catch(function(error){
+      return result(false,'error',null,normalizeStorageError(error));
+    });
+  }
+
   function getOperation(operationId){
     if(!isUuid(String(operationId||''))){
       return Promise.resolve(result(false,'error',null,safeError(
@@ -661,6 +823,8 @@
   global.OfflineSyncQueue = Object.freeze({
     statuses:STATUSES,
     enqueueSnapshotOperation:enqueueSnapshotOperation,
+    coalesceSnapshotOperation:coalesceSnapshotOperation,
+    rebasePendingOperations:rebasePendingOperations,
     getOperation:getOperation,
     getAllOperations:getAllOperations,
     getOperationsByConference:getOperationsByConference,

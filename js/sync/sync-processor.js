@@ -69,7 +69,8 @@
       nextAttemptAt:operation.nextAttemptAt||null,
       result:operation.result?cloneValue(operation.result):null,
       conflict:operation.conflict?cloneValue(operation.conflict):null,
-      lastError:operation.lastError?cloneValue(operation.lastError):null
+      lastError:operation.lastError?cloneValue(operation.lastError):null,
+      deviceId:operation.deviceId||null
     };
   }
 
@@ -137,7 +138,9 @@
         return snapshotSync.uploadSnapshot(uploadInput);
       })
       .then(function(uploadResult){
-        if(uploadResult&&uploadResult.ok&&uploadResult.status==='applied'){
+        if(uploadResult&&uploadResult.ok&&
+          (uploadResult.status==='applied'||
+          uploadResult.status==='duplicate')){
           var appliedData=uploadResult.data||{};
           return queue.markApplied(operationId,{
             revision:appliedData.revision,
@@ -150,7 +153,7 @@
                 'The applied queue operation could not be recorded.'
               ));
             }
-            return result(true,'applied',{
+            return result(true,uploadResult.status,{
               operationId:operationId,
               revision:appliedData.revision,
               operation:publicOperationData(markResult.data)
@@ -291,7 +294,9 @@
   function summarizeBatchResult(summary,operationResult){
     summary.processed++;
     summary.results.push(operationResult);
-    if(operationResult&&operationResult.status==='applied'){
+    if(operationResult&&
+      (operationResult.status==='applied'||
+      operationResult.status==='duplicate')){
       summary.applied++;
     }else if(operationResult&&operationResult.status==='conflict'){
       summary.conflicts++;
