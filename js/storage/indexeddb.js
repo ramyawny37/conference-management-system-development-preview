@@ -2,7 +2,7 @@
   'use strict';
 
   var DATABASE_NAME = 'conference_manager_v3';
-  var DATABASE_VERSION = 1;
+  var DATABASE_VERSION = 2;
   var STORE_NAMES = Object.freeze({
     conferences: 'conferences',
     rooms: 'rooms',
@@ -10,7 +10,8 @@
     syncMetadata: 'sync_metadata',
     conflicts: 'conflicts',
     deviceSettings: 'device_settings',
-    localBackups: 'local_backups'
+    localBackups: 'local_backups',
+    syncOperationsQueue: 'sync_operations_queue'
   });
   var database = null;
   var openingPromise = null;
@@ -62,6 +63,18 @@
       {name:'conferenceId',keyPath:'conferenceId'},
       {name:'conferenceCreatedAt',keyPath:['conferenceId','createdAt']}
     ]);
+    ensureStore(
+      db,
+      upgradeTransaction,
+      STORE_NAMES.syncOperationsQueue,
+      {keyPath:'operationId'},
+      [
+        {name:'status',keyPath:'status'},
+        {name:'conferenceId',keyPath:'conferenceId'},
+        {name:'createdAt',keyPath:'createdAt'},
+        {name:'nextAttemptAt',keyPath:'nextAttemptAt'}
+      ]
+    );
   }
 
   function openDatabase(){
