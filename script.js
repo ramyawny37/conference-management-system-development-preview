@@ -6537,6 +6537,10 @@ function renderSettings(){
     ge('tab6').innerHTML = h;
     return;
   }
+  if(window.SyncSettingsUI&&
+    typeof window.SyncSettingsUI.renderSection==='function'){
+    h+=window.SyncSettingsUI.renderSection();
+  }
   h += renderMigrationAuditSection();
   if (!current) {
     h += '<div class="settings-empty-state">يرجى اختيار مؤتمر أو إنشاء مؤتمر جديد أولًا لعرض هذا القسم.</div></div>';

@@ -76,8 +76,28 @@
     return memoryIdentity;
   }
 
+  function setDeviceName(deviceName,options){
+    var identity=getOrCreate(options);
+    memoryIdentity={
+      id:identity.id,
+      deviceName:String(deviceName||'').trim().slice(0,80),
+      platform:identity.platform,
+      createdAt:identity.createdAt
+    };
+    var storage=getStorage(options);
+    if(storage){
+      try{
+        storage.setItem(STORAGE_KEY,JSON.stringify(memoryIdentity));
+      }catch(error){
+        return {success:false,reason:'DEVICE_IDENTITY_STORAGE_FAILED'};
+      }
+    }
+    return {success:true,identity:memoryIdentity};
+  }
+
   global.SupabaseDeviceIdentity=Object.freeze({
     getOrCreate:getOrCreate,
-    getCurrent:getCurrent
+    getCurrent:getCurrent,
+    setDeviceName:setDeviceName
   });
 })(window);

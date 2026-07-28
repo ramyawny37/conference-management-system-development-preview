@@ -103,9 +103,18 @@
     };
   }
 
+  function clear(){
+    state.configured=false;
+    state.available=false;
+    state.client=null;
+    state.lastError=null;
+    return {available:false,reason:'SUPABASE_CONFIG_MISSING'};
+  }
+
   global.SupabaseClientLayer=Object.freeze({
     configure:configure,
     getClient:getClient,
-    getState:getState
+    getState:getState,
+    clear:clear
   });
 })(window);
