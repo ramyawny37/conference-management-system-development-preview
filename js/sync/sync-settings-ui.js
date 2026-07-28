@@ -77,6 +77,10 @@
     html+='<label class="lbl" for="sync_supabase_key">Supabase Anon Key</label>';
     html+='<input id="sync_supabase_key" type="password" dir="ltr" autocomplete="new-password" value="" placeholder="'+
       escapeHtml(config.maskedKey||'أدخل المفتاح العام')+'">';
+    html+='<label class="lbl" for="sync_auth_redirect_url">Email Redirect URL</label>';
+    html+='<input id="sync_auth_redirect_url" type="url" dir="ltr" autocomplete="off" value="'+
+      escapeHtml(config.emailRedirectTo||'')+'" placeholder="'+
+      escapeHtml(global.location&&global.location.origin||'https://example.com')+'">';
     html+='<div class="sync-settings-actions"><button class="btn btn-green btn-sm" onclick="SyncSettingsUI.saveRuntimeConfig()">حفظ الإعداد</button>';
     html+='<button class="btn btn-gray btn-sm" onclick="SyncSettingsUI.clearRuntimeConfig()">إزالة الإعداد</button></div>';
     html+='<div id="sync_config_message" class="sync-settings-message"></div></div>';
@@ -144,11 +148,13 @@
   function saveRuntimeConfig(){
     var url=element('sync_supabase_url');
     var key=element('sync_supabase_key');
+    var redirect=element('sync_auth_redirect_url');
     var api=global.SupabaseRuntimeConfig;
     if(!api||busy)return;
     var result=api.save({
       url:url&&url.value,
-      publishableKey:key&&key.value
+      publishableKey:key&&key.value,
+      emailRedirectTo:redirect&&redirect.value
     });
     if(!result.ok){
       message('sync_config_message',

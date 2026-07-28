@@ -9,6 +9,7 @@
     lastError: null
   };
   var initializationPromise = null;
+  var clientGeneration = 0;
 
   function getClient(){
     return global.SupabaseClientLayer&&
@@ -29,6 +30,11 @@
       global.SupabaseClientLayer.configure(options);
     }
     var client=getClient();
+    if(!client&&global.SupabaseRuntimeConfig&&
+      typeof global.SupabaseRuntimeConfig.configureClient==='function'){
+      global.SupabaseRuntimeConfig.configureClient();
+      client=getClient();
+    }
     if(!client||!client.auth){
       state.initialized=true;
       initializationPromise=Promise.resolve({
@@ -38,12 +44,21 @@
       });
       return initializationPromise;
     }
+    var generation=clientGeneration;
 
     initializationPromise=client.auth.getSession()
       .then(function(result){
+        if(generation!==clientGeneration){
+          return {
+            available:false,
+            authenticated:false,
+            reason:'SUPABASE_CLIENT_CHANGED'
+          };
+        }
         if(result.error)throw result.error;
         updateSession(result.data&&result.data.session);
         var listener=client.auth.onAuthStateChange(function(event,session){
+          if(generation!==clientGeneration)return;
           updateSession(session);
         });
         state.subscription=listener&&listener.data
@@ -58,6 +73,13 @@
         };
       })
       .catch(function(error){
+        if(generation!==clientGeneration){
+          return {
+            available:false,
+            authenticated:false,
+            reason:'SUPABASE_CLIENT_CHANGED'
+          };
+        }
         state.initialized=true;
         state.lastError=error;
         return {
@@ -101,11 +123,30 @@
   }
 
   function signUp(email,password,metadata){
+    var redirectUrl='';
+    try{
+      var runtimeConfig=global.SupabaseRuntimeConfig&&
+        typeof global.SupabaseRuntimeConfig.load==='function'
+        ?global.SupabaseRuntimeConfig.load()
+        :null;
+      redirectUrl=String(
+        runtimeConfig&&runtimeConfig.emailRedirectTo||
+        global.SUPABASE_AUTH_REDIRECT_URL||
+        global.location&&global.location.origin||
+        ''
+      ).trim();
+    }catch(error){
+      redirectUrl='';
+    }
     return runAuthAction(function(auth){
+      var signUpOptions={
+        data:metadata&&typeof metadata==='object'?metadata:{}
+      };
+      if(redirectUrl)signUpOptions.emailRedirectTo=redirectUrl;
       return auth.signUp({
         email:email,
         password:password,
-        options:{data:metadata&&typeof metadata==='object'?metadata:{}}
+        options:signUpOptions
       });
     });
   }
@@ -136,6 +177,20 @@
     };
   }
 
+  function resetForClientChange(){
+    clientGeneration++;
+    if(state.subscription&&
+      typeof state.subscription.unsubscribe==='function'){
+      try{state.subscription.unsubscribe();}catch(error){}
+    }
+    state.initialized=false;
+    state.session=null;
+    state.user=null;
+    state.subscription=null;
+    state.lastError=null;
+    initializationPromise=null;
+  }
+
   global.SupabaseAuth=Object.freeze({
     initialize:initialize,
     signInWithPassword:signInWithPassword,
@@ -143,6 +198,7 @@
     signOut:signOut,
     getSession:getSession,
     getUser:getUser,
-    getState:getState
+    getState:getState,
+    resetForClientChange:resetForClientChange
   });
 })(window);

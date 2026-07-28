@@ -5,6 +5,8 @@
     configured: false,
     available: false,
     client: null,
+    url: null,
+    publishableKey: null,
     lastError: null
   };
 
@@ -48,11 +50,6 @@
     ).trim();
     var createClient=resolveCreateClient(options);
 
-    state.configured=false;
-    state.available=false;
-    state.client=null;
-    state.lastError=null;
-
     if(!url||!publishableKey){
       return {available:false,reason:'SUPABASE_CONFIG_MISSING'};
     }
@@ -67,8 +64,32 @@
     if(!createClient){
       return {available:false,reason:'SUPABASE_CLIENT_LIBRARY_UNAVAILABLE'};
     }
+    if(state.client&&state.url===url&&state.publishableKey===publishableKey){
+      return {available:true,reason:'',reused:true};
+    }
 
     try{
+      var previousClient=state.client;
+      if(previousClient){
+        try{
+          if(previousClient.auth&&
+            typeof previousClient.auth.stopAutoRefresh==='function'){
+            previousClient.auth.stopAutoRefresh();
+          }
+          if(typeof previousClient.removeAllChannels==='function'){
+            previousClient.removeAllChannels();
+          }
+        }catch(cleanupError){}
+      }
+      if(global.SupabaseAuth&&
+        typeof global.SupabaseAuth.resetForClientChange==='function'){
+        global.SupabaseAuth.resetForClientChange();
+      }
+      state.configured=false;
+      state.available=false;
+      state.client=null;
+      state.url=null;
+      state.publishableKey=null;
       state.client=createClient(url,publishableKey,{
         auth:{
           persistSession:true,
@@ -78,11 +99,19 @@
       });
       state.configured=true;
       state.available=!!state.client;
+      state.url=url;
+      state.publishableKey=publishableKey;
+      state.lastError=null;
       return {
         available:state.available,
         reason:state.available?'':'SUPABASE_CLIENT_CREATION_FAILED'
       };
     }catch(error){
+      state.configured=false;
+      state.available=false;
+      state.client=null;
+      state.url=null;
+      state.publishableKey=null;
       state.lastError=error;
       return {
         available:false,
@@ -104,9 +133,26 @@
   }
 
   function clear(){
+    if(state.client){
+      try{
+        if(state.client.auth&&
+          typeof state.client.auth.stopAutoRefresh==='function'){
+          state.client.auth.stopAutoRefresh();
+        }
+        if(typeof state.client.removeAllChannels==='function'){
+          state.client.removeAllChannels();
+        }
+      }catch(error){}
+    }
+    if(global.SupabaseAuth&&
+      typeof global.SupabaseAuth.resetForClientChange==='function'){
+      global.SupabaseAuth.resetForClientChange();
+    }
     state.configured=false;
     state.available=false;
     state.client=null;
+    state.url=null;
+    state.publishableKey=null;
     state.lastError=null;
     return {available:false,reason:'SUPABASE_CONFIG_MISSING'};
   }

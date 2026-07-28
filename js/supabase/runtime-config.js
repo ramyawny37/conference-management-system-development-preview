@@ -32,6 +32,7 @@
     var publishableKey=String(
       input.publishableKey||input.anonKey||''
     ).trim();
+    var emailRedirectTo=String(input.emailRedirectTo||'').trim();
     var errors=[];
     try{
       var parsed=new URL(url);
@@ -46,12 +47,24 @@
     if(isServiceRoleKey(publishableKey)){
       errors.push('SUPABASE_SERVICE_ROLE_KEY_REJECTED');
     }
+    if(emailRedirectTo){
+      try{
+        var redirectUrl=new URL(emailRedirectTo);
+        if(redirectUrl.protocol!=='https:'&&
+          redirectUrl.protocol!=='http:'){
+          errors.push('SUPABASE_REDIRECT_URL_INVALID');
+        }
+      }catch(error){
+        errors.push('SUPABASE_REDIRECT_URL_INVALID');
+      }
+    }
     return {
       valid:errors.length===0,
       errors:errors,
       value:errors.length?null:{
         url:url,
-        publishableKey:publishableKey
+        publishableKey:publishableKey,
+        emailRedirectTo:emailRedirectTo
       }
     };
   }
@@ -68,7 +81,8 @@
   function load(options){
     if(memoryConfig)return {
       url:memoryConfig.url,
-      publishableKey:memoryConfig.publishableKey
+      publishableKey:memoryConfig.publishableKey,
+      emailRedirectTo:memoryConfig.emailRedirectTo||''
     };
     var storage=getStorage(options);
     if(!storage)return null;
@@ -79,7 +93,8 @@
         memoryConfig=checked.value;
         return {
           url:memoryConfig.url,
-          publishableKey:memoryConfig.publishableKey
+          publishableKey:memoryConfig.publishableKey,
+          emailRedirectTo:memoryConfig.emailRedirectTo||''
         };
       }
     }catch(error){}
@@ -152,6 +167,7 @@
     return {
       configured:!!config,
       url:config?config.url:'',
+      emailRedirectTo:config?config.emailRedirectTo:'',
       maskedKey:config?maskKey(config.publishableKey):''
     };
   }
