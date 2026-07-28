@@ -439,7 +439,16 @@
       operationId,
       'applied',
       function(operation){
-        operation.result = {revision:revision};
+        operation.result = {
+          revision:revision,
+          previousRevision:Number.isInteger(applyResult.previousRevision)
+            ?applyResult.previousRevision
+            :operation.baseRevision,
+          conferenceId:isUuid(String(applyResult.conferenceId||''))
+            ?String(applyResult.conferenceId)
+            :operation.conferenceId,
+          operationId:operation.operationId
+        };
         operation.conflict = null;
         operation.nextAttemptAt = null;
         operation.lastError = null;
