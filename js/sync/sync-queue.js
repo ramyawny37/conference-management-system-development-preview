@@ -7,14 +7,18 @@
     'processing',
     'applied',
     'conflict',
-    'failed'
+    'failed',
+    'resolved',
+    'discarded'
   ]);
   var TRANSITIONS = Object.freeze({
     pending: Object.freeze(['processing']),
     processing: Object.freeze(['pending','applied','conflict','failed']),
     applied: Object.freeze([]),
-    conflict: Object.freeze([]),
-    failed: Object.freeze(['pending'])
+    conflict: Object.freeze(['resolved','discarded']),
+    failed: Object.freeze(['pending']),
+    resolved: Object.freeze([]),
+    discarded: Object.freeze([])
   });
   var BACKOFF_DELAYS = Object.freeze([
     5000,
@@ -588,6 +592,64 @@
     );
   }
 
+  function markConflictResolved(operationId,input,options){
+    input=input&&typeof input==='object'?input:{};
+    var target=input.strategy==='keep_server'?'discarded':'resolved';
+    if(!isUuid(String(operationId||''))){
+      return Promise.resolve(result(false,'error',null,safeError(
+        'INVALID_OPERATION_ID','operationId must be a valid UUID.'
+      )));
+    }
+    var repository=getRepository();
+    if(!repository)return Promise.resolve(result(false,'error',null,safeError(
+      'SYNC_QUEUE_UNAVAILABLE','The sync queue is unavailable.'
+    )));
+    var now;
+    try{now=resolveNow(options).toISOString();}
+    catch(error){return Promise.resolve(result(false,'error',null,safeError(
+      'INVALID_DATE','A valid current time is required.'
+    )));}
+    var updated;
+    return repository.runTransaction(STORE_NAME,'readwrite',function(stores){
+      var store=stores[STORE_NAME];
+      return requestToPromise(store.get(String(operationId))).then(function(operation){
+        if(!operation)throw new Error('OPERATION_NOT_FOUND');
+        if(operation.status===target){
+          var previous=operation.conflictResolution||{};
+          if(previous.conflictId!==String(input.conflictId||'')||
+            previous.resolutionOperationId!==
+              String(input.resolutionOperationId||'')||
+            previous.strategy!==String(input.strategy||'')||
+            previous.revision!==
+              (Number.isInteger(input.revision)?input.revision:null)){
+            throw new Error('RESOLUTION_RESULT_MISMATCH');
+          }
+          updated=operation;
+          return null;
+        }
+        if(operation.status!=='conflict')throw new Error('INVALID_STATUS_TRANSITION');
+        operation.status=target;
+        operation.updatedAt=now;
+        operation.conflictResolution={
+          conflictId:String(input.conflictId||''),
+          resolutionOperationId:String(input.resolutionOperationId||''),
+          strategy:String(input.strategy||''),
+          revision:Number.isInteger(input.revision)?input.revision:null,
+          resolvedAt:now
+        };
+        updated=operation;
+        return requestToPromise(store.put(operation));
+      });
+    }).then(function(){
+      return result(true,updated.status,cloneValue(updated),null);
+    }).catch(function(error){
+      return result(false,'error',null,safeError(
+        error&&error.message||'QUEUE_UPDATE_FAILED',
+        'The conflict queue operation could not be finalized.'
+      ));
+    });
+  }
+
   function markApplied(operationId,applyResult,options){
     applyResult = applyResult&&typeof applyResult==='object'?applyResult:{};
     var revision = applyResult.revision;
@@ -830,6 +892,7 @@
     getOperationsByConference:getOperationsByConference,
     getReadyOperations:getReadyOperations,
     countOperationsByStatus:countOperationsByStatus,
+    markConflictResolved:markConflictResolved,
     startProcessing:startProcessing,
     markApplied:markApplied,
     markConflict:markConflict,

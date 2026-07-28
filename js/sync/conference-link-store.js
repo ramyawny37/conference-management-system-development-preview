@@ -1,7 +1,10 @@
 (function(global){
   'use strict';
   var KEY='conference_manager_sync_links';
-  var STATUSES=['linked','upload_pending','needs_resolution','unsynced','disconnected'];
+  var STATUSES=[
+    'linked','upload_pending','needs_resolution','unsynced','disconnected',
+    'server_selected_pending_local_apply'
+  ];
   function copy(value){
     if(typeof global.structuredClone==='function')return global.structuredClone(value);
     return JSON.parse(JSON.stringify(value));
@@ -51,6 +54,20 @@
       initialOperationId:String(
         input.initialOperationId||previous.initialOperationId||''
       )||null,
+      conflictId:String(input.conflictId||previous.conflictId||'')||null,
+      conflictStatus:String(input.conflictStatus||previous.conflictStatus||'')||null,
+      resolutionStrategy:String(
+        input.resolutionStrategy||previous.resolutionStrategy||''
+      )||null,
+      resolutionOperationId:String(
+        input.resolutionOperationId||previous.resolutionOperationId||''
+      )||null,
+      resolvedRevision:Number.isInteger(input.resolvedRevision)
+        ?input.resolvedRevision
+        :previous.resolvedRevision||null,
+      pendingLocalApplication:input.pendingLocalApplication===true,
+      lastConflictAt:input.lastConflictAt||previous.lastConflictAt||null,
+      lastResolvedAt:input.lastResolvedAt||previous.lastResolvedAt||null,
       createdAt:previous.createdAt||now,
       updatedAt:now
     };

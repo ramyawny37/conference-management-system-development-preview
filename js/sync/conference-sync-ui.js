@@ -289,6 +289,13 @@
       .then(function(result){
         var current=d.integration.getConferenceSyncState(input.localConferenceId);
         var revision=current.context&&current.context.baseRevision;
+        var batch=result&&result.data&&result.data.syncResult&&
+          result.data.syncResult.data;
+        var conflictResult=batch&&Array.isArray(batch.results)
+          ?batch.results.find(function(item){return item&&item.status==='conflict';})
+          :null;
+        var conflictId=conflictResult&&conflictResult.data&&
+          conflictResult.data.conflictId||null;
         if(Number.isInteger(revision))saveLink(d,{
           localConferenceId:link.localConferenceId,
           remoteConferenceId:link.remoteConferenceId,
@@ -296,7 +303,10 @@
           knownRevision:revision,
           actualRevision:current.conflictActualRevision,
           linkStatus:current.conflictActualRevision===null?'linked':'needs_resolution',
-          initialOperationId:link.initialOperationId
+          initialOperationId:link.initialOperationId,
+          conflictId:conflictId,
+          conflictStatus:conflictId?'pending':null,
+          lastConflictAt:conflictId?new Date().toISOString():null
         });
         return result&&result.ok?outcome(true,'completed',result.data):
           outcome(false,'sync_failed');

@@ -2,7 +2,7 @@
   'use strict';
 
   var DATABASE_NAME = 'conference_manager_v3';
-  var DATABASE_VERSION = 2;
+  var DATABASE_VERSION = 3;
   var STORE_NAMES = Object.freeze({
     conferences: 'conferences',
     rooms: 'rooms',
@@ -11,7 +11,10 @@
     conflicts: 'conflicts',
     deviceSettings: 'device_settings',
     localBackups: 'local_backups',
-    syncOperationsQueue: 'sync_operations_queue'
+    syncOperationsQueue: 'sync_operations_queue',
+    pendingRemoteApplications: 'pending_remote_applications',
+    conflictResolutionDrafts: 'conflict_resolution_drafts',
+    conflictResolutionBackups: 'conflict_resolution_backups'
   });
   var database = null;
   var openingPromise = null;
@@ -75,6 +78,21 @@
         {name:'nextAttemptAt',keyPath:'nextAttemptAt'}
       ]
     );
+    ensureStore(db,upgradeTransaction,STORE_NAMES.pendingRemoteApplications,
+      {keyPath:'localConferenceId'},[
+        {name:'status',keyPath:'status'},
+        {name:'remoteConferenceId',keyPath:'remoteConferenceId'}
+      ]);
+    ensureStore(db,upgradeTransaction,STORE_NAMES.conflictResolutionDrafts,
+      {keyPath:'localConferenceId'},[
+        {name:'status',keyPath:'status'},
+        {name:'conflictId',keyPath:'conflictId'}
+      ]);
+    ensureStore(db,upgradeTransaction,STORE_NAMES.conflictResolutionBackups,
+      {keyPath:'backupId'},[
+        {name:'localConferenceId',keyPath:'localConferenceId'},
+        {name:'conferenceCreatedAt',keyPath:['localConferenceId','createdAt']}
+      ]);
   }
 
   function openDatabase(){

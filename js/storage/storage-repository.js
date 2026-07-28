@@ -1,10 +1,13 @@
 (function(global){
   'use strict';
 
-  function saveAppSnapshot(appData){
+  function saveAppSnapshot(appData,options){
+    options=options&&typeof options==='object'?options:{};
     return global.AppIndexedDB.saveAppSnapshot(appData)
       .then(function(saveResult){
-        var integration=global.OfflineFirstIntegration;
+        var integration=options.skipSyncQueue
+          ?null
+          :global.OfflineFirstIntegration;
         if(!integration||
           typeof integration.handleLocalSave!=='function'){
           return saveResult;
