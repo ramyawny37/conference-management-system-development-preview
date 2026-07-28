@@ -18,6 +18,13 @@
           })
           .catch(function(){ return null; })
           .then(function(){ return saveResult; });
+      })
+      .then(function(saveResult){
+        if(!options.skipSyncQueue&&global.AutomaticSyncOrchestrator&&
+          typeof global.AutomaticSyncOrchestrator.schedule==='function'){
+          global.AutomaticSyncOrchestrator.schedule('local_save');
+        }
+        return saveResult;
       });
   }
 

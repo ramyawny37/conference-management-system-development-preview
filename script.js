@@ -215,6 +215,10 @@ function setCurrentConferenceById(id, options){
   if(!next) return;
 
   appData.currentConferenceId = next.id;
+  if(window.AutomaticSyncOrchestrator&&
+    typeof window.AutomaticSyncOrchestrator.schedule==='function'){
+    window.AutomaticSyncOrchestrator.schedule('conference_changed');
+  }
   setCurrentConference(next);
   if(!save())return false;
   syncCurrentConferenceRefs();
@@ -7987,3 +7991,9 @@ try{
     restoreLastApplicationTab();
   }
 }catch(e){alert('خطأ: '+e.message)}
+Promise.resolve(window.applicationStorageReadyPromise).then(function(){
+  if(window.AutomaticSyncOrchestrator&&
+    typeof window.AutomaticSyncOrchestrator.start==='function'){
+    window.AutomaticSyncOrchestrator.start();
+  }
+});

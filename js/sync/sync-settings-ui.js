@@ -122,6 +122,12 @@
   function rerender(){
     if(typeof global.renderSettings==='function')global.renderSettings();
   }
+  function scheduleAuthChanged(){
+    if(global.AutomaticSyncOrchestrator&&
+      typeof global.AutomaticSyncOrchestrator.schedule==='function'){
+      global.AutomaticSyncOrchestrator.schedule('auth_changed');
+    }
+  }
 
   function setBusy(value){
     busy=!!value;
@@ -200,6 +206,7 @@
     }).then(function(result){
       if(passwordElement)passwordElement.value='';
       if(result&&result.success){
+        scheduleAuthChanged();
         rerender();
       }else{
         message('sync_auth_message',safeAuthMessage(result,successText),true);
@@ -231,6 +238,7 @@
       }
       var session=result.data&&result.data.session;
       if(session){
+        scheduleAuthChanged();
         rerender();
         return;
       }
@@ -254,7 +262,10 @@
       ))return;
     setBusy(true);
     global.SupabaseAuth.signOut().then(function(result){
-      if(result&&result.success)rerender();
+      if(result&&result.success){
+        scheduleAuthChanged();
+        rerender();
+      }
       else message('sync_auth_message','تعذر تسجيل الخروج.',true);
     }).catch(function(){
       message('sync_auth_message','تعذر تسجيل الخروج بأمان.',true);
