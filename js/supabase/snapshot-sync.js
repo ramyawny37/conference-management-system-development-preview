@@ -191,6 +191,138 @@
       });
   }
 
+  function normalizeConferenceCreationResult(rpcData,input){
+    var row=Array.isArray(rpcData)?rpcData[0]:rpcData;
+    if(!row||typeof row!=='object'){
+      return result(false,'error',null,safeError(
+        'INVALID_CREATION_RESPONSE',
+        'The conference creation response was incomplete.'
+      ));
+    }
+    var status=String(row.status||'');
+    var operationId=String(row.operationId||row.operation_id||'');
+    var conferenceId=String(row.conferenceId||row.conference_id||'');
+    if(status==='invalid_request'){
+      if(operationId&&operationId!==input.operationId){
+        return result(false,'error',null,safeError(
+          'OPERATION_RESULT_MISMATCH',
+          'The conference creation operation did not match the request.'
+        ));
+      }
+      var errorCode=String(row.errorCode||row.error_code||'CREATION_FAILED');
+      return result(false,'error',{
+        operationId:operationId||input.operationId
+      },safeError(errorCode,'The conference could not be created.'));
+    }
+    if(!operationId){
+      return result(false,'error',null,safeError(
+        'INVALID_CREATION_RESPONSE',
+        'The conference creation response was incomplete.'
+      ));
+    }
+    if(operationId!==input.operationId){
+      return result(false,'error',null,safeError(
+        'OPERATION_RESULT_MISMATCH',
+        'The conference creation operation did not match the request.'
+      ));
+    }
+    if(status==='operation_mismatch'){
+      return result(false,'operation_mismatch',{
+        operationId:operationId,
+        conferenceId:isUuid(conferenceId)?conferenceId:null
+      },safeError(
+        'OPERATION_RESULT_MISMATCH',
+        'The conference creation operation is already bound.'
+      ));
+    }
+    if(status!=='created'&&status!=='duplicate'){
+      return result(false,'error',null,safeError(
+        'INVALID_CREATION_RESPONSE',
+        'The conference creation response was not recognized.'
+      ));
+    }
+    if(!isUuid(conferenceId)||conferenceId!==input.requestedConferenceId){
+      return result(false,'error',null,safeError(
+        'CONFERENCE_RESULT_MISMATCH',
+        'The created conference did not match the request.'
+      ));
+    }
+    return result(true,status,{
+      operationId:operationId,
+      conferenceId:conferenceId,
+      created:status==='created'&&row.created!==false
+    },null);
+  }
+
+  function createConferenceIdempotent(input){
+    input=input&&typeof input==='object'?input:{};
+    var operationId=String(input.operationId||'');
+    var requestedConferenceId=String(input.requestedConferenceId||'');
+    var name=String(input.name||'').trim();
+    if(!isUuid(operationId)){
+      return Promise.resolve(validationError(
+        'INVALID_OPERATION_ID',
+        'operationId must be a valid UUID.'
+      ));
+    }
+    if(!isUuid(requestedConferenceId)){
+      return Promise.resolve(validationError(
+        'INVALID_CONFERENCE_ID',
+        'requestedConferenceId must be a valid UUID.'
+      ));
+    }
+    if(!name){
+      return Promise.resolve(validationError(
+        'CONFERENCE_NAME_REQUIRED',
+        'Conference name is required.'
+      ));
+    }
+    var metadata=input.metadata===undefined?{}:input.metadata;
+    if(!metadata||typeof metadata!=='object'||Array.isArray(metadata)){
+      return Promise.resolve(validationError(
+        'INVALID_METADATA',
+        'metadata must be an object.'
+      ));
+    }
+    var metadataCopy;
+    try{
+      metadataCopy=cloneSnapshot(metadata);
+    }catch(error){
+      return Promise.resolve(validationError(
+        'METADATA_CLONE_FAILED',
+        'metadata could not be cloned safely.'
+      ));
+    }
+    var context=getOnlineContext();
+    if(context.error){
+      return Promise.resolve(result(false,'error',{
+        operationId:operationId
+      },context.error));
+    }
+    return Promise.resolve().then(function(){
+      return context.client.rpc('create_conference_idempotent',{
+        p_operation_id:operationId,
+        p_requested_conference_id:requestedConferenceId,
+        p_name:name,
+        p_initial_metadata:metadataCopy
+      });
+    }).then(function(response){
+      if(response.error){
+        return result(false,'error',{
+          operationId:operationId
+        },normalizeRequestError(response.error));
+      }
+      return normalizeConferenceCreationResult(response.data,{
+        operationId:operationId,
+        requestedConferenceId:requestedConferenceId
+      });
+    }).catch(function(error){
+      return result(false,'error',{
+        operationId:operationId
+      },normalizeThrownError(error));
+    });
+  }
+
   function normalizeSnapshotRpcResult(rpcData,input,operationId){
     var status=rpcData&&typeof rpcData.status==='string'
       ?rpcData.status
@@ -428,6 +560,7 @@
 
   global.SupabaseSnapshotSync=Object.freeze({
     createConference:createConference,
+    createConferenceIdempotent:createConferenceIdempotent,
     uploadInitialSnapshot:uploadInitialSnapshot,
     uploadSnapshot:uploadSnapshot,
     downloadSnapshot:downloadSnapshot,
