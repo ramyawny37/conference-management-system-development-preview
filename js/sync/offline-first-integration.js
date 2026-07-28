@@ -377,7 +377,12 @@
         'Realtime notifications are unavailable.'
       )));
     }
-    var handlerResult=realtime.setEventHandler(handleRealtimeEvent);
+    var handlerResult=realtime.setEventHandler(function(event){
+      handleRealtimeEvent(event);
+      if(typeof options.eventHandler==='function'){
+        try{options.eventHandler(cloneValue(event));}catch(error){}
+      }
+    });
     if(handlerResult&&handlerResult.ok===false){
       return Promise.resolve(result(false,'error',null,safeError(
         'REALTIME_HANDLER_FAILED',
@@ -456,6 +461,26 @@
     });
   }
 
+  function applyLockResult(conferenceId,lockResult){
+    conferenceId=String(conferenceId||'');
+    if(!lockResult||!lockResult.ok){
+      return result(false,'error',null,safeError(
+        'INVALID_LOCK_RESULT','A valid lock result is required.'
+      ));
+    }
+    var data=lockResult.data||{};
+    if(data.locked&&data.owned===false){
+      lockedConferences[conferenceId]={
+        conferenceId:conferenceId,
+        deviceId:data.deviceId||null,
+        expiresAt:data.expiresAt||null
+      };
+    }else{
+      delete lockedConferences[conferenceId];
+    }
+    return result(true,'lock_state_updated',{state:publicState()},null);
+  }
+
   function setConnectivity(connectivity){
     if(connectivity!=='online'&&connectivity!=='offline'&&
       connectivity!=='unknown'){
@@ -523,6 +548,7 @@
     getRemoteUpdate:getRemoteUpdate,
     clearRemoteUpdate:clearRemoteUpdate,
     refreshLockState:refreshLockState,
+    applyLockResult:applyLockResult,
     setConnectivity:setConnectivity,
     clearConflictState:clearConflictState,
     getConferenceSyncState:getConferenceSyncState,

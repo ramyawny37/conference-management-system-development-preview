@@ -246,6 +246,12 @@
 
   function signOut(){
     if(busy||!global.SupabaseAuth)return;
+    if(global.RealtimeLocksUI&&
+      typeof global.RealtimeLocksUI.hasOwnedLock==='function'&&
+      global.RealtimeLocksUI.hasOwnedLock()&&global.confirm&&
+      !global.confirm(
+        'هذا الجهاز يملك قفلًا ساريًا. تسجيل الخروج لن يحرره تلقائيًا. هل تريد المتابعة؟'
+      ))return;
     setBusy(true);
     global.SupabaseAuth.signOut().then(function(result){
       if(result&&result.success)rerender();
