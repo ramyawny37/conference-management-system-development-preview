@@ -34,6 +34,28 @@
         .test(value);
   }
 
+  function createSecureUuid(options){
+    if(options&&typeof options.uuidFactory==='function'){
+      return String(options.uuidFactory());
+    }
+    if(global.crypto&&typeof global.crypto.randomUUID==='function'){
+      return global.crypto.randomUUID();
+    }
+    if(global.crypto&&typeof global.crypto.getRandomValues==='function'){
+      var bytes=new Uint8Array(16);
+      global.crypto.getRandomValues(bytes);
+      bytes[6]=(bytes[6]&15)|64;
+      bytes[8]=(bytes[8]&63)|128;
+      return Array.prototype.map.call(bytes,function(byte,index){
+        var text=byte.toString(16).padStart(2,'0');
+        return index===4||index===6||index===8||index===10
+          ?'-'+text
+          :text;
+      }).join('');
+    }
+    throw new Error('SECURE_UUID_UNAVAILABLE');
+  }
+
   function cloneValue(value){
     if(typeof global.structuredClone==='function'){
       return global.structuredClone(value);
@@ -612,6 +634,32 @@
         'Valid baseRevision and actualRevision values are required.'
       ));
     }
+    var sourceOperationId=isUuid(String(input.operationId||''))
+      ?String(input.operationId)
+      :null;
+    var resolutionOperationId;
+    try{
+      resolutionOperationId=input.resolutionOperationId
+        ?String(input.resolutionOperationId)
+        :createSecureUuid(options);
+    }catch(error){
+      return result(false,'error',null,safeError(
+        'SECURE_UUID_UNAVAILABLE',
+        'A secure resolution operationId could not be created.'
+      ));
+    }
+    if(!isUuid(resolutionOperationId)){
+      return result(false,'error',null,safeError(
+        'INVALID_RESOLUTION_OPERATION_ID',
+        'resolutionOperationId must be a valid UUID.'
+      ));
+    }
+    if(sourceOperationId&&resolutionOperationId===sourceOperationId){
+      return result(false,'error',null,safeError(
+        'SOURCE_OPERATION_ID_REUSED',
+        'The resolution operationId must differ from the source operation.'
+      ));
+    }
     var comparison=compareSnapshots(
       input.localSnapshot,
       input.serverSnapshot,
@@ -693,11 +741,19 @@
     }
     return result(true,'planned',{
       conflictId:conflictId,
+      conferenceId:isUuid(String(input.conferenceId||''))
+        ?String(input.conferenceId)
+        :null,
       strategy:strategy,
       baseRevision:input.actualRevision,
+      actualRevision:input.actualRevision,
       sourceRevision:strategy==='keep_local'
         ?input.baseRevision
         :input.actualRevision,
+      sourceOperationId:sourceOperationId,
+      resolutionOperationId:resolutionOperationId,
+      schemaVersion:String(input.schemaVersion||'').trim(),
+      appVersion:String(input.appVersion||'').trim(),
       resolvedSnapshot:resolvedSnapshot,
       selectedPaths:selectedPaths,
       createdAt:createdAt
@@ -738,10 +794,19 @@
       ));
     }
     var valid= isUuid(String(plan.conflictId||''))&&
+      isUuid(String(plan.resolutionOperationId||''))&&
       STRATEGIES.indexOf(plan.strategy)!==-1&&
       Object.prototype.hasOwnProperty.call(plan,'resolvedSnapshot')&&
       Number.isInteger(plan.baseRevision)&&plan.baseRevision>=0&&
       Number.isInteger(plan.sourceRevision)&&plan.sourceRevision>=0;
+    if(valid&&plan.sourceOperationId&&
+      String(plan.sourceOperationId)===String(plan.resolutionOperationId)){
+      valid=false;
+    }
+    if(valid&&plan.operationId&&
+      String(plan.operationId)===String(plan.resolutionOperationId)){
+      valid=false;
+    }
     if(!valid){
       return result(false,'error',null,safeError(
         'INVALID_RESOLUTION_PLAN',
