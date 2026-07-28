@@ -6541,6 +6541,10 @@ function renderSettings(){
     typeof window.SyncSettingsUI.renderSection==='function'){
     h+=window.SyncSettingsUI.renderSection();
   }
+  if(window.ConferenceSyncUI&&
+    typeof window.ConferenceSyncUI.renderSection==='function'){
+    h+=window.ConferenceSyncUI.renderSection({localConference:current});
+  }
   h += renderMigrationAuditSection();
   if (!current) {
     h += '<div class="settings-empty-state">يرجى اختيار مؤتمر أو إنشاء مؤتمر جديد أولًا لعرض هذا القسم.</div></div>';
