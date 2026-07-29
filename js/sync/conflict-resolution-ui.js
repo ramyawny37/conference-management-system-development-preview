@@ -11,6 +11,7 @@
   var persistentLoadedFor=null;
   var finalizationPending=false;
   var remoteApplicationEnabled=true;
+  var persistentStateError=false;
 
   function copy(value){
     if(typeof global.structuredClone==='function')return global.structuredClone(value);
@@ -222,11 +223,22 @@
   }
   function restorePersistentState(localConferenceId,options){
     var d=deps(options), link=d.links.get(localConferenceId);
+    review=null;
+    plan=null;
+    execution=null;
+    pendingRecord=null;
     pendingTrusted=false;
+    finalizationPending=false;
+    persistentStateError=false;
     return Promise.all([
       d.pending.get(localConferenceId),
       d.drafts.get(localConferenceId)
     ]).then(function(results){
+      if(!results[0]||!results[1]||
+        !results[0].ok&&results[0].status!=='not_found'||
+        !results[1].ok&&results[1].status!=='not_found'){
+        throw new Error('PERSISTENT_STATE_READ_FAILED');
+      }
       pendingRecord=results[0].ok&&results[0].data.status==='pending'
         ?results[0].data:null;
       var draft=results[1].ok?results[1].data:null;
@@ -278,7 +290,16 @@
           pendingTrusted:pendingTrusted
         });
       });
-    }).catch(function(){return safe(false,'persistent_state_load_failed');});
+    }).catch(function(){
+      review=null;
+      plan=null;
+      execution=null;
+      pendingRecord=null;
+      pendingTrusted=false;
+      finalizationPending=false;
+      persistentStateError=true;
+      return safe(false,'persistent_state_load_failed');
+    });
   }
   function esc(value){
     return String(value==null?'':value).replace(/&/g,'&amp;')
@@ -306,7 +327,8 @@
       input.localConference.id
     );
     var hasConflict=link&&(link.linkStatus==='needs_resolution'||
-      link.conflictStatus==='pending'||link.conflictStatus==='reviewed'||
+      link.conflictStatus==='active'||link.conflictStatus==='pending'||
+      link.conflictStatus==='reviewed'||link.conflictStatus==='changed'||
       link.pendingLocalApplication);
     if(!hasConflict)return '';
     if(persistentLoadedFor!==input.localConference.id){
@@ -319,7 +341,7 @@
       '<div class="settings-section-title">مراجعة تعارض المزامنة</div>'+
       '<div class="sync-settings-message sync-settings-error">'+
       'توقفت المزامنة بسبب تعارض ولم تُعدّل البيانات المحلية.</div>'+
-      '<button class="btn btn-orange btn-sm" onclick="ConflictResolutionUI.reviewCurrent()">مراجعة التعارض</button>';
+      (persistentStateError?'':'<button class="btn btn-orange btn-sm" onclick="ConflictResolutionUI.reviewCurrent()">مراجعة التعارض</button>');
     if(review&&review.localConferenceId===input.localConference.id){
       var summary=review.comparison.summary;
       html+='<div class="sync-link-summary"><span>المحلي: '+

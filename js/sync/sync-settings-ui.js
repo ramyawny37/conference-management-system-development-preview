@@ -4,7 +4,14 @@
   var busy=false;
   var explicitConnectivity='unknown';
   var orchestratorSubscribed=false;
-  var lastRenderedLinkFingerprint=null;
+  var lastRenderedSyncFingerprint=null;
+  var RENDERED_CONFERENCE_STATES=Object.freeze([
+    'needs_resolution',
+    'finalizing_conflict',
+    'pending_local_application',
+    'linked',
+    'error'
+  ]);
 
   function currentConference(){
     return typeof global.getCurrentConference==='function'
@@ -12,28 +19,66 @@
       :null;
   }
 
-  function linkFingerprint(localConferenceId){
+  function storedConferenceState(link){
+    if(!link)return 'local_only';
+    if(link.linkStatus==='needs_resolution'||
+      ['active','pending','reviewed','changed'].indexOf(
+        link.conflictStatus
+      )>=0){
+      return 'needs_resolution';
+    }
+    if(link.pendingLocalApplication===true||
+      link.linkStatus==='server_selected_pending_local_apply'){
+      return 'pending_local_application';
+    }
+    return link.linkStatus==='linked'?'linked':'local_only';
+  }
+
+  function syncStateFingerprint(state,localConferenceId){
     var store=global.ConferenceLinkStore;
     var link=store&&typeof store.get==='function'
       ?store.get(localConferenceId)
       :null;
-    if(!link||link.linkStatus!=='linked')return null;
+    link=link||{};
     return [
       String(localConferenceId),
+      String(state&&state.conferenceState||''),
       String(link.remoteConferenceId||''),
+      String(link.linkStatus||''),
+      String(link.conflictStatus||''),
+      String(link.pendingLocalApplication===true),
       String(link.knownRevision==null?'':link.knownRevision),
-      String(link.linkStatus)
+      String(link.actualRevision==null?'':link.actualRevision)
     ].join('|');
   }
 
   function handleOrchestratorState(state){
-    if(!state||state.conferenceState!=='linked')return;
+    if(!state||RENDERED_CONFERENCE_STATES.indexOf(
+      state.conferenceState
+    )<0)return;
     var conference=currentConference();
-    if(!conference||String(conference.id)!==
-      String(state.linkedConferenceId||''))return;
-    var fingerprint=linkFingerprint(conference.id);
-    if(!fingerprint||fingerprint===lastRenderedLinkFingerprint)return;
-    lastRenderedLinkFingerprint=fingerprint;
+    if(!conference)return;
+    var localConferenceId=String(conference.id||'');
+    if(!localConferenceId)return;
+    var scopedConferenceId=state.linkedConferenceId||
+      state.activeConferenceId||null;
+    if(scopedConferenceId&&String(scopedConferenceId)!==
+      localConferenceId)return;
+    var store=global.ConferenceLinkStore;
+    var link=store&&typeof store.get==='function'
+      ?store.get(localConferenceId)
+      :null;
+    var storedState=storedConferenceState(link);
+    if(!scopedConferenceId&&state.conferenceState!=='error'&&
+      state.conferenceState!=='finalizing_conflict'&&
+      state.conferenceState!==storedState){
+      return;
+    }
+    var fingerprint=syncStateFingerprint(
+      state,localConferenceId
+    );
+    if(fingerprint===lastRenderedSyncFingerprint)return;
+    lastRenderedSyncFingerprint=fingerprint;
     rerender();
   }
 
