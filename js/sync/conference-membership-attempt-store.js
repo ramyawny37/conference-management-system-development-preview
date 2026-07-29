@@ -39,6 +39,35 @@
       ['add_manager','remove_manager'].indexOf(input.action)>=0);
   }
 
+  function validScope(input){
+    return !!(input&&
+      isUuid(String(input.actorUserId||''))&&
+      isUuid(String(input.remoteConferenceId||''))&&
+      isUuid(String(input.targetUserId||''))&&
+      ['add_manager','remove_manager'].indexOf(input.action)>=0);
+  }
+
+  function validTimestamp(value){
+    return typeof value==='string'&&value.length>0&&
+      !Number.isNaN(Date.parse(value));
+  }
+
+  function validStoredRecord(record,key,input){
+    if(!valid(record)||
+      record.attemptKey!==key||
+      buildAttemptKey(record)!==key||
+      !validTimestamp(record.createdAt)||
+      !validTimestamp(record.updatedAt)){
+      return false;
+    }
+    if(typeof input==='string')return true;
+    return record.actorUserId===String(input.actorUserId||'')&&
+      record.remoteConferenceId===
+        String(input.remoteConferenceId||'')&&
+      record.targetUserId===String(input.targetUserId||'')&&
+      record.action===String(input.action||'');
+  }
+
   function requestPromise(request){
     return new Promise(function(resolve,reject){
       request.onsuccess=function(){resolve(request.result);};
@@ -102,13 +131,16 @@
 
   function get(input,options){
     var key=typeof input==='string'?input:buildAttemptKey(input);
-    if(!key||key.split('|').some(function(part){return !part;})){
+    if((typeof input!=='string'&&!validScope(input))||
+      !key||key.split('|').some(function(part){return !part;})){
       return Promise.resolve({ok:false,status:'invalid',data:null});
     }
     return repositoryCall('get',key,null,options).then(function(record){
-      return record
-        ?{ok:true,status:'found',data:copy(record)}
-        :{ok:false,status:'not_found',data:null};
+      if(!record)return {ok:false,status:'not_found',data:null};
+      if(!validStoredRecord(record,key,input)){
+        return {ok:false,status:'corrupt_record',data:null};
+      }
+      return {ok:true,status:'found',data:copy(record)};
     }).catch(function(){
       return {ok:false,status:'read_failed',data:null};
     });
@@ -135,6 +167,7 @@
         }
         return {ok:true,status:'preserved',data:existing.data};
       }
+      if(existing.status==='corrupt_record')return existing;
       if(existing.status!=='not_found'){
         return {ok:false,status:'storage_error',data:null};
       }

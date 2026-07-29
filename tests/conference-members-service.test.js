@@ -132,6 +132,38 @@ async function run(){
     remoteConferenceId:ids.conference
   },access.options)).status,'available');
 
+  var accessUserMismatch=load({rpc:function(){
+    return Promise.resolve({data:{
+      success:true,status:'available',
+      conferenceId:ids.conference,
+      userId:ids.target,
+      role:'owner',
+      canManageMembers:true,
+      canSync:true,
+      canResolveConflicts:true,
+      canAcquireLock:true
+    },error:null});
+  }});
+  assert.strictEqual((await accessUserMismatch.service.getCurrentAccess({
+    remoteConferenceId:ids.conference
+  },accessUserMismatch.options)).status,'malformed_response');
+
+  var malformedAccess=load({rpc:function(){
+    return Promise.resolve({data:{
+      success:true,status:'available',
+      conferenceId:ids.conference,
+      userId:ids.actor,
+      role:'owner',
+      canManageMembers:'yes',
+      canSync:true,
+      canResolveConflicts:true,
+      canAcquireLock:true
+    },error:null});
+  }});
+  assert.strictEqual((await malformedAccess.service.getCurrentAccess({
+    remoteConferenceId:ids.conference
+  },malformedAccess.options)).status,'malformed_response');
+
   var listed=load({rpc:function(name){
     assert.strictEqual(name,'list_conference_members');
     return Promise.resolve({data:[{
@@ -380,6 +412,47 @@ async function run(){
     mutationInput(),storageFailure.options
   )).status,'attempt_storage_failed');
   assert.strictEqual(storageFailure.rpcCalls.length,0);
+
+  var corruptAttempts=load();
+  corruptAttempts.attempts.get=function(){
+    return Promise.resolve({
+      ok:false,status:'corrupt_record',data:null
+    });
+  };
+  assert.strictEqual((await corruptAttempts.service.addManager(
+    mutationInput(),corruptAttempts.options
+  )).status,'attempt_corrupt');
+  assert.strictEqual(corruptAttempts.rpcCalls.length,0);
+
+  var sessionReads=0;
+  var sessionChange=load({cleanupFails:true,rpc:function(name,args){
+    assert.strictEqual(name,'add_conference_manager');
+    return Promise.resolve({data:{
+      success:true,status:'added',
+      conferenceId:ids.conference,
+      targetUserId:ids.target,
+      operationId:args.p_operation_id,
+      role:'manager'
+    },error:null});
+  }});
+  sessionChange.options.auth={
+    getSession:function(){
+      sessionReads++;
+      return {
+        user:{
+          id:sessionReads===1?ids.actor:ids.secondTarget
+        }
+      };
+    }
+  };
+  assert.strictEqual((await sessionChange.service.addManager(
+    mutationInput(),sessionChange.options
+  )).status,'added');
+  assert.strictEqual(sessionReads,1);
+  assert.strictEqual(
+    Object.keys(sessionChange.records)[0].split('|')[0],
+    ids.actor
+  );
 
   var sourceText=source;
   [

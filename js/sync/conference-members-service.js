@@ -230,6 +230,7 @@
             'Conference access is not available.'));
         }
         if(!isUuid(String(access.userId||''))||
+          String(access.userId)!==ctx.userId||
           ['owner','manager','accommodation_viewer',
             'transport_viewer','viewer'].indexOf(access.role)<0||
           ['canManageMembers','canSync','canResolveConflicts',
@@ -270,6 +271,9 @@
     return ctx.attempts.get(scope,options&&options.attemptOptions)
       .then(function(existing){
         if(existing.ok)return existing;
+        if(existing.status==='corrupt_record'){
+          return {ok:false,status:'attempt_corrupt'};
+        }
         if(existing.status!=='not_found'){
           return {ok:false,status:'attempt_storage_failed'};
         }
@@ -291,7 +295,7 @@
       });
   }
 
-  function runMutation(action,input,options){
+  function runMutation(action,input,options,ctx){
     var remoteConferenceId=String(input.remoteConferenceId||'');
     var targetUserId=String(input.targetUserId||'');
     if(!isUuid(remoteConferenceId)||!isUuid(targetUserId)){
@@ -299,7 +303,7 @@
         safeError('INVALID_MEMBERSHIP_INPUT',
           'Membership input is invalid.')));
     }
-    var ctx=context(options);
+    ctx=ctx||context(options);
     if(ctx.error){
       return Promise.resolve(outcome(false,
         ctx.error.code==='AUTH_REQUIRED'?'auth_required':'unavailable',{
@@ -316,7 +320,9 @@
     return resolveAttempt(ctx,scope,options).then(function(attempt){
       if(!attempt.ok){
         var code=attempt.status==='operation_id_unavailable'
-          ?'SECURE_UUID_UNAVAILABLE':'ATTEMPT_STORAGE_FAILED';
+          ?'SECURE_UUID_UNAVAILABLE':
+          attempt.status==='attempt_corrupt'
+            ?'ATTEMPT_CORRUPT':'ATTEMPT_STORAGE_FAILED';
         return outcome(false,attempt.status,scope,safeError(code,
           'The membership attempt could not be prepared.'));
       }
@@ -392,7 +398,7 @@
     if(intentFlights[intentKey])return intentFlights[intentKey];
     var previous=targetFlights[targetKey]||Promise.resolve();
     var flight=previous.catch(function(){return null;}).then(function(){
-      return runMutation(action,input,options);
+      return runMutation(action,input,options,ctx);
     });
     intentFlights[intentKey]=flight;
     targetFlights[targetKey]=flight;

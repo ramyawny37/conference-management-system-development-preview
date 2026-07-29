@@ -150,6 +150,19 @@ async function run(){
   assert.strictEqual(read.ok,true);
   assert.strictEqual(read.data.createdAt,createdAt);
 
+  var corruptKey=env.store.buildAttemptKey(input());
+  env.records[corruptKey]=Object.assign({},read.data,{
+    attemptKey:'different|attempt|scope|key'
+  });
+  var corrupt=await env.store.get(input(),env.options);
+  assert.strictEqual(corrupt.ok,false);
+  assert.strictEqual(corrupt.status,'corrupt_record');
+  assert.strictEqual(
+    Object.prototype.hasOwnProperty.call(env.records,corruptKey),
+    true
+  );
+  env.records[corruptKey]=read.data;
+
   var preserved=await env.store.save(input(),env.options);
   assert.strictEqual(preserved.status,'preserved');
   assert.strictEqual(preserved.data.operationId,ids.operation);
