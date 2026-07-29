@@ -153,6 +153,34 @@ async function run(){
   assert.strictEqual(Object.keys(disabled.handlers).length,0);
   assert.strictEqual(disabled.networkCalls(),0);
 
+  var cloudEnabled=false;
+  var restarted=load({
+    authenticated:true,
+    configured:true,
+    available:true
+  });
+  var restartOptions={
+    debounceMs:100,
+    preferences:{get:function(){
+      return {cloudSyncEnabled:cloudEnabled};
+    }}
+  };
+  assert.strictEqual(
+    restarted.window.AutomaticSyncOrchestrator.start(restartOptions).status,
+    'cloud_disabled'
+  );
+  cloudEnabled=true;
+  assert.strictEqual(
+    restarted.window.AutomaticSyncOrchestrator.start(restartOptions).status,
+    'started'
+  );
+  assert.strictEqual(
+    restarted.window.AutomaticSyncOrchestrator
+      .getState().conferenceState,
+    'local_only'
+  );
+  restarted.window.AutomaticSyncOrchestrator.stop();
+
   var offline=load({online:false,authenticated:true,configured:true,available:true});
   assert.strictEqual((await evaluate(offline)).connectivity,'browser_offline');
   assert.strictEqual(offline.networkCalls(),0);
@@ -172,6 +200,80 @@ async function run(){
   var online=load({authenticated:true,configured:true,available:true});
   assert.strictEqual((await evaluate(online)).connectivity,'online');
   assert.strictEqual(online.networkCalls(),1);
+
+  var blockedRuns=0;
+  var unlinked=load({authenticated:true,configured:true,available:true});
+  await evaluate(unlinked,{
+    automaticLinking:{evaluate:function(){
+      return Promise.resolve({
+        ok:false,status:'create_failed',data:{linked:false}
+      });
+    }},
+    queueRunner:{run:function(){
+      blockedRuns++;
+      return Promise.resolve({ok:true});
+    }}
+  });
+  assert.strictEqual(blockedRuns,0);
+
+  var linkedRuns=0;
+  var newlyLinked=load({authenticated:true,configured:true,available:true});
+  await evaluate(newlyLinked,{
+    automaticLinking:{evaluate:function(){
+      return Promise.resolve({
+        ok:true,status:'linked',data:{linked:true}
+      });
+    }},
+    queueRunner:{run:function(){
+      linkedRuns++;
+      return Promise.resolve({ok:true});
+    }}
+  });
+  assert.strictEqual(linkedRuns,1);
+  assert.strictEqual(
+    newlyLinked.window.AutomaticSyncOrchestrator
+      .getState().conferenceState,
+    'linked'
+  );
+
+  var currentConference={id:'conference-a'};
+  var linkingCalls=[];
+  var queueConferences=[];
+  var resolveConferenceA;
+  var switched=load({authenticated:true,configured:true,available:true});
+  switched.window.AutomaticSyncOrchestrator.start({
+    debounceMs:0,
+    preferences:{get:function(){return {cloudSyncEnabled:true};}},
+    getCurrentConference:function(){return currentConference;},
+    automaticLinking:{evaluate:function(){
+      linkingCalls.push(currentConference.id);
+      if(currentConference.id==='conference-a'){
+        return new Promise(function(resolve){
+          resolveConferenceA=resolve;
+        });
+      }
+      return Promise.resolve({
+        ok:true,status:'linked',
+        data:{linked:true,localConferenceId:'conference-b'}
+      });
+    }},
+    queueRunner:{run:function(){
+      queueConferences.push(currentConference.id);
+      return Promise.resolve({ok:true});
+    }}
+  });
+  await delay(5);
+  currentConference={id:'conference-b'};
+  switched.window.AutomaticSyncOrchestrator.schedule(
+    'conference_changed',{debounceMs:0}
+  );
+  resolveConferenceA({
+    ok:true,status:'linked',
+    data:{linked:true,localConferenceId:'conference-a'}
+  });
+  await delay(20);
+  assert.deepStrictEqual(linkingCalls,['conference-a','conference-b']);
+  assert.deepStrictEqual(queueConferences,['conference-b']);
 
   var flapping=load({authenticated:true,configured:true,available:true});
   flapping.window.AutomaticSyncOrchestrator.start({

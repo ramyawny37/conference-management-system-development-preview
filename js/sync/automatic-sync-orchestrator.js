@@ -73,6 +73,20 @@
     };
   }
 
+  function currentLocalConferenceId(options){
+    var getter=options&&options.getCurrentConference||
+      global.getCurrentConference;
+    if(typeof getter!=='function')return null;
+    try{
+      var conference=getter();
+      return conference&&conference.id
+        ?String(conference.id)
+        :null;
+    }catch(error){
+      return null;
+    }
+  }
+
   function defaultServiceCheck(client){
     return Promise.resolve().then(function(){
       return client.from('conference_members')
@@ -178,13 +192,41 @@
           reasons.indexOf('offline_event')>=0&&reasons.length===1){
           return connectivityState;
         }
-        var runner=options.queueRunner||global.AutomaticQueueRunner;
-        if(!runner||typeof runner.run!=='function')return connectivityState;
-        return runner.run(Object.assign({},options.queueRunnerOptions||{},{
-          connectivity:connectivityState.connectivity,
-          reasons:reasons,
-          orchestrator:global.AutomaticSyncOrchestrator
-        })).then(function(){return publicState();});
+        var linker=options.automaticLinking||
+          global.AutomaticConferenceLinking;
+        var linkingLocalConferenceId=currentLocalConferenceId(options);
+        var linking=linker&&typeof linker.evaluate==='function'
+          ?linker.evaluate(Object.assign({},options.automaticLinkingOptions||{},{
+            connectivity:connectivityState.connectivity,
+            reason:reasons.join(',')
+          }))
+          :Promise.resolve({ok:true,status:'unavailable',data:{linked:true}});
+        return linking.then(function(linkResult){
+          var currentConferenceId=currentLocalConferenceId(options);
+          if(linker&&linkingLocalConferenceId&&
+            currentConferenceId!==linkingLocalConferenceId){
+            state.conferenceState='link_stale';
+            state.linkedConferenceId=null;
+            global.setTimeout(function(){
+              if(state.started)schedule('conference_changed',options);
+            },0);
+            return publicState();
+          }
+          if(linker&&(!linkResult||!linkResult.data||
+            linkResult.data.linked!==true)){
+            return publicState();
+          }
+          state.conferenceState='linked';
+          state.linkedConferenceId=currentConferenceId;
+          notify();
+          var runner=options.queueRunner||global.AutomaticQueueRunner;
+          if(!runner||typeof runner.run!=='function')return publicState();
+          return runner.run(Object.assign({},options.queueRunnerOptions||{},{
+            connectivity:connectivityState.connectivity,
+            reasons:reasons,
+            orchestrator:global.AutomaticSyncOrchestrator
+          })).then(function(){return publicState();});
+        });
       });
     }).then(function(result){
       if(generation===state.generation){
@@ -234,6 +276,8 @@
     state.started=true;
     state.generation++;
     state.connectivity='unknown';
+    state.conferenceState='local_only';
+    state.linkedConferenceId=null;
     onlineHandler=function(){schedule('online_event',options);};
     offlineHandler=function(){schedule('offline_event',options);};
     if(global.addEventListener){

@@ -187,13 +187,31 @@
       lastConflictAt:new Date().toISOString()
     }),options.linkOptions);
   }
+  function publishSuccessfulRevision(item,processResult,options){
+    var integration=options.integration||global.OfflineFirstIntegration;
+    if(!integration||
+      typeof integration.applySuccessfulSyncRevision!=='function'){
+      return Promise.resolve({ok:true,status:'publisher_unavailable'});
+    }
+    return integration.applySuccessfulSyncRevision(
+      processResult,
+      {
+        operation:item.operation,
+        queue:options.queue||global.OfflineSyncQueue,
+        queueOptions:options.queueOptions,
+        linkStore:options.linkStore||global.ConferenceLinkStore,
+        linkOptions:options.linkOptions
+      }
+    );
+  }
   function processSelected(selected,options){
     var processor=options.processor||global.SyncQueueProcessor;
     var outcomes=[];
+    var blockedConferences=Object.create(null);
     var sequence=Promise.resolve();
     selected.forEach(function(item){
       sequence=sequence.then(function(){
-        if(stopped)return;
+        if(stopped||blockedConferences[item.operation.conferenceId])return;
         var dependencies=dependencyState(options);
         if(!dependencies.auth.authenticated){
           setStatus('waiting_for_auth');
@@ -205,8 +223,20 @@
           var category=classify(processResult);
           outcomes.push(processResult);
           if(category==='success'){
-            clearRetry(item.operation.conferenceId);
-            state.lastSuccessfulSyncAt=new Date().toISOString();
+            return publishSuccessfulRevision(
+              item,
+              processResult,
+              options
+            ).then(function(published){
+              if(!published||!published.ok||
+                published.status==='revision_unavailable'){
+                blockedConferences[item.operation.conferenceId]=true;
+                setStatus('error','REVISION_PUBLISH_FAILED');
+                return;
+              }
+              clearRetry(item.operation.conferenceId);
+              state.lastSuccessfulSyncAt=new Date().toISOString();
+            });
           }else if(category==='conflict'){
             clearRetry(item.operation.conferenceId);
             state.conflictCount++;

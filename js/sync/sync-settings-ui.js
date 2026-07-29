@@ -3,6 +3,47 @@
 
   var busy=false;
   var explicitConnectivity='unknown';
+  var orchestratorSubscribed=false;
+  var lastRenderedLinkFingerprint=null;
+
+  function currentConference(){
+    return typeof global.getCurrentConference==='function'
+      ?global.getCurrentConference()
+      :null;
+  }
+
+  function linkFingerprint(localConferenceId){
+    var store=global.ConferenceLinkStore;
+    var link=store&&typeof store.get==='function'
+      ?store.get(localConferenceId)
+      :null;
+    if(!link||link.linkStatus!=='linked')return null;
+    return [
+      String(localConferenceId),
+      String(link.remoteConferenceId||''),
+      String(link.knownRevision==null?'':link.knownRevision),
+      String(link.linkStatus)
+    ].join('|');
+  }
+
+  function handleOrchestratorState(state){
+    if(!state||state.conferenceState!=='linked')return;
+    var conference=currentConference();
+    if(!conference||String(conference.id)!==
+      String(state.linkedConferenceId||''))return;
+    var fingerprint=linkFingerprint(conference.id);
+    if(!fingerprint||fingerprint===lastRenderedLinkFingerprint)return;
+    lastRenderedLinkFingerprint=fingerprint;
+    rerender();
+  }
+
+  function ensureOrchestratorSubscription(){
+    if(orchestratorSubscribed)return;
+    var orchestrator=global.AutomaticSyncOrchestrator;
+    if(!orchestrator||typeof orchestrator.subscribe!=='function')return;
+    orchestratorSubscribed=true;
+    orchestrator.subscribe(handleOrchestratorState);
+  }
 
   function escapeHtml(value){
     return String(value==null?'':value)
@@ -25,6 +66,17 @@
     return api&&typeof api.getState==='function'
       ?api.getState()
       :{initialized:false,authenticated:false,user:null};
+  }
+
+  function getAutomaticSyncPreferences(){
+    var api=global.AutomaticSyncPreferences;
+    return api&&typeof api.get==='function'
+      ?api.get()
+      :{
+        cloudSyncEnabled:false,
+        automaticLinkingEnabled:true,
+        automaticSyncEnabled:true
+      };
   }
 
   function getDevice(){
@@ -50,9 +102,11 @@
   }
 
   function renderSection(){
+    ensureOrchestratorSubscription();
     var config=getConfigState();
     var auth=getAuthState();
     var device=getDevice();
+    var preferences=getAutomaticSyncPreferences();
     var email=auth.user&&auth.user.email?auth.user.email:'';
     var html='<section class="settings-section sync-settings-section">';
     html+='<div class="settings-section-title">المزامنة والأجهزة</div>';
@@ -107,6 +161,17 @@
       escapeHtml(device&&device.deviceName||'')+'" placeholder="جهاز المكتب">';
     html+='<button class="btn btn-green btn-sm" onclick="SyncSettingsUI.saveDeviceName()">حفظ اسم الجهاز</button>';
     html+='<div id="sync_device_message" class="sync-settings-message"></div></div>';
+    html+='<div class="sync-settings-panel"><h3>خيارات المزامنة</h3>';
+    html+='<label class="lbl"><input id="sync_cloud_enabled" type="checkbox" '+
+      (preferences.cloudSyncEnabled?'checked ':'')+
+      'onchange="SyncSettingsUI.saveAutomaticSyncPreferences()"> تفعيل المزامنة السحابية</label>';
+    html+='<label class="lbl"><input id="sync_automatic_linking_enabled" type="checkbox" '+
+      (preferences.automaticLinkingEnabled?'checked ':'')+
+      'onchange="SyncSettingsUI.saveAutomaticSyncPreferences()"> تفعيل الربط التلقائي</label>';
+    html+='<label class="lbl"><input id="sync_automatic_sync_enabled" type="checkbox" '+
+      (preferences.automaticSyncEnabled?'checked ':'')+
+      'onchange="SyncSettingsUI.saveAutomaticSyncPreferences()"> تفعيل المزامنة التلقائية</label>';
+    html+='<div id="sync_preferences_message" class="sync-settings-message"></div></div>';
     html+='</div></section>';
     return html;
   }
@@ -299,6 +364,32 @@
       !result.success);
   }
 
+  function saveAutomaticSyncPreferences(){
+    var api=global.AutomaticSyncPreferences;
+    if(!api||typeof api.set!=='function')return;
+    var current=getAutomaticSyncPreferences();
+    var cloud=element('sync_cloud_enabled');
+    var linking=element('sync_automatic_linking_enabled');
+    var automatic=element('sync_automatic_sync_enabled');
+    var saved=api.set({
+      cloudSyncEnabled:cloud?cloud.checked:current.cloudSyncEnabled,
+      automaticLinkingEnabled:linking
+        ?linking.checked
+        :current.automaticLinkingEnabled,
+      automaticSyncEnabled:automatic
+        ?automatic.checked
+        :current.automaticSyncEnabled
+    });
+    message(
+      'sync_preferences_message',
+      saved&&saved.ok
+        ?'تم حفظ خيارات المزامنة.'
+        :'تعذر حفظ خيارات المزامنة.',
+      !(saved&&saved.ok)
+    );
+    return saved;
+  }
+
   function setConnectivity(value){
     explicitConnectivity=value==='online'||value==='offline'
       ?value
@@ -324,6 +415,7 @@
     signOut:signOut,
     refreshAuthState:refreshAuthState,
     saveDeviceName:saveDeviceName,
+    saveAutomaticSyncPreferences:saveAutomaticSyncPreferences,
     setConnectivity:setConnectivity,
     getState:getState
   });

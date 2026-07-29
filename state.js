@@ -29,6 +29,14 @@ var DAYS;
 
 // Constants
 var SK='conf_v5';
+var applicationStorageState = {
+  storageReady: false,
+  loadedSource: null,
+  lastLocalSaveAt: null,
+  lastIndexedDbSaveAt: null,
+  lastStorageError: null
+};
+var storageInitializationPromise = null;
 
 
 // ═══════════════════════════════════════════════════════
@@ -82,23 +90,144 @@ function updateCurrentConferenceData(){
   current.updatedAt = new Date().toISOString();
 }
 
+function cloneApplicationStorageData(value){
+  if(typeof window.structuredClone==='function'){
+    return window.structuredClone(value);
+  }
+  return JSON.parse(JSON.stringify(value));
+}
+
+function isValidStoredAppData(value){
+  return !!(value&&typeof value==='object'&&!Array.isArray(value)&&
+    Array.isArray(value.conferences));
+}
+
+function readLocalStorageAppData(){
+  var raw=localStorage.getItem(SK);
+  if(!raw)return null;
+  var parsed=JSON.parse(raw);
+  var loadedAppData=null;
+  if(parsed&&typeof parsed==='object'&&!Array.isArray(parsed)&&parsed.appData){
+    loadedAppData=parsed.appData;
+  }else if(parsed&&typeof parsed==='object'&&!Array.isArray(parsed)&&
+    Array.isArray(parsed.conferences)){
+    loadedAppData=parsed;
+  }else if(parsed&&typeof parsed==='object'&&!Array.isArray(parsed)){
+    loadedAppData=buildAppDataFromLegacy(parsed);
+  }
+  return isValidStoredAppData(loadedAppData)?loadedAppData:null;
+}
+
+function initializeApplicationStorage(){
+  if(storageInitializationPromise)return storageInitializationPromise;
+
+  var defaults=cloneApplicationStorageData(appData);
+  var repository=window.StorageRepository;
+  var indexedDbApi=window.AppIndexedDB;
+  storageInitializationPromise=Promise.resolve()
+    .then(function(){
+      if(!repository||typeof repository.getAppSnapshot!=='function'){
+        throw new Error('INDEXEDDB_REPOSITORY_UNAVAILABLE');
+      }
+      return repository.getAppSnapshot();
+    })
+    .then(function(snapshot){
+      var validation=indexedDbApi&&typeof indexedDbApi.validateAppSnapshot==='function'
+        ?indexedDbApi.validateAppSnapshot(snapshot)
+        :{valid:false,reason:'SNAPSHOT_VALIDATOR_UNAVAILABLE'};
+      return validation.valid
+        ?{source:'indexeddb',data:snapshot.data,savedAt:snapshot.savedAt||null}
+        :null;
+    })
+    .catch(function(error){
+      applicationStorageState.lastStorageError=error;
+      console.warn('تعذر قراءة بيانات IndexedDB:',error);
+      return null;
+    })
+    .then(function(selection){
+      if(selection)return selection;
+      try{
+        var localData=readLocalStorageAppData();
+        if(localData)return {source:'localStorage',data:localData};
+      }catch(error){
+        applicationStorageState.lastStorageError=error;
+        console.warn('تعذر قراءة بيانات localStorage:',error);
+      }
+      return {source:'defaults',data:defaults};
+    })
+    .then(function(selection){
+      appData=cloneApplicationStorageData(selection.data);
+      normalizeAppData();
+      updateLogoText();
+      var current=getCurrentConference();
+      if(current)setCurrentConference(current);
+
+      try{
+        localStorage.setItem(SK,JSON.stringify(appData));
+        applicationStorageState.lastLocalSaveAt=new Date().toISOString();
+      }catch(error){
+        applicationStorageState.lastStorageError=error;
+        console.warn('تعذر تحديث بيانات localStorage:',error);
+      }
+
+      if(selection.source==='indexeddb'||!repository||
+        typeof repository.saveAppSnapshot!=='function'){
+        return selection;
+      }
+      return repository.saveAppSnapshot(appData)
+        .then(function(){
+          applicationStorageState.lastIndexedDbSaveAt=new Date().toISOString();
+          return selection;
+        })
+        .catch(function(error){
+          applicationStorageState.lastStorageError=error;
+          console.warn('تعذر حفظ Snapshot في IndexedDB:',error);
+          return selection;
+        });
+    })
+    .then(function(selection){
+      applicationStorageState.storageReady=true;
+      applicationStorageState.loadedSource=selection.source;
+      if(selection.source==='indexeddb'&&selection.savedAt){
+        applicationStorageState.lastIndexedDbSaveAt=selection.savedAt;
+      }
+      return appData;
+    });
+
+  return storageInitializationPromise;
+}
+
 function save(){
+  var json;
   try{
     updateCurrentConferenceData();
-    var json=JSON.stringify(appData);
-    localStorage.setItem(SK,json);
-    var b=ge('syncBar');if(b){b.textContent='✔ '+new Date().toLocaleTimeString('ar-EG');}
-    if(window.AppIndexedDB&&typeof window.AppIndexedDB.saveAppSnapshot==='function'){
-      window.AppIndexedDB.saveAppSnapshot(appData).catch(function(indexedDbError){
-        console.warn('تعذر حفظ النسخة الاحتياطية في IndexedDB:',indexedDbError);
-      });
-    }
-    return true;
+    json=JSON.stringify(appData);
   }catch(e){
     console.error('تعذر حفظ بيانات التطبيق:',e);
     notifyPersistenceFailure('تعذر حفظ البيانات على الجهاز. قد تكون مساحة التخزين ممتلئة. لم يتم تأكيد حفظ آخر تعديل.');
     return false;
   }
+  if(window.StorageRepository&&
+    typeof window.StorageRepository.saveAppSnapshot==='function'){
+    window.StorageRepository.saveAppSnapshot(appData)
+      .then(function(){
+        applicationStorageState.lastIndexedDbSaveAt=new Date().toISOString();
+      })
+      .catch(function(indexedDbError){
+        applicationStorageState.lastStorageError=indexedDbError;
+        console.warn('تعذر حفظ النسخة الاحتياطية في IndexedDB:',indexedDbError);
+      });
+  }
+  try{
+    localStorage.setItem(SK,json);
+    applicationStorageState.lastLocalSaveAt=new Date().toISOString();
+    var b=ge('syncBar');if(b){b.textContent='✔ '+new Date().toLocaleTimeString('ar-EG');}
+  }catch(e){
+    applicationStorageState.lastStorageError=e;
+    console.error('تعذر حفظ بيانات التطبيق:',e);
+    notifyPersistenceFailure('تعذر حفظ البيانات على الجهاز. قد تكون مساحة التخزين ممتلئة. لم يتم تأكيد حفظ آخر تعديل.');
+  }
+  return true;
 }
 
 function getStorageUsageReport(){

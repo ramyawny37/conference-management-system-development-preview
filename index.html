@@ -466,9 +466,11 @@
 <script src="js/sync/conflict-resolution.js"></script>
 <script src="js/sync/conflict-executor.js"></script>
 <script src="js/sync/conference-locks.js"></script>
-<script src="js/sync/offline-first-integration.js"></script>
-<script src="js/sync/sync-settings-ui.js"></script>
+<script src="js/sync/offline-first-integration.js?rev=revision-publish-1"></script>
+<script src="js/sync/sync-settings-ui.js?rev=link-render-1"></script>
 <script src="js/sync/conference-link-store.js"></script>
+<script src="js/sync/conference-linking-attempt-store.js"></script>
+<script src="js/sync/conference-linking-service.js"></script>
 <script src="js/sync/conference-sync-ui.js"></script>
 <script src="js/sync/conflict-backup-store.js"></script>
 <script src="js/sync/pending-remote-application-store.js"></script>
@@ -479,8 +481,9 @@
 <script src="js/sync/realtime-locks-ui.js"></script>
 <script src="js/sync/automatic-sync-preferences.js"></script>
 <script src="js/sync/sync-scheduler-state.js"></script>
-<script src="js/sync/automatic-queue-runner.js"></script>
-<script src="js/sync/automatic-sync-orchestrator.js"></script>
+<script src="js/sync/automatic-queue-runner.js?rev=revision-publish-1"></script>
+<script src="js/sync/automatic-conference-linking.js"></script>
+<script src="js/sync/automatic-sync-orchestrator.js?rev=link-state-1"></script>
 <script src="utils.js"></script>
 <script src="core.js"></script>
 <script src="people.js"></script>
@@ -491,7 +494,7 @@
 <script src="js/conference/accounts.js"></script>
 <script src="cards.js"></script>
 <script src="libs/html2canvas.min.js"></script>
-<script src="script.js"></script>
+<script src="script.js?rev=sync-ui-1"></script>
 <script src="version.js"></script>
 <script>
   document.addEventListener('DOMContentLoaded', function() {
@@ -506,8 +509,11 @@
         appVersionLabel.style.display = 'none';
       }
     }
-    setTimeout(function() { document.getElementById('splash-screen').style.opacity = '0'; }, 250);
-    setTimeout(function() { document.getElementById('splash-screen').style.display = 'none'; }, 500);
+    var storageReady = window.applicationStorageReadyPromise || Promise.resolve();
+    storageReady.catch(function() {}).then(function() {
+      setTimeout(function() { document.getElementById('splash-screen').style.opacity = '0'; }, 250);
+      setTimeout(function() { document.getElementById('splash-screen').style.display = 'none'; }, 500);
+    });
   });
 </script>
 <script src="pwa.js"></script>

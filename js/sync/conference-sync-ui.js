@@ -89,71 +89,18 @@
 
   function createOnlineConference(input,options){
     input=input||{};
-    var d=deps(options), ready=readiness(options);
-    if(!ready.ready)return Promise.resolve(outcome(
-      false,'prerequisites_missing',{reasons:ready.reasons}
-    ));
-    var snapshot;
-    try{snapshot=copy(input.snapshot);}catch(error){
-      return Promise.resolve(outcome(false,'snapshot_invalid'));
+    var service=options&&options.linkingService||
+      global.ConferenceLinkingService;
+    if(!service||typeof service.ensureConferenceLinked!=='function'){
+      return Promise.resolve(outcome(false,'linking_service_unavailable'));
     }
-    var existing=d.links.get(input.localConferenceId);
-    var resume=existing&&existing.linkStatus==='upload_pending';
-    var remoteId=resume?existing.remoteConferenceId:null;
-    var operationId=resume?existing.initialOperationId:null;
-    try{operationId=operationId||createUuid();}
-    catch(error){return Promise.resolve(outcome(false,'operation_id_unavailable'));}
-    var created=resume
-      ?Promise.resolve({ok:true,data:{conferenceId:remoteId}})
-      :d.remote.createConference({name:input.name});
-    return created.then(function(result){
-      if(!result||!result.ok)return outcome(false,'create_failed');
-      remoteId=result.data.conferenceId;
-      saveLink(d,{
-        localConferenceId:input.localConferenceId,
-        remoteConferenceId:remoteId,
-        remoteName:input.name,
-        knownRevision:0,
-        linkStatus:'upload_pending',
-        initialOperationId:operationId
-      });
-      var v=version(options);
-      return d.remote.uploadInitialSnapshot({
-        conferenceId:remoteId,
-        snapshot:snapshot,
-        schemaVersion:v.schemaVersion,
-        appVersion:v.appVersion,
-        operationId:operationId||undefined
-      }).then(function(upload){
-        var returnedId=upload&&upload.data&&upload.data.operationId;
-        if(!upload||!upload.ok||
-          ['applied','duplicate'].indexOf(upload.status)<0){
-          saveLink(d,{
-            localConferenceId:input.localConferenceId,
-            remoteConferenceId:remoteId,
-            remoteName:input.name,
-            knownRevision:0,
-            linkStatus:'upload_pending',
-            initialOperationId:returnedId||operationId
-          });
-          return outcome(true,'remote_created_upload_pending',{
-            remoteConferenceId:remoteId
-          });
-        }
-        var revision=upload.data&&upload.data.revision;
-        if(!Number.isInteger(revision))return outcome(false,'revision_missing');
-        saveLink(d,{
-          localConferenceId:input.localConferenceId,
-          remoteConferenceId:remoteId,
-          remoteName:input.name,
-          knownRevision:revision,
-          linkStatus:'linked',
-          initialOperationId:returnedId||operationId
-        });
-        restoreContext(input.localConferenceId,options);
-        return outcome(true,'linked',{remoteConferenceId:remoteId,revision:revision});
-      });
-    }).catch(function(){return outcome(false,'network_error');});
+    return service.ensureConferenceLinked({
+      localConferenceId:input.localConferenceId,
+      name:input.name,
+      snapshot:input.snapshot,
+      mode:'manual',
+      reason:'manual_button'
+    },options&&options.linkingOptions||options);
   }
   function listAvailable(options){
     var ready=readiness(options), d=deps(options);
@@ -418,7 +365,7 @@
   function createCurrentOnline(){
     createOnlineConference(current()).then(function(result){
       refresh(result.status==='linked'?'تم إنشاء الربط بنجاح.':
-        result.status==='remote_created_upload_pending'
+        result.status==='upload_pending'
           ?'تم إنشاء المؤتمر الأونلاين والرفع ما زال معلقًا.':'تعذر إنشاء الربط.');
     });
   }

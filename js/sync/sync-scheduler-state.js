@@ -7,7 +7,7 @@
   ]);
   var CONFERENCE_STATES=Object.freeze([
     'local_only','cloud_disabled','auth_required','link_scheduled','linking',
-    'link_pending','linked_idle','sync_pending','syncing','offline_pending',
+    'link_pending','linked','linked_idle','sync_pending','syncing','offline_pending',
     'remote_update_available','auto_reviewing','applying_remote',
     'needs_resolution','sync_error'
   ]);
@@ -23,6 +23,7 @@
       generation:0,
       queueStatus:'idle',
       activeConferenceId:null,
+      linkedConferenceId:null,
       lastRunAt:null,
       lastSuccessfulSyncAt:null,
       lastSafeError:null,

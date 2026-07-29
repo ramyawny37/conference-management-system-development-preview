@@ -653,6 +653,17 @@ function switchSettingsTab(tab) {
   renderSettings();
 }
 
+function mountSyncSettingsSection(){
+  var target=ge('tab6');
+  var navigation=target&&target.querySelector('.settings-nav');
+  if(!navigation||!window.SyncSettingsUI||
+    typeof window.SyncSettingsUI.renderSection!=='function')return;
+  navigation.insertAdjacentHTML(
+    'afterend',
+    window.SyncSettingsUI.renderSection()
+  );
+}
+
 function renderHouseTemplateDetails(house) {
   if (!house) {
     return '<div style="color:#95a5a6;text-align:center;padding:18px">اختر بيتًا لعرض غرفه هنا</div>';
@@ -6541,10 +6552,6 @@ function renderSettings(){
     ge('tab6').innerHTML = h;
     return;
   }
-  if(window.SyncSettingsUI&&
-    typeof window.SyncSettingsUI.renderSection==='function'){
-    h+=window.SyncSettingsUI.renderSection();
-  }
   if(window.ConferenceSyncUI&&
     typeof window.ConferenceSyncUI.renderSection==='function'){
     h+=window.ConferenceSyncUI.renderSection({localConference:current});
@@ -6561,6 +6568,7 @@ function renderSettings(){
   if (!current) {
     h += '<div class="settings-empty-state">يرجى اختيار مؤتمر أو إنشاء مؤتمر جديد أولًا لعرض هذا القسم.</div></div>';
     ge('tab6').innerHTML = h;
+    mountSyncSettingsSection();
     return;
   }
   conferenceBrandingDraft=getConferenceBrandingSettings(current);
@@ -6670,6 +6678,7 @@ function renderSettings(){
   }
   h+='</div></div></section></div>';
   ge('tab6').innerHTML=h;
+  mountSyncSettingsSection();
   var conferenceSelect = ge('conf_select');
   if(conferenceSelect){
     conferenceSelect.value = appData.currentConferenceId || '';
@@ -7979,8 +7988,7 @@ function doBulkAssign(){
 // ═══════════════════════════════════════════════════════
 //__S__
 //__E__
-try{
-  load();
+window.applicationStorageReadyPromise=initializeApplicationStorage().then(function(){
   syncCurrentConferenceRefs();
   if(!getCurrentConference()){
     showSelectConferenceModal();
@@ -7990,8 +7998,16 @@ try{
     setApplicationMode('application');
     restoreLastApplicationTab();
   }
-}catch(e){alert('خطأ: '+e.message)}
-Promise.resolve(window.applicationStorageReadyPromise).then(function(){
+  return true;
+}).catch(function(e){
+  alert('خطأ: '+e.message);
+  return false;
+});
+window.applicationStorageReadyPromise.then(function(){
+  if(window.AutomaticConferenceLinking&&
+    typeof window.AutomaticConferenceLinking.initialize==='function'){
+    window.AutomaticConferenceLinking.initialize();
+  }
   if(window.AutomaticSyncOrchestrator&&
     typeof window.AutomaticSyncOrchestrator.start==='function'){
     window.AutomaticSyncOrchestrator.start();

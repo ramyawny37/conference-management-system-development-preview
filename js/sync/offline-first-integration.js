@@ -237,38 +237,116 @@
     });
   }
 
-  function updateRevisionsFromSync(syncResult,queue){
+  function hasActiveConflict(link){
+    return !!(link&&(
+      link.linkStatus==='needs_resolution'||
+      link.conflictId||
+      link.conflictStatus==='active'||
+      link.conflictStatus==='pending'||
+      link.conflictStatus==='reviewed'
+    ));
+  }
+
+  function applySuccessfulSyncRevision(operationResult,options){
+    options=options&&typeof options==='object'?options:{};
+    if(!operationResult||
+      (operationResult.status!=='applied'&&
+      operationResult.status!=='duplicate')||
+      !operationResult.data||
+      !Number.isInteger(operationResult.data.revision)||
+      operationResult.data.revision<1){
+      return Promise.resolve(result(true,'revision_unavailable',{
+        applied:false
+      },null));
+    }
+    var operation=operationResult.data.operation||options.operation;
+    var remoteConferenceId=String(
+      operation&&operation.conferenceId||''
+    );
+    var deviceId=String(operation&&operation.deviceId||'');
+    if(!isUuid(remoteConferenceId)){
+      return Promise.resolve(result(false,'error',null,safeError(
+        'INVALID_SUCCESSFUL_SYNC_RESULT',
+        'The successful sync result has no valid conference ID.'
+      )));
+    }
+    var revision=operationResult.data.revision;
+    Object.keys(conferenceContexts).forEach(function(localId){
+      var context=conferenceContexts[localId];
+      if(context.conferenceId===remoteConferenceId){
+        context.baseRevision=revision;
+      }
+    });
+    var linkStore=options.linkStore||global.ConferenceLinkStore;
+    var link=linkStore&&
+      typeof linkStore.findByRemoteId==='function'
+      ?linkStore.findByRemoteId(
+        remoteConferenceId,
+        options.linkOptions
+      )
+      :null;
+    if(link&&!hasActiveConflict(link)&&
+      typeof linkStore.save==='function'){
+      var saved=linkStore.save(Object.assign({},link,{
+        knownRevision:revision,
+        actualRevision:revision,
+        linkStatus:'linked'
+      }),options.linkOptions);
+      if(!saved||!saved.ok){
+        return Promise.resolve(result(false,'error',null,safeError(
+          'LINK_REVISION_UPDATE_FAILED',
+          'The linked conference revision could not be updated.'
+        )));
+      }
+    }
+    var queue=options.queue||global.OfflineSyncQueue;
+    if(!queue||typeof queue.rebasePendingOperations!=='function'||
+      !isUuid(deviceId)){
+      return Promise.resolve(result(true,'revision_published',{
+        applied:true,
+        revision:revision,
+        remoteConferenceId:remoteConferenceId,
+        rebased:0
+      },null));
+    }
+    return queue.rebasePendingOperations(
+      remoteConferenceId,
+      deviceId,
+      revision,
+      options.queueOptions
+    ).then(function(rebased){
+      if(!rebased||!rebased.ok){
+        return result(false,'error',null,safeError(
+          'PENDING_REBASE_FAILED',
+          'Pending operations could not be rebased.'
+        ));
+      }
+      return result(true,'revision_published',{
+        applied:true,
+        revision:revision,
+        remoteConferenceId:remoteConferenceId,
+        rebased:rebased.data&&rebased.data.count||0
+      },null);
+    }).catch(function(){
+      return result(false,'error',null,safeError(
+        'PENDING_REBASE_FAILED',
+        'Pending operations could not be rebased.'
+      ));
+    });
+  }
+
+  function updateRevisionsFromSync(syncResult,queue,options){
     var results=syncResult&&syncResult.data&&
       Array.isArray(syncResult.data.results)
       ?syncResult.data.results
       :[];
     var sequence=Promise.resolve();
     results.forEach(function(operationResult){
-      if(!operationResult||
-        (operationResult.status!=='applied'&&
-        operationResult.status!=='duplicate')||
-        !operationResult.data||
-        !Number.isInteger(operationResult.data.revision)||
-        !operationResult.data.operation){
-        return;
-      }
-      Object.keys(conferenceContexts).forEach(function(localId){
-        var context=conferenceContexts[localId];
-        if(context.conferenceId===
-          operationResult.data.operation.conferenceId){
-          context.baseRevision=operationResult.data.revision;
-          if(queue&&
-            typeof queue.rebasePendingOperations==='function'&&
-            operationResult.data.operation.deviceId){
-            sequence=sequence.then(function(){
-              return queue.rebasePendingOperations(
-                context.conferenceId,
-                operationResult.data.operation.deviceId,
-                operationResult.data.revision
-              );
-            }).catch(function(){ return null; });
-          }
-        }
+      sequence=sequence.then(function(){
+        return applySuccessfulSyncRevision(
+          operationResult,
+          Object.assign({},options||{},{queue:queue})
+        );
       });
     });
     results.forEach(function(operationResult){
@@ -320,7 +398,7 @@
         state.conflict=true;
       }
       if(syncResult&&syncResult.ok){
-        return updateRevisionsFromSync(syncResult,queue).then(function(){
+        return updateRevisionsFromSync(syncResult,queue,options).then(function(){
           state.syncing=false;
           return result(true,'completed',{
             syncResult:cloneValue(syncResult),
@@ -541,6 +619,7 @@
     configureConferenceSync:configureConferenceSync,
     removeConferenceSync:removeConferenceSync,
     handleLocalSave:handleLocalSave,
+    applySuccessfulSyncRevision:applySuccessfulSyncRevision,
     triggerSync:triggerSync,
     connectRealtime:connectRealtime,
     disconnectRealtime:disconnectRealtime,

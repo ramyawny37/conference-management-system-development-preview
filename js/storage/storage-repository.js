@@ -1,9 +1,28 @@
 (function(global){
   'use strict';
 
+  var snapshotWriteQueue = Promise.resolve();
+
+  function cloneSnapshotData(appData){
+    if(typeof global.structuredClone==='function'){
+      return global.structuredClone(appData);
+    }
+    return JSON.parse(JSON.stringify(appData));
+  }
+
   function saveAppSnapshot(appData,options){
     options=options&&typeof options==='object'?options:{};
-    return global.AppIndexedDB.saveAppSnapshot(appData)
+    var queuedSnapshot;
+    try{
+      queuedSnapshot = cloneSnapshotData(appData);
+    }catch(error){
+      return Promise.reject(error);
+    }
+    var writeOperation = snapshotWriteQueue
+      .catch(function(){})
+      .then(function(){
+        return global.AppIndexedDB.saveAppSnapshot(queuedSnapshot);
+      })
       .then(function(saveResult){
         var integration=options.skipSyncQueue
           ?null
@@ -14,7 +33,7 @@
         }
         return Promise.resolve()
           .then(function(){
-            return integration.handleLocalSave(appData);
+            return integration.handleLocalSave(queuedSnapshot);
           })
           .catch(function(){ return null; })
           .then(function(){ return saveResult; });
@@ -26,6 +45,8 @@
         }
         return saveResult;
       });
+    snapshotWriteQueue = writeOperation;
+    return writeOperation;
   }
 
   function getAppSnapshot(){
