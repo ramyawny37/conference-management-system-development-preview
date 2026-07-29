@@ -664,6 +664,13 @@ function mountSyncSettingsSection(){
   );
 }
 
+function refreshConferenceMembersSection(){
+  if(window.ConferenceMembersUI&&
+    typeof window.ConferenceMembersUI.refresh==='function'){
+    window.ConferenceMembersUI.refresh();
+  }
+}
+
 function renderHouseTemplateDetails(house) {
   if (!house) {
     return '<div style="color:#95a5a6;text-align:center;padding:18px">اختر بيتًا لعرض غرفه هنا</div>';
@@ -6556,6 +6563,18 @@ function renderSettings(){
     typeof window.ConferenceSyncUI.renderSection==='function'){
     h+=window.ConferenceSyncUI.renderSection({localConference:current});
   }
+  if(window.ConferenceMembersUI&&
+    typeof window.ConferenceMembersUI.renderSection==='function'){
+    var membershipLink=current&&window.ConferenceLinkStore&&
+      typeof window.ConferenceLinkStore.get==='function'
+      ?window.ConferenceLinkStore.get(current.id)
+      :null;
+    h+=window.ConferenceMembersUI.renderSection({
+      localConference:current,
+      remoteConferenceId:membershipLink&&
+        membershipLink.remoteConferenceId||''
+    });
+  }
   if(window.ConflictResolutionUI&&
     typeof window.ConflictResolutionUI.renderSection==='function'){
     h+=window.ConflictResolutionUI.renderSection({localConference:current});
@@ -6569,6 +6588,7 @@ function renderSettings(){
     h += '<div class="settings-empty-state">يرجى اختيار مؤتمر أو إنشاء مؤتمر جديد أولًا لعرض هذا القسم.</div></div>';
     ge('tab6').innerHTML = h;
     mountSyncSettingsSection();
+    refreshConferenceMembersSection();
     return;
   }
   conferenceBrandingDraft=getConferenceBrandingSettings(current);
@@ -6679,6 +6699,7 @@ function renderSettings(){
   h+='</div></div></section></div>';
   ge('tab6').innerHTML=h;
   mountSyncSettingsSection();
+  refreshConferenceMembersSection();
   var conferenceSelect = ge('conf_select');
   if(conferenceSelect){
     conferenceSelect.value = appData.currentConferenceId || '';

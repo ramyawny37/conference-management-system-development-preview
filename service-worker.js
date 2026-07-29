@@ -1,6 +1,6 @@
 const APP_VERSION = '3.1.1';
 const CACHE_PREFIX = 'conference-manager-core-';
-const CACHE_REVISION = 'phase-6';
+const CACHE_REVISION = 'm5-phase-3';
 const CACHE_NAME = CACHE_PREFIX + 'v' + APP_VERSION + '-' + CACHE_REVISION;
 const CORE_ASSETS = [
   './',
@@ -24,6 +24,9 @@ const CORE_ASSETS = [
   './js/sync/offline-first-integration.js?rev=revision-publish-1',
   './js/sync/sync-settings-ui.js?rev=phase-6',
   './js/sync/conference-link-store.js',
+  './js/sync/conference-membership-attempt-store.js',
+  './js/sync/conference-members-service.js',
+  './js/sync/conference-members-ui.js',
   './js/sync/conference-linking-attempt-store.js',
   './js/sync/conference-linking-service.js',
   './js/sync/conference-sync-ui.js',
