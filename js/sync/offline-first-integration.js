@@ -247,30 +247,23 @@
     ));
   }
 
-  function applySuccessfulSyncRevision(operationResult,options){
+  function publishConferenceRevision(input,options){
     options=options&&typeof options==='object'?options:{};
-    if(!operationResult||
-      (operationResult.status!=='applied'&&
-      operationResult.status!=='duplicate')||
-      !operationResult.data||
-      !Number.isInteger(operationResult.data.revision)||
-      operationResult.data.revision<1){
+    input=input&&typeof input==='object'?input:{};
+    if(!Number.isInteger(input.revision)||input.revision<1){
       return Promise.resolve(result(true,'revision_unavailable',{
         applied:false
       },null));
     }
-    var operation=operationResult.data.operation||options.operation;
-    var remoteConferenceId=String(
-      operation&&operation.conferenceId||''
-    );
-    var deviceId=String(operation&&operation.deviceId||'');
+    var remoteConferenceId=String(input.remoteConferenceId||'');
+    var deviceId=String(input.deviceId||'');
     if(!isUuid(remoteConferenceId)){
       return Promise.resolve(result(false,'error',null,safeError(
         'INVALID_SUCCESSFUL_SYNC_RESULT',
         'The successful sync result has no valid conference ID.'
       )));
     }
-    var revision=operationResult.data.revision;
+    var revision=input.revision;
     Object.keys(conferenceContexts).forEach(function(localId){
       var context=conferenceContexts[localId];
       if(context.conferenceId===remoteConferenceId){
@@ -285,12 +278,13 @@
         options.linkOptions
       )
       :null;
-    if(link&&!hasActiveConflict(link)&&
+    if(link&&(!hasActiveConflict(link)||
+      input.allowActiveConflict===true)&&
       typeof linkStore.save==='function'){
       var saved=linkStore.save(Object.assign({},link,{
         knownRevision:revision,
         actualRevision:revision,
-        linkStatus:'linked'
+        linkStatus:input.linkStatus||link.linkStatus
       }),options.linkOptions);
       if(!saved||!saved.ok){
         return Promise.resolve(result(false,'error',null,safeError(
@@ -333,6 +327,25 @@
         'Pending operations could not be rebased.'
       ));
     });
+  }
+
+  function applySuccessfulSyncRevision(operationResult,options){
+    options=options&&typeof options==='object'?options:{};
+    if(!operationResult||
+      (operationResult.status!=='applied'&&
+      operationResult.status!=='duplicate')||
+      !operationResult.data){
+      return Promise.resolve(result(true,'revision_unavailable',{
+        applied:false
+      },null));
+    }
+    var operation=operationResult.data.operation||options.operation;
+    return publishConferenceRevision({
+      remoteConferenceId:operation&&operation.conferenceId,
+      deviceId:operation&&operation.deviceId,
+      revision:operationResult.data.revision,
+      linkStatus:'linked'
+    },options);
   }
 
   function updateRevisionsFromSync(syncResult,queue,options){
@@ -619,6 +632,7 @@
     configureConferenceSync:configureConferenceSync,
     removeConferenceSync:removeConferenceSync,
     handleLocalSave:handleLocalSave,
+    publishConferenceRevision:publishConferenceRevision,
     applySuccessfulSyncRevision:applySuccessfulSyncRevision,
     triggerSync:triggerSync,
     connectRealtime:connectRealtime,

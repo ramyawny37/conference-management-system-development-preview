@@ -212,6 +212,15 @@
     var status=rpcData&&typeof rpcData.status==='string'
       ?rpcData.status
       :'';
+    var responseOperationId=String(
+      rpcData&&rpcData.operationId||''
+    );
+    var responseConflictId=String(
+      rpcData&&rpcData.conflictId||''
+    );
+    var responseConferenceId=String(
+      rpcData&&rpcData.conferenceId||''
+    );
     var data={
       conflictId:plan.conflictId,
       conferenceId:plan.conferenceId,
@@ -228,11 +237,46 @@
       resolvedSnapshot:cloneValue(plan.resolvedSnapshot)
     };
     addLegacyPlanData(data,plan,legacyUpgraded);
+    function invalidResponse(){
+      return result(false,'error',{
+        operationId:operationId
+      },safeError(
+        'INVALID_RESOLUTION_RESPONSE',
+        'The conflict resolution response was incomplete or inconsistent.'
+      ));
+    }
+    if(!rpcData||typeof rpcData!=='object'||
+      responseOperationId!==operationId||
+      responseConflictId!==plan.conflictId||
+      responseConferenceId!==plan.conferenceId){
+      return invalidResponse();
+    }
     if(status==='resolved'||status==='server_selected'||
       status==='duplicate'){
+      var resolvedRevision=rpcData.resolvedRevision;
+      var expectedRevision=plan.strategy==='keep_server'
+        ?plan.baseRevision
+        :plan.baseRevision+1;
+      var statusMatchesStrategy=plan.strategy==='keep_server'
+        ?status==='server_selected'||status==='duplicate'
+        :status==='resolved'||status==='duplicate';
+      if(rpcData.success!==true||
+        String(rpcData.strategy||'')!==plan.strategy||
+        !Number.isInteger(resolvedRevision)||
+        resolvedRevision!==expectedRevision||
+        !statusMatchesStrategy){
+        return invalidResponse();
+      }
       return result(true,status,data,null);
     }
     if(status==='conflict_changed'){
+      if(rpcData.success!==false||
+        !Number.isInteger(rpcData.expectedRevision)||
+        rpcData.expectedRevision!==plan.baseRevision||
+        !Number.isInteger(rpcData.actualRevision)||
+        rpcData.actualRevision<0){
+        return invalidResponse();
+      }
       data.expectedRevision=rpcData.expectedRevision;
       data.actualRevision=rpcData.actualRevision;
       data.resolvedSnapshot=null;

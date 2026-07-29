@@ -14,6 +14,7 @@
   var connectivityPromise=null;
   var onlineHandler=null;
   var offlineHandler=null;
+  var lastNotificationFingerprint=null;
 
   function copy(value){
     if(typeof global.structuredClone==='function')return global.structuredClone(value);
@@ -31,6 +32,21 @@
 
   function notify(){
     var snapshot=publicState();
+    var fingerprint=JSON.stringify({
+      started:snapshot.started,
+      connectivity:snapshot.connectivity,
+      conferenceState:snapshot.conferenceState,
+      linkedConferenceId:snapshot.linkedConferenceId,
+      queueStatus:snapshot.queueStatus,
+      activeConferenceId:snapshot.activeConferenceId,
+      pendingCount:snapshot.pendingCount,
+      conflictCount:snapshot.conflictCount,
+      nextRetryAt:snapshot.nextRetryAt,
+      lastError:snapshot.lastError&&snapshot.lastError.code,
+      lastSafeError:snapshot.lastSafeError&&snapshot.lastSafeError.code
+    });
+    if(fingerprint===lastNotificationFingerprint)return;
+    lastNotificationFingerprint=fingerprint;
     listeners.slice().forEach(function(listener){
       try{listener(snapshot);}catch(error){}
     });
@@ -192,40 +208,115 @@
           reasons.indexOf('offline_event')>=0&&reasons.length===1){
           return connectivityState;
         }
-        var linker=options.automaticLinking||
-          global.AutomaticConferenceLinking;
         var linkingLocalConferenceId=currentLocalConferenceId(options);
-        var linking=linker&&typeof linker.evaluate==='function'
-          ?linker.evaluate(Object.assign({},options.automaticLinkingOptions||{},{
-            connectivity:connectivityState.connectivity,
-            reason:reasons.join(',')
-          }))
-          :Promise.resolve({ok:true,status:'unavailable',data:{linked:true}});
-        return linking.then(function(linkResult){
-          var currentConferenceId=currentLocalConferenceId(options);
-          if(linker&&linkingLocalConferenceId&&
-            currentConferenceId!==linkingLocalConferenceId){
-            state.conferenceState='link_stale';
-            state.linkedConferenceId=null;
-            global.setTimeout(function(){
-              if(state.started)schedule('conference_changed',options);
-            },0);
-            return publicState();
+        var resolver=options.stateResolver||
+          global.ConferenceSyncStateResolver;
+        var resolveState=function(){
+          if(!linkingLocalConferenceId||!resolver||
+            typeof resolver.resolve!=='function'){
+            return Promise.resolve(null);
           }
-          if(linker&&(!linkResult||!linkResult.data||
-            linkResult.data.linked!==true)){
-            return publicState();
+          return resolver.resolve({
+            localConferenceId:linkingLocalConferenceId
+          },options.stateResolverOptions);
+        };
+        var staleResult=function(){
+          if(currentLocalConferenceId(options)===linkingLocalConferenceId){
+            return false;
           }
+          state.conferenceState='link_stale';
+          state.linkedConferenceId=null;
+          global.setTimeout(function(){
+            if(state.started)schedule('conference_changed',options);
+          },0);
+          return true;
+        };
+        var runLinkedConference=function(connectivityState){
+          if(staleResult())return Promise.resolve(publicState());
           state.conferenceState='linked';
-          state.linkedConferenceId=currentConferenceId;
+          state.linkedConferenceId=linkingLocalConferenceId;
           notify();
           var runner=options.queueRunner||global.AutomaticQueueRunner;
-          if(!runner||typeof runner.run!=='function')return publicState();
+          if(!runner||typeof runner.run!=='function'){
+            return Promise.resolve(publicState());
+          }
           return runner.run(Object.assign({},options.queueRunnerOptions||{},{
             connectivity:connectivityState.connectivity,
             reasons:reasons,
             orchestrator:global.AutomaticSyncOrchestrator
-          })).then(function(){return publicState();});
+          })).then(function(){
+            return resolveState().then(function(afterRun){
+              if(staleResult())return publicState();
+              if(afterRun&&afterRun.ok){
+                state.conferenceState=afterRun.status;
+                if(afterRun.status!=='linked'){
+                  state.linkedConferenceId=null;
+                }
+              }
+              return publicState();
+            });
+          });
+        };
+        var recoverOrRoute=function(resolved,connectivityState){
+          if(staleResult())return Promise.resolve(publicState());
+          if(resolved&&resolved.ok&&
+            resolved.status==='finalizing_conflict'){
+            state.conferenceState='finalizing_conflict';
+            state.linkedConferenceId=null;
+            notify();
+            var finalizer=options.finalizationService||
+              global.ConflictFinalizationService;
+            if(!finalizer||typeof finalizer.finalize!=='function'){
+              return Promise.resolve(publicState());
+            }
+            return finalizer.finalize(
+              linkingLocalConferenceId,
+              options.finalizationOptions
+            ).then(function(){
+              if(staleResult())return publicState();
+              return resolveState().then(function(afterFinalization){
+                if(afterFinalization&&afterFinalization.ok){
+                  state.conferenceState=afterFinalization.status;
+                  if(afterFinalization.status==='linked'){
+                    return runLinkedConference(connectivityState);
+                  }
+                }
+                return publicState();
+              });
+            });
+          }
+          if(resolved&&resolved.ok&&resolved.status==='linked'){
+            return runLinkedConference(connectivityState);
+          }
+          if(resolved&&resolved.ok&&
+            resolved.status!=='local_only'){
+            state.conferenceState=resolved.status;
+            state.linkedConferenceId=null;
+            return Promise.resolve(publicState());
+          }
+          var linker=options.automaticLinking||
+            global.AutomaticConferenceLinking;
+          var linking=linker&&typeof linker.evaluate==='function'
+            ?linker.evaluate(Object.assign(
+              {},options.automaticLinkingOptions||{},{
+                connectivity:connectivityState.connectivity,
+                reason:reasons.join(',')
+              }
+            ))
+            :Promise.resolve({
+              ok:true,status:'unavailable',data:{linked:true}
+            });
+          return linking.then(function(linkResult){
+            if(staleResult())return publicState();
+            if(linker&&(!linkResult||!linkResult.data||
+              linkResult.data.linked!==true)){
+              return publicState();
+            }
+            return runLinkedConference(connectivityState);
+          });
+        };
+        return resolveState().then(function(resolved){
+          return recoverOrRoute(resolved,connectivityState);
         });
       });
     }).then(function(result){

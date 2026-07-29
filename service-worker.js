@@ -1,6 +1,6 @@
 const APP_VERSION = '3.1.1';
 const CACHE_PREFIX = 'conference-manager-core-';
-const CACHE_REVISION = 'sync-ui-1';
+const CACHE_REVISION = 'phase-5';
 const CACHE_NAME = CACHE_PREFIX + 'v' + APP_VERSION + '-' + CACHE_REVISION;
 const CORE_ASSETS = [
   './',
@@ -27,18 +27,20 @@ const CORE_ASSETS = [
   './js/sync/conference-linking-attempt-store.js',
   './js/sync/conference-linking-service.js',
   './js/sync/conference-sync-ui.js',
-  './js/sync/conflict-backup-store.js',
-  './js/sync/pending-remote-application-store.js',
+  './js/sync/conflict-backup-store.js?rev=phase-4',
+  './js/sync/pending-remote-application-store.js?rev=phase-4',
   './js/sync/conflict-resolution-draft-store.js',
-  './js/sync/local-snapshot-application.js',
-  './js/sync/conflict-resolution-ui.js',
+  './js/sync/conflict-finalization-service.js?rev=phase-3-5',
+  './js/sync/local-snapshot-application.js?rev=phase-5',
+  './js/sync/conflict-resolution-ui.js?rev=phase-5',
   './js/sync/remote-update-store.js',
   './js/sync/realtime-locks-ui.js',
   './js/sync/automatic-sync-preferences.js',
   './js/sync/sync-scheduler-state.js',
-  './js/sync/automatic-queue-runner.js?rev=revision-publish-1',
+  './js/sync/conference-sync-state-resolver.js?rev=phase-5',
+  './js/sync/automatic-queue-runner.js?rev=phase-5',
   './js/sync/automatic-conference-linking.js',
-  './js/sync/automatic-sync-orchestrator.js?rev=link-state-1',
+  './js/sync/automatic-sync-orchestrator.js?rev=phase-5',
   './utils.js',
   './core.js',
   './people.js',

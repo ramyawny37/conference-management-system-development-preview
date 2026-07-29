@@ -206,6 +206,90 @@ async function run(){
   assert.strictEqual((await runner.run(blocked)).status,'empty');
 
   runner.resetForTests();
+  var metadataBlockedCalls=0;
+  var metadataBlocked=options({
+    processor:{processOperation:function(){metadataBlockedCalls++;}}
+  });
+  metadataBlocked._links[ids.first].linkStatus='linked';
+  metadataBlocked._links[ids.first].pendingLocalApplication=true;
+  assert.strictEqual(
+    (await runner.run(metadataBlocked)).status,
+    'empty'
+  );
+  assert.strictEqual(metadataBlockedCalls,0);
+
+  runner.resetForTests();
+  var resolverBlockedStates=[
+    'needs_resolution',
+    'finalizing_conflict',
+    'pending_local_application'
+  ];
+  for(var resolverIndex=0;
+    resolverIndex<resolverBlockedStates.length;
+    resolverIndex++){
+    var resolverCalls=0;
+    var resolverBlocked=options({
+      stateResolver:{resolve:function(){
+        return Promise.resolve({
+          ok:true,
+          status:resolverBlockedStates[resolverIndex]
+        });
+      }},
+      processor:{processOperation:function(){resolverCalls++;}}
+    });
+    assert.strictEqual((await runner.run(resolverBlocked)).status,'empty');
+    assert.strictEqual(resolverCalls,0);
+    runner.resetForTests();
+  }
+
+  var isolatedOperations=[
+    operation('cccccccc-cccc-4ccc-8ccc-cccccccccccc',ids.first),
+    operation('dddddddd-dddd-4ddd-8ddd-dddddddddddd',ids.second)
+  ];
+  var isolatedLinks={};
+  isolatedLinks[ids.first]={
+    localConferenceId:'local-first',
+    remoteConferenceId:ids.first,
+    linkStatus:'linked'
+  };
+  isolatedLinks[ids.second]={
+    localConferenceId:'local-second',
+    remoteConferenceId:ids.second,
+    linkStatus:'linked'
+  };
+  var processedConferences=[];
+  var isolated=options({
+    queue:{getReadyOperations:function(){
+      return Promise.resolve({
+        ok:true,data:{operations:isolatedOperations.slice()}
+      });
+    }},
+    linkStore:{findByRemoteId:function(remoteId){
+      return isolatedLinks[remoteId];
+    }},
+    stateResolver:{resolve:function(input){
+      return Promise.resolve({
+        ok:true,
+        status:input.localConferenceId==='local-first'
+          ?'needs_resolution'
+          :'linked'
+      });
+    }},
+    processor:{processOperation:function(operationId){
+      var selected=isolatedOperations.filter(function(item){
+        return item.operationId===operationId;
+      })[0];
+      processedConferences.push(selected.conferenceId);
+      return Promise.resolve({
+        ok:true,status:'applied',
+        data:{operation:selected,revision:2}
+      });
+    }}
+  });
+  assert.strictEqual((await runner.run(isolated)).status,'completed');
+  assert.deepStrictEqual(processedConferences,[ids.second]);
+
+  runner.resetForTests();
   var backoffBypassCalls=0;
   var backoffBypass=options({
     reasons:['local_save'],

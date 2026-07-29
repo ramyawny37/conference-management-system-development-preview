@@ -102,6 +102,20 @@
       return !!(read&&read.ok&&read.data&&read.data.status==='pending');
     }).catch(function(){return true;});
   }
+  function resolvedConferenceAllows(link,options){
+    var resolver=options.stateResolver||
+      global.ConferenceSyncStateResolver;
+    if(!resolver||typeof resolver.resolve!=='function'){
+      return pendingApplicationBlocks(link,options).then(function(blocked){
+        return !blocked;
+      });
+    }
+    return resolver.resolve({
+      localConferenceId:link.localConferenceId
+    },options.stateResolverOptions).then(function(resolved){
+      return !!(resolved&&resolved.ok&&resolved.status==='linked');
+    }).catch(function(){return false;});
+  }
   function selectFair(operations,limit){
     var selected=[];
     var deferred=[];
@@ -274,8 +288,8 @@
         var link=resolveLink(operation,options);
         if(bypassBackoff)clearRetry(operation.conferenceId);
         if(!isSafeLink(link)||retryTimers[operation.conferenceId])return;
-        checks.push(pendingApplicationBlocks(link,options).then(function(blocked){
-          return blocked?null:{operation:operation,link:link};
+        checks.push(resolvedConferenceAllows(link,options).then(function(allowed){
+          return allowed?{operation:operation,link:link}:null;
         }));
       });
       return Promise.all(checks).then(function(items){

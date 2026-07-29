@@ -8,6 +8,24 @@
   function repository(options){
     return options&&options.indexedDb||global.AppIndexedDB;
   }
+  function normalizeFinalization(record){
+    record.finalization=record.finalization&&
+      typeof record.finalization==='object'
+      ?record.finalization
+      :{};
+    [
+      'pendingApplicationStored',
+      'revisionPublished',
+      'linkMetadataUpdated',
+      'queueUpdated',
+      'draftCompleted'
+    ].forEach(function(flag){
+      if(record.finalization[flag]!==true){
+        record.finalization[flag]=false;
+      }
+    });
+    return record;
+  }
   function save(localConferenceId,plan,options){
     if(!localConferenceId||!plan||!plan.resolutionOperationId){
       return Promise.resolve({ok:false,status:'invalid'});
@@ -32,6 +50,7 @@
         resolvedRevision:null,
         finalization:{
           pendingApplicationStored:false,
+          revisionPublished:false,
           linkMetadataUpdated:false,
           queueUpdated:false,
           draftCompleted:false
@@ -48,7 +67,8 @@
   function get(localConferenceId,options){
     return repository(options).getRecord(STORE,String(localConferenceId||''))
       .then(function(record){
-        return record?{ok:true,status:record.status,data:copy(record)}:
+        return record?{ok:true,status:record.status,
+          data:copy(normalizeFinalization(record))}:
           {ok:false,status:'not_found'};
       }).catch(function(){return {ok:false,status:'read_failed'};});
   }

@@ -7,8 +7,10 @@
   var decisions=Object.create(null);
   var message='';
   var pendingRecord=null;
+  var pendingTrusted=false;
   var persistentLoadedFor=null;
   var finalizationPending=false;
+  var remoteApplicationEnabled=true;
 
   function copy(value){
     if(typeof global.structuredClone==='function')return global.structuredClone(value);
@@ -24,13 +26,21 @@
       queue:options.queue||global.OfflineSyncQueue,
       adapter:options.adapter||global.LocalSnapshotApplication,
       pending:options.pending||global.PendingRemoteApplicationStore,
-      drafts:options.drafts||global.ConflictResolutionDraftStore
+      drafts:options.drafts||global.ConflictResolutionDraftStore,
+      finalizer:options.finalizer||global.ConflictFinalizationService
     };
   }
   function safe(ok,status,data){
     return {ok:ok,status:status,data:data||null,error:ok?null:{
       code:status,message:'تعذر إكمال العملية بأمان.'
     }};
+  }
+  function scheduleStateRefresh(options){
+    var orchestrator=options&&options.orchestrator||
+      global.AutomaticSyncOrchestrator;
+    if(orchestrator&&typeof orchestrator.schedule==='function'){
+      orchestrator.schedule('conference_changed');
+    }
   }
   function loadConflict(input,options){
     input=input||{};
@@ -75,7 +85,6 @@
         d.links.save(Object.assign({},link,{
           conflictId:conflict.conflictId,
           conflictStatus:'reviewed',
-          actualRevision:conflict.actualRevision,
           linkStatus:'needs_resolution',
           lastConflictAt:conflict.createdAt||new Date().toISOString()
         }));
@@ -127,94 +136,22 @@
   }
   function finalizeResolution(localConferenceId,options){
     var d=deps(options);
-    return d.drafts.get(localConferenceId).then(function(draftResult){
-      if(!draftResult.ok)return safe(false,'draft_not_found');
-      var draft=draftResult.data;
-      if(['executed','finalizing'].indexOf(draft.executionStatus)<0){
-        return safe(false,draft.executionStatus==='stale'
-          ?'stale_resolution':'finalization_not_ready');
-      }
-      var result=draft.executionResult;
-      var storedPlan=draft.plan;
-      var revision=draft.resolvedRevision;
-      var keepServer=storedPlan.strategy==='keep_server';
-      var flags=draft.finalization;
-      var sequence=Promise.resolve();
-      if(!flags.pendingApplicationStored){
-        sequence=sequence.then(function(){
-          if(!keepServer)return {ok:true,data:null};
-          return d.pending.save({
-            localConferenceId:localConferenceId,
-            remoteConferenceId:storedPlan.conferenceId,
-            conflictId:storedPlan.conflictId,
-            resolutionStrategy:'keep_server',
-            resolutionOperationId:storedPlan.resolutionOperationId,
-            resolvedRevision:revision,
-            resolvedSnapshot:copy(storedPlan.resolvedSnapshot)
-          });
-        }).then(function(pendingResult){
-          if(!pendingResult.ok)throw new Error('PENDING_APPLICATION_STORE_FAILED');
-          pendingRecord=pendingResult.data||pendingRecord;
-          return d.drafts.updateFinalization(localConferenceId,{
-            pendingApplicationStored:true
-          });
-        }).then(function(updated){flags=updated.data.finalization;});
-      }
-      sequence=sequence.then(function(){
-        if(flags.linkMetadataUpdated)return null;
-        var link=d.links.get(localConferenceId);
-        if(!link)throw new Error('LINK_METADATA_MISSING');
-        var metadata=d.links.save(Object.assign({},link,{
-          knownRevision:revision,
-          resolvedRevision:revision,
-          conflictStatus:'resolved',
-          resolutionStrategy:storedPlan.strategy,
-          resolutionOperationId:storedPlan.resolutionOperationId,
-          pendingLocalApplication:keepServer,
-          linkStatus:keepServer
-            ?'server_selected_pending_local_apply':'linked',
-          lastResolvedAt:new Date().toISOString()
-        }));
-        if(!metadata.ok)throw new Error('LINK_METADATA_UPDATE_FAILED');
-        return d.drafts.updateFinalization(localConferenceId,{
-          linkMetadataUpdated:true
-        }).then(function(updated){flags=updated.data.finalization;});
-      }).then(function(){
-        if(flags.queueUpdated)return null;
-        if(!storedPlan.sourceOperationId){
-          return d.drafts.updateFinalization(localConferenceId,{
-            queueUpdated:true
-          }).then(function(updated){flags=updated.data.finalization;});
+    if(!d.finalizer||typeof d.finalizer.finalize!=='function'){
+      return Promise.resolve(safe(false,'finalization_unavailable'));
+    }
+    return d.finalizer.finalize(localConferenceId,options)
+      .then(function(result){
+        scheduleStateRefresh(options);
+        if(result&&result.ok){
+          execution=result;
+          persistentLoadedFor=null;
+          pendingRecord=null;
+          pendingTrusted=false;
         }
-        if(!d.queue||!d.queue.markConflictResolved){
-          throw new Error('QUEUE_UPDATE_UNAVAILABLE');
-        }
-        return d.queue.markConflictResolved(storedPlan.sourceOperationId,{
-          conflictId:storedPlan.conflictId,
-          resolutionOperationId:storedPlan.resolutionOperationId,
-          strategy:storedPlan.strategy,
-          revision:revision
-        }).then(function(queueResult){
-          if(!queueResult.ok)throw new Error('QUEUE_UPDATE_FAILED');
-          return d.drafts.updateFinalization(localConferenceId,{
-            queueUpdated:true
-          });
-        }).then(function(updated){flags=updated.data.finalization;});
-      }).then(function(){
-        return d.drafts.markCompleted(localConferenceId);
-      }).then(function(completed){
-        if(!completed.ok)throw new Error('DRAFT_COMPLETION_FAILED');
-        execution=result;
-        return safe(true,'finalization_completed',{
-          executionResult:copy(result)
-        });
-      }).catch(function(error){
-        return safe(false,'finalization_incomplete',{
-          reason:error&&error.message
-        });
+        return result||safe(false,'finalization_incomplete');
+      }).catch(function(){
+        return safe(false,'finalization_incomplete');
       });
-      return sequence;
-    }).catch(function(){return safe(false,'finalization_incomplete');});
   }
   function execute(options){
     if(busy)return Promise.resolve(safe(false,'busy'));
@@ -244,14 +181,6 @@
           if(result&&result.status==='conflict_changed'){
             plan=null;
             message='تغير التعارض؛ أعد تحميله قبل إنشاء خطة جديدة.';
-            var changedLink=d.links.get(review.localConferenceId);
-            if(changedLink){
-              d.links.save(Object.assign({},changedLink,{
-                linkStatus:'needs_resolution',
-                conflictStatus:'changed',
-                actualRevision:result.data&&result.data.actualRevision
-              }));
-            }
             return d.drafts.markStale(
               review.localConferenceId,result
             ).then(function(){return result;});
@@ -266,6 +195,7 @@
             review.localConferenceId,result
           ).then(function(saved){
             if(!saved.ok)return safe(false,'execution_result_storage_failed');
+            scheduleStateRefresh(options);
             return finalizeResolution(review.localConferenceId,options);
           });
         });
@@ -285,36 +215,14 @@
     var localId=input.localConferenceId||
       review&&review.localConferenceId||
       pendingRecord&&pendingRecord.localConferenceId;
-    var link=d.links.get(localId);
-    if(!link||!pendingRecord||pendingRecord.status!=='pending'||
-      !link.pendingLocalApplication){
-      return Promise.resolve(safe(false,'server_apply_mismatch'));
+    if(!d.adapter||typeof d.adapter.apply!=='function'){
+      return Promise.resolve(safe(false,'local_application_unavailable'));
     }
-    return d.adapter.apply({
-      record:copy(pendingRecord),
-      link:copy(link)
-    },input).then(function(result){
-      if(!result.ok)return result;
-      var metadata=d.links.save(Object.assign({},link,{
-        linkStatus:'linked',
-        pendingLocalApplication:false
-      }));
-      if(!metadata.ok)return safe(false,'metadata_update_failed');
-      return d.pending.mark(localId,'applied').then(function(marked){
-        if(!marked.ok){
-          d.links.save(Object.assign({},link,{
-            linkStatus:'server_selected_pending_local_apply',
-            pendingLocalApplication:true
-          }));
-          return safe(false,'pending_status_update_failed');
-        }
-        pendingRecord=marked.data;
-        return safe(true,'applied_local',result.data);
-      });
-    });
+    return d.adapter.apply({localConferenceId:localId},input);
   }
   function restorePersistentState(localConferenceId,options){
     var d=deps(options), link=d.links.get(localConferenceId);
+    pendingTrusted=false;
     return Promise.all([
       d.pending.get(localConferenceId),
       d.drafts.get(localConferenceId)
@@ -349,10 +257,26 @@
           };
         }
       }
-      return safe(true,'persistent_state_loaded',{
-        pending:pendingRecord?copy(pendingRecord):null,
-        draft:draft?copy(draft):null,
-        finalizationPending:finalizationPending
+      var verification=pendingRecord&&d.pending&&
+        typeof d.pending.verify==='function'
+        ?d.pending.verify(pendingRecord)
+        :Promise.resolve(false);
+      return verification.then(function(valid){
+        pendingTrusted=!!(valid&&link&&
+          pendingRecord.localConferenceId===String(localConferenceId)&&
+          pendingRecord.remoteConferenceId===link.remoteConferenceId&&
+          pendingRecord.conflictId===link.conflictId&&
+          pendingRecord.resolutionOperationId===
+            link.resolutionOperationId&&
+          pendingRecord.resolvedRevision===link.resolvedRevision&&
+          link.linkStatus==='server_selected_pending_local_apply'&&
+          link.pendingLocalApplication===true);
+        return safe(true,'persistent_state_loaded',{
+          pending:pendingRecord?copy(pendingRecord):null,
+          draft:draft?copy(draft):null,
+          finalizationPending:finalizationPending,
+          pendingTrusted:pendingTrusted
+        });
       });
     }).catch(function(){return safe(false,'persistent_state_load_failed');});
   }
@@ -445,7 +369,9 @@
         '<button class="btn btn-orange btn-sm" '+
         'onclick="ConflictResolutionUI.finalizeCurrent()">استكمال إنهاء حل التعارض</button>';
     }
-    if(link.pendingLocalApplication&&pendingRecord&&
+    if(remoteApplicationEnabled&&pendingTrusted&&
+      link.linkStatus==='server_selected_pending_local_apply'&&
+      link.pendingLocalApplication&&pendingRecord&&
       pendingRecord.status==='pending'){
       html+='<button class="btn btn-red btn-sm" onclick="ConflictResolutionUI.applyCurrentServer()">تطبيق نسخة الخادم على هذا الجهاز</button>';
     }
@@ -470,7 +396,9 @@
     refresh(result.ok?'تم إعداد Preview للخطة.':'الخطة غير مكتملة أو غير صالحة.');
   }
   function executeCurrent(){
+    var localConferenceId=current().localConferenceId;
     execute().then(function(result){
+      if(current().localConferenceId!==localConferenceId)return;
       refresh(result&&result.ok?'تم تنفيذ قرار التعارض على الخادم.':
         'تعذر تنفيذ الخطة، ويمكن إعادة المحاولة بنفس الخطة.');
     });
@@ -484,20 +412,25 @@
     });
   }
   function applyCurrentServer(){
+    if(busy)return;
     if(!global.confirm||!global.confirm(
       'سيتم استبدال بيانات المؤتمر المحلية بعد إنشاء نسخة احتياطية. هل تريد المتابعة؟'
     ))return;
+    var localConferenceId=current().localConferenceId;
+    busy=true;
     applyServerLocally({
-      localConferenceId:current().localConferenceId,
+      localConferenceId:localConferenceId,
       appData:global.appData,
       applyMemory:function(value){global.appData=value;},
       render:function(){
         if(global.syncCurrentConferenceRefs)global.syncCurrentConferenceRefs();
       }
     }).then(function(result){
+      busy=false;
+      if(current().localConferenceId!==localConferenceId)return;
       refresh(result.ok?'تم تطبيق نسخة الخادم محليًا بعد إنشاء Backup.':
         'لم يتم تطبيق النسخة المحلية.');
-    });
+    }).catch(function(){busy=false;});
   }
   global.ConflictResolutionUI=Object.freeze({
     loadConflict:loadConflict,setDecision:setDecision,buildPlan:buildPlan,

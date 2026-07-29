@@ -794,11 +794,16 @@
       ));
     }
     var valid= isUuid(String(plan.conflictId||''))&&
+      isUuid(String(plan.conferenceId||''))&&
       isUuid(String(plan.resolutionOperationId||''))&&
       STRATEGIES.indexOf(plan.strategy)!==-1&&
       Object.prototype.hasOwnProperty.call(plan,'resolvedSnapshot')&&
       Number.isInteger(plan.baseRevision)&&plan.baseRevision>=0&&
-      Number.isInteger(plan.sourceRevision)&&plan.sourceRevision>=0;
+      Number.isInteger(plan.actualRevision)&&plan.actualRevision>=0&&
+      plan.baseRevision===plan.actualRevision&&
+      Number.isInteger(plan.sourceRevision)&&plan.sourceRevision>=0&&
+      String(plan.schemaVersion||'').trim()!==''&&
+      String(plan.appVersion||'').trim()!=='';
     if(valid&&plan.sourceOperationId&&
       String(plan.sourceOperationId)===String(plan.resolutionOperationId)){
       valid=false;
