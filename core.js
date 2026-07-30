@@ -1279,42 +1279,54 @@ function getRoomById(roomId) {
   return result;
 }
 
-function normalizeAppData_core(){
-  appData.version = appData.version || '2.0.0';
-  appData.conferences = appData.conferences || [];
-  appData.templates = appData.templates || [];
-  appData.archives = appData.archives || [];
-  appData.backups = appData.backups || [];
-  appData.houseTemplates = appData.houseTemplates || [];
-  appData.peopleDb = appData.peopleDb || { version: '1.0.0', people: [] };
-  appData.peopleDb.version = appData.peopleDb.version || '1.0.0';
-  appData.peopleDb.people = (appData.peopleDb.people || []).map(function(p){ return normalizePersonRecord(p); });
-  appData.trash = appData.trash || {};
-  appData.trash.templates = appData.trash.templates || [];
-  appData.trash.archives = appData.trash.archives || [];
-  appData.trash.backups = appData.trash.backups || [];
-  appData.trash.houseTemplates = appData.trash.houseTemplates || [];
-  appData.trash.rooms = appData.trash.rooms || [];
-  appData.conferences.forEach(function(confObj){
-    normalizeConference(confObj);
-    linkRoomPeopleToDatabase(confObj);
+function normalizeAppData_core(targetAppData){
+  var target=targetAppData||appData;
+  target.version = target.version || '2.0.0';
+  target.conferences = target.conferences || [];
+  target.templates = target.templates || [];
+  target.archives = target.archives || [];
+  target.backups = target.backups || [];
+  target.houseTemplates = target.houseTemplates || [];
+  target.peopleDb = target.peopleDb || { version: '1.0.0', people: [] };
+  target.peopleDb.version = target.peopleDb.version || '1.0.0';
+  target.peopleDb.people = (target.peopleDb.people || []).map(function(p){ return normalizePersonRecord(p); });
+  target.trash = target.trash || {};
+  target.trash.templates = target.trash.templates || [];
+  target.trash.archives = target.trash.archives || [];
+  target.trash.backups = target.trash.backups || [];
+  target.trash.houseTemplates = target.trash.houseTemplates || [];
+  target.trash.rooms = target.trash.rooms || [];
+  target.conferences.forEach(function(confObj){
+    normalizeConference(confObj,target);
+    if(target===appData)linkRoomPeopleToDatabase(confObj);
   });
   var currentConfExists = false;
-  if (appData.currentConferenceId) {
-    for (var i = 0; i < appData.conferences.length; i++) {
-      if (appData.conferences[i].id === appData.currentConferenceId) {
+  if (target.currentConferenceId) {
+    for (var i = 0; i < target.conferences.length; i++) {
+      if (target.conferences[i].id === target.currentConferenceId) {
         currentConfExists = true;
         break;
       }
     }
   }
   if (!currentConfExists) {
-    appData.currentConferenceId = null;
+    target.currentConferenceId = null;
   }
+  return target;
 }
 
-function normalizeConference(confObj){
+function normalizeAppDataCandidate(candidate){
+  if(!candidate||typeof candidate!=='object'||Array.isArray(candidate)){
+    throw new Error('INVALID_APP_DATA_CANDIDATE');
+  }
+  var normalized=deepClone(candidate);
+  normalizeAppData_core(normalized);
+  return normalized;
+}
+
+function normalizeConference(confObj,sourceAppData){
   if(!confObj) return;
+  var source=sourceAppData||appData;
   confObj.conf = confObj.conf || {name:confObj.name||'المؤتمر',startDate:confObj.startDate||'',endDate:confObj.endDate||'',days:confObj.days||1};
   syncConferencePeriod(confObj);
   confObj.houses = confObj.houses || [];
@@ -1334,11 +1346,11 @@ function normalizeConference(confObj){
   if(
     !confObj.skipPeopleMigration &&
     !confObj.peopleDb.people.length &&
-    appData.peopleDb &&
-    appData.peopleDb.people &&
-    appData.peopleDb.people.length
+    source.peopleDb &&
+    source.peopleDb.people &&
+    source.peopleDb.people.length
   ){
-    confObj.peopleDb.people = deepClone(appData.peopleDb.people);
+    confObj.peopleDb.people = deepClone(source.peopleDb.people);
   }
 
   if(!confObj.houses.length && Array.isArray(confObj.rooms) && confObj.rooms.length){

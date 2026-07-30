@@ -383,6 +383,373 @@ function exportJsonFile(){
   a.download='conference_'+new Date().toISOString().slice(0,10)+'.json';
   a.click();showToast('✅ تم تصدير JSON');
 }
+function downloadFullApplicationBackup(){
+  try{
+    if(!window.FullBackupService||
+      typeof window.FullBackupService.createAndDownloadFullBackup!=='function'){
+      throw new Error('FULL_BACKUP_SERVICE_UNAVAILABLE');
+    }
+    var result=window.FullBackupService.createAndDownloadFullBackup(appData);
+    showToast('✅ تم تنزيل النسخة الاحتياطية الكاملة: '+result.fileName);
+    return result;
+  }catch(error){
+    console.error('تعذر تنزيل النسخة الاحتياطية الكاملة:',error);
+    showToast('❌ تعذر تنزيل النسخة الاحتياطية الكاملة. تحقق من البيانات وحاول مرة أخرى.','#E74C3C');
+    return null;
+  }
+}
+var fullRestorePreflightState=null;
+function closeFullRestorePreflight(){
+  if(fullRestorePreflightState&&fullRestorePreflightState.running)return;
+  var modal=ge('fullRestorePreflightModal');
+  if(modal)modal.remove();
+  var confirmation=ge('fullRestoreConfirmationModal');
+  if(confirmation)confirmation.remove();
+  fullRestorePreflightState=null;
+}
+function readFullRestoreSyncLinks(){
+  var result={syncLinks:[],warnings:[]};
+  try{
+    var raw=localStorage.getItem('conference_manager_sync_links');
+    if(!raw)return result;
+    var parsed=JSON.parse(raw);
+    if(!parsed||typeof parsed!=='object'){
+      result.warnings.push({
+        code:'SYNC_LINKS_READ_INVALID',
+        message:'تعذر فهم بيانات روابط المزامنة المحلية.'
+      });
+      return result;
+    }
+    result.syncLinks=parsed;
+  }catch(error){
+    result.warnings.push({
+      code:'SYNC_LINKS_READ_FAILED',
+      message:'تعذر قراءة روابط المزامنة المحلية، واستمر فحص النسخة بدونها.'
+    });
+  }
+  return result;
+}
+function fullRestorePreviewCountRows(preview){
+  var rows=[
+    ['المؤتمرات','conferenceCount'],
+    ['القوالب','templateCount'],
+    ['الأرشيف','archiveCount'],
+    ['النسخ الداخلية','internalBackupCount'],
+    ['قوالب البيوت','houseTemplateCount'],
+    ['الأشخاص','peopleCount']
+  ];
+  var html='<div class="settings-list">';
+  rows.forEach(function(row){
+    html+='<div class="settings-list-item"><span>'+row[0]+'</span>'+
+      '<span>الحالي: <strong>'+preview.current[row[1]]+
+      '</strong> — القادم: <strong>'+preview.incoming[row[1]]+
+      '</strong></span></div>';
+  });
+  return html+'</div>';
+}
+function fullRestorePreviewIssues(title,items,errorStyle){
+  if(!items||!items.length)return '';
+  var html='<div class="modal-section"><strong>'+esc(title)+'</strong>';
+  items.forEach(function(item){
+    html+='<div class="sync-settings-message'+
+      (errorStyle?' sync-settings-error':'')+'">'+
+      esc(item.code||'NOTICE')+' — '+esc(item.message||'')+'</div>';
+  });
+  return html+'</div>';
+}
+function showFullRestorePreflightModal(input){
+  closeFullRestorePreflight();
+  fullRestorePreflightState={
+    file:input.file,
+    candidate:input.candidate,
+    preview:input.preview,
+    backupDocument:input.backupDocument,
+    running:false
+  };
+  var preview=input.preview;
+  var candidate=input.candidate;
+  var file=input.file;
+  var modal=document.createElement('div');
+  modal.id='fullRestorePreflightModal';
+  modal.className='overlay app-modal';
+  modal.onclick=function(event){
+    if(event.target===modal)closeFullRestorePreflight();
+  };
+  var sizeMb=Math.round((file.fileSize/1024/1024)*100)/100;
+  var html='<div class="modal" style="max-width:720px">'+
+    '<div class="mhead"><span>فحص نسخة احتياطية كاملة</span>'+
+    '<span style="cursor:pointer" onclick="closeFullRestorePreflight()">✕</span></div>'+
+    '<div class="mbody"><div class="modal-section">'+
+    '<div><strong>الملف:</strong> '+esc(file.fileName)+'</div>'+
+    '<div><strong>الحجم:</strong> '+sizeMb+' MB</div>'+
+    '<div><strong>تاريخ النسخة:</strong> '+esc(preview.source.fileCreatedAt)+'</div>'+
+    '<div><strong>إصدار التطبيق المصدر:</strong> '+esc(preview.source.appVersion)+'</div>'+
+    '<div><strong>إصدار البيانات:</strong> '+esc(preview.source.dataSchemaVersion)+'</div>'+
+    '<div><strong>المؤتمر الحالي داخل النسخة:</strong> '+
+    esc(preview.incoming.currentConferenceName||'—')+'</div></div>'+
+    '<div class="modal-section"><strong>مقارنة البيانات</strong>'+
+    fullRestorePreviewCountRows(preview)+'</div>'+
+    '<div class="sync-settings-message sync-settings-error">'+
+    'الاستعادة ستستبدل جميع بيانات البرنامج الحالية.</div>'+
+    '<div class="sync-settings-message">'+
+    'سيتم فحص الملف محليًا داخل هذا الجهاز ولن يتم رفعه إلى الإنترنت.</div>'+
+    fullRestorePreviewIssues('أخطاء تمنع الاستعادة',candidate.errors,true)+
+    fullRestorePreviewIssues('تحذيرات الفحص',
+      candidate.warnings.concat(preview.warnings||[]),false)+
+    fullRestorePreviewIssues('مخاطر الروابط السحابية',preview.risks,false)+
+    '<div id="fullRestoreExecutionStatus" class="sync-settings-message" style="display:none"></div>'+
+    '<div class="row" style="margin-top:12px">'+
+    '<button id="executeFullRestoreButton" class="btn btn-red" '+
+    (candidate.errors.length?'disabled':'onclick="showFullRestoreConfirmation()"')+
+    '>استعادة جميع بيانات البرنامج</button>'+
+    '<button class="btn btn-blue" onclick="closeFullRestorePreflight()">إغلاق</button>'+
+    '</div></div></div>';
+  modal.innerHTML=html;
+  document.body.appendChild(modal);
+}
+function closeFullRestoreConfirmation(){
+  var modal=ge('fullRestoreConfirmationModal');
+  if(modal)modal.remove();
+}
+function showFullRestoreConfirmation(){
+  if(!fullRestorePreflightState||
+    fullRestorePreflightState.running||
+    fullRestorePreflightState.candidate.errors.length)return;
+  closeFullRestoreConfirmation();
+  var modal=document.createElement('div');
+  modal.id='fullRestoreConfirmationModal';
+  modal.className='overlay app-modal';
+  modal.innerHTML='<div class="modal" style="max-width:560px">'+
+    '<div class="mhead"><span>تأكيد الاستعادة الكاملة</span></div>'+
+    '<div class="mbody"><div class="sync-settings-message sync-settings-error">'+
+    'سيتم استبدال جميع بيانات البرنامج الحالية بالنسخة المختارة. سيتم إنشاء نسخة حماية محلية أولًا. هل تريد المتابعة؟</div>'+
+    '<div class="row" style="margin-top:12px">'+
+    '<button class="btn btn-red" onclick="executeConfirmedFullRestore()">نعم، استعادة جميع البيانات</button>'+
+    '<button class="btn btn-gray" onclick="closeFullRestoreConfirmation()">إلغاء</button>'+
+    '</div></div></div>';
+  document.body.appendChild(modal);
+}
+function renderFullRestoreFailure(result){
+  var rollback=result.rollback||{};
+  var safety=result.safetyBackup||{};
+  var message='فشلت الاستعادة عند المرحلة: '+(result.failedStage||'unknown')+'. ';
+  if(rollback.attempted){
+    message+=rollback.success
+      ?'تمت استعادة البيانات السابقة بنجاح. '
+      :'فشل جزء من استعادة البيانات السابقة. لا تغلق البرنامج وراجع نسخة الحماية. ';
+  }
+  message+=safety.created
+    ?'توجد نسخة حماية محلية برقم '+safety.id+'.'
+    :'لم يتم تأكيد إنشاء نسخة حماية.';
+  return message;
+}
+function executeConfirmedFullRestore(){
+  var state=fullRestorePreflightState;
+  if(!state||state.running)return;
+  closeFullRestoreConfirmation();
+  state.running=true;
+  var button=ge('executeFullRestoreButton');
+  var status=ge('fullRestoreExecutionStatus');
+  if(button)button.disabled=true;
+  if(status){
+    status.style.display='block';
+    status.classList.remove('sync-settings-error');
+    status.textContent='جارٍ إنشاء نسخة حماية واستعادة البيانات...';
+  }
+  window.FullBackupService.executeFullRestore({
+    confirmed:true,
+    backupDocument:state.backupDocument,
+    candidateResult:state.candidate,
+    preview:state.preview
+  },{
+    currentAppData:appData,
+    supportedDataSchemaVersion:appData.version,
+    normalizeCandidate:normalizeAppDataCandidate,
+    applyAppData:function(value){appData=value;}
+  }).then(function(result){
+    if(result.success){
+      if(status){
+        status.textContent='تمت استعادة البيانات بنجاح. سيتم إعادة تشغيل البرنامج.';
+      }
+      showToast('✅ تمت استعادة البيانات بنجاح. سيتم إعادة تشغيل البرنامج.');
+      setTimeout(function(){window.location.reload();},1500);
+      return;
+    }
+    state.running=false;
+    if(button)button.disabled=false;
+    if(status){
+      status.classList.add('sync-settings-error');
+      status.textContent=renderFullRestoreFailure(result);
+    }
+  }).catch(function(error){
+    state.running=false;
+    if(button)button.disabled=false;
+    if(status){
+      status.classList.add('sync-settings-error');
+      status.textContent='تعذر إكمال الاستعادة بأمان. لم تتم إعادة تشغيل البرنامج.';
+    }
+    console.error('تعذر تنفيذ الاستعادة الكاملة:',error);
+  });
+}
+function closePostRestoreCloudReviewModal(){
+  var modal=ge('postRestoreCloudReviewModal');
+  if(modal)modal.remove();
+}
+function readPostRestoreSyncLinksStrict(){
+  var raw=localStorage.getItem('conference_manager_sync_links');
+  if(!raw)return {};
+  var parsed=JSON.parse(raw);
+  if(!parsed||typeof parsed!=='object'||Array.isArray(parsed)){
+    throw new Error('FULL_RESTORE_SYNC_LINKS_MALFORMED');
+  }
+  return parsed;
+}
+function showPostRestoreCloudReviewBanner(){
+  var existing=ge('postRestoreCloudReviewBanner');
+  if(existing)return;
+  var banner=document.createElement('div');
+  banner.id='postRestoreCloudReviewBanner';
+  banner.className='update-bar';
+  banner.style.display='flex';
+  banner.innerHTML='<span>مراجعة الربط السحابي بعد الاستعادة مطلوبة. المزامنة متوقفة مؤقتًا.</span>'+
+    '<button class="btn btn-orange btn-sm" onclick="showPostRestoreCloudReviewModal()">فتح المراجعة</button>';
+  document.body.appendChild(banner);
+}
+function postRestoreAffectedNames(review){
+  var names=[];
+  (review.affectedLinks||[]).forEach(function(link){
+    var conference=(appData.conferences||[]).find(function(item){
+      return item&&item.id===link.localConferenceId;
+    });
+    names.push(conference&&conference.name||link.localConferenceId);
+  });
+  return names;
+}
+function showPostRestoreCloudReviewModal(){
+  closePostRestoreCloudReviewModal();
+  var service=window.FullBackupService;
+  var markerResult=service.getFullRestoreCloudReviewMarker();
+  var review=null;
+  var readError=null;
+  try{
+    var links=readPostRestoreSyncLinksStrict();
+    if(markerResult.malformed){
+      throw new Error(markerResult.errorCode);
+    }
+    review=service.buildPostRestoreCloudReview(
+      appData,
+      links,
+      markerResult.marker
+    );
+  }catch(error){
+    readError=error;
+  }
+  var modal=document.createElement('div');
+  modal.id='postRestoreCloudReviewModal';
+  modal.className='overlay app-modal';
+  var html='<div class="modal" style="max-width:680px">'+
+    '<div class="mhead"><span>مراجعة الربط السحابي بعد الاستعادة</span></div>'+
+    '<div class="mbody"><div class="sync-settings-message">'+
+    'تمت استعادة نسخة احتياطية كاملة. أوقف البرنامج المزامنة مؤقتًا حتى لا تُرفع البيانات المستعادة إلى مؤتمرات سحابية مرتبطة سابقًا.</div>';
+  if(readError){
+    html+='<div class="sync-settings-message sync-settings-error">'+
+      'تعذر قراءة عقد الروابط السحابية بأمان. بقيت المزامنة متوقفة ولم يتم تغيير الروابط.</div>';
+  }else{
+    var names=postRestoreAffectedNames(review);
+    html+='<div class="modal-section">'+
+      '<div><strong>المؤتمرات المستعادة:</strong> '+review.restoredConferenceIds.length+'</div>'+
+      '<div><strong>الروابط المتأثرة:</strong> '+review.affectedLinks.length+'</div>'+
+      '<div><strong>الروابط غير المتأثرة:</strong> '+review.unaffectedLinks.length+'</div>'+
+      '<div><strong>الروابط غير الصالحة:</strong> '+review.malformedLinks.length+'</div>'+
+      (names.length?'<div><strong>المؤتمرات المتأثرة:</strong> '+esc(names.join('، '))+'</div>':'')+
+      '</div><div class="sync-settings-message">'+
+      'سيتم إلغاء الربط المحلي للمؤتمرات المستعادة فقط. لن تُحذف أي بيانات من Supabase، ويمكنك إعادة ربطها يدويًا لاحقًا.</div>';
+  }
+  html+='<div id="postRestoreCloudReviewStatus" class="sync-settings-message" style="display:none"></div>'+
+    '<div class="row" style="margin-top:12px">'+
+    '<button id="completePostRestoreCloudReviewButton" class="btn btn-orange" '+
+    (readError?'disabled':'onclick="completePostRestoreCloudReviewFromUI()"')+
+    '>إلغاء الروابط القديمة واستكمال التشغيل</button>'+
+    '<button class="btn btn-gray" onclick="closePostRestoreCloudReviewModal()">المراجعة لاحقًا</button>'+
+    '</div></div></div>';
+  modal.innerHTML=html;
+  document.body.appendChild(modal);
+}
+function completePostRestoreCloudReviewFromUI(){
+  var button=ge('completePostRestoreCloudReviewButton');
+  var status=ge('postRestoreCloudReviewStatus');
+  if(button)button.disabled=true;
+  if(status){
+    status.style.display='block';
+    status.classList.remove('sync-settings-error');
+    status.textContent='جارٍ تنظيف الروابط المحلية المتأثرة...';
+  }
+  window.FullBackupService.completePostRestoreCloudReview({
+    currentAppData:appData
+  }).then(function(result){
+    if(!result.success){
+      if(button)button.disabled=false;
+      if(status){
+        status.classList.add('sync-settings-error');
+        status.textContent=result.errorCode===
+          'FULL_RESTORE_QUEUE_REVIEW_REQUIRED'
+          ?'توجد عمليات مزامنة معلقة ولا توجد API آمنة لإلغائها. بقيت المزامنة متوقفة للمراجعة التقنية.'
+          :'تعذر إكمال مراجعة الروابط بأمان: '+result.errorCode;
+      }
+      return;
+    }
+    var banner=ge('postRestoreCloudReviewBanner');
+    if(banner)banner.remove();
+    if(status){
+      status.textContent=result.affectedLinkCount
+        ?'تم إلغاء الروابط المحلية القديمة. يمكنك إعادة الربط يدويًا لاحقًا.'
+        :'تمت مراجعة الربط السحابي، ولا توجد روابط متعارضة.';
+    }
+    showToast(result.affectedLinkCount
+      ?'✅ تم إلغاء الروابط المحلية القديمة واستكمال التشغيل.'
+      :'✅ تمت مراجعة الربط السحابي، ولا توجد روابط متعارضة.');
+    setTimeout(closePostRestoreCloudReviewModal,1200);
+  });
+}
+function inspectFullApplicationBackup(event){
+  var input=event&&event.target;
+  var file=input&&input.files&&input.files[0];
+  if(!file)return;
+  var service=window.FullBackupService;
+  if(!service||typeof service.readFullBackupFile!=='function'){
+    showToast('❌ خدمة فحص النسخة الاحتياطية غير متاحة.','#E74C3C');
+    input.value='';
+    return;
+  }
+  service.readFullBackupFile(file).then(function(readResult){
+    var candidate=service.prepareFullRestoreCandidate(readResult.document,{
+      supportedDataSchemaVersion:appData.version
+    });
+    var preview=service.buildFullRestorePreview(
+      appData,
+      readResult.document,
+      candidate.candidateAppData
+    );
+    var linkRead=readFullRestoreSyncLinks();
+    preview.risks=service.detectFullRestoreCloudLinkRisks(
+      candidate.candidateAppData,
+      {syncLinks:linkRead.syncLinks}
+    );
+    preview.warnings=linkRead.warnings;
+    showFullRestorePreflightModal({
+      file:readResult,
+      candidate:candidate,
+      preview:preview,
+      backupDocument:readResult.document
+    });
+  }).catch(function(error){
+    console.error('تعذر فحص النسخة الاحتياطية الكاملة:',error);
+    showToast('❌ تعذر فحص النسخة الاحتياطية: '+
+      (error&&error.code?error.code:'ملف غير صالح'),'#E74C3C');
+  }).then(function(){
+    input.value='';
+  });
+}
 function createConferenceFromObject(data, name){
   data=data&&typeof data==='object'?data:{};
   var confObj=deepClone(data);
@@ -6618,9 +6985,15 @@ function renderSettings(){
   h+='</div></div>';
   h+='<div class="settings-action-group"><div class="settings-action-group-title">حفظ واسترجاع</div><div class="settings-actions-grid">';
   h+='<button class="btn btn-gray" onclick="backupAppData()">🔁 إنشاء نسخة احتياطية</button>';
+  h+='<button class="btn btn-blue" onclick="downloadFullApplicationBackup()">تنزيل نسخة احتياطية كاملة</button>';
+  h+='<button class="btn btn-purple" onclick="ge(\'fullBackupPreflightInput\').click()">فحص نسخة احتياطية كاملة</button>';
+  h+='<input id="fullBackupPreflightInput" type="file" accept=".json,application/json" style="display:none" onchange="inspectFullApplicationBackup(event)">';
   h+='<button class="btn btn-orange" onclick="archiveCurrentConference()">🗄️ أرشفة المؤتمر</button>';
   h+='<button class="btn btn-purple" onclick="saveTemplate()">✳️ إنشاء قالب</button>';
-  h+='</div></div>';
+  h+='</div><div class="settings-summary-note">يحفظ جميع المؤتمرات والقوالب والأرشيفات وبيانات البرنامج في ملف واحد.</div>';
+  h+='<div class="settings-summary-note">يقرأ النسخة ويعرض محتوياتها ومخاطر الاستعادة قبل استبدال أي بيانات.</div>';
+  h+='<div class="settings-summary-note">سيتم فحص الملف محليًا داخل هذا الجهاز ولن يتم رفعه إلى الإنترنت.</div>';
+  h+='<div class="settings-summary-note">قد يحتوي الملف على بيانات شخصية ومالية. احتفظ به في مكان آمن.</div></div>';
   h+='<div class="settings-action-group settings-action-group-sensitive"><div class="settings-action-group-title">عمليات حساسة</div><div class="settings-actions-grid">';
   h+='<button class="btn btn-orange" onclick="if(confirm(\'هل أنت متأكد من إنهاء هذا المؤتمر؟ لن يتم حذف أي بيانات، وسيتم نقله إلى قائمة المؤتمرات المنتهية.\')) completeCurrentConference()">✅ إنهاء المؤتمر</button>';
   h+='<button class="btn btn-red" onclick="deleteCurrentConference()">🗑 حذف المؤتمر</button>';
@@ -8025,6 +8398,19 @@ window.applicationStorageReadyPromise=initializeApplicationStorage().then(functi
   return false;
 });
 window.applicationStorageReadyPromise.then(function(){
+  try{
+    if(window.FullBackupService&&
+      typeof window.FullBackupService.isFullRestoreCloudReviewPending==='function'&&
+      window.FullBackupService.isFullRestoreCloudReviewPending()){
+      console.warn('تم إيقاف المزامنة مؤقتًا لحين مراجعة روابط النسخة المستعادة.');
+      showPostRestoreCloudReviewBanner();
+      setTimeout(showPostRestoreCloudReviewModal,0);
+      return;
+    }
+  }catch(error){
+    console.warn('تعذر قراءة حالة مراجعة الروابط بعد الاستعادة.',error);
+    return;
+  }
   if(window.AutomaticConferenceLinking&&
     typeof window.AutomaticConferenceLinking.initialize==='function'){
     window.AutomaticConferenceLinking.initialize();

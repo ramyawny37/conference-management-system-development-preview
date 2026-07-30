@@ -60,6 +60,7 @@
       return {ok:false,status:'invalid'};
     }
     var links=all(options);
+    var previousLinks=copy(links);
     var previous=links[localId]||{};
     var now=new Date().toISOString();
     links[localId]={
@@ -89,9 +90,52 @@
       createdAt:previous.createdAt||now,
       updatedAt:now
     };
-    return write(links,options)
-      ?{ok:true,status:'saved',data:copy(links[localId])}
-      :{ok:false,status:'storage_error'};
+    if(!write(links,options))return {ok:false,status:'storage_error'};
+    if(global.FullBackupService&&
+      typeof global.FullBackupService.clearManualRelinkRequirement==='function'){
+      var cleared=global.FullBackupService.clearManualRelinkRequirement(
+        localId,
+        {storage:target(options)}
+      );
+      if(!cleared||!cleared.ok){
+        var rolledBack=write(previousLinks,options);
+        var service=global.FullBackupService;
+        var manualRelinkRequired=service&&
+          typeof service.isManualRelinkRequired==='function'&&
+          service.isManualRelinkRequired(localId,{
+            storage:target(options)
+          });
+        if(!manualRelinkRequired&&service&&
+          typeof service.getManualRelinkConferenceIds==='function'&&
+          typeof service.setManualRelinkConferenceIds==='function'){
+          var ids=service.getManualRelinkConferenceIds({
+            storage:target(options)
+          });
+          service.setManualRelinkConferenceIds(
+            ids.concat([localId]),
+            {storage:target(options)}
+          );
+          manualRelinkRequired=service.isManualRelinkRequired(
+            localId,
+            {storage:target(options)}
+          );
+        }
+        var actualLink=get(localId,options);
+        return {
+          ok:false,
+          status:rolledBack?'storage_error':'rollback_failed',
+          linkState:actualLink,
+          manualRelinkRequired:manualRelinkRequired===true,
+          isolationPreserved:manualRelinkRequired===true,
+          rollbackError:rolledBack?null:'SYNC_LINK_ROLLBACK_FAILED',
+          rollback:{
+            attempted:true,
+            success:rolledBack
+          }
+        };
+      }
+    }
+    return {ok:true,status:'saved',data:copy(links[localId])};
   }
   function remove(localId,options){
     var links=all(options);

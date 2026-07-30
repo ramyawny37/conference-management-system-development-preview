@@ -82,6 +82,11 @@
     if(!conference||!conference.id||!conference.name){
       return skip('conference_unavailable');
     }
+    if(global.FullBackupService&&
+      typeof global.FullBackupService.isManualRelinkRequired==='function'&&
+      global.FullBackupService.isManualRelinkRequired(conference.id)){
+      return skip('manual_relink_required');
+    }
     if(evaluationPromises[conference.id]){
       return evaluationPromises[conference.id];
     }

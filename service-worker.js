@@ -1,6 +1,6 @@
 const APP_VERSION = '3.1.1';
 const CACHE_PREFIX = 'conference-manager-core-';
-const CACHE_REVISION = 'm5-phase-3';
+const CACHE_REVISION = 'full-backup-phase-5-fixes';
 const CACHE_NAME = CACHE_PREFIX + 'v' + APP_VERSION + '-' + CACHE_REVISION;
 const CORE_ASSETS = [
   './',
@@ -8,6 +8,7 @@ const CORE_ASSETS = [
   './style.css',
   './js/storage/indexeddb.js',
   './js/storage/storage-repository.js',
+  './js/storage/full-backup.js',
   './js/sync/sync-queue.js',
   './js/storage/migration-audit.js',
   './js/storage/migration-repair.js',
