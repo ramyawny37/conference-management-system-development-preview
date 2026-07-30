@@ -3,7 +3,8 @@
   var KEY='conference_manager_sync_links';
   var STATUSES=[
     'linked','upload_pending','needs_resolution','unsynced','disconnected',
-    'server_selected_pending_local_apply'
+    'server_selected_pending_local_apply','linking','cloud_linked',
+    'link_failed'
   ];
   function copy(value){
     if(typeof global.structuredClone==='function')return global.structuredClone(value);
@@ -19,6 +20,33 @@
       var value=storage&&JSON.parse(storage.getItem(KEY)||'{}');
       return value&&typeof value==='object'&&!Array.isArray(value)?value:{};
     }catch(error){return {};}
+  }
+  function inspect(options){
+    var storage=target(options);
+    try{
+      var raw=storage&&storage.getItem(KEY);
+      if(raw===null||raw===''){
+        return {ok:true,status:'empty',data:{}};
+      }
+      var value=JSON.parse(raw);
+      if(!value||typeof value!=='object'||Array.isArray(value)){
+        return {ok:false,status:'malformed',data:null};
+      }
+      var valid=Object.keys(value).every(function(key){
+        var link=value[key];
+        return link&&typeof link==='object'&&!Array.isArray(link)&&
+          link.localConferenceId===key&&
+          isUuid(link.remoteConferenceId)&&
+          STATUSES.indexOf(link.linkStatus)>=0&&
+          Number.isInteger(link.knownRevision)&&link.knownRevision>=0;
+      });
+      if(!valid){
+        return {ok:false,status:'malformed',data:null};
+      }
+      return {ok:true,status:'read',data:copy(value)};
+    }catch(error){
+      return {ok:false,status:'read_failed',data:null};
+    }
   }
   function write(value,options){
     var storage=target(options);
@@ -60,6 +88,13 @@
       return {ok:false,status:'invalid'};
     }
     var links=all(options);
+    var duplicateRemote=Object.keys(links).some(function(key){
+      return key!==localId&&links[key]&&
+        String(links[key].remoteConferenceId||'')===remoteId;
+    });
+    if(duplicateRemote){
+      return {ok:false,status:'remote_already_linked'};
+    }
     var previousLinks=copy(links);
     var previous=links[localId]||{};
     var now=new Date().toISOString();
@@ -85,6 +120,16 @@
         ?input.resolvedRevision
         :previous.resolvedRevision||null,
       pendingLocalApplication:input.pendingLocalApplication===true,
+      linkedAt:input.linkedAt||previous.linkedAt||null,
+      linkedByUserId:String(
+        input.linkedByUserId||previous.linkedByUserId||''
+      )||null,
+      syncState:input.syncState&&
+        typeof input.syncState==='object'&&!Array.isArray(input.syncState)
+        ?copy(input.syncState)
+        :previous.syncState||null,
+      lastVerifiedAt:input.lastVerifiedAt||
+        previous.lastVerifiedAt||null,
       lastConflictAt:input.lastConflictAt||previous.lastConflictAt||null,
       lastResolvedAt:input.lastResolvedAt||previous.lastResolvedAt||null,
       createdAt:previous.createdAt||now,
@@ -146,6 +191,7 @@
   }
   global.ConferenceLinkStore=Object.freeze({
     statuses:Object.freeze(STATUSES.slice()),
-    get:get,list:list,findByRemoteId:findByRemoteId,save:save,remove:remove
+    inspect:inspect,get:get,list:list,findByRemoteId:findByRemoteId,
+    save:save,remove:remove
   });
 })(window);

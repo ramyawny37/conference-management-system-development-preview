@@ -7,13 +7,15 @@
     channel:null,
     eventHandler:null,
     lastError:null,
-    connectionId:0
+    connectionId:0,
+    cleanupPromise:null
   };
 
   function result(ok,status,data,error){
     return {
       ok:ok,
       status:status,
+      code:error&&error.code||null,
       data:data===undefined?null:data,
       error:error||null
     };
@@ -80,6 +82,7 @@
       connected:state.status==='connected',
       conferenceId:state.conferenceId,
       hasEventHandler:typeof state.eventHandler==='function',
+      cleanupPending:!!state.cleanupPromise,
       lastError:state.lastError
         ?{code:state.lastError.code,message:state.lastError.message}
         :null
@@ -87,23 +90,25 @@
   }
 
   function normalizeSnapshotEvent(payload,conferenceId){
-    var record=payload&&payload.new&&typeof payload.new==='object'
+    var eventType=payload&&String(payload.eventType||'').toUpperCase();
+    if(eventType!=='INSERT'&&eventType!=='UPDATE')return null;
+    var record=payload&&payload.new&&typeof payload.new==='object'&&
+      !Array.isArray(payload.new)
       ?payload.new
-      :payload&&payload.record&&typeof payload.record==='object'
-        ?payload.record
-        :null;
+      :null;
     if(!record)return null;
-    var eventConferenceId=String(
-      record.conference_id||conferenceId||''
-    );
-    if(eventConferenceId!==conferenceId)return null;
-    var revision=Number(record.revision);
+    var eventConferenceId=String(record.conference_id||'');
+    if(!isUuid(eventConferenceId)||eventConferenceId!==conferenceId||
+      !Number.isInteger(record.revision)||record.revision<0||
+      !isUuid(String(record.updated_by_device_id||''))){
+      return null;
+    }
     return {
       type:'snapshot_changed',
       conferenceId:conferenceId,
-      revision:Number.isInteger(revision)&&revision>=0?revision:null,
+      revision:record.revision,
       updatedAt:record.updated_at||null,
-      deviceId:record.updated_by_device_id||null
+      deviceId:String(record.updated_by_device_id)
     };
   }
 
@@ -116,8 +121,32 @@
     var event=normalizeSnapshotEvent(payload,conferenceId);
     if(!event||typeof state.eventHandler!=='function')return;
     try{
-      state.eventHandler(event);
-    }catch(error){}
+      var handled=state.eventHandler(event);
+      if(handled&&handled.ok===false){
+        state.lastError=safeError(
+          handled.error&&handled.error.code||
+          'REALTIME_EVENT_STORAGE_FAILED',
+          'The realtime event could not be stored.'
+        );
+      }
+    }catch(error){
+      state.lastError=safeError(
+        'REALTIME_EVENT_HANDLER_FAILED',
+        'The realtime event handler failed.'
+      );
+    }
+  }
+
+  function removeChannel(channel,client){
+    return Promise.resolve().then(function(){
+      if(client&&typeof client.removeChannel==='function'){
+        return client.removeChannel(channel);
+      }
+      if(channel&&typeof channel.unsubscribe==='function'){
+        return channel.unsubscribe();
+      }
+      return null;
+    });
   }
 
   function connect(conferenceId,options){
@@ -128,17 +157,38 @@
         'conferenceId must be a valid UUID.'
       )));
     }
+    if(state.cleanupPromise){
+      return state.cleanupPromise.then(function(cleaned){
+        return cleaned
+          ?connect(conferenceId,options)
+          :result(false,'error',null,safeError(
+            'REALTIME_CONNECT_FAILED',
+            'The previous realtime channel cleanup failed.'
+          ));
+      });
+    }
     if(state.channel){
-      if(state.conferenceId===conferenceId){
-        return Promise.resolve(result(true,'busy',{
+      if(state.conferenceId===conferenceId&&state.status==='connected'){
+        return Promise.resolve(result(true,'already_connected',{
           conferenceId:conferenceId,
           state:publicState()
         },null));
       }
-      return Promise.resolve(result(false,'error',null,safeError(
-        'REALTIME_ALREADY_ACTIVE',
-        'Disconnect the active realtime channel first.'
-      )));
+      if(state.conferenceId===conferenceId&&state.status==='connecting'){
+        return Promise.resolve(result(true,'connecting',{
+          conferenceId:conferenceId,
+          state:publicState()
+        },null));
+      }
+      return disconnect(options).then(function(disconnected){
+        if(!disconnected.ok){
+          return result(false,'error',null,safeError(
+            'REALTIME_CONNECT_FAILED',
+            'The previous realtime channel could not be removed.'
+          ));
+        }
+        return connect(conferenceId,options);
+      });
     }
 
     var dependencies=resolveDependencies(options);
@@ -152,6 +202,7 @@
     state.lastError=null;
     state.connectionId++;
     var connectionId=state.connectionId;
+    var client=dependencies.client;
 
     return new Promise(function(resolve){
       var settled=false;
@@ -175,7 +226,7 @@
             deliverSnapshotEvent(payload,conferenceId,connectionId);
           })
           .subscribe(function(subscriptionStatus){
-            if(state.connectionId!==connectionId)return;
+            if(state.connectionId!==connectionId||settled)return;
             if(subscriptionStatus==='SUBSCRIBED'){
               state.status='connected';
               state.lastError=null;
@@ -187,12 +238,34 @@
             if(subscriptionStatus==='CHANNEL_ERROR'||
               subscriptionStatus==='TIMED_OUT'||
               subscriptionStatus==='CLOSED'){
+              var failedChannel=state.channel;
+              state.connectionId++;
               state.status='error';
               state.lastError=safeError(
-                'REALTIME_SUBSCRIPTION_FAILED',
+                subscriptionStatus==='CHANNEL_ERROR'
+                  ?'REALTIME_CHANNEL_ERROR'
+                  :'REALTIME_CONNECT_FAILED',
                 'The realtime subscription failed.'
               );
-              finish(result(false,'error',null,state.lastError));
+              state.channel=null;
+              state.conferenceId=null;
+              state.eventHandler=null;
+              var cleanup=removeChannel(failedChannel,client).then(function(){
+                finish(result(false,'error',null,state.lastError));
+                return true;
+              }).catch(function(){
+                state.lastError=safeError(
+                  'REALTIME_CHANNEL_CLEANUP_FAILED',
+                  'The failed realtime channel could not be removed.'
+                );
+                finish(result(false,'error',null,state.lastError));
+                return false;
+              }).finally(function(){
+                if(state.cleanupPromise===cleanup){
+                  state.cleanupPromise=null;
+                }
+              });
+              state.cleanupPromise=cleanup;
             }
           });
       }catch(error){
@@ -210,6 +283,22 @@
 
   function disconnect(options){
     options=options&&typeof options==='object'?options:{};
+    if(state.cleanupPromise){
+      return state.cleanupPromise.then(function(cleaned){
+        if(cleaned){
+          state.status='disconnected';
+          state.conferenceId=null;
+          state.lastError=null;
+          return result(true,'disconnected',null,null);
+        }
+        state.status='error';
+        return result(false,'error',null,state.lastError||
+          safeError(
+            'REALTIME_DISCONNECT_FAILED',
+            'The realtime channel could not be closed cleanly.'
+          ));
+      });
+    }
     var channel=state.channel;
     var conferenceId=state.conferenceId;
     var client=null;
@@ -226,6 +315,7 @@
     state.conferenceId=null;
     state.channel=null;
     state.lastError=null;
+    state.eventHandler=null;
 
     if(!channel){
       return Promise.resolve(result(true,'disconnected',{
@@ -233,16 +323,7 @@
       },null));
     }
 
-    return Promise.resolve()
-      .then(function(){
-        if(client&&typeof client.removeChannel==='function'){
-          return client.removeChannel(channel);
-        }
-        if(typeof channel.unsubscribe==='function'){
-          return channel.unsubscribe();
-        }
-        return null;
-      })
+    return removeChannel(channel,client)
       .then(function(){
         return result(true,'disconnected',{
           conferenceId:conferenceId
@@ -253,6 +334,7 @@
           'REALTIME_DISCONNECT_FAILED',
           'The realtime channel could not be closed cleanly.'
         );
+        state.status='error';
         state.lastError=error;
         return result(false,'error',null,error);
       });

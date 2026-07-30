@@ -2,11 +2,13 @@
   'use strict';
 
   var MAX_OPERATIONS=20;
+  var MAX_RETRY_ATTEMPTS=6;
   var BACKOFF_DELAYS=Object.freeze([5000,15000,30000,60000,300000]);
   var runningPromise=null;
   var followUpRequested=false;
   var retryTimers=Object.create(null);
   var authBlockedOperations=Object.create(null);
+  var externallySuspendedConferences=Object.create(null);
   var stopped=false;
   var state={
     queueStatus:'idle',
@@ -86,10 +88,33 @@
   }
   function isSafeLink(link){
     return !!(link&&
-      (link.linkStatus==='linked'||link.linkStatus==='unsynced')&&
+      (link.linkStatus==='linked'||link.linkStatus==='unsynced'||
+        link.linkStatus==='cloud_linked')&&
       link.pendingLocalApplication!==true&&
       !link.conflictId&&
       link.conflictStatus!=='active');
+  }
+  function validateQueueItem(item,options){
+    if(!item||!item.operation)return Promise.resolve(false);
+    var integration=options.queueIntegration||
+      global.ConferenceQueueIntegration;
+    if(!integration||
+      typeof integration.validateOperation!=='function'){
+      return Promise.resolve(
+        item.operation.queueSchemaVersion!==1
+      );
+    }
+    return Promise.resolve(integration.validateOperation(
+      item.operation,
+      Object.assign({},options.queueIntegrationOptions||{},{
+        queue:options.queue||global.OfflineSyncQueue,
+        links:options.linkStore||global.ConferenceLinkStore,
+        linkOptions:options.linkOptions,
+        appData:options.appData||global.appData
+      })
+    )).then(function(checked){
+      return !!(checked&&checked.ok);
+    }).catch(function(){return false;});
   }
   function pendingApplicationBlocks(link,options){
     var store=options.pendingApplicationStore||
@@ -175,20 +200,27 @@
       (processResult.status==='applied'||processResult.status==='duplicate')){
       return 'success';
     }
+    if(processResult&&processResult.status==='server_applied'){
+      return 'success';
+    }
     if(processResult&&processResult.status==='conflict')return 'conflict';
     var code=String(processResult&&processResult.error&&
       processResult.error.code||'').toUpperCase();
     if(/AUTH|401|403/.test(code))return 'auth';
-    if(/VALID|SCHEMA|PERMISSION|POLICY|FORBIDDEN/.test(code))return 'permanent';
-    return 'temporary';
+    if(/NETWORK|TIMEOUT|TEMPORARY|SERVICE_UNAVAILABLE|SERVER_ERROR|5\d\d/
+      .test(code)){
+      return 'temporary';
+    }
+    return 'permanent';
   }
   function classifyErrorCode(code){
     code=String(code||'').toUpperCase();
     if(/AUTH|401|403/.test(code))return 'auth';
-    if(/VALID|SCHEMA|PERMISSION|POLICY|FORBIDDEN/.test(code)){
-      return 'permanent';
+    if(/NETWORK|TIMEOUT|TEMPORARY|SERVICE_UNAVAILABLE|SERVER_ERROR|5\d\d/
+      .test(code)){
+      return 'temporary';
     }
-    return 'temporary';
+    return 'permanent';
   }
   function saveConflictLink(link,processResult,options){
     var store=options.linkStore||global.ConferenceLinkStore;
@@ -232,8 +264,21 @@
           return;
         }
         state.activeConferenceId=item.operation.conferenceId;
-        return processor.processOperation(item.operation.operationId,
-          options.processorOptions).then(function(processResult){
+        return validateQueueItem(item,options).then(function(valid){
+          if(!valid){
+            blockedConferences[item.operation.conferenceId]=true;
+            setStatus('blocked','QUEUE_OPERATION_NOT_AUTHORIZED');
+            return null;
+          }
+          return processor.processOperation(
+            item.operation.operationId,
+            Object.assign({},options.processorOptions||{},{
+              deferAppliedFinalization:
+                item.operation.queueSchemaVersion===1
+            })
+          );
+        }).then(function(processResult){
+          if(!processResult)return;
           var category=classify(processResult);
           outcomes.push(processResult);
           if(category==='success'){
@@ -247,6 +292,34 @@
                 blockedConferences[item.operation.conferenceId]=true;
                 setStatus('error','REVISION_PUBLISH_FAILED');
                 return;
+              }
+              if(processResult.status==='server_applied'){
+                var queue=options.queue||global.OfflineSyncQueue;
+                if(!queue||typeof queue.markApplied!=='function'){
+                  blockedConferences[item.operation.conferenceId]=true;
+                  setStatus('error','QUEUE_FINALIZATION_UNAVAILABLE');
+                  return;
+                }
+                return queue.markApplied(
+                  item.operation.operationId,{
+                    revision:processResult.data.revision,
+                    previousRevision:
+                      processResult.data.previousRevision,
+                    conferenceId:item.operation.conferenceId
+                  },
+                  options.queueOptions
+                ).then(function(marked){
+                  if(!marked||!marked.ok){
+                    blockedConferences[
+                      item.operation.conferenceId
+                    ]=true;
+                    setStatus('error','QUEUE_FINALIZATION_FAILED');
+                    return;
+                  }
+                  clearRetry(item.operation.conferenceId);
+                  state.lastSuccessfulSyncAt=
+                    new Date().toISOString();
+                });
               }
               clearRetry(item.operation.conferenceId);
               state.lastSuccessfulSyncAt=new Date().toISOString();
@@ -262,6 +335,11 @@
           }else if(category==='temporary'){
             var operation=processResult&&processResult.data&&
               processResult.data.operation;
+            if(operation&&operation.attempts>=MAX_RETRY_ATTEMPTS){
+              setStatus('error','QUEUE_RETRY_LIMIT_REACHED');
+              blockedConferences[item.operation.conferenceId]=true;
+              return;
+            }
             scheduleRetry(item.operation.conferenceId,
               operation&&operation.attempts||1,
               item.operation.operationId,options);
@@ -287,9 +365,14 @@
       operations.forEach(function(operation){
         var link=resolveLink(operation,options);
         if(bypassBackoff)clearRetry(operation.conferenceId);
-        if(!isSafeLink(link)||retryTimers[operation.conferenceId])return;
+        if(!isSafeLink(link)||retryTimers[operation.conferenceId]||
+          externallySuspendedConferences[operation.conferenceId])return;
         checks.push(resolvedConferenceAllows(link,options).then(function(allowed){
-          return allowed?{operation:operation,link:link}:null;
+          if(!allowed)return null;
+          var item={operation:operation,link:link};
+          return validateQueueItem(item,options).then(function(valid){
+            return valid?item:null;
+          });
         }));
       });
       return Promise.all(checks).then(function(items){
@@ -357,6 +440,24 @@
       });
       return retrySequence;
     });
+    recovery=recovery.then(function(){
+      var integration=options.queueIntegration||
+        global.ConferenceQueueIntegration;
+      var appData=options.appData||global.appData;
+      if(!integration||
+        typeof integration.prepareCandidates!=='function'||
+        !appData||!Array.isArray(appData.conferences)){
+        return null;
+      }
+      return integration.prepareCandidates(
+        appData,
+        Object.assign({},options.queueIntegrationOptions||{},{
+          queue:queue,
+          links:options.linkStore||global.ConferenceLinkStore,
+          linkOptions:options.linkOptions
+        })
+      ).catch(function(){return null;});
+    });
     return recovery.then(function(){return readEligible(options);})
       .then(function(selected){
       if(!selected.length){
@@ -409,6 +510,7 @@
   function resetForTests(){
     stop();
     authBlockedOperations=Object.create(null);
+    externallySuspendedConferences=Object.create(null);
     runningPromise=null;
     stopped=false;
     state={
@@ -420,10 +522,24 @@
 
   global.AutomaticQueueRunner=Object.freeze({
     maxOperations:MAX_OPERATIONS,
+    maxRetryAttempts:MAX_RETRY_ATTEMPTS,
     calculateBackoffDelay:calculateBackoffDelay,
     run:run,
     stop:stop,
     getState:getState,
+    suspendConference:function(conferenceId,reason){
+      conferenceId=String(conferenceId||'');
+      if(!conferenceId)return {ok:false,status:'invalid_conference_id'};
+      externallySuspendedConferences[conferenceId]=String(
+        reason||'externally_suspended'
+      );
+      return {ok:true,status:'suspended'};
+    },
+    resumeConference:function(conferenceId){
+      conferenceId=String(conferenceId||'');
+      delete externallySuspendedConferences[conferenceId];
+      return {ok:true,status:'resumed'};
+    },
     resetForTests:resetForTests
   });
 })(window);

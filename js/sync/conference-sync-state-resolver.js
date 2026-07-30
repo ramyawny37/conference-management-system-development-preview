@@ -90,7 +90,10 @@
         pending&&pending.status==='pending'){
         return result('pending_local_application',data);
       }
-      if(link.linkStatus==='linked')return result('linked',data);
+      if(link.linkStatus==='linked'||
+        link.linkStatus==='cloud_linked'){
+        return result('linked',data);
+      }
       return result('local_only',data);
     });
   }

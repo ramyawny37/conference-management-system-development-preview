@@ -17,7 +17,8 @@
   ]);
   var LINK_STATUSES=Object.freeze([
     'linked','upload_pending','needs_resolution','unsynced','disconnected',
-    'server_selected_pending_local_apply'
+    'server_selected_pending_local_apply','linking','cloud_linked',
+    'link_failed'
   ]);
   var restoreInProgress=false;
   var cloudReviewInProgress=false;

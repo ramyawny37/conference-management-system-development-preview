@@ -183,6 +183,42 @@
         'operationId must be a valid UUID.'
       );
     }
+    if(input.localConferenceId!==undefined&&
+      !String(input.localConferenceId||'').trim()){
+      return safeError(
+        'INVALID_LOCAL_CONFERENCE_ID',
+        'localConferenceId must be a non-empty string.'
+      );
+    }
+    if(input.localContentVersion!==undefined&&
+      (!Number.isInteger(input.localContentVersion)||
+        input.localContentVersion<0)){
+      return safeError(
+        'INVALID_LOCAL_CONTENT_VERSION',
+        'localContentVersion must be a non-negative integer.'
+      );
+    }
+    if(input.createdByUserId!==undefined&&
+      !isUuid(String(input.createdByUserId||''))){
+      return safeError(
+        'INVALID_CREATED_BY_USER_ID',
+        'createdByUserId must be a valid UUID.'
+      );
+    }
+    if(input.operationType!==undefined&&
+      input.operationType!=='snapshot'){
+      return safeError(
+        'INVALID_OPERATION_TYPE',
+        'operationType must be snapshot.'
+      );
+    }
+    if(input.idempotencyKey!==undefined&&
+      !String(input.idempotencyKey||'').trim()){
+      return safeError(
+        'INVALID_IDEMPOTENCY_KEY',
+        'idempotencyKey must be a non-empty string.'
+      );
+    }
     return null;
   }
 
@@ -217,7 +253,18 @@
     }
     var operation = {
       operationId:operationId,
+      queueSchemaVersion:1,
+      localConferenceId:input.localConferenceId===undefined
+        ?null:String(input.localConferenceId),
       conferenceId:String(input.conferenceId),
+      cloudConferenceId:String(input.conferenceId),
+      operationType:String(input.operationType||'snapshot'),
+      localContentVersion:Number.isInteger(input.localContentVersion)
+        ?input.localContentVersion:null,
+      createdByUserId:input.createdByUserId
+        ?String(input.createdByUserId):null,
+      idempotencyKey:input.idempotencyKey
+        ?String(input.idempotencyKey):null,
       deviceId:String(input.deviceId),
       baseRevision:input.baseRevision,
       snapshot:snapshot,
@@ -275,7 +322,11 @@
         var candidates=operations.filter(function(operation){
           return operation.conferenceId===String(input.conferenceId)&&
             operation.deviceId===String(input.deviceId)&&
-            (operation.status==='pending'||
+            (!input.localConferenceId||
+              !operation.localConferenceId||
+              operation.localConferenceId===
+                String(input.localConferenceId))&&
+            (operation.status==='pending'&&operation.attempts===0||
               (operation.status==='failed'&&operation.attempts===0));
         }).sort(function(first,second){
           return String(first.createdAt).localeCompare(
@@ -290,7 +341,19 @@
             :createUuid();
           storedOperation={
             operationId:operationId,
+            queueSchemaVersion:1,
+            localConferenceId:input.localConferenceId===undefined
+              ?null:String(input.localConferenceId),
             conferenceId:String(input.conferenceId),
+            cloudConferenceId:String(input.conferenceId),
+            operationType:String(input.operationType||'snapshot'),
+            localContentVersion:Number.isInteger(
+              input.localContentVersion
+            )?input.localContentVersion:null,
+            createdByUserId:input.createdByUserId
+              ?String(input.createdByUserId):null,
+            idempotencyKey:input.idempotencyKey
+              ?String(input.idempotencyKey):null,
             deviceId:String(input.deviceId),
             baseRevision:input.baseRevision,
             snapshot:snapshot,
@@ -310,7 +373,27 @@
         }
         wasCoalesced=true;
         storedOperation=candidates[0];
+        storedOperation.baseRevision=input.baseRevision;
         storedOperation.snapshot=snapshot;
+        storedOperation.queueSchemaVersion=1;
+        storedOperation.localConferenceId=
+          input.localConferenceId===undefined
+            ?storedOperation.localConferenceId||null
+            :String(input.localConferenceId);
+        storedOperation.cloudConferenceId=String(input.conferenceId);
+        storedOperation.operationType=String(
+          input.operationType||'snapshot'
+        );
+        storedOperation.localContentVersion=
+          Number.isInteger(input.localContentVersion)
+            ?input.localContentVersion
+            :storedOperation.localContentVersion||null;
+        storedOperation.createdByUserId=input.createdByUserId
+          ?String(input.createdByUserId)
+          :storedOperation.createdByUserId||null;
+        storedOperation.idempotencyKey=input.idempotencyKey
+          ?String(input.idempotencyKey)
+          :storedOperation.idempotencyKey||null;
         storedOperation.schemaVersion=String(input.schemaVersion).trim();
         storedOperation.appVersion=String(input.appVersion).trim();
         storedOperation.status='pending';
@@ -484,6 +567,35 @@
       return result(true,'listed',{operations:cloneValue(ready)},null);
     }).catch(function(error){
       return result(false,'error',null,normalizeStorageError(error));
+    });
+  }
+
+  function getConferenceReadiness(conferenceId,options){
+    conferenceId=String(conferenceId||'');
+    if(!isUuid(conferenceId)){
+      return Promise.resolve(result(false,'invalid_conference_id'));
+    }
+    return getAllOperations(options).then(function(read){
+      if(!read||!read.ok||read.status!=='listed'||
+        !read.data||!Array.isArray(read.data.operations)){
+        return result(false,'queue_read_failed');
+      }
+      var active=read.data.operations.filter(function(operation){
+        return operation&&operation.conferenceId===conferenceId&&
+          ['pending','processing','failed','server_applied',
+            'requires_reconciliation']
+            .indexOf(operation.status)>=0;
+      });
+      if(active.length){
+        return result(false,'not_stable',{
+          conferenceId:conferenceId,
+          blockingOperations:cloneValue(active)
+        });
+      }
+      return result(true,'stable',{
+        conferenceId:conferenceId,
+        blockingOperations:[]
+      });
     });
   }
 
@@ -891,6 +1003,7 @@
     getAllOperations:getAllOperations,
     getOperationsByConference:getOperationsByConference,
     getReadyOperations:getReadyOperations,
+    getConferenceReadiness:getConferenceReadiness,
     countOperationsByStatus:countOperationsByStatus,
     markConflictResolved:markConflictResolved,
     startProcessing:startProcessing,

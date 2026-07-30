@@ -58,6 +58,9 @@ async function run(){
   });
   assert.strictEqual(networkCalls,0);
   assert.strictEqual(typeof unloaded.api.createConference,'function');
+  assert.strictEqual(
+    typeof unloaded.api.verifyOwnerMembership,'function'
+  );
   assert.strictEqual(typeof unloaded.api.uploadInitialSnapshot,'function');
   assert.strictEqual(typeof unloaded.api.uploadSnapshot,'function');
   assert.strictEqual(typeof unloaded.api.downloadSnapshot,'function');
@@ -138,6 +141,19 @@ async function run(){
     (await accessDenied.api.createConferenceIdempotent(request())).error.code,
     'ACCESS_DENIED'
   );
+
+  var rpcAccessDenied=load(function(name,input){
+    return Promise.resolve({data:{
+      status:'access_denied',
+      errorCode:'ACCOUNT_PENDING',
+      operationId:input.p_operation_id
+    },error:null});
+  });
+  var rpcDeniedResult=await rpcAccessDenied.api
+    .createConferenceIdempotent(request());
+  assert.strictEqual(rpcDeniedResult.ok,false);
+  assert.strictEqual(rpcDeniedResult.status,'access_denied');
+  assert.strictEqual(rpcDeniedResult.error.code,'ACCOUNT_PENDING');
 
   var network=load(function(){
     return Promise.reject(new Error('network unavailable'));

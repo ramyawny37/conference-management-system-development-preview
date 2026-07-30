@@ -199,18 +199,54 @@
         reason:'SYNC_QUEUE_UNAVAILABLE'
       },null));
     }
+    var lifecycleRecord=appSnapshot.conferenceLifecycle&&
+      appSnapshot.conferenceLifecycle.records&&
+      appSnapshot.conferenceLifecycle.records[localConferenceId]||null;
+    var localContentVersion=lifecycleRecord&&
+      Number.isInteger(lifecycleRecord.localContentVersion)
+      ?lifecycleRecord.localContentVersion:null;
+    var linkStore=options.linkStore||global.ConferenceLinkStore;
+    var currentLink=linkStore&&typeof linkStore.get==='function'
+      ?linkStore.get(localConferenceId,options.linkOptions):null;
+    var queueIntegration=options.queueIntegration||
+      global.ConferenceQueueIntegration;
+    var operationIdempotencyKey=
+      localContentVersion!==null&&currentLink&&
+      queueIntegration&&
+      typeof queueIntegration.idempotencyKey==='function'
+      ?queueIntegration.idempotencyKey(
+        localConferenceId,currentLink,localContentVersion
+      ):null;
+    var auth=options.auth||global.SupabaseAuth;
+    var session=auth&&typeof auth.getSession==='function'
+      ?auth.getSession():null;
+    var createdByUserId=session&&session.user&&
+      isUuid(String(session.user.id||''))
+      ?String(session.user.id):null;
     return Promise.resolve().then(function(){
       var enqueue=typeof queue.coalesceSnapshotOperation==='function'
         ?queue.coalesceSnapshotOperation
         :queue.enqueueSnapshotOperation;
-      return enqueue.call(queue,{
+      var queueInput={
+        localConferenceId:localConferenceId,
         conferenceId:context.conferenceId,
+        operationType:'snapshot',
         deviceId:deviceId,
         baseRevision:context.baseRevision,
         snapshot:conferenceSnapshot,
         schemaVersion:context.schemaVersion,
         appVersion:context.appVersion
-      });
+      };
+      if(localContentVersion!==null){
+        queueInput.localContentVersion=localContentVersion;
+      }
+      if(createdByUserId){
+        queueInput.createdByUserId=createdByUserId;
+      }
+      if(operationIdempotencyKey){
+        queueInput.idempotencyKey=operationIdempotencyKey;
+      }
+      return enqueue.call(queue,queueInput);
     }).then(function(queueResult){
       if(!queueResult||!queueResult.ok){
         unsyncedConferences[localConferenceId]={
@@ -333,18 +369,29 @@
     options=options&&typeof options==='object'?options:{};
     if(!operationResult||
       (operationResult.status!=='applied'&&
-      operationResult.status!=='duplicate')||
+      operationResult.status!=='duplicate'&&
+      operationResult.status!=='server_applied')||
       !operationResult.data){
       return Promise.resolve(result(true,'revision_unavailable',{
         applied:false
       },null));
     }
     var operation=operationResult.data.operation||options.operation;
+    var successfulLinkStore=options.linkStore||
+      global.ConferenceLinkStore;
+    var successfulLink=successfulLinkStore&&
+      typeof successfulLinkStore.findByRemoteId==='function'
+      ?successfulLinkStore.findByRemoteId(
+        operation&&operation.conferenceId,
+        options.linkOptions
+      ):null;
     return publishConferenceRevision({
       remoteConferenceId:operation&&operation.conferenceId,
       deviceId:operation&&operation.deviceId,
       revision:operationResult.data.revision,
-      linkStatus:'linked'
+      linkStatus:successfulLink&&
+        successfulLink.linkStatus==='cloud_linked'
+        ?'cloud_linked':'linked'
     },options);
   }
 
@@ -435,25 +482,67 @@
     });
   }
 
-  function handleRealtimeEvent(event){
+  function handleRealtimeEvent(event,options){
+    options=options&&typeof options==='object'?options:{};
     if(!event||event.type!=='snapshot_changed'||
-      !isUuid(String(event.conferenceId||''))){
+      !isUuid(String(event.conferenceId||''))||
+      !Number.isInteger(event.revision)||event.revision<0||
+      !isUuid(String(event.deviceId||''))||
+      options.expectedConferenceId&&
+        String(event.conferenceId)!==String(options.expectedConferenceId)){
       return result(false,'error',null,safeError(
         'INVALID_REALTIME_EVENT',
         'A valid snapshot_changed event is required.'
       ));
     }
-    remoteUpdates[String(event.conferenceId)]={
+    var markerStore=options.remoteUpdateStore||global.RemoteUpdateStore;
+    if(!markerStore||typeof markerStore.add!=='function'){
+      return result(false,'error',null,safeError(
+        'REMOTE_UPDATE_STORE_UNAVAILABLE',
+        'The realtime event store is unavailable.'
+      ));
+    }
+    var identity=options.deviceIdentity;
+    if(!identity&&global.SupabaseDeviceIdentity&&
+      typeof global.SupabaseDeviceIdentity.getOrCreate==='function'){
+      try{identity=global.SupabaseDeviceIdentity.getOrCreate();}
+      catch(error){}
+    }
+    var currentDeviceId=identity&&isUuid(String(identity.id||''))
+      ?String(identity.id)
+      :null;
+    if(!currentDeviceId){
+      return result(false,'error',null,safeError(
+        'REALTIME_DEVICE_ID_UNTRUSTED',
+        'The realtime event cannot be classified safely.'
+      ));
+    }
+    var update={
       conferenceId:String(event.conferenceId),
-      revision:Number.isInteger(event.revision)?event.revision:null,
+      revision:event.revision,
       updatedAt:event.updatedAt||null,
-      deviceId:isUuid(String(event.deviceId||''))
-        ?String(event.deviceId)
-        :null,
+      deviceId:String(event.deviceId),
       receivedAt:new Date().toISOString()
     };
+    var stored=markerStore.add({
+      remoteConferenceId:update.conferenceId,
+      revision:update.revision,
+      sourceDeviceId:update.deviceId,
+      receivedAt:update.receivedAt,
+      status:update.deviceId===currentDeviceId
+        ?'self_update'
+        :'unreviewed'
+    },options.markerOptions);
+    if(!stored||stored.ok===false){
+      return result(false,'error',null,safeError(
+        stored&&stored.status||'REMOTE_UPDATE_STORAGE_FAILED',
+        'The realtime event could not be stored.'
+      ));
+    }
+    remoteUpdates[update.conferenceId]=update;
     return result(true,'update_marked',{
-      update:cloneValue(remoteUpdates[String(event.conferenceId)])
+      update:cloneValue(update),
+      duplicate:stored.status==='duplicate'
     },null);
   }
 
@@ -469,10 +558,13 @@
       )));
     }
     var handlerResult=realtime.setEventHandler(function(event){
-      handleRealtimeEvent(event);
+      var handled=handleRealtimeEvent(event,Object.assign({},options,{
+        expectedConferenceId:String(conferenceId)
+      }));
       if(typeof options.eventHandler==='function'){
-        try{options.eventHandler(cloneValue(event));}catch(error){}
+        try{options.eventHandler(cloneValue(event),handled);}catch(error){}
       }
+      return handled;
     });
     if(handlerResult&&handlerResult.ok===false){
       return Promise.resolve(result(false,'error',null,safeError(

@@ -501,8 +501,16 @@ async function run(){
   ].forEach(function(asset){
     assert.ok(serviceWorkerSource.indexOf(asset)>=0);
   });
+  // The revision value changes between releases; verify the cache contract
+  // instead of coupling Conference Members to a historical release label.
+  var revisionMatch=serviceWorkerSource.match(
+    /const\s+CACHE_REVISION\s*=\s*(['"])([^'"]+)\1\s*;/
+  );
+  assert.ok(revisionMatch);
+  assert.ok(revisionMatch[2].trim().length>0);
   assert.ok(
-    /CACHE_REVISION = 'm5-phase-3'/.test(serviceWorkerSource)
+    /const\s+CACHE_NAME\s*=\s*CACHE_PREFIX\s*\+\s*['"]v['"]\s*\+\s*APP_VERSION\s*\+\s*['"]-['"]\s*\+\s*CACHE_REVISION\s*;/
+      .test(serviceWorkerSource)
   );
   assert.strictEqual(
     env.ui.resetForTests().status,

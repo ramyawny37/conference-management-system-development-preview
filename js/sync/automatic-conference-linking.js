@@ -18,9 +18,10 @@
       config:options.config||global.SupabaseRuntimeConfig,
       auth:options.auth||global.SupabaseAuth,
       links:options.links||global.ConferenceLinkStore,
-      service:options.service||global.ConferenceLinkingService,
+      recovery:options.recovery||global.ConferencePublishRecovery,
       getCurrentConference:options.getCurrentConference||
         global.getCurrentConference,
+      getAppData:options.getAppData||function(){return global.appData;},
       navigator:options.navigator||global.navigator,
       orchestrator:options.orchestrator||global.AutomaticSyncOrchestrator
     };
@@ -99,21 +100,42 @@
         revision:existing.knownRevision
       });
     }
-    if(!d.service||
-      typeof d.service.ensureConferenceLinked!=='function'){
-      return skip('service_unavailable');
+    var currentAppData=typeof d.getAppData==='function'
+      ?d.getAppData():null;
+    if(!d.recovery||
+      typeof d.recovery.scanCandidates!=='function'||
+      typeof d.recovery.reconcileConference!=='function'){
+      return skip('recovery_unavailable');
     }
-    var flight=d.service.ensureConferenceLinked({
-      localConferenceId:conference.id,
-      name:conference.name,
-      snapshot:conference,
-      mode:'automatic',
-      reason:String(options.reason||'scheduled')
-    },options.linkingOptions).then(function(linkResult){
-      lastResult=linkResult;
-      return linkResult;
+    var scan=d.recovery.scanCandidates(
+      currentAppData,options.recoveryOptions
+    );
+    var candidate=scan&&scan.ok&&scan.data&&
+      scan.data.candidates.some(function(item){
+        return item.localConferenceId===conference.id;
+      });
+    if(!candidate){
+      return skip(scan&&scan.ok
+        ?'no_existing_publish_attempt'
+        :'recovery_scan_failed');
+    }
+    var flight=d.recovery.reconcileConference(
+      currentAppData,conference.id,options.recoveryOptions
+    ).then(function(recoveryResult){
+      if(recoveryResult&&recoveryResult.ok&&
+        (recoveryResult.status==='cloud_linked'||
+          recoveryResult.status===
+            'cloud_linked_local_changes_pending')){
+        lastResult=result(true,'linked',Object.assign({
+          linked:true,
+          localConferenceId:conference.id
+        },recoveryResult.data||{}));
+        return lastResult;
+      }
+      lastResult=recoveryResult;
+      return recoveryResult;
     }).catch(function(){
-      lastResult=result(false,'linking_failed',{linked:false});
+      lastResult=result(false,'recovery_failed',{linked:false});
       return lastResult;
     }).finally(function(){
       if(evaluationPromises[conference.id]===flight){

@@ -214,6 +214,20 @@
         operationId:operationId||input.operationId
       },safeError(errorCode,'The conference could not be created.'));
     }
+    if(status==='access_denied'){
+      if(operationId&&operationId!==input.operationId){
+        return result(false,'error',null,safeError(
+          'OPERATION_RESULT_MISMATCH',
+          'The conference creation operation did not match the request.'
+        ));
+      }
+      return result(false,'access_denied',{
+        operationId:operationId||input.operationId
+      },safeError(
+        String(row.errorCode||row.error_code||'ACCESS_DENIED'),
+        'Conference creation is not authorized.'
+      ));
+    }
     if(!operationId){
       return result(false,'error',null,safeError(
         'INVALID_CREATION_RESPONSE',
@@ -479,6 +493,174 @@
     });
   }
 
+  function verifyOwnerMembership(input){
+    input=input&&typeof input==='object'?input:{};
+    var conferenceId=String(input.conferenceId||'');
+    var requestedUserId=String(input.userId||'');
+    if(!isUuid(conferenceId)||!isUuid(requestedUserId)){
+      return Promise.resolve(validationError(
+        'INVALID_MEMBERSHIP_REQUEST',
+        'A valid conference and user are required.'
+      ));
+    }
+    var context=getOnlineContext();
+    if(context.error){
+      return Promise.resolve(result(false,'error',null,context.error));
+    }
+    if(String(context.user.id)!==requestedUserId){
+      return Promise.resolve(validationError(
+        'MEMBERSHIP_USER_MISMATCH',
+        'The membership user did not match the authenticated user.'
+      ));
+    }
+    return Promise.resolve().then(function(){
+      return context.client.from('conference_members')
+        .select('conference_id,user_id,role')
+        .eq('conference_id',conferenceId)
+        .eq('user_id',requestedUserId)
+        .maybeSingle();
+    }).then(function(response){
+      if(response.error){
+        return result(false,'error',null,
+          normalizeRequestError(response.error));
+      }
+      var row=response.data;
+      if(!row||row.conference_id!==conferenceId||
+        row.user_id!==requestedUserId||row.role!=='owner'){
+        return result(false,'owner_not_verified',null,safeError(
+          'OWNER_MEMBERSHIP_NOT_VERIFIED',
+          'Owner membership could not be verified.'
+        ));
+      }
+      return result(true,'owner_verified',{
+        conferenceId:conferenceId,
+        userId:requestedUserId,
+        role:'owner'
+      },null);
+    }).catch(function(error){
+      return result(false,'error',null,normalizeThrownError(error));
+    });
+  }
+
+  function inspectConferenceCreationOperation(input){
+    input=input&&typeof input==='object'?input:{};
+    var operationId=String(input.operationId||'');
+    var requestedConferenceId=String(input.requestedConferenceId||'');
+    var requestedUserId=String(input.userId||'');
+    if(!isUuid(operationId)||!isUuid(requestedConferenceId)||
+      !isUuid(requestedUserId)){
+      return Promise.resolve(validationError(
+        'INVALID_CREATION_INSPECTION',
+        'Valid operation, conference, and user IDs are required.'
+      ));
+    }
+    var context=getOnlineContext();
+    if(context.error){
+      return Promise.resolve(result(false,'error',null,context.error));
+    }
+    if(String(context.user.id)!==requestedUserId){
+      return Promise.resolve(validationError(
+        'CREATION_INSPECTION_USER_MISMATCH',
+        'The operation owner did not match the authenticated user.'
+      ));
+    }
+    return Promise.resolve().then(function(){
+      return context.client.from('conference_creation_operations')
+        .select('user_id,operation_id,conference_id,created_at,updated_at')
+        .eq('user_id',requestedUserId)
+        .eq('operation_id',operationId)
+        .maybeSingle();
+    }).then(function(response){
+      if(response.error){
+        return result(false,'error',null,
+          normalizeRequestError(response.error));
+      }
+      if(!response.data){
+        return result(true,'not_found',{
+          operationId:operationId,
+          requestedConferenceId:requestedConferenceId
+        },null);
+      }
+      var row=response.data;
+      if(String(row.user_id||'')!==requestedUserId||
+        String(row.operation_id||'')!==operationId){
+        return result(false,'integrity_conflict',null,safeError(
+          'CREATION_OPERATION_MISMATCH',
+          'The creation operation did not match the request.'
+        ));
+      }
+      var cloudConferenceId=String(row.conference_id||'');
+      if(!isUuid(cloudConferenceId)||
+        cloudConferenceId!==requestedConferenceId){
+        return result(false,'integrity_conflict',{
+          operationId:operationId,
+          cloudConferenceId:isUuid(cloudConferenceId)
+            ?cloudConferenceId:null
+        },safeError(
+          'CONFERENCE_ID_MISMATCH',
+          'The cloud conference did not match the requested ID.'
+        ));
+      }
+      return result(true,'created',{
+        userId:requestedUserId,
+        operationId:operationId,
+        conferenceId:cloudConferenceId,
+        createdAt:row.created_at||null,
+        updatedAt:row.updated_at||null
+      },null);
+    }).catch(function(error){
+      return result(false,'error',null,normalizeThrownError(error));
+    });
+  }
+
+  function inspectInitialSnapshot(conferenceId){
+    conferenceId=String(conferenceId||'');
+    if(!isUuid(conferenceId)){
+      return Promise.resolve(validationError(
+        'INVALID_CONFERENCE_ID',
+        'conferenceId must be a valid UUID.'
+      ));
+    }
+    var context=getOnlineContext();
+    if(context.error){
+      return Promise.resolve(result(false,'error',null,context.error));
+    }
+    return Promise.resolve().then(function(){
+      return context.client.from('conference_snapshots')
+        .select('conference_id,revision,schema_version,app_version,updated_at')
+        .eq('conference_id',conferenceId)
+        .maybeSingle();
+    }).then(function(response){
+      if(response.error){
+        return result(false,'error',null,
+          normalizeRequestError(response.error));
+      }
+      if(!response.data){
+        return result(true,'not_found',{
+          conferenceId:conferenceId
+        },null);
+      }
+      var row=response.data;
+      var revision=Number(row.revision);
+      if(String(row.conference_id||'')!==conferenceId||
+        !Number.isInteger(revision)||revision<1){
+        return result(false,'invalid_snapshot',null,safeError(
+          'SNAPSHOT_INSPECTION_INVALID',
+          'The initial snapshot state was invalid.'
+        ));
+      }
+      return result(true,'found',{
+        conferenceId:conferenceId,
+        revision:revision,
+        schemaVersion:row.schema_version||null,
+        appVersion:row.app_version||null,
+        updatedAt:row.updated_at||null
+      },null);
+    }).catch(function(error){
+      return result(false,'error',null,normalizeThrownError(error));
+    });
+  }
+
   function downloadSnapshot(conferenceId){
     conferenceId=String(conferenceId||'');
     if(!isUuid(conferenceId)){
@@ -561,6 +743,10 @@
   global.SupabaseSnapshotSync=Object.freeze({
     createConference:createConference,
     createConferenceIdempotent:createConferenceIdempotent,
+    verifyOwnerMembership:verifyOwnerMembership,
+    inspectConferenceCreationOperation:
+      inspectConferenceCreationOperation,
+    inspectInitialSnapshot:inspectInitialSnapshot,
     uploadInitialSnapshot:uploadInitialSnapshot,
     uploadSnapshot:uploadSnapshot,
     downloadSnapshot:downloadSnapshot,

@@ -201,6 +201,14 @@ function save(){
   var json;
   try{
     updateCurrentConferenceData();
+    var currentConference=getCurrentConference();
+    if(currentConference&&window.ConferenceRepository&&
+      typeof window.ConferenceRepository.recordLocalChange==='function'){
+      var tracked=window.ConferenceRepository.recordLocalChange(
+        appData,currentConference.id
+      );
+      if(tracked&&tracked.ok)appData=tracked.data;
+    }
     json=JSON.stringify(appData);
   }catch(e){
     console.error('تعذر حفظ بيانات التطبيق:',e);

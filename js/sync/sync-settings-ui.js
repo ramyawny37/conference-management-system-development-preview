@@ -377,7 +377,13 @@
         'هذا الجهاز يملك قفلًا ساريًا. تسجيل الخروج لن يحرره تلقائيًا. هل تريد المتابعة؟'
       ))return;
     setBusy(true);
-    global.SupabaseAuth.signOut().then(function(result){
+    var cleanup=global.ConferenceOperationalUI&&
+      typeof global.ConferenceOperationalUI.logoutCleanup==='function'
+      ?global.ConferenceOperationalUI.logoutCleanup()
+      :Promise.resolve();
+    Promise.resolve(cleanup).then(function(){
+      return global.SupabaseAuth.signOut();
+    }).then(function(result){
       if(result&&result.success){
         scheduleAuthChanged();
         rerender();

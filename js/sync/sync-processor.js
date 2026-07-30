@@ -142,6 +142,17 @@
           (uploadResult.status==='applied'||
           uploadResult.status==='duplicate')){
           var appliedData=uploadResult.data||{};
+          if(options&&options.deferAppliedFinalization===true){
+            return result(true,'server_applied',{
+              operationId:operationId,
+              revision:appliedData.revision,
+              previousRevision:appliedData.previousRevision,
+              conferenceId:appliedData.conferenceId||
+                operation.conferenceId,
+              operation:publicOperationData(operation),
+              serverStatus:uploadResult.status
+            },null);
+          }
           return queue.markApplied(operationId,{
             revision:appliedData.revision,
             previousRevision:appliedData.previousRevision,

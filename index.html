@@ -80,7 +80,7 @@
       </header>
 
       <div class="startup-actions">
-        <button class="startup-action startup-action-green" onclick="openNewConferenceModal('create')">
+        <button class="startup-action startup-action-green" data-system-conference-create onclick="openNewConferenceModal('create')">
           <span class="startup-action-icon">▣+</span>
           <strong>إنشاء مؤتمر جديد</strong>
           <small>إنشاء مؤتمر جديد من البداية</small>
@@ -452,14 +452,20 @@
 </div>
 <script src="js/storage/indexeddb.js"></script>
 <script src="js/storage/storage-repository.js"></script>
+<script src="js/storage/conference-repository.js"></script>
+<script src="js/storage/conference-publishing-engine.js"></script>
+<script src="js/storage/conference-publish-recovery.js"></script>
+<script src="js/storage/conference-publish-manager.js"></script>
 <script src="js/storage/full-backup.js"></script>
 <script src="js/sync/sync-queue.js"></script>
 <script src="js/storage/migration-audit.js"></script>
 <script src="js/storage/migration-repair.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/supabase/public-config.js"></script>
 <script src="js/supabase/runtime-config.js"></script>
 <script src="js/supabase/client.js"></script>
 <script src="js/supabase/auth.js"></script>
+<script src="js/supabase/system-access-service.js"></script>
 <script src="js/supabase/device-identity.js"></script>
 <script src="js/supabase/snapshot-sync.js"></script>
 <script src="js/sync/sync-processor.js"></script>
@@ -487,6 +493,9 @@
 <script src="js/sync/automatic-sync-preferences.js"></script>
 <script src="js/sync/sync-scheduler-state.js"></script>
 <script src="js/sync/conference-sync-state-resolver.js?rev=phase-5"></script>
+<script src="js/sync/conference-queue-integration.js"></script>
+<script src="js/sync/conference-realtime-manager.js"></script>
+<script src="js/sync/conference-operational-ui.js"></script>
 <script src="js/sync/automatic-queue-runner.js?rev=phase-5"></script>
 <script src="js/sync/automatic-conference-linking.js"></script>
 <script src="js/sync/automatic-sync-orchestrator.js?rev=phase-5"></script>

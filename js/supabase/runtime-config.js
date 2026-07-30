@@ -79,25 +79,36 @@
   }
 
   function load(options){
+    var publicConfig=global.SUPABASE_RUNTIME_CONFIG;
+    var publicCheck=validate(publicConfig);
+    if(publicCheck.valid){
+      memoryConfig=publicCheck.value;
+      return {
+        url:memoryConfig.url,
+        publishableKey:memoryConfig.publishableKey,
+        emailRedirectTo:memoryConfig.emailRedirectTo||''
+      };
+    }
     if(memoryConfig)return {
       url:memoryConfig.url,
       publishableKey:memoryConfig.publishableKey,
       emailRedirectTo:memoryConfig.emailRedirectTo||''
     };
     var storage=getStorage(options);
-    if(!storage)return null;
-    try{
-      var parsed=JSON.parse(storage.getItem(STORAGE_KEY)||'null');
-      var checked=validate(parsed);
-      if(checked.valid){
-        memoryConfig=checked.value;
-        return {
-          url:memoryConfig.url,
-          publishableKey:memoryConfig.publishableKey,
-          emailRedirectTo:memoryConfig.emailRedirectTo||''
-        };
-      }
-    }catch(error){}
+    if(storage){
+      try{
+        var parsed=JSON.parse(storage.getItem(STORAGE_KEY)||'null');
+        var checked=validate(parsed);
+        if(checked.valid){
+          memoryConfig=checked.value;
+          return {
+            url:memoryConfig.url,
+            publishableKey:memoryConfig.publishableKey,
+            emailRedirectTo:memoryConfig.emailRedirectTo||''
+          };
+        }
+      }catch(error){}
+    }
     return null;
   }
 

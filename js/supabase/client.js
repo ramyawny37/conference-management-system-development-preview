@@ -163,4 +163,6 @@
     getState:getState,
     clear:clear
   });
+
+  configure();
 })(window);

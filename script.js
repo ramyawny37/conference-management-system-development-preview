@@ -5959,7 +5959,7 @@ function showSelectConferenceModal(){
     html += '<div style="background:#fff;border-radius:15px;padding:30px;max-width:500px;box-shadow:0 4px 20px rgba(0,0,0,0.2);text-align:center">';
     html += '<div style="font-size:18px;font-weight:700;color:#1F4E79;margin-bottom:20px">📌 لا توجد مؤتمرات محفوظة</div>';
     html += '<div style="color:#666;margin-bottom:30px;line-height:1.6">يرجى إنشاء مؤتمر جديد للبدء.</div>';
-    html += '<button class="btn btn-blue" style="width:100%;margin-bottom:8px" onclick="createNewConference();var m=ge(\'selectConfModal\');if(m)m.remove();">➕ إنشاء أول مؤتمر</button>';
+    html += '<button class="btn btn-blue" data-system-conference-create style="width:100%;margin-bottom:8px" onclick="createNewConference();var m=ge(\'selectConfModal\');if(m)m.remove();">➕ إنشاء أول مؤتمر</button>';
     if (completedConfs.length) {
       html += '<button class="btn btn-purple" style="width:100%;margin-bottom:8px" onclick="openCompletedConferencesModal()">📂 فتح مؤتمر سابق</button>';
     }
@@ -5972,7 +5972,7 @@ function showSelectConferenceModal(){
     html += '<div style="background:#fff;border-radius:15px;padding:30px;max-width:600px;max-height:80vh;overflow-y:auto;box-shadow:0 4px 20px rgba(0,0,0,0.2)">';
     html += '<div style="font-size:18px;font-weight:700;color:#1F4E79;margin-bottom:20px">📌 لا يوجد مؤتمر نشط</div>';
     html += '<div style="margin-bottom:20px;padding:15px;background:#FFF3CD;border-radius:8px;color:#856404">اختر مؤتمراً أو أنشئ واحداً جديداً</div>';
-    html += '<div style="margin-bottom:20px"><button class="btn btn-green" onclick="openNewConferenceModal(\'create\');var m=ge(\'selectConfModal\');if(m)m.remove();" style="width:100%">➕ إنشاء مؤتمر جديد</button></div>';
+    html += '<div style="margin-bottom:20px"><button class="btn btn-green" data-system-conference-create onclick="openNewConferenceModal(\'create\');var m=ge(\'selectConfModal\');if(m)m.remove();" style="width:100%">➕ إنشاء مؤتمر جديد</button></div>';
     html += '<div style="margin-bottom:20px"><button class="btn btn-gray" onclick="ge(\'selectConfImportInput\').click()" style="width:100%">📂 استيراد مؤتمر</button><input id="selectConfImportInput" type="file" accept=".html,.json" style="display:none" onchange="loadFromFile(event);var m=ge(\'selectConfModal\');if(m)m.remove();"></div>';
     html += '<div style="margin-bottom:15px;font-weight:700;color:#1F4E79">المؤتمرات المحفوظة:</div>';
     html += '<div style="display:flex;flex-direction:column;gap:10px">';
@@ -6977,11 +6977,17 @@ function renderSettings(){
   h+='<div><label class="lbl">المؤتمر الحالي</label><div class="settings-current-conference">'+esc(current?current.name:'')+' <span>'+conferenceStatusText(current)+'</span></div></div>';
   h+='</div></section>';
   h+=renderConferenceBrandingSettings();
+  if(window.ConferenceOperationalUI&&
+    typeof window.ConferenceOperationalUI.renderSection==='function'){
+    h+=window.ConferenceOperationalUI.renderSection({
+      localConference:getCurrentConference()
+    });
+  }
   h+=renderActivityLogSection();
   h+='<section class="settings-section settings-conference-management"><div class="settings-section-title">إدارة المؤتمر</div><div class="settings-action-groups">';
   h+='<div class="settings-action-group"><div class="settings-action-group-title">إدارة</div><div class="settings-actions-grid">';
   h+='<button class="btn btn-green" onclick="editCurrentConference()">✏️ تعديل بيانات المؤتمر</button>';
-  h+='<button class="btn btn-blue" onclick="createNewConference()">➕ مؤتمر جديد</button>';
+  h+='<button class="btn btn-blue" data-system-conference-create onclick="createNewConference()">➕ مؤتمر جديد</button>';
   h+='</div></div>';
   h+='<div class="settings-action-group"><div class="settings-action-group-title">حفظ واسترجاع</div><div class="settings-actions-grid">';
   h+='<button class="btn btn-gray" onclick="backupAppData()">🔁 إنشاء نسخة احتياطية</button>';
@@ -7071,6 +7077,10 @@ function renderSettings(){
   }
   h+='</div></div></section></div>';
   ge('tab6').innerHTML=h;
+  if(window.SystemAccessService&&
+    typeof window.SystemAccessService.applyUi==='function'){
+    window.SystemAccessService.applyUi();
+  }
   mountSyncSettingsSection();
   refreshConferenceMembersSection();
   var conferenceSelect = ge('conf_select');
@@ -7961,7 +7971,30 @@ function createConferenceFromSelection(){
     ,activityLog: []
   };
   normalizeConference(newConf);
-  appData.conferences.push(newConf);
+  try{
+    if(!window.ConferenceRepository||
+      typeof window.ConferenceRepository.addLocalConference!=='function'){
+      throw new Error('CONFERENCE_REPOSITORY_UNAVAILABLE');
+    }
+    var added=window.ConferenceRepository.addLocalConference(
+      appData,newConf
+    );
+    if(!added||added.ok!==true){
+      var repositoryError=new Error(
+        'ConferenceRepository.addLocalConference failed: '+
+        String(added&&added.status||'UNKNOWN_RESULT')
+      );
+      repositoryError.name='LocalConferenceCreationError';
+      repositoryError.cause=added||{
+        status:'undefined_repository_result'
+      };
+      throw repositoryError;
+    }
+    appData=added.data;
+  }catch(error){
+    showToast('تعذر إنشاء المؤتمر المحلي بأمان.','#C0392B');
+    return;
+  }
   setCurrentConferenceById(newConf.id, { skipToast: true });
   addActivityLog('conference_created','تم إنشاء مؤتمر جديد',{section:'conference',entityType:'conference',entityId:newConf.id});
   closeNewConferenceModal();
@@ -7997,6 +8030,37 @@ function collectConferenceSelection(){
     }
   });
   return selected;
+}
+
+function systemAccessAllowsConferenceCreation(){
+  if(!window.SupabaseAuth||typeof window.SupabaseAuth.getState!=='function'){
+    return true;
+  }
+  var authState=window.SupabaseAuth.getState();
+  if(!authState||!authState.authenticated)return true;
+  if(!window.SystemAccessService||
+    typeof window.SystemAccessService.getState!=='function'){
+    return true;
+  }
+  var access=window.SystemAccessService.getState();
+  if(!access.profileLoaded||!access.fresh){
+    alert('تعذر التحقق حديثًا من صلاحية إنشاء المؤتمرات.');
+    return false;
+  }
+  if(access.accountStatus==='pending'){
+    alert('الحساب ينتظر الاعتماد.');
+    return false;
+  }
+  if(access.accountStatus==='blocked'){
+    alert('الحساب موقوف.');
+    return false;
+  }
+  if(access.accountStatus==='approved'&&
+    !access.canCreateConferences&&!access.isSystemOwner){
+    alert('هذا الحساب غير مخول بإنشاء مؤتمرات جديدة.');
+    return false;
+  }
+  return true;
 }
 
 function openNewConferenceModal(mode){
@@ -8411,12 +8475,23 @@ window.applicationStorageReadyPromise.then(function(){
     console.warn('تعذر قراءة حالة مراجعة الروابط بعد الاستعادة.',error);
     return;
   }
-  if(window.AutomaticConferenceLinking&&
-    typeof window.AutomaticConferenceLinking.initialize==='function'){
-    window.AutomaticConferenceLinking.initialize();
-  }
-  if(window.AutomaticSyncOrchestrator&&
-    typeof window.AutomaticSyncOrchestrator.start==='function'){
-    window.AutomaticSyncOrchestrator.start();
-  }
+  var accessBootstrap=window.SystemAccessService&&
+    typeof window.SystemAccessService.initialize==='function'
+    ?window.SystemAccessService.initialize()
+    :Promise.resolve();
+  Promise.resolve(accessBootstrap).catch(function(){
+    return null;
+  }).then(function(){
+    var linking=window.AutomaticConferenceLinking&&
+      typeof window.AutomaticConferenceLinking.initialize==='function'
+      ?window.AutomaticConferenceLinking.initialize():null;
+    return linking&&linking.promise?linking.promise:null;
+  }).catch(function(){
+    return null;
+  }).then(function(){
+    if(window.AutomaticSyncOrchestrator&&
+      typeof window.AutomaticSyncOrchestrator.start==='function'){
+      window.AutomaticSyncOrchestrator.start();
+    }
+  });
 });

@@ -1,6 +1,6 @@
 const APP_VERSION = '3.1.1';
 const CACHE_PREFIX = 'conference-manager-core-';
-const CACHE_REVISION = 'full-backup-phase-5-fixes';
+const CACHE_REVISION = 'phase-2-7-operational-ui';
 const CACHE_NAME = CACHE_PREFIX + 'v' + APP_VERSION + '-' + CACHE_REVISION;
 const CORE_ASSETS = [
   './',
@@ -8,13 +8,19 @@ const CORE_ASSETS = [
   './style.css',
   './js/storage/indexeddb.js',
   './js/storage/storage-repository.js',
+  './js/storage/conference-repository.js',
+  './js/storage/conference-publishing-engine.js',
+  './js/storage/conference-publish-recovery.js',
+  './js/storage/conference-publish-manager.js',
   './js/storage/full-backup.js',
   './js/sync/sync-queue.js',
   './js/storage/migration-audit.js',
   './js/storage/migration-repair.js',
+  './js/supabase/public-config.js',
   './js/supabase/runtime-config.js',
   './js/supabase/client.js',
   './js/supabase/auth.js',
+  './js/supabase/system-access-service.js',
   './js/supabase/device-identity.js',
   './js/supabase/snapshot-sync.js',
   './js/sync/sync-processor.js',
@@ -42,6 +48,9 @@ const CORE_ASSETS = [
   './js/sync/automatic-sync-preferences.js',
   './js/sync/sync-scheduler-state.js',
   './js/sync/conference-sync-state-resolver.js?rev=phase-5',
+  './js/sync/conference-queue-integration.js',
+  './js/sync/conference-realtime-manager.js',
+  './js/sync/conference-operational-ui.js',
   './js/sync/automatic-queue-runner.js?rev=phase-5',
   './js/sync/automatic-conference-linking.js',
   './js/sync/automatic-sync-orchestrator.js?rev=phase-5',
