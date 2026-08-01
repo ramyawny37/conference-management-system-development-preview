@@ -171,11 +171,39 @@
       return executeRecord(ctx,prepared.data,options);
     }).finally(function(){delete flights[flightKey];});flights[flightKey]=flight;return flight;
   }
-  function reconcilePendingOperations(options){
+  function listPendingOperations(options){
     var ctx=context(options);if(ctx.error)return Promise.resolve(outcome(false,'unavailable',null,ctx.error));
     if(!ctx.repository||typeof ctx.repository.listForReconciliation!=='function')return Promise.resolve(outcome(false,'unavailable'));
     return ctx.repository.listForReconciliation(ctx.authenticatedUserId,options&&options.repositoryOptions).then(function(list){
-      if(!list.ok)return list;var sequence=Promise.resolve([]);list.data.operations.forEach(function(record){sequence=sequence.then(function(results){return executeRecord(ctx,record,options).then(function(item){results.push(item);return results;});});});return sequence.then(function(results){return outcome(true,'reconciled',{results:results});});
+      return list.ok?outcome(true,'listed',{operations:list.data.operations}):list;
+    });
+  }
+  function getStoredOperation(ctx,operationId,options){
+    if(!isUuid(String(operationId||''))||!ctx.repository||typeof ctx.repository.get!=='function')return Promise.resolve(outcome(false,'invalid_input'));
+    return ctx.repository.get(ctx.authenticatedUserId,String(operationId),options&&options.repositoryOptions).then(function(found){
+      return found.ok?outcome(true,'found',{operation:found.data}):found;
+    });
+  }
+  function retryUnknownOperation(operationId,options){
+    var ctx=context(options);if(ctx.error)return Promise.resolve(outcome(false,'unavailable',null,ctx.error));
+    return getStoredOperation(ctx,operationId,options).then(function(found){
+      if(!found.ok)return found;
+      if(found.data.operation.state!=='unknown')return outcome(false,'not_unknown',{operation:found.data.operation});
+      return executeRecord(ctx,found.data.operation,options);
+    });
+  }
+  function abandonUnknownOperation(operationId,options){
+    var ctx=context(options);if(ctx.error)return Promise.resolve(outcome(false,'unavailable',null,ctx.error));
+    if(!ctx.repository||typeof ctx.repository.removeUnknown!=='function')return Promise.resolve(outcome(false,'unavailable'));
+    return getStoredOperation(ctx,operationId,options).then(function(found){
+      if(!found.ok)return found;var record=found.data.operation;
+      if(record.state!=='unknown')return outcome(false,'not_unknown',{operation:record});
+      return refresh({organizationId:record.organizationId},options).then(function(refreshed){
+        if(!refreshed.ok)return outcome(false,'refresh_failed',{operation:record});
+        return ctx.repository.removeUnknown(ctx.authenticatedUserId,record.operationId,options&&options.repositoryOptions).then(function(removed){
+          return removed.ok?outcome(true,'tracking_stopped',{operation:record,refresh:refreshed.data}):removed;
+        });
+      });
     });
   }
   global.OrganizationAdministrationService=Object.freeze({listMyOrganizations:listMyOrganizations,getCurrentAccess:getCurrentAccess,
@@ -183,5 +211,6 @@
     addMember:function(input,options){return mutate(Object.assign({},input,{action:'add_organization_member',requestedRole:null}),options);},
     removeMember:function(input,options){return mutate(Object.assign({},input,{action:'remove_organization_member',requestedRole:null}),options);},
     changeRole:function(input,options){return mutate(Object.assign({},input,{action:'change_organization_role'}),options);},
-    reconcilePendingOperations:reconcilePendingOperations});
+    listPendingOperations:listPendingOperations,retryUnknownOperation:retryUnknownOperation,
+    abandonUnknownOperation:abandonUnknownOperation});
 })(window);

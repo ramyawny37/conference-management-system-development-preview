@@ -93,6 +93,21 @@
     return database.deleteRecord(STORE_NAME,[authenticatedUserId,operationId])
       .then(function(){return result(true,'removed');},function(){return result(false,'storage_error');});
   }
+  function removeUnknown(authenticatedUserId,operationId,options){
+    options=options||{};var now=date(options.now||new Date());var database=db();
+    if(!isUuid(String(authenticatedUserId||''))||!isUuid(String(operationId||''))||!now||!database)return Promise.resolve(result(false,'invalid_input'));
+    return database.runTransaction(STORE_NAME,'readwrite',function(stores){
+      var store=stores[STORE_NAME];return requestPromise(store.get([authenticatedUserId,operationId])).then(function(record){
+        if(!record)throw new Error('NOT_FOUND');
+        if(!validRecord(record,now))return requestPromise(store.delete([authenticatedUserId,operationId])).then(function(){throw new Error('CORRUPT');});
+        if(record.state!=='unknown')throw new Error('NOT_UNKNOWN');
+        return requestPromise(store.delete([authenticatedUserId,operationId]));
+      });
+    }).then(function(){return result(true,'tracking_stopped');}).catch(function(error){
+      var status=error&&error.message==='NOT_UNKNOWN'?'not_unknown':error&&error.message==='CORRUPT'?'manual_retry_required':error&&error.message==='NOT_FOUND'?'not_found':'storage_error';
+      return result(false,status);
+    });
+  }
   function listForReconciliation(authenticatedUserId,options){
     options=options||{};var now=date(options.now||new Date());var database=db();
     if(!isUuid(String(authenticatedUserId||''))||!now||!database)return Promise.resolve(result(false,'invalid_input'));
@@ -109,6 +124,7 @@
   global.OrganizationMembershipOperationRepository=Object.freeze({
     storeName:STORE_NAME,retentionMs:RETENTION_MS,futureToleranceMs:FUTURE_TOLERANCE_MS,
     intentKey:intentKey,get:get,prepare:prepare,markAttempt:markAttempt,
-    markUnknown:markUnknown,remove:remove,listForReconciliation:listForReconciliation
+    markUnknown:markUnknown,remove:remove,removeUnknown:removeUnknown,
+    listForReconciliation:listForReconciliation
   });
 })(window);
