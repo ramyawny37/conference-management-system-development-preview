@@ -1,6 +1,6 @@
 const APP_VERSION = '3.1.1';
 const CACHE_PREFIX = 'conference-manager-core-';
-const CACHE_REVISION = 'phase-2-7-operational-ui';
+const CACHE_REVISION = 'p0-2d-organization-administration';
 const CACHE_NAME = CACHE_PREFIX + 'v' + APP_VERSION + '-' + CACHE_REVISION;
 const CORE_ASSETS = [
   './',
@@ -21,6 +21,10 @@ const CORE_ASSETS = [
   './js/supabase/client.js',
   './js/supabase/auth.js',
   './js/supabase/system-access-service.js',
+  './js/sync/organization-administration-utils.js',
+  './js/sync/organization-membership-operation-repository.js',
+  './js/supabase/organization-administration-service.js',
+  './js/sync/organization-members-ui.js',
   './js/supabase/device-identity.js',
   './js/supabase/snapshot-sync.js',
   './js/sync/sync-processor.js',

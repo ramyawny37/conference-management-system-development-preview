@@ -1038,6 +1038,13 @@ function refreshConferenceMembersSection(){
   }
 }
 
+function refreshOrganizationMembersSection(){
+  if(window.OrganizationMembersUI&&
+    typeof window.OrganizationMembersUI.initialize==='function'){
+    window.OrganizationMembersUI.initialize();
+  }
+}
+
 function renderHouseTemplateDetails(house) {
   if (!house) {
     return '<div style="color:#95a5a6;text-align:center;padding:18px">اختر بيتًا لعرض غرفه هنا</div>';
@@ -6942,6 +6949,10 @@ function renderSettings(){
         membershipLink.remoteConferenceId||''
     });
   }
+  if(window.OrganizationMembersUI&&
+    typeof window.OrganizationMembersUI.renderSection==='function'){
+    h+=window.OrganizationMembersUI.renderSection({});
+  }
   if(window.ConflictResolutionUI&&
     typeof window.ConflictResolutionUI.renderSection==='function'){
     h+=window.ConflictResolutionUI.renderSection({localConference:current});
@@ -6956,6 +6967,7 @@ function renderSettings(){
     ge('tab6').innerHTML = h;
     mountSyncSettingsSection();
     refreshConferenceMembersSection();
+    refreshOrganizationMembersSection();
     return;
   }
   conferenceBrandingDraft=getConferenceBrandingSettings(current);
@@ -7083,6 +7095,7 @@ function renderSettings(){
   }
   mountSyncSettingsSection();
   refreshConferenceMembersSection();
+  refreshOrganizationMembersSection();
   var conferenceSelect = ge('conf_select');
   if(conferenceSelect){
     conferenceSelect.value = appData.currentConferenceId || '';

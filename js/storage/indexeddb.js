@@ -2,7 +2,7 @@
   'use strict';
 
   var DATABASE_NAME = 'conference_manager_v3';
-  var DATABASE_VERSION = 3;
+  var DATABASE_VERSION = 4;
   var STORE_NAMES = Object.freeze({
     conferences: 'conferences',
     rooms: 'rooms',
@@ -14,7 +14,9 @@
     syncOperationsQueue: 'sync_operations_queue',
     pendingRemoteApplications: 'pending_remote_applications',
     conflictResolutionDrafts: 'conflict_resolution_drafts',
-    conflictResolutionBackups: 'conflict_resolution_backups'
+    conflictResolutionBackups: 'conflict_resolution_backups',
+    organizationMembershipPendingOperations:
+      'organization_membership_pending_operations'
   });
   var database = null;
   var openingPromise = null;
@@ -92,6 +94,19 @@
       {keyPath:'backupId'},[
         {name:'localConferenceId',keyPath:'localConferenceId'},
         {name:'conferenceCreatedAt',keyPath:['localConferenceId','createdAt']}
+      ]);
+    ensureStore(db,upgradeTransaction,
+      STORE_NAMES.organizationMembershipPendingOperations,
+      {keyPath:['authenticatedUserId','operationId']},[
+        {name:'by_authenticated_user',keyPath:'authenticatedUserId'},
+        {name:'by_user_intent',keyPath:[
+          'authenticatedUserId','organizationId','targetUserId','action',
+          'requestedRole'
+        ]},
+        {name:'by_user_created_at',keyPath:[
+          'authenticatedUserId','createdAt'
+        ]},
+        {name:'by_created_at',keyPath:'createdAt'}
       ]);
   }
 
