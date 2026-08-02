@@ -44,6 +44,8 @@
 
 <div class="body" id="applicationBody">
   <div id="globalConferenceHeader"></div>
+  <div id="current_device_authorization_root"></div>
+  <div id="device_authorization_administration_root" style="display:none"></div>
   <div id="tab0"></div><div id="tab1" style="display:none"></div>
   <div id="tab2" style="display:none"></div><div id="tab3" style="display:none"></div>
   <div id="tab4" style="display:none"></div><div id="tab5" style="display:none"></div>
@@ -471,6 +473,11 @@
 <script src="js/supabase/organization-administration-service.js"></script>
 <script src="js/sync/organization-members-ui.js"></script>
 <script src="js/supabase/device-identity.js"></script>
+<script src="js/sync/device-authorization-operation-repository.js"></script>
+<script src="js/supabase/current-device-authorization-service.js"></script>
+<script src="js/supabase/device-authorization-administration-service.js"></script>
+<script src="js/sync/current-device-authorization-ui.js"></script>
+<script src="js/sync/device-authorization-administration-ui.js"></script>
 <script src="js/supabase/snapshot-sync.js"></script>
 <script src="js/sync/sync-processor.js"></script>
 <script src="js/sync/realtime.js"></script>
@@ -517,6 +524,8 @@
 <script src="version.js"></script>
 <script>
   document.addEventListener('DOMContentLoaded', function() {
+    if (window.CurrentDeviceAuthorizationUI) window.CurrentDeviceAuthorizationUI.initialize();
+    if (window.DeviceAuthorizationAdministrationUI) window.DeviceAuthorizationAdministrationUI.initialize();
     var appVersionLabel = document.getElementById('appVersionLabel');
     if (appVersionLabel) {
       var appReleaseVersion = window.APP_RELEASE && window.APP_RELEASE.version
