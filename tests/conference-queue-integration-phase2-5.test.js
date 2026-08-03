@@ -125,6 +125,9 @@ function environment(settings){
     structuredClone:structuredClone,
     navigator:{onLine:settings.online!==false},
     appData:appData,
+    isConferenceImportRecoveryPending:function(){
+      return settings.importRecovery===true;
+    },
     APP_RELEASE:{version:'5.0.0'},
     SupabaseAuth:{
       getSession:function(){return {user:{id:userId}};},
@@ -192,6 +195,10 @@ function environment(settings){
           :{ok:true,status:'read',data:{'local-1':plain(link)}};
       },
       get:function(){return settings.noLink?null:plain(link);},
+      list:function(){
+        if(settings.noLink)return [];
+        return [plain(link)].concat(plain(settings.additionalLinks||[]));
+      },
       findByRemoteId:function(){
         return settings.noLink?null:plain(link);
       },
@@ -393,7 +400,8 @@ async function run(){
     localConferenceId:'local-1',
     conferenceId:cloudId,
     cloudConferenceId:cloudId,
-    baseRevision:4
+    baseRevision:4,
+    snapshot:{nested:{value:1}}
   };
   assert.strictEqual(
     (await validation.integration.validateOperation(
@@ -430,6 +438,97 @@ async function run(){
     true
   );
   assert.strictEqual((await prepare(legacy)).status,'legacy_managed');
+
+  var linkedOperation=Object.assign({},validOperation);
+  var linkedSnapshotBefore=JSON.stringify(linkedOperation.snapshot);
+  var linkedValidation=await legacy.integration.validateOperation(
+    linkedOperation,legacy.options
+  );
+  assert.strictEqual(linkedValidation.ok,true);
+  assert.strictEqual(linkedValidation.status,'write_authorized');
+  assert.strictEqual(legacy.calls.access,1);
+  assert.strictEqual(legacy.calls.membership,1);
+  assert.strictEqual(JSON.stringify(linkedOperation.snapshot),linkedSnapshotBefore);
+
+  var missingCloud=await legacy.integration.validateOperation(
+    Object.assign({},linkedOperation,{cloudConferenceId:null}),legacy.options
+  );
+  assert.strictEqual(missingCloud.status,'cloud_id_mismatch');
+  assert.strictEqual((await legacy.integration.validateOperation(
+    Object.assign({},linkedOperation,{cloudConferenceId:
+      '44444444-4444-4444-8444-444444444444'}),legacy.options
+  )).status,'cloud_id_mismatch');
+  assert.strictEqual((await legacy.integration.validateOperation(
+    Object.assign({},linkedOperation,{baseRevision:3}),legacy.options
+  )).status,'base_revision_mismatch');
+
+  var unsynced=environment({
+    linkStatus:'unsynced',lifecycle:'unpublished',pendingLocalChanges:false
+  });
+  assert.strictEqual((await unsynced.integration.validateOperation(
+    linkedOperation,unsynced.options
+  )).status,'legacy_link_contract_mismatch');
+
+  var legacyWithoutLocal=Object.assign({},linkedOperation);
+  delete legacyWithoutLocal.queueSchemaVersion;
+  delete legacyWithoutLocal.localConferenceId;
+  assert.strictEqual((await legacy.integration.validateOperation(
+    legacyWithoutLocal,legacy.options
+  )).ok,true);
+
+  var missingMapping=environment({noLink:true,pendingLocalChanges:false});
+  assert.strictEqual((await missingMapping.integration.validateOperation(
+    legacyWithoutLocal,missingMapping.options
+  )).status,'local_conference_missing');
+
+  var ambiguousMapping=environment({
+    linkStatus:'linked',lifecycle:'unpublished',pendingLocalChanges:false,
+    additionalLinks:[Object.assign({},legacy.link(),{
+      localConferenceId:'local-other'
+    })]
+  });
+  assert.strictEqual((await ambiguousMapping.integration.validateOperation(
+    legacyWithoutLocal,ambiguousMapping.options
+  )).status,'ambiguous_remote_link');
+  assert.strictEqual((await ambiguousMapping.integration.validateOperation(
+    linkedOperation,ambiguousMapping.options
+  )).status,'ambiguous_remote_link');
+
+  var localMismatch=environment({
+    linkStatus:'linked',lifecycle:'unpublished',pendingLocalChanges:false
+  });
+  assert.notStrictEqual((await localMismatch.integration.validateOperation(
+    Object.assign({},linkedOperation,{localConferenceId:'local-other'}),
+    localMismatch.options
+  )).ok,true);
+
+  for(var guardedSettings of [
+    {restoreMarker:true},
+    {manualRelink:true},
+    {importRecovery:true},
+    {publishing:true},
+    {recovering:true},
+    {membershipDenied:true},
+    {access:{accountStatus:'blocked'}}
+  ]){
+    var guarded=environment(Object.assign({
+      linkStatus:'linked',lifecycle:'unpublished',pendingLocalChanges:false
+    },guardedSettings));
+    assert.strictEqual((await guarded.integration.validateOperation(
+      linkedOperation,guarded.options
+    )).ok,false);
+    assert.strictEqual(guarded.calls.enqueue,0);
+    assert.strictEqual(guarded.calls.linkSave,0);
+    assert.strictEqual(guarded.calls.createConference,0);
+  }
+
+  var pendingLegacy=environment({
+    linkStatus:'linked',lifecycle:'unpublished',pendingLocalChanges:false,
+    link:{pendingLocalApplication:true}
+  });
+  assert.strictEqual((await pendingLegacy.integration.validateOperation(
+    linkedOperation,pendingLegacy.options
+  )).status,'legacy_link_contract_mismatch');
 
   var scanA=environment();
   var batch=await scanA.integration.prepareCandidates(

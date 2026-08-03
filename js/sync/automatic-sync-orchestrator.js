@@ -11,6 +11,7 @@
   var listeners=[];
   var debounceTimer=null;
   var evaluationPromise=null;
+  var evaluationFollowUpRequested=false;
   var connectivityPromise=null;
   var onlineHandler=null;
   var offlineHandler=null;
@@ -22,6 +23,18 @@
   var realtimeCleanupPending=false;
   var realtimeCleanupPromise=Promise.resolve();
   var activeOptions=null;
+  var diagnostics={
+    lastScheduledReason:null,
+    lastEvaluationReasons:[],
+    lastEvaluationStartedAt:null,
+    lastEvaluationFinishedAt:null,
+    lastResolverStatus:null,
+    lastRunLinkedConferenceAt:null,
+    lastRunnerInvocationAt:null,
+    lastRunnerResultStatus:'runner_not_invoked',
+    lastRunnerWaitingReason:null,
+    lastStopReason:null
+  };
 
   function copy(value){
     if(typeof global.structuredClone==='function')return global.structuredClone(value);
@@ -33,6 +46,21 @@
     snapshot.realtimeStatus=realtimeStatus;
     snapshot.realtimeConferenceId=realtimeConferenceId;
     snapshot.realtimeError=realtimeError?copy(realtimeError):null;
+    snapshot.lastScheduledReason=diagnostics.lastScheduledReason;
+    snapshot.scheduledReasonCount=state.scheduledReasons.length;
+    snapshot.debouncePending=!!debounceTimer;
+    snapshot.evaluationInProgress=!!evaluationPromise||state.evaluating===true;
+    snapshot.followUpPending=evaluationFollowUpRequested;
+    snapshot.lastEvaluationReasons=diagnostics.lastEvaluationReasons.slice();
+    snapshot.lastEvaluationStartedAt=diagnostics.lastEvaluationStartedAt;
+    snapshot.lastEvaluationFinishedAt=diagnostics.lastEvaluationFinishedAt;
+    snapshot.lastResolverStatus=diagnostics.lastResolverStatus;
+    snapshot.lastRunLinkedConferenceAt=
+      diagnostics.lastRunLinkedConferenceAt;
+    snapshot.lastRunnerInvocationAt=diagnostics.lastRunnerInvocationAt;
+    snapshot.lastRunnerResultStatus=diagnostics.lastRunnerResultStatus;
+    snapshot.lastRunnerWaitingReason=diagnostics.lastRunnerWaitingReason;
+    snapshot.lastStopReason=diagnostics.lastStopReason;
     var runner=global.AutomaticQueueRunner;
     if(runner&&typeof runner.getState==='function'){
       Object.assign(snapshot,runner.getState());
@@ -370,13 +398,18 @@
   }
 
   function evaluateScheduled(options){
-    if(evaluationPromise)return evaluationPromise;
+    if(evaluationPromise){
+      evaluationFollowUpRequested=true;
+      return evaluationPromise;
+    }
     var generation=state.generation;
     var reasons=state.scheduledReasons.slice();
     state.evaluating=true;
     var flight=Promise.resolve().then(function(){
       if(generation!==state.generation||!state.started)return publicState();
       state.scheduledReasons=[];
+      diagnostics.lastEvaluationReasons=reasons.slice();
+      diagnostics.lastEvaluationStartedAt=new Date().toISOString();
       return evaluateConnectivity(options).then(function(connectivityState){
         if(generation!==state.generation||!state.started||
           connectivityState.connectivity!=='online'||
@@ -423,11 +456,15 @@
         var resolveState=function(){
           if(!linkingLocalConferenceId||!resolver||
             typeof resolver.resolve!=='function'){
+            diagnostics.lastResolverStatus='resolver_unavailable';
             return Promise.resolve(null);
           }
           return resolver.resolve({
             localConferenceId:linkingLocalConferenceId
-          },options.stateResolverOptions);
+          },options.stateResolverOptions).then(function(resolved){
+            diagnostics.lastResolverStatus=resolved&&resolved.status||null;
+            return resolved;
+          });
         };
         var staleResult=function(){
           if(currentLocalConferenceId(options)===linkingLocalConferenceId){
@@ -441,6 +478,7 @@
           return true;
         };
         var runLinkedConference=function(connectivityState,resolvedState){
+          diagnostics.lastRunLinkedConferenceAt=new Date().toISOString();
           if(staleResult())return Promise.resolve(publicState());
           if(restoreIsolationPending(options)||
             manualRelinkPending(linkingLocalConferenceId,options)||
@@ -451,20 +489,36 @@
                 ?'manual_relink_required'
                 :'offline';
             state.linkedConferenceId=null;
+            diagnostics.lastStopReason=state.conferenceState;
             return disconnectRealtime(options).then(publicState);
           }
           state.conferenceState='linked';
           state.linkedConferenceId=linkingLocalConferenceId;
           notify();
           var runner=options.queueRunner||global.AutomaticQueueRunner;
-          var runQueue=!runner||typeof runner.run!=='function'
-            ?Promise.resolve()
-            :runner.run(Object.assign({},options.queueRunnerOptions||{},{
-            connectivity:connectivityState.connectivity,
-            reasons:reasons,
-            orchestrator:global.AutomaticSyncOrchestrator
-          }));
+          var runQueue;
+          if(!runner||typeof runner.run!=='function'){
+            diagnostics.lastRunnerResultStatus='runner_not_invoked';
+            diagnostics.lastRunnerWaitingReason=null;
+            runQueue=Promise.resolve();
+          }else{
+            diagnostics.lastRunnerInvocationAt=new Date().toISOString();
+            runQueue=runner.run(Object.assign(
+              {},options.queueRunnerOptions||{}, {
+                connectivity:connectivityState.connectivity,
+                reasons:reasons,
+                orchestrator:global.AutomaticSyncOrchestrator
+              }
+            ));
+          }
           return Promise.resolve(runQueue).then(function(queueResult){
+            if(runner&&typeof runner.run==='function'){
+              diagnostics.lastRunnerResultStatus=
+                queueResult&&queueResult.status||null;
+              diagnostics.lastRunnerWaitingReason=
+                queueResult&&queueResult.status==='waiting'&&
+                queueResult.data&&queueResult.data.reason||null;
+            }
             if(queueResult&&queueResult.ok===false||
               generation!==state.generation||!state.started||
               currentLocalConferenceId(options)!==linkingLocalConferenceId||
@@ -529,6 +583,7 @@
         var stopForLinkedContext=function(status){
           state.conferenceState=status;
           state.linkedConferenceId=null;
+          diagnostics.lastStopReason=status;
           return disconnectRealtime(options).then(publicState);
         };
         var restoreLinkedThenRun=function(connectivityState){
@@ -663,7 +718,24 @@
       return result;
     }).finally(function(){
       if(generation===state.generation)state.evaluating=false;
-      if(evaluationPromise===flight)evaluationPromise=null;
+      if(generation===state.generation){
+        diagnostics.lastEvaluationFinishedAt=new Date().toISOString();
+      }
+      if(evaluationPromise===flight){
+        evaluationPromise=null;
+        var followUpRequired=evaluationFollowUpRequested||
+          state.scheduledReasons.length>0;
+        evaluationFollowUpRequested=false;
+        if(generation===state.generation&&state.started&&
+          followUpRequired&&!debounceTimer){
+          debounceTimer=global.setTimeout(function(){
+            debounceTimer=null;
+            evaluateScheduled(options);
+          },Number.isInteger(options.debounceMs)
+            ?Math.max(0,options.debounceMs)
+            :DEBOUNCE_MS);
+        }
+      }
       if(generation===state.generation)notify();
     });
     evaluationPromise=flight;
@@ -677,6 +749,7 @@
       return {ok:false,status:'invalid_reason'};
     }
     if(!state.started)return {ok:false,status:'stopped'};
+    diagnostics.lastScheduledReason=reason;
     if(state.scheduledReasons.indexOf(reason)<0){
       state.scheduledReasons.push(reason);
     }
@@ -724,6 +797,7 @@
       return {ok:true,status:'cloud_disabled'};
     }
     state.started=true;
+    diagnostics.lastStopReason=null;
     activeOptions=options;
     state.generation++;
     state.connectivity='unknown';
@@ -746,6 +820,7 @@
       debounceTimer=null;
     }
     state.scheduledReasons=[];
+    evaluationFollowUpRequested=false;
     notify();
     return {ok:true,status:'cleared'};
   }
@@ -759,9 +834,11 @@
     offlineHandler=null;
     clearScheduledWork();
     state.started=false;
+    diagnostics.lastStopReason='stopped';
     state.generation++;
     connectivityPromise=null;
     evaluationPromise=null;
+    evaluationFollowUpRequested=false;
     state.evaluating=false;
     state.checkingConnectivity=false;
     state.connectivity='stopped';

@@ -174,6 +174,25 @@ async function run(){
   assert.strictEqual(compatibleEvaluateCalls,0);
   assert.strictEqual(compatibleRunnerCalls,1);
 
+  var waiting=load();
+  waiting.AutomaticSyncOrchestrator.start(baseOptions({
+    stateResolver:{resolve:function(){return Promise.resolve({
+      ok:true,status:'linked',
+      data:{link:linkedRecord,remoteConferenceId:remoteId}
+    });}},
+    integration:{getConferenceSyncState:function(){return {context:{
+      localConferenceId:'local-a',conferenceId:remoteId,baseRevision:2
+    }};}},
+    queueRunner:{run:function(){return Promise.resolve({
+      ok:true,status:'waiting',data:{reason:'AUTH_REQUIRED'}
+    });}}
+  }));
+  await delay(10);
+  var waitingState=waiting.AutomaticSyncOrchestrator.getState();
+  assert.strictEqual(waitingState.lastRunnerResultStatus,'waiting');
+  assert.strictEqual(waitingState.lastRunnerWaitingReason,'AUTH_REQUIRED');
+  assert.ok(waitingState.lastRunnerInvocationAt);
+
   var restored=load();
   var restoredContext=null;
   var restoreEvaluateCalls=0;

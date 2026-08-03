@@ -18,7 +18,13 @@
     lastSafeError:null,
     pendingCount:0,
     conflictCount:0,
-    nextRetryAt:null
+    nextRetryAt:null,
+    lastEligibleCount:0,
+    lastEligibilityStatus:'runner_not_invoked',
+    lastOperationValidationStatus:null,
+    lastSelectedOperationStatus:'runner_not_invoked',
+    lastProcessorInvocationAt:null,
+    lastProcessorResultStatus:null
   };
 
   function clone(value){
@@ -95,11 +101,18 @@
       link.conflictStatus!=='active');
   }
   function validateQueueItem(item,options){
-    if(!item||!item.operation)return Promise.resolve(false);
+    if(!item||!item.operation){
+      state.lastOperationValidationStatus='operation_unavailable';
+      return Promise.resolve(false);
+    }
     var integration=options.queueIntegration||
       global.ConferenceQueueIntegration;
     if(!integration||
       typeof integration.validateOperation!=='function'){
+      state.lastOperationValidationStatus=
+        item.operation.queueSchemaVersion!==1
+          ?'legacy_validation_allowed'
+          :'validation_unavailable';
       return Promise.resolve(
         item.operation.queueSchemaVersion!==1
       );
@@ -113,8 +126,15 @@
         appData:options.appData||global.appData
       })
     )).then(function(checked){
+      state.lastOperationValidationStatus=
+        checked&&checked.status
+          ?String(checked.status)
+          :checked&&checked.ok?'validated':'validation_rejected';
       return !!(checked&&checked.ok);
-    }).catch(function(){return false;});
+    }).catch(function(){
+      state.lastOperationValidationStatus='validation_failed';
+      return false;
+    });
   }
   function pendingApplicationBlocks(link,options){
     var store=options.pendingApplicationStore||
@@ -267,9 +287,12 @@
         return validateQueueItem(item,options).then(function(valid){
           if(!valid){
             blockedConferences[item.operation.conferenceId]=true;
+            state.lastSelectedOperationStatus='blocked';
             setStatus('blocked','QUEUE_OPERATION_NOT_AUTHORIZED');
             return null;
           }
+          state.lastSelectedOperationStatus='processor_invoked';
+          state.lastProcessorInvocationAt=new Date().toISOString();
           return processor.processOperation(
             item.operation.operationId,
             Object.assign({},options.processorOptions||{},{
@@ -279,6 +302,7 @@
           );
         }).then(function(processResult){
           if(!processResult)return;
+          state.lastProcessorResultStatus=processResult.status||null;
           var category=classify(processResult);
           outcomes.push(processResult);
           if(category==='success'){
@@ -361,29 +385,51 @@
     return queue.getReadyOperations(options.queueOptions).then(function(read){
       var operations=read&&read.ok&&read.data&&read.data.operations||[];
       state.pendingCount=operations.length;
+      state.lastEligibleCount=0;
+      state.lastEligibilityStatus=operations.length
+        ?'checking':'empty';
+      state.lastSelectedOperationStatus=operations.length
+        ?'not_selected':'empty';
       var checks=[];
       operations.forEach(function(operation){
         var link=resolveLink(operation,options);
         if(bypassBackoff)clearRetry(operation.conferenceId);
         if(!isSafeLink(link)||retryTimers[operation.conferenceId]||
-          externallySuspendedConferences[operation.conferenceId])return;
+          externallySuspendedConferences[operation.conferenceId]){
+          state.lastEligibilityStatus=!isSafeLink(link)
+            ?'unsafe_link'
+            :retryTimers[operation.conferenceId]
+              ?'retry_wait':'externally_suspended';
+          return;
+        }
         checks.push(resolvedConferenceAllows(link,options).then(function(allowed){
-          if(!allowed)return null;
+          if(!allowed){
+            state.lastEligibilityStatus='resolver_not_linked';
+            return null;
+          }
           var item={operation:operation,link:link};
           return validateQueueItem(item,options).then(function(valid){
+            if(!valid)state.lastEligibilityStatus='validation_rejected';
             return valid?item:null;
           });
         }));
       });
       return Promise.all(checks).then(function(items){
-        return selectFair(items.filter(Boolean),
+        var selected=selectFair(items.filter(Boolean),
           options.limit||MAX_OPERATIONS);
+        state.lastEligibleCount=selected.length;
+        state.lastEligibilityStatus=selected.length?'selected':'empty';
+        state.lastSelectedOperationStatus=selected.length
+          ?'selected':'empty';
+        return selected;
       });
     });
   }
   function performRun(options){
     var reason=waitingReason(options);
     if(reason){
+      state.lastEligibilityStatus='waiting';
+      state.lastSelectedOperationStatus='waiting';
       setStatus(reason==='AUTH_REQUIRED'
         ?'waiting_for_auth':'waiting_for_connection',reason);
       return Promise.resolve(result(true,'waiting',{reason:reason},null));
@@ -392,6 +438,8 @@
     var processor=options.processor||global.SyncQueueProcessor;
     if(!queue||typeof queue.getReadyOperations!=='function'||
       !processor||typeof processor.processOperation!=='function'){
+      state.lastEligibilityStatus='blocked';
+      state.lastSelectedOperationStatus='blocked';
       setStatus('error','QUEUE_PROCESSOR_UNAVAILABLE');
       return Promise.resolve(result(false,'error',null,
         safeError('QUEUE_PROCESSOR_UNAVAILABLE')));
@@ -516,7 +564,11 @@
     state={
       queueStatus:'idle',activeConferenceId:null,lastRunAt:null,
       lastSuccessfulSyncAt:null,lastSafeError:null,pendingCount:0,
-      conflictCount:0,nextRetryAt:null
+      conflictCount:0,nextRetryAt:null,lastEligibleCount:0,
+      lastEligibilityStatus:'runner_not_invoked',
+      lastOperationValidationStatus:null,
+      lastSelectedOperationStatus:'runner_not_invoked',
+      lastProcessorInvocationAt:null,lastProcessorResultStatus:null
     };
   }
 

@@ -120,6 +120,39 @@ async function run(){
   });
   assert.strictEqual((await runner.run(disabled)).status,'waiting');
   assert.strictEqual(calls,0);
+  assert.strictEqual(runner.getState().lastEligibilityStatus,'waiting');
+  assert.strictEqual(runner.getState().lastSelectedOperationStatus,'waiting');
+  assert.strictEqual(runner.getState().lastProcessorInvocationAt,null);
+
+  runner.resetForTests();
+  var compatibilityProcessorCalls=0;
+  var compatibilityAttempts=0;
+  var compatibleOperation=operation(
+    'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',ids.first
+  );
+  compatibleOperation.queueSchemaVersion=1;
+  compatibleOperation.localConferenceId='local-first';
+  compatibleOperation.cloudConferenceId=ids.first;
+  compatibleOperation.baseRevision=1;
+  var compatibleQueue=options({
+    queue:{getReadyOperations:function(){return Promise.resolve({
+      ok:true,data:{operations:[compatibleOperation]}
+    });}},
+    queueIntegration:{validateOperation:function(){return Promise.resolve({
+      ok:true,status:'write_authorized'
+    });}},
+    processor:{processOperation:function(){
+      compatibilityProcessorCalls++;
+      compatibleOperation.attempts++;
+      compatibilityAttempts=compatibleOperation.attempts;
+      return Promise.resolve({ok:true,status:'applied',data:{
+        revision:2,operation:compatibleOperation
+      }});
+    }}
+  });
+  assert.strictEqual((await runner.run(compatibleQueue)).status,'completed');
+  assert.strictEqual(compatibilityProcessorCalls,1);
+  assert.strictEqual(compatibilityAttempts,1);
 
   runner.resetForTests();
   calls=0;
@@ -180,6 +213,22 @@ async function run(){
   var empty=options();
   empty._operations.length=0;
   assert.strictEqual((await runner.run(empty)).status,'empty');
+  assert.strictEqual(runner.getState().lastEligibleCount,0);
+  assert.strictEqual(runner.getState().lastEligibilityStatus,'empty');
+  assert.strictEqual(runner.getState().lastSelectedOperationStatus,'empty');
+
+  runner.resetForTests();
+  var validationBlocked=options({
+    queueIntegration:{validateOperation:function(){return Promise.resolve({
+      ok:false,status:'base_revision_mismatch'
+    });}}
+  });
+  assert.strictEqual((await runner.run(validationBlocked)).status,'empty');
+  assert.strictEqual(
+    runner.getState().lastOperationValidationStatus,
+    'base_revision_mismatch'
+  );
+  assert.strictEqual(runner.getState().lastProcessorInvocationAt,null);
 
   runner.resetForTests();
   var unlinkedCalls=0;
@@ -317,6 +366,25 @@ async function run(){
   var successResult=await runner.run(success);
   assert.strictEqual(successResult.data.processed,1);
   assert.ok(runner.getState().lastSuccessfulSyncAt);
+  assert.strictEqual(runner.getState().lastEligibleCount,1);
+  assert.strictEqual(
+    runner.getState().lastSelectedOperationStatus,
+    'processor_invoked'
+  );
+  assert.ok(runner.getState().lastProcessorInvocationAt);
+  assert.strictEqual(runner.getState().lastProcessorResultStatus,'applied');
+  assert.ok(runner.getState().lastRunAt);
+  var safeDiagnostics={
+    lastEligibilityStatus:runner.getState().lastEligibilityStatus,
+    lastOperationValidationStatus:
+      runner.getState().lastOperationValidationStatus,
+    lastSelectedOperationStatus:
+      runner.getState().lastSelectedOperationStatus,
+    lastProcessorResultStatus:
+      runner.getState().lastProcessorResultStatus
+  };
+  assert.doesNotMatch(JSON.stringify(safeDiagnostics),
+    /snapshot|token|credential|11111111|aaaaaaaa/i);
 
   runner.resetForTests();
   var duplicate=options({

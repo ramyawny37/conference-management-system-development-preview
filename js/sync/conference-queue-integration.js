@@ -142,6 +142,20 @@
     return legacyLinkAllowed(link,options);
   }
 
+  function remoteLinkMatches(d,remoteConferenceId,options){
+    if(!d.links||typeof d.links.list!=='function')return [];
+    var links;
+    try{
+      links=d.links.list(options&&options.linkOptions);
+    }catch(error){
+      return [];
+    }
+    return Array.isArray(links)?links.filter(function(link){
+      return link&&String(link.remoteConferenceId||'')===
+        String(remoteConferenceId||'');
+    }):[];
+  }
+
   function freshAuthorization(d,link,options){
     if(!d.systemAccess||
       typeof d.systemAccess.refresh!=='function'||
@@ -237,13 +251,14 @@
     var localId=String(operation.localConferenceId||'');
     var d=dependencies(options);
     if(!localId){
-      var legacy=d.links&&
-        typeof d.links.findByRemoteId==='function'
-        ?d.links.findByRemoteId(
-          operation.conferenceId,
-          options&&options.linkOptions
-        ):null;
-      localId=legacy&&String(legacy.localConferenceId||'');
+      var legacyMatches=remoteLinkMatches(
+        d,operation.conferenceId,options
+      );
+      if(legacyMatches.length>1){
+        return Promise.resolve(result(false,'ambiguous_remote_link'));
+      }
+      localId=legacyMatches.length===1&&
+        String(legacyMatches[0].localConferenceId||'');
     }
     if(!localId){
       return Promise.resolve(result(false,'local_conference_missing'));
@@ -254,11 +269,6 @@
     var appData=options&&options.appData||global.appData;
     var scope=inspectScope(appData,localId,options);
     if(!scope.ok)return Promise.resolve(scope);
-    if(operation.queueSchemaVersion===1&&scope.data.legacy){
-      return Promise.resolve(result(
-        false,'legacy_link_contract_mismatch'
-      ));
-    }
     var link=scope.data.link;
     if(operation.conferenceId!==link.remoteConferenceId||
       operation.cloudConferenceId&&
@@ -267,6 +277,34 @@
     }
     if(operation.baseRevision!==link.knownRevision){
       return Promise.resolve(result(false,'base_revision_mismatch'));
+    }
+    if(operation.queueSchemaVersion===1&&scope.data.legacy){
+      var compatibilityMatches=remoteLinkMatches(
+        d,operation.conferenceId,options
+      );
+      if(compatibilityMatches.length>1){
+        return Promise.resolve(result(false,'ambiguous_remote_link'));
+      }
+      if(compatibilityMatches.length!==1){
+        return Promise.resolve(result(false,'local_conference_missing'));
+      }
+      var compatibleLink=compatibilityMatches[0];
+      if(scope.data.link.linkStatus!=='linked'||
+        scope.data.link.pendingLocalApplication===true){
+        return Promise.resolve(result(
+          false,'legacy_link_contract_mismatch'
+        ));
+      }
+      if(!operation.localConferenceId||
+        String(operation.localConferenceId)!==localId||
+        String(compatibleLink.localConferenceId||'')!==localId){
+        return Promise.resolve(result(
+          false,'local_conference_mismatch'
+        ));
+      }
+      if(!operation.cloudConferenceId){
+        return Promise.resolve(result(false,'cloud_id_mismatch'));
+      }
     }
     if(d.navigator&&d.navigator.onLine===false){
       return Promise.resolve(result(false,'offline'));

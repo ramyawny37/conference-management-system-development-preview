@@ -327,6 +327,162 @@ async function run(){
   );
   single.window.AutomaticSyncOrchestrator.stop();
 
+  var followUp=load({
+    authenticated:true,configured:true,available:true
+  });
+  var firstConnectivityResolve;
+  var connectivityChecks=0;
+  var concurrentChecks=0;
+  var maximumConcurrentChecks=0;
+  var followUpRunnerCalls=0;
+  var runnerReasons=[];
+  var followUpRemoteId='11111111-1111-4111-8111-111111111111';
+  var followUpLink={
+    localConferenceId:'local-follow-up',
+    remoteConferenceId:followUpRemoteId,
+    knownRevision:1,
+    linkStatus:'linked'
+  };
+  var followUpOptions={
+    debounceMs:0,
+    preferences:{get:function(){return {
+      cloudSyncEnabled:true,automaticSyncEnabled:true
+    };}},
+    getCurrentConference:function(){return {id:'local-follow-up'};},
+    serviceCheck:function(){
+      connectivityChecks++;
+      concurrentChecks++;
+      maximumConcurrentChecks=Math.max(
+        maximumConcurrentChecks,concurrentChecks
+      );
+      if(connectivityChecks===1){
+        return new Promise(function(resolve){
+          firstConnectivityResolve=function(value){
+            concurrentChecks--;
+            resolve(value);
+          };
+        });
+      }
+      concurrentChecks--;
+      return Promise.resolve({available:true});
+    },
+    stateResolver:{resolve:function(){return Promise.resolve({
+      ok:true,status:'linked',data:{
+        link:followUpLink,remoteConferenceId:followUpRemoteId
+      }
+    });}},
+    integration:{getConferenceSyncState:function(){return {context:{
+      localConferenceId:'local-follow-up',
+      conferenceId:followUpRemoteId,
+      baseRevision:1
+    }};}},
+    queueRunner:{run:function(options){
+      followUpRunnerCalls++;
+      runnerReasons.push(Array.from(options.reasons));
+      return Promise.resolve({ok:true,status:'empty'});
+    }}
+  };
+  followUp.window.AutomaticSyncOrchestrator.start(followUpOptions);
+  assert.strictEqual(
+    followUp.window.AutomaticSyncOrchestrator.getState().debouncePending,
+    true
+  );
+  await delay(5);
+  assert.strictEqual(connectivityChecks,1);
+  assert.strictEqual(
+    followUp.window.AutomaticSyncOrchestrator.getState()
+      .evaluationInProgress,
+    true
+  );
+  assert.deepStrictEqual(Array.from(
+    followUp.window.AutomaticSyncOrchestrator.getState()
+      .lastEvaluationReasons
+  ),['startup']);
+  followUp.window.AutomaticSyncOrchestrator.schedule(
+    'local_save',followUpOptions
+  );
+  assert.strictEqual(
+    followUp.window.AutomaticSyncOrchestrator.getState()
+      .lastScheduledReason,
+    'local_save'
+  );
+  assert.strictEqual(
+    followUp.window.AutomaticSyncOrchestrator.getState().debouncePending,
+    true
+  );
+  followUp.window.AutomaticSyncOrchestrator.schedule(
+    'auth_changed',followUpOptions
+  );
+  await delay(5);
+  assert.strictEqual(connectivityChecks,1);
+  assert.strictEqual(followUpRunnerCalls,0);
+  assert.strictEqual(
+    followUp.window.AutomaticSyncOrchestrator.getState().followUpPending,
+    true
+  );
+  assert.strictEqual(
+    followUp.window.AutomaticSyncOrchestrator.getState()
+      .lastRunnerInvocationAt,
+    null
+  );
+  firstConnectivityResolve({available:false});
+  await delay(15);
+  assert.strictEqual(connectivityChecks,2);
+  assert.strictEqual(maximumConcurrentChecks,1);
+  assert.strictEqual(followUpRunnerCalls,1);
+  assert.deepStrictEqual(runnerReasons,[['local_save','auth_changed']]);
+  var followUpState=followUp.window.AutomaticSyncOrchestrator.getState();
+  assert.strictEqual(followUpState.evaluationInProgress,false);
+  assert.strictEqual(followUpState.followUpPending,false);
+  assert.strictEqual(followUpState.scheduledReasonCount,0);
+  assert.deepStrictEqual(Array.from(followUpState.lastEvaluationReasons),[
+    'local_save','auth_changed'
+  ]);
+  assert.strictEqual(followUpState.lastResolverStatus,'linked');
+  assert.ok(followUpState.lastEvaluationStartedAt);
+  assert.ok(followUpState.lastEvaluationFinishedAt);
+  assert.ok(followUpState.lastRunLinkedConferenceAt);
+  assert.ok(followUpState.lastRunnerInvocationAt);
+  assert.strictEqual(followUpState.lastRunnerResultStatus,'empty');
+  assert.strictEqual(followUpState.lastRunnerWaitingReason,null);
+  followUp.window.AutomaticSyncOrchestrator.stop();
+  assert.strictEqual(
+    followUp.window.AutomaticSyncOrchestrator.getState().lastStopReason,
+    'stopped'
+  );
+
+  var stoppedFollowUp=load({
+    authenticated:true,configured:true,available:true
+  });
+  var stoppedResolve;
+  var stoppedChecks=0;
+  var stoppedRunnerCalls=0;
+  var stoppedOptions=Object.assign({},followUpOptions,{
+    serviceCheck:function(){
+      stoppedChecks++;
+      return new Promise(function(resolve){stoppedResolve=resolve;});
+    },
+    queueRunner:{run:function(){
+      stoppedRunnerCalls++;
+      return Promise.resolve({ok:true});
+    }}
+  });
+  stoppedFollowUp.window.AutomaticSyncOrchestrator.start(stoppedOptions);
+  await delay(5);
+  stoppedFollowUp.window.AutomaticSyncOrchestrator.schedule(
+    'local_save',stoppedOptions
+  );
+  await delay(5);
+  stoppedFollowUp.window.AutomaticSyncOrchestrator.stop();
+  stoppedResolve({available:true});
+  await delay(10);
+  assert.strictEqual(stoppedChecks,1);
+  assert.strictEqual(stoppedRunnerCalls,0);
+  assert.strictEqual(
+    stoppedFollowUp.window.AutomaticSyncOrchestrator.getState().started,
+    false
+  );
+
   console.log('automatic-sync-orchestrator tests: passed');
 }
 
