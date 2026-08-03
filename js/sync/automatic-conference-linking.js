@@ -19,6 +19,8 @@
       auth:options.auth||global.SupabaseAuth,
       links:options.links||global.ConferenceLinkStore,
       recovery:options.recovery||global.ConferencePublishRecovery,
+      backup:options.backup||global.FullBackupService,
+      integration:options.integration||global.OfflineFirstIntegration,
       getCurrentConference:options.getCurrentConference||
         global.getCurrentConference,
       getAppData:options.getAppData||function(){return global.appData;},
@@ -30,6 +32,65 @@
   function skip(status,data){
     lastResult=result(true,status,Object.assign({linked:false},data||{}));
     return Promise.resolve(lastResult);
+  }
+
+  function fail(status,data){
+    lastResult=result(false,status,Object.assign({linked:false},data||{}));
+    return Promise.resolve(lastResult);
+  }
+
+  function uuid(value){
+    return typeof value==='string'&&
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+        .test(value);
+  }
+
+  function isolated(d,localConferenceId,options){
+    if(!d.backup)return false;
+    var marker=typeof d.backup.getFullRestoreCloudReviewMarker==='function'
+      ?d.backup.getFullRestoreCloudReviewMarker({
+        storage:options&&options.localStorage
+      }):null;
+    return !!(marker&&marker.pending)||
+      typeof d.backup.isManualRelinkRequired==='function'&&
+      d.backup.isManualRelinkRequired(localConferenceId,{
+        storage:options&&options.localStorage
+      });
+  }
+
+  function restoreLinkedContext(d,conference,link,options){
+    if(!link||link.linkStatus!=='linked'||
+      String(link.localConferenceId||'')!==String(conference.id)||
+      !uuid(String(link.remoteConferenceId||''))||
+      !Number.isInteger(link.knownRevision)||link.knownRevision<1){
+      return fail('linked_context_invalid');
+    }
+    if(!d.integration||
+      typeof d.integration.configureConferenceSync!=='function'){
+      return fail('linked_context_restore_unavailable');
+    }
+    var configured;
+    try{
+      configured=d.integration.configureConferenceSync(conference.id,{
+        conferenceId:link.remoteConferenceId,
+        baseRevision:link.knownRevision,
+        schemaVersion:String(options.schemaVersion||'1'),
+        appVersion:String(options.appVersion||
+          global.APP_RELEASE&&global.APP_RELEASE.version||'unknown')
+      });
+    }catch(error){
+      return fail('linked_context_restore_failed');
+    }
+    if(!configured||configured.ok!==true){
+      return fail('linked_context_restore_failed');
+    }
+    return skip('already_linked',{
+      linked:true,
+      contextRestored:true,
+      localConferenceId:conference.id,
+      remoteConferenceId:link.remoteConferenceId,
+      revision:link.knownRevision
+    });
   }
 
   function initialize(options){
@@ -83,9 +144,7 @@
     if(!conference||!conference.id||!conference.name){
       return skip('conference_unavailable');
     }
-    if(global.FullBackupService&&
-      typeof global.FullBackupService.isManualRelinkRequired==='function'&&
-      global.FullBackupService.isManualRelinkRequired(conference.id)){
+    if(isolated(d,conference.id,options)){
       return skip('manual_relink_required');
     }
     if(evaluationPromises[conference.id]){
@@ -93,12 +152,7 @@
     }
     var existing=d.links&&d.links.get(conference.id);
     if(existing&&existing.linkStatus==='linked'){
-      return skip('already_linked',{
-        linked:true,
-        localConferenceId:conference.id,
-        remoteConferenceId:existing.remoteConferenceId,
-        revision:existing.knownRevision
-      });
+      return restoreLinkedContext(d,conference,existing,options);
     }
     var currentAppData=typeof d.getAppData==='function'
       ?d.getAppData():null;

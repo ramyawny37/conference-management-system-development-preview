@@ -391,6 +391,35 @@
         var linkingLocalConferenceId=currentLocalConferenceId(options);
         var resolver=options.stateResolver||
           global.ConferenceSyncStateResolver;
+        var inspectLinkedContext=function(resolved){
+          var integration=options.integration||
+            global.OfflineFirstIntegration;
+          var available=!!(integration&&
+            typeof integration.getConferenceSyncState==='function');
+          var integrationState=null;
+          if(available){
+            try{
+              integrationState=integration.getConferenceSyncState(
+                linkingLocalConferenceId
+              );
+            }catch(error){
+              available=false;
+            }
+          }
+          var context=integrationState&&integrationState.context;
+          var link=resolved&&resolved.data&&resolved.data.link;
+          return {
+            available:available,
+            actualContextPresent:!!context,
+            contextCompatible:!!(context&&link&&
+              String(context.localConferenceId||'')===
+                String(linkingLocalConferenceId||'')&&
+              String(context.conferenceId||'')===
+                String(link.remoteConferenceId||'')&&
+              context.baseRevision===link.knownRevision),
+            link:link||null
+          };
+        };
         var resolveState=function(){
           if(!linkingLocalConferenceId||!resolver||
             typeof resolver.resolve!=='function'){
@@ -497,6 +526,51 @@
             });
           });
         };
+        var stopForLinkedContext=function(status){
+          state.conferenceState=status;
+          state.linkedConferenceId=null;
+          return disconnectRealtime(options).then(publicState);
+        };
+        var restoreLinkedThenRun=function(connectivityState){
+          var linker=options.automaticLinking||
+            global.AutomaticConferenceLinking;
+          if(!linker||typeof linker.evaluate!=='function'){
+            return stopForLinkedContext('linked_context_unavailable');
+          }
+          return Promise.resolve().then(function(){
+            return linker.evaluate(Object.assign(
+              {},options.automaticLinkingOptions||{}, {
+                connectivity:connectivityState.connectivity,
+                reason:reasons.join(',')
+              }
+            ));
+          }).catch(function(){
+            return null;
+          }).then(function(linkResult){
+            if(staleResult())return publicState();
+            if(!linkResult||!linkResult.ok||
+              linkResult.status!=='already_linked'||
+              !linkResult.data||linkResult.data.linked!==true||
+              linkResult.data.contextRestored!==true){
+              return stopForLinkedContext('linked_context_missing');
+            }
+            return resolveState().then(function(afterRestore){
+              var restored=inspectLinkedContext(afterRestore);
+              if(!afterRestore||!afterRestore.ok||
+                afterRestore.status!=='linked'||
+                !restored.contextCompatible){
+                return stopForLinkedContext(
+                  restored.available
+                    ?'linked_context_missing'
+                    :'linked_context_unavailable'
+                );
+              }
+              return runLinkedConference(
+                connectivityState,afterRestore
+              );
+            });
+          });
+        };
         var recoverOrRoute=function(resolved,connectivityState){
           if(staleResult())return Promise.resolve(publicState());
           if(resolved&&resolved.ok&&
@@ -529,7 +603,25 @@
             });
           }
           if(resolved&&resolved.ok&&resolved.status==='linked'){
-            return runLinkedConference(connectivityState,resolved);
+            var linkedContext=inspectLinkedContext(resolved);
+            if(linkedContext.contextCompatible){
+              return runLinkedConference(connectivityState,resolved);
+            }
+            if(restoreIsolationPending(options)||
+              manualRelinkPending(linkingLocalConferenceId,options)||
+              global.navigator&&global.navigator.onLine===false){
+              return runLinkedConference(connectivityState,resolved);
+            }
+            if(!linkedContext.available){
+              return stopForLinkedContext(
+                'linked_context_unavailable'
+              );
+            }
+            if(!linkedContext.link||
+              linkedContext.link.linkStatus!=='linked'){
+              return stopForLinkedContext('linked_context_missing');
+            }
+            return restoreLinkedThenRun(connectivityState);
           }
           if(resolved&&resolved.ok&&
             resolved.status!=='local_only'){
