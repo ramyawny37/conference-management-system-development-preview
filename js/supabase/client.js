@@ -71,6 +71,14 @@
     try{
       var previousClient=state.client;
       if(previousClient){
+        if(global.StartupConferenceDiscovery&&
+          typeof global.StartupConferenceDiscovery.clear==='function'){
+          global.StartupConferenceDiscovery.clear();
+        }
+        if(global.DiscoveredConferenceOpenService&&
+          typeof global.DiscoveredConferenceOpenService.invalidate==='function'){
+          global.DiscoveredConferenceOpenService.invalidate();
+        }
         try{
           if(previousClient.auth&&
             typeof previousClient.auth.stopAutoRefresh==='function'){
@@ -133,6 +141,14 @@
   }
 
   function clear(){
+    if(global.StartupConferenceDiscovery&&
+      typeof global.StartupConferenceDiscovery.clear==='function'){
+      global.StartupConferenceDiscovery.clear();
+    }
+    if(global.DiscoveredConferenceOpenService&&
+      typeof global.DiscoveredConferenceOpenService.invalidate==='function'){
+      global.DiscoveredConferenceOpenService.invalidate();
+    }
     if(state.client){
       try{
         if(state.client.auth&&

@@ -28,6 +28,15 @@
     input=input||{};
     var localConferenceId=String(input.localConferenceId||'');
     var d=dependencies(options);
+    var applicationData=options&&options.appData||global.appData;
+    if(global.isConferenceImportRecoveryPending&&
+      global.isConferenceImportRecoveryPending(
+        applicationData,localConferenceId
+      )){
+      return Promise.resolve(result('pending_local_application',{
+        localConferenceId:localConferenceId
+      }));
+    }
     if(!localConferenceId||!d.links||
       typeof d.links.get!=='function'){
       return Promise.resolve(result('local_only',{

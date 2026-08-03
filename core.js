@@ -33,6 +33,9 @@ function getCurrentConference(){
   }
   for (var i = 0; i < appData.conferences.length; i++) {
     if (appData.conferences[i].id === appData.currentConferenceId) {
+      if(isConferenceImportRecoveryPending(
+        appData,appData.conferences[i].id
+      ))return null;
       return appData.conferences[i];
     }
   }
@@ -1296,6 +1299,7 @@ function normalizeAppData_core(targetAppData){
   target.trash.backups = target.trash.backups || [];
   target.trash.houseTemplates = target.trash.houseTemplates || [];
   target.trash.rooms = target.trash.rooms || [];
+  normalizeConferenceImportRecovery(target);
   target.conferences.forEach(function(confObj){
     normalizeConference(confObj,target);
     if(target===appData)linkRoomPeopleToDatabase(confObj);
@@ -1303,7 +1307,8 @@ function normalizeAppData_core(targetAppData){
   var currentConfExists = false;
   if (target.currentConferenceId) {
     for (var i = 0; i < target.conferences.length; i++) {
-      if (target.conferences[i].id === target.currentConferenceId) {
+      if (target.conferences[i].id === target.currentConferenceId&&
+        !isConferenceImportRecoveryPending(target,target.currentConferenceId)) {
         currentConfExists = true;
         break;
       }
@@ -1313,6 +1318,44 @@ function normalizeAppData_core(targetAppData){
     target.currentConferenceId = null;
   }
   return target;
+}
+
+function normalizeConferenceImportRecovery(data){
+  var source=data&&data.conferenceImportRecovery;
+  var normalized={};
+  var reserved=Object.create(null);
+  if(source&&typeof source==='object'&&!Array.isArray(source)){
+    Object.keys(source).sort().forEach(function(remoteConferenceId){
+      var record=source[remoteConferenceId];
+      var localId=String(record&&record.localConferenceId||'').trim();
+      var accountId=String(record&&record.authenticatedUserId||'').trim();
+      var validUuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      if(!validUuid.test(remoteConferenceId)||!record||
+        typeof record!=='object'||Array.isArray(record)||
+        String(record.remoteConferenceId||'')!==remoteConferenceId||!localId||
+        reserved[localId]||!validUuid.test(accountId)||
+        !Number.isInteger(record.revision)||record.revision<1||
+        record.status!=='normalized_persisted'||!record.snapshot||
+        typeof record.snapshot!=='object'||Array.isArray(record.snapshot)||
+        String(record.snapshot.id||'')!==localId||
+        ['active','completed'].indexOf(record.snapshot.status)<0||
+        (record.schemaVersion!=null&&String(record.schemaVersion)!=='1'))return;
+      reserved[localId]=true;
+      normalized[remoteConferenceId]=record;
+    });
+  }
+  data.conferenceImportRecovery=normalized;
+  return normalized;
+}
+
+function isConferenceImportRecoveryPending(data,localConferenceId){
+  var records=data&&data.conferenceImportRecovery;
+  if(!records||typeof records!=='object'||Array.isArray(records))return false;
+  return Object.keys(records).some(function(remoteConferenceId){
+    var record=records[remoteConferenceId];
+    return record&&String(record.localConferenceId||'')===
+      String(localConferenceId||'');
+  });
 }
 
 function normalizeAppDataCandidate(candidate){

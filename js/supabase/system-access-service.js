@@ -291,11 +291,24 @@
         if(!authSubscription&&client&&client.auth&&
           typeof client.auth.onAuthStateChange==='function'){
           var listener=client.auth.onAuthStateChange(function(event,session){
+            if(global.StartupConferenceDiscovery&&
+              typeof global.StartupConferenceDiscovery.clear==='function'){
+              global.StartupConferenceDiscovery.clear();
+            }
+            if(global.DiscoveredConferenceOpenService&&
+              typeof global.DiscoveredConferenceOpenService.invalidate==='function'){
+              global.DiscoveredConferenceOpenService.invalidate();
+            }
             if(!session||!session.user){
               setUnauthenticated();
               return;
             }
-            load(Object.assign({},options,{force:true}));
+            load(Object.assign({},options,{force:true})).then(function(){
+              if(global.StartupConferenceDiscovery&&
+                typeof global.StartupConferenceDiscovery.refresh==='function'){
+                global.StartupConferenceDiscovery.refresh();
+              }
+            });
           });
           authSubscription=listener&&listener.data
             ?listener.data.subscription:null;

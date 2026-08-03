@@ -208,6 +208,8 @@ function setCurrentConferenceById(id, options){
   var conferences = appData.conferences || [];
   for (var i = 0; i < conferences.length; i++) {
     if (conferences[i].id === id) {
+      if(typeof isConferenceImportRecoveryPending==='function'&&
+        isConferenceImportRecoveryPending(appData,id))return;
       next = conferences[i];
       break;
     }
@@ -382,6 +384,28 @@ function exportJsonFile(){
   a.href=URL.createObjectURL(new Blob([data],{type:'application/json;charset=utf-8'}));
   a.download='conference_'+new Date().toISOString().slice(0,10)+'.json';
   a.click();showToast('✅ تم تصدير JSON');
+}
+
+function activatePersistedConferenceById(id,options){
+  options=options||{};
+  var current=getCurrentConference();
+  if(!current||String(current.id)!==String(id))return false;
+  var applicationBody=ge('applicationBody');
+  var wasStartup=applicationBody&&applicationBody.style.display==='none';
+  setCurrentConference(current);
+  syncCurrentConferenceRefs();
+  setApplicationMode('application');
+  refreshPeopleDatalist();
+  renderAccommodation();
+  renderTransports();
+  renderSettings();
+  if(wasStartup)restoreLastApplicationTab();
+  else if(!switchTab(currentTab))switchTab(0);
+  if(window.AutomaticSyncOrchestrator&&
+    typeof window.AutomaticSyncOrchestrator.schedule==='function'){
+    window.AutomaticSyncOrchestrator.schedule('conference_changed');
+  }
+  return true;
 }
 function downloadFullApplicationBackup(){
   try{
@@ -5890,7 +5914,14 @@ function renderStartupConferenceCards(conferences, status){
     var days = parseInt(conf.days || ((conf.conf || {}).days), 10) || 1;
     var participantCount = getStartupConferenceParticipantCount(conf);
     var statusClass = status === 'active' ? 'startup-status-active' : 'startup-status-completed';
-    html += '<article class="startup-conference-card" onclick="openConferenceFromStartup(\''+conf.id+'\')">';
+    if(conf.__startupDiscoveredRemoteId&&
+      startupDiscoveredOpenBusy[conf.__startupDiscoveredRemoteId]){
+      html += '<article class="startup-conference-card" aria-disabled="true">';
+    }else if(conf.__startupDiscoveredRemoteId){
+      html += '<article class="startup-conference-card" onclick="openDiscoveredConferenceFromStartup(\''+conf.__startupDiscoveredRemoteId+'\')">';
+    }else{
+      html += '<article class="startup-conference-card" onclick="openConferenceFromStartup(\''+conf.id+'\')">';
+    }
     html += '<div class="startup-conference-head"><span class="startup-status-badge '+statusClass+'">'+conferenceStatusText(conf)+'</span><strong>'+esc(conf.name || ((conf.conf || {}).name) || 'المؤتمر')+'</strong></div>';
     html += '<div class="startup-conference-meta">';
     html += '<span>📅 '+esc(conf.startDate || ((conf.conf || {}).startDate) || '-')+'</span>';
@@ -5902,8 +5933,69 @@ function renderStartupConferenceCards(conferences, status){
   return html;
 }
 
+var startupDiscoveredOpenBusy=Object.create(null);
+function openDiscoveredConferenceFromStartup(remoteConferenceId){
+  if(!window.DiscoveredConferenceOpenService||
+    typeof window.DiscoveredConferenceOpenService.open!=='function')return false;
+  remoteConferenceId=String(remoteConferenceId||'');
+  if(startupDiscoveredOpenBusy[remoteConferenceId]){
+    return startupDiscoveredOpenBusy[remoteConferenceId];
+  }
+  var flight=window.DiscoveredConferenceOpenService.open(remoteConferenceId)
+    .then(function(result){
+      if(!result||!result.ok){
+        showToast('تعذر إكمال العملية بأمان.','#E74C3C');
+      }
+      return result;
+    })
+    .finally(function(){
+      if(startupDiscoveredOpenBusy[remoteConferenceId]===flight){
+        delete startupDiscoveredOpenBusy[remoteConferenceId];
+        showStartupConferenceList();
+      }
+    });
+  startupDiscoveredOpenBusy[remoteConferenceId]=flight;
+  showStartupConferenceList();
+  return flight;
+}
+
+function getStartupConferenceViewModel(){
+  var localConferences=Array.isArray(appData&&appData.conferences)
+    ?appData.conferences.filter(function(conference){
+      return !conference||
+        typeof isConferenceImportRecoveryPending!=='function'||
+        !isConferenceImportRecoveryPending(appData,conference.id);
+    }):[];
+  var merged=localConferences.slice();
+  var remoteIds=Object.create(null);
+  localConferences.forEach(function(conference){
+    if(!conference)return;
+    var localId=String(conference.id||'');
+    var link=window.ConferenceLinkStore&&
+      typeof window.ConferenceLinkStore.get==='function'
+      ?window.ConferenceLinkStore.get(localId):null;
+    var linkedRemoteId=String(link&&link.remoteConferenceId||'');
+    if(linkedRemoteId)remoteIds[linkedRemoteId]=true;
+  });
+  var discovered=window.StartupConferenceDiscovery&&
+    typeof window.StartupConferenceDiscovery.getRecords==='function'
+    ?window.StartupConferenceDiscovery.getRecords():[];
+  discovered.forEach(function(record){
+    var remoteId=String(record&&record.remoteConferenceId||'');
+    var conference=record&&record.conference;
+    if(!remoteId||remoteIds[remoteId]||!conference)return;
+    remoteIds[remoteId]=true;
+    var viewConference=typeof structuredClone==='function'
+      ?structuredClone(conference)
+      :JSON.parse(JSON.stringify(conference));
+    viewConference.__startupDiscoveredRemoteId=remoteId;
+    merged.push(viewConference);
+  });
+  return merged;
+}
+
 function showStartupConferenceList(){
-  var conferences = appData.conferences || [];
+  var conferences = getStartupConferenceViewModel();
   var activeConferences = [];
   var completedConferences = [];
   conferences.forEach(function(conf){
@@ -5995,7 +6087,11 @@ function showSelectConferenceModal(){
 }
 
 function openCompletedConferencesModal(){
-  var completedConfs = (appData.conferences || []).filter(function(conf){ return conf.status === 'completed'; });
+  var completedConfs = (appData.conferences || []).filter(function(conf){
+    return conf.status === 'completed'&&
+      (typeof isConferenceImportRecoveryPending!=='function'||
+        !isConferenceImportRecoveryPending(appData,conf.id));
+  });
   if(!completedConfs.length){
     alert('لا توجد مؤتمرات سابقة متاحة.');
     return;
@@ -8495,6 +8591,10 @@ window.applicationStorageReadyPromise.then(function(){
   Promise.resolve(accessBootstrap).catch(function(){
     return null;
   }).then(function(){
+    if(window.StartupConferenceDiscovery&&
+      typeof window.StartupConferenceDiscovery.refresh==='function'){
+      window.StartupConferenceDiscovery.refresh();
+    }
     var linking=window.AutomaticConferenceLinking&&
       typeof window.AutomaticConferenceLinking.initialize==='function'
       ?window.AutomaticConferenceLinking.initialize():null;

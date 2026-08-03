@@ -194,6 +194,10 @@
   function inspectScope(appData,id,options){
     var d=dependencies(options);
     var local=conference(appData,id);
+    if(global.isConferenceImportRecoveryPending&&
+      global.isConferenceImportRecoveryPending(appData,id)){
+      return result(false,'import_recovery_pending');
+    }
     var record=lifecycle(appData,id);
     if(!local)return result(false,'conference_not_found');
     if(record&&record.localLifecycle==='archived'){

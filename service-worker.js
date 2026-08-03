@@ -1,6 +1,6 @@
 const APP_VERSION = '3.1.1';
 const CACHE_PREFIX = 'conference-manager-core-';
-const CACHE_REVISION = 'sync-context-restore-v1';
+const CACHE_REVISION = 'startup-discovery-open-v1';
 const CACHE_NAME = CACHE_PREFIX + 'v' + APP_VERSION + '-' + CACHE_REVISION;
 const CORE_ASSETS = [
   './',
@@ -32,6 +32,7 @@ const CORE_ASSETS = [
   './js/sync/current-device-authorization-ui.js',
   './js/sync/device-authorization-administration-ui.js',
   './js/supabase/snapshot-sync.js',
+  './js/sync/startup-conference-discovery.js',
   './js/sync/sync-processor.js',
   './js/sync/realtime.js',
   './js/sync/conflict-resolution.js',
@@ -62,6 +63,7 @@ const CORE_ASSETS = [
   './js/sync/conference-operational-ui.js',
   './js/sync/automatic-queue-runner.js?rev=phase-5',
   './js/sync/automatic-conference-linking.js',
+  './js/sync/discovered-conference-open-service.js',
   './js/sync/automatic-sync-orchestrator.js?rev=phase-5',
   './utils.js',
   './core.js',
