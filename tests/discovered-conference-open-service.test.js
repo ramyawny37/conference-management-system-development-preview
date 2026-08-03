@@ -18,6 +18,28 @@ function environment(settings={}){
   const persistCounts={};
   const links={};
   const remoteId=settings.remoteId||'remote-1';
+  const revisionSequence=Array.isArray(settings.revisionSequence)&&
+    settings.revisionSequence.length
+      ?settings.revisionSequence.slice()
+      :[settings.revision||1];
+  let revisionCursor=0;
+  let inspectedRevision=null;
+  function nextRevision(){
+    const revision=revisionSequence[Math.min(
+      revisionCursor,
+      revisionSequence.length-1
+    )];
+    if(revisionCursor<revisionSequence.length-1)revisionCursor++;
+    return revision;
+  }
+  function snapshotByRevision(revision){
+    if(settings.snapshotByRevision&&settings.snapshotByRevision[revision]){
+      return clone(settings.snapshotByRevision[revision]);
+    }
+    return clone(settings.snapshot||{
+      id:'source-local',name:'Same',status:'active',peopleDb:{people:[]}
+    });
+  }
   const snapshot=clone(settings.snapshot||{
     id:'source-local',name:'Same',status:'active',peopleDb:{people:[]}
   });
@@ -40,19 +62,22 @@ function environment(settings={}){
           Object.assign({},listing,{deletedAt:'2026-01-01'})
         ]:[listing]}
       }),
-      inspectInitialSnapshot:()=>{inspects++;return Promise.resolve({
-        ok:true,status:'found',data:{revision:settings.revision||1,
+      inspectInitialSnapshot:()=>{inspects++;inspectedRevision=nextRevision();
+        return Promise.resolve({
+        ok:true,status:'found',data:{revision:inspectedRevision,
           schemaVersion:settings.schemaVersion||'1',appVersion:'test'}
       });},
       downloadSnapshot:()=>{downloads++;return Promise.resolve(settings.malformed
         ?{ok:true,status:'downloaded',data:{revision:1,snapshot:null}}
-        :{ok:true,status:'downloaded',data:{revision:settings.revision||1,
+        :{ok:true,status:'downloaded',data:{revision:inspectedRevision||1,
           schemaVersion:settings.schemaVersion||'1',appVersion:'test',
-          snapshot:clone(snapshot)}});}
+          snapshot:snapshotByRevision(inspectedRevision||1)}});}
     },
-    ConferenceMembersService:{getCurrentAccess:()=>Promise.resolve({
-      ok:true,status:'available',data:{role:settings.role||'viewer'}
-    })},
+    ConferenceMembersService:{getCurrentAccess:()=>Promise.resolve(
+      settings.membershipDenied
+        ?{ok:false,status:'access_denied'}
+        :{ok:true,status:'available',data:{role:settings.role||'viewer'}}
+    )},
     CurrentDeviceAuthorizationService:{getStatus:()=>Promise.resolve({
       ok:true,data:{deviceAuthorizationStatus:'approved'}
     })},
@@ -216,6 +241,93 @@ function environment(settings={}){
   assert.strictEqual((await reuse.api.open(reuse.remoteId)).data.localConferenceId,
     'existing-local');
   assert.strictEqual(reuse.stored().conferences.length,1);
+
+  const refreshSnapshot2={
+    id:'source-local',name:'Rev-2',status:'active',
+    peopleDb:{people:[{id:'p1'},{id:'p2'}]},
+    houses:[{floors:[{rooms:[{closed:false,guests:['p1'],children:['p2']}]}]}],
+    transports:[{id:'t1'}],
+    activityLog:[{id:'a1'}]
+  };
+  const refreshSnapshot3={
+    id:'source-local',name:'Rev-3',status:'active',
+    peopleDb:{people:[{id:'p1'},{id:'p2'},{id:'p3'}]},
+    houses:[{floors:[{rooms:[
+      {closed:false,guests:['p1'],children:['p2']},
+      {closed:false,guests:['p3'],children:[]}
+    ]}]}],
+    transports:[{id:'t1'},{id:'t2'}],
+    activityLog:[{id:'a1'},{id:'a2'}]
+  };
+  const refreshSnapshot4={
+    id:'source-local',name:'Rev-4',status:'active',
+    peopleDb:{people:[{id:'p1'},{id:'p2'},{id:'p3'},{id:'p4'}]},
+    houses:[{floors:[{rooms:[
+      {closed:false,guests:['p1'],children:['p2']},
+      {closed:false,guests:['p3'],children:['p4']}
+    ]}]}],
+    transports:[{id:'t1'},{id:'t2'},{id:'t3'}],
+    activityLog:[{id:'a1'},{id:'a2'},{id:'a3'}]
+  };
+  const linkedRefresh=environment({
+    cached:false,
+    revisionSequence:[2,3,4],
+    snapshotByRevision:{2:refreshSnapshot2,3:refreshSnapshot3,4:refreshSnapshot4},
+    appData:{conferences:[{id:'existing-local',name:'Local stale',status:'active',
+      peopleDb:{people:[{id:'old'}]},houses:[],transports:[],activityLog:[]}],
+      currentConferenceId:null},
+    existingLink:{localConferenceId:'existing-local',remoteConferenceId:'remote-1',
+      knownRevision:1,linkStatus:'linked',pendingLocalApplication:false,
+      syncState:{pendingLocalChanges:false,initialSnapshotComplete:true}}
+  });
+  const linkedOpen=await linkedRefresh.api.open(linkedRefresh.remoteId);
+  assert.strictEqual(linkedOpen.status,'opened');
+  assert.strictEqual(linkedRefresh.downloads(),1);
+  assert.strictEqual(linkedRefresh.stored().conferences.length,1);
+  assert.strictEqual(linkedRefresh.stored().currentConferenceId,'existing-local');
+  assert.strictEqual(Object.values(linkedRefresh.links)[0].knownRevision,2);
+  assert.strictEqual(Object.values(linkedRefresh.links)[0].pendingLocalApplication,
+    false);
+  assert.strictEqual(linkedRefresh.stored().conferences[0].peopleDb.people.length,2);
+  assert.deepStrictEqual(linkedRefresh.forbidden(),{queue:0,publication:0,rpc:0});
+  const refreshOne=await linkedRefresh.api.refreshLinkedLocalConference('existing-local');
+  assert.strictEqual(refreshOne.status,'opened');
+  const refreshTwo=await linkedRefresh.api.refreshLinkedLocalConference('existing-local');
+  assert.strictEqual(refreshTwo.status,'opened');
+  assert.strictEqual(linkedRefresh.stored().conferences.length,1);
+  assert.strictEqual(linkedRefresh.stored().conferences[0].name,'Rev-4');
+  assert.strictEqual(Object.values(linkedRefresh.links)[0].knownRevision,4);
+  assert.strictEqual(Object.values(linkedRefresh.links)[0].syncState.pendingLocalChanges,
+    false);
+  assert.strictEqual(linkedRefresh.downloads(),3);
+  const diagnostics=linkedRefresh.api.getDiagnostics();
+  assert.strictEqual(diagnostics.ok,true);
+  assert.ok(Array.isArray(diagnostics.data.events));
+  assert.ok(diagnostics.data.events.some(entry=>entry.status==='applied'));
+
+  const refreshDenied=environment({
+    cached:false,
+    revision:2,
+    membershipDenied:true,
+    appData:{conferences:[{id:'existing-local',name:'Local stale',status:'active'}],
+      currentConferenceId:null},
+    existingLink:{localConferenceId:'existing-local',remoteConferenceId:'remote-1',
+      knownRevision:1,linkStatus:'linked',pendingLocalApplication:false}
+  });
+  const deniedResult=await refreshDenied.api.refreshLinkedLocalConference(
+    'existing-local'
+  );
+  assert.strictEqual(deniedResult.status,'membership_unavailable');
+  assert.strictEqual(refreshDenied.stored().conferences[0].name,'Local stale');
+  assert.deepStrictEqual(refreshDenied.forbidden(),{queue:0,publication:0,rpc:0});
+
+  const notLinked=environment({cached:false,revision:2,appData:{
+    conferences:[{id:'existing-local',name:'Local',status:'active'}],
+    currentConferenceId:null
+  }});
+  assert.strictEqual((await notLinked.api.refreshLinkedLocalConference(
+    'existing-local'
+  )).status,'not_linked');
 
   const redownload=environment({revision:2});
   await redownload.api.open(redownload.remoteId);

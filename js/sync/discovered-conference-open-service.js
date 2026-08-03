@@ -1,15 +1,38 @@
 (function(global){
   'use strict';
   var flights=Object.create(null);
+  var refreshFlights=Object.create(null);
   var transactionTail=Promise.resolve();
   var generation=0;
+  var MAX_DIAGNOSTICS=40;
+  var diagnostics=[];
   var ROLES=['owner','manager','viewer','accommodation_viewer','transport_viewer'];
 
   function copy(value){
     if(typeof global.structuredClone==='function')return global.structuredClone(value);
     return JSON.parse(JSON.stringify(value));
   }
+  function object(value){
+    return !!value&&typeof value==='object'&&!Array.isArray(value);
+  }
+  function uuid(value){
+    return typeof value==='string'&&
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+        .test(value);
+  }
   function result(ok,status,data){return {ok:ok,status:status,data:data||null};}
+  function diagnostic(stage,status,data){
+    diagnostics.unshift({
+      at:new Date().toISOString(),
+      stage:String(stage||'unknown'),
+      status:String(status||'unknown'),
+      data:data&&typeof data==='object'?copy(data):null
+    });
+    diagnostics=diagnostics.slice(0,MAX_DIAGNOSTICS);
+  }
+  function getDiagnostics(){
+    return {ok:true,status:'read',data:{events:copy(diagnostics)}};
+  }
   function userId(d){
     var state=d.auth&&d.auth.getState?d.auth.getState():null;
     return String(state&&state.user&&state.user.id||'');
@@ -26,8 +49,13 @@
       device:options.device||global.CurrentDeviceAuthorizationService,
       systemAccess:options.systemAccess||global.SystemAccessService,
       links:options.links||global.ConferenceLinkStore,
+      queue:options.queue||global.OfflineSyncQueue,
       storage:options.storage||global.StorageRepository,
       repository:options.repository||global.ConferenceRepository,
+      publishing:options.publishing||global.ConferencePublishingEngine,
+      recovery:options.recovery||global.ConferencePublishRecovery,
+      remoteUpdates:options.remoteUpdateStore||global.RemoteUpdateStore,
+      deviceIdentity:options.deviceIdentity||global.SupabaseDeviceIdentity,
       getData:options.getAppData||function(){return global.appData;},
       applyData:options.applyAppData||function(value){global.appData=value;},
       normalize:options.normalizeAppData||global.normalizeAppDataCandidate,
@@ -164,6 +192,285 @@
     return (data&&Array.isArray(data.conferences)?data.conferences:[])
       .find(function(item){return item&&String(item.id)===String(id);})||null;
   }
+  function lifecycle(data,id){
+    return data&&data.conferenceLifecycle&&data.conferenceLifecycle.records&&
+      data.conferenceLifecycle.records[id]||null;
+  }
+  function activeFor(id,service){
+    var state=service&&typeof service.getState==='function'
+      ?service.getState()
+      :null;
+    return !!(state&&Array.isArray(state.activeConferenceIds)&&
+      state.activeConferenceIds.indexOf(id)>=0);
+  }
+  function hasConflict(link){
+    return !!(link&&(
+      link.linkStatus==='needs_resolution'||
+      link.conflictId||
+      ['active','pending','reviewed','changed'].indexOf(
+        link.conflictStatus
+      )>=0
+    ));
+  }
+  function importRecoveryPending(data,localConferenceId){
+    if(typeof global.isConferenceImportRecoveryPending!=='function')return false;
+    try{
+      return global.isConferenceImportRecoveryPending(
+        data,
+        localConferenceId
+      )===true;
+    }catch(error){
+      return true;
+    }
+  }
+  function queuePendingStatus(status){
+    status=String(status||'').toLowerCase();
+    return ['pending','processing','conflict'].indexOf(status)>=0||
+      status==='failed';
+  }
+  function evaluateLinkedRefreshGuards(d,localConferenceId,link,stored,options){
+    if(!link||!link.remoteConferenceId||
+      ['linked','cloud_linked'].indexOf(link.linkStatus)<0){
+      return Promise.resolve(result(false,'not_linked'));
+    }
+    if(link.pendingLocalApplication===true||
+      link.linkStatus==='server_selected_pending_local_apply'){
+      return Promise.resolve(result(false,'pending_local_application'));
+    }
+    if(hasConflict(link)){
+      return Promise.resolve(result(false,'needs_resolution'));
+    }
+    if(object(link.syncState)&&
+      link.syncState.pendingLocalChanges===true){
+      return Promise.resolve(result(false,'local_changes_pending'));
+    }
+    if(importRecoveryPending(stored,localConferenceId)){
+      return Promise.resolve(result(false,'import_recovery_pending'));
+    }
+    if(activeFor(localConferenceId,d.publishing)){
+      return Promise.resolve(result(false,'publishing_active'));
+    }
+    if(activeFor(localConferenceId,d.recovery)){
+      return Promise.resolve(result(false,'reconciliation_active'));
+    }
+    var blocked=guardStatus(d,localConferenceId,options);
+    if(blocked)return Promise.resolve(result(false,blocked));
+    var record=lifecycle(stored,localConferenceId);
+    if(object(link.syncState)&&
+      Number.isInteger(link.syncState.queuedLocalContentVersion)&&
+      Number.isInteger(record&&record.localContentVersion)&&
+      link.syncState.queuedLocalContentVersion!==record.localContentVersion){
+      return Promise.resolve(result(false,'local_content_version_mismatch'));
+    }
+    if(!d.queue||typeof d.queue.getConferenceReadiness!=='function'){
+      return Promise.resolve(result(true,'guards_passed'));
+    }
+    return Promise.resolve(d.queue.getConferenceReadiness(
+      link.remoteConferenceId,
+      options&&options.queueOptions
+    )).then(function(readiness){
+      var blocking=readiness&&readiness.data&&
+        Array.isArray(readiness.data.blockingOperations)
+        ?readiness.data.blockingOperations
+        :[];
+      var pending=blocking.some(function(operation){
+        return queuePendingStatus(operation&&operation.status);
+      });
+      if(!readiness||readiness.ok!==true||readiness.status!=='stable'||pending){
+        return result(false,'local_changes_pending',{
+          queueStatus:readiness&&readiness.status||'not_stable'
+        });
+      }
+      return result(true,'guards_passed');
+    }).catch(function(){
+      return result(false,'local_changes_pending');
+    });
+  }
+  function recordRemoteReviewMarker(d,remoteConferenceId,revision,options){
+    if(!d.remoteUpdates||typeof d.remoteUpdates.add!=='function'){
+      return {ok:false,status:'store_unavailable'};
+    }
+    var identity=null;
+    try{
+      identity=d.deviceIdentity&&
+        typeof d.deviceIdentity.getOrCreate==='function'
+        ?d.deviceIdentity.getOrCreate()
+        :null;
+    }catch(error){
+      identity=null;
+    }
+    var sourceDeviceId=String(identity&&identity.id||'');
+    if(!uuid(remoteConferenceId)||!uuid(sourceDeviceId)||
+      !Number.isInteger(revision)||revision<0){
+      return {ok:false,status:'invalid_marker_input'};
+    }
+    return d.remoteUpdates.add({
+      remoteConferenceId:remoteConferenceId,
+      revision:revision,
+      sourceDeviceId:sourceDeviceId,
+      receivedAt:new Date().toISOString(),
+      status:'unreviewed'
+    },options&&options.remoteUpdateOptions);
+  }
+  function snapshotCounts(snapshot){
+    var houses=Array.isArray(snapshot&&snapshot.houses)
+      ?snapshot.houses
+      :[];
+    var activeRooms=0;
+    var assignedPeople=0;
+    houses.forEach(function(house){
+      var floors=Array.isArray(house&&house.floors)?house.floors:[];
+      floors.forEach(function(floor){
+        var rooms=Array.isArray(floor&&floor.rooms)?floor.rooms:[];
+        rooms.forEach(function(room){
+          if(room&&room.closed!==true)activeRooms++;
+          assignedPeople+=Array.isArray(room&&room.guests)
+            ?room.guests.length
+            :0;
+          assignedPeople+=Array.isArray(room&&room.children)
+            ?room.children.length
+            :0;
+        });
+      });
+    });
+    return {
+      conferencePeopleDb:Array.isArray(
+        snapshot&&snapshot.peopleDb&&snapshot.peopleDb.people
+      )?snapshot.peopleDb.people.length:0,
+      assignedPeople:assignedPeople,
+      houses:houses.length,
+      activeRooms:activeRooms,
+      transports:Array.isArray(snapshot&&snapshot.transports)
+        ?snapshot.transports.length
+        :0,
+      activityLog:Array.isArray(snapshot&&snapshot.activityLog)
+        ?snapshot.activityLog.length
+        :0
+    };
+  }
+  function replaceConferenceSnapshot(data,localConferenceId,snapshot){
+    var next=copy(data);
+    next.conferences=Array.isArray(next.conferences)
+      ?next.conferences.slice()
+      :[];
+    var index=-1;
+    for(var cursor=0;cursor<next.conferences.length;cursor++){
+      if(next.conferences[cursor]&&
+        String(next.conferences[cursor].id)===String(localConferenceId)){
+        index=cursor;
+        break;
+      }
+    }
+    if(index<0)return null;
+    var mapped=copy(snapshot);
+    mapped.id=String(localConferenceId);
+    next.conferences[index]=mapped;
+    return next;
+  }
+  function refreshExistingLinkedLocal(d,previous,identity,ctx){
+    if(!identity.existing||!conference(previous,identity.id)||
+      ['linked','cloud_linked'].indexOf(identity.existing.linkStatus)<0){
+      return Promise.resolve(null);
+    }
+    var incomingRevision=ctx.snapshot&&ctx.snapshot.data&&ctx.snapshot.data.revision;
+    var knownRevision=Number(identity.existing.knownRevision);
+    if(!Number.isInteger(incomingRevision)||incomingRevision<1||
+      !Number.isInteger(knownRevision)||incomingRevision<=knownRevision){
+      diagnostic('linked_refresh','up_to_date',{
+        refreshed:false,
+        downloadedRevision:Number.isInteger(incomingRevision)
+          ?incomingRevision
+          :null,
+        knownRevision:Number.isInteger(knownRevision)
+          ?knownRevision
+          :null
+      });
+      return Promise.resolve({
+        noop:true,
+        status:'up_to_date',
+        reused:true,
+        refreshed:false,
+        data:previous,
+        localId:identity.id,
+        link:identity.existing,
+        revision:Number.isInteger(knownRevision)?knownRevision:null
+      });
+    }
+    var replaced=replaceConferenceSnapshot(
+      previous,
+      identity.id,
+      ctx.snapshot.data.snapshot
+    );
+    if(!replaced)return Promise.resolve(result(false,'link_recovery_required'));
+    var normalized=d.normalize(replaced);
+    var normalizedConference=conference(normalized,identity.id);
+    if(!normalizedConference)return Promise.resolve(result(false,'snapshot_malformed'));
+    var normalizedCounts=snapshotCounts(normalizedConference);
+    return persistGuarded(
+      d,
+      normalized,
+      ctx,
+      'linked_refresh_persistence_failed',
+      previous
+    ).then(function(saved){
+      if(!saved.ok)return saved;
+      var verified=saved.data.value;
+      var verifiedConference=conference(verified,identity.id);
+      if(!verifiedConference)return result(false,'linked_refresh_persistence_failed');
+      var verifiedCounts=snapshotCounts(verifiedConference);
+      var sameCounts=Object.keys(normalizedCounts).every(function(key){
+        return normalizedCounts[key]===verifiedCounts[key];
+      });
+      if(!sameCounts)return result(false,'linked_refresh_verification_failed');
+      var linkInput=Object.assign({},identity.existing,{
+        localConferenceId:identity.id,
+        remoteConferenceId:ctx.remoteId,
+        knownRevision:incomingRevision,
+        actualRevision:null,
+        linkStatus:'linked',
+        pendingLocalApplication:false,
+        conflictId:null,
+        conflictStatus:null,
+        resolutionStrategy:null,
+        resolutionOperationId:null,
+        resolvedRevision:null,
+        syncState:Object.assign({},
+          identity.existing.syncState&&typeof identity.existing.syncState==='object'
+            ?identity.existing.syncState
+            :{},
+          {
+            lastRemoteApplyStatus:'applied',
+            lastRemoteApplyAt:new Date().toISOString(),
+            lastDownloadedRevision:incomingRevision,
+            pendingLocalChanges:false,
+            downloadedSnapshotCounts:verifiedCounts
+          }
+        )
+      });
+      var linked=saveLinkGuarded(
+        d,
+        linkInput,
+        ctx,
+        'linked_refresh_link_failed'
+      );
+      if(!linked.ok)return linked;
+      diagnostic('linked_refresh','applied',{
+        refreshed:true,
+        downloadedRevision:incomingRevision,
+        knownRevision:knownRevision,
+        counts:verifiedCounts
+      });
+      return {
+        reused:true,
+        refreshed:true,
+        data:verified,
+        localId:identity.id,
+        link:linked.data.link,
+        revision:incomingRevision,
+        counts:verifiedCounts
+      };
+    });
+  }
   function localId(d,data,snapshot,remoteId){
     var exact=d.links.findByRemoteId(remoteId);
     if(exact)return {id:exact.localConferenceId,existing:exact};
@@ -254,6 +561,65 @@
       });
     });
   }
+  function inspectSnapshotMetadata(d,remoteId){
+    return Promise.resolve(d.remote.inspectInitialSnapshot(remoteId))
+      .then(function(inspected){
+        if(!inspected||!inspected.ok||inspected.status!=='found'){
+          return result(false,'snapshot_unavailable');
+        }
+        if(String(inspected.data&&inspected.data.schemaVersion||'')!=='1'||
+          !String(inspected.data&&inspected.data.appVersion||'').trim()||
+          !Number.isInteger(inspected.data&&inspected.data.revision)||
+          inspected.data.revision<1){
+          return result(false,'snapshot_unsupported');
+        }
+        return result(true,'snapshot_inspected',{
+          revision:inspected.data.revision,
+          schemaVersion:String(inspected.data.schemaVersion),
+          appVersion:String(inspected.data.appVersion)
+        });
+      }).catch(function(){
+        return result(false,'snapshot_unavailable');
+      });
+  }
+  function downloadSnapshotForRevision(d,remoteId,account,metadata){
+    var cached=d.discovery&&d.discovery.getRecord
+      ?d.discovery.getRecord(remoteId)
+      :null;
+    if(cached&&cached.authenticatedUserId===account&&
+      cached.remoteConferenceId===remoteId&&
+      cached.revision===metadata.revision&&cached.conference){
+      return Promise.resolve(result(true,'snapshot_reused',{
+        snapshot:copy(cached.conference),
+        revision:metadata.revision,
+        schemaVersion:metadata.schemaVersion,
+        appVersion:metadata.appVersion
+      }));
+    }
+    return Promise.resolve(d.remote.downloadSnapshot(remoteId))
+      .then(function(downloaded){
+        if(!downloaded||!downloaded.ok||downloaded.status!=='downloaded' ||
+          !downloaded.data||!downloaded.data.snapshot){
+          return result(false,'snapshot_unavailable');
+        }
+        if(downloaded.data.revision!==metadata.revision||
+          String(downloaded.data.schemaVersion||'')!=='1'||
+          !String(downloaded.data.appVersion||'').trim()||
+          typeof downloaded.data.snapshot!=='object'||
+          Array.isArray(downloaded.data.snapshot)||
+          ['active','completed'].indexOf(downloaded.data.snapshot.status)<0){
+          return result(false,'snapshot_malformed');
+        }
+        return result(true,'snapshot_downloaded',{
+          snapshot:copy(downloaded.data.snapshot),
+          revision:downloaded.data.revision,
+          schemaVersion:String(downloaded.data.schemaVersion),
+          appVersion:String(downloaded.data.appVersion)
+        });
+      }).catch(function(){
+        return result(false,'snapshot_unavailable');
+      });
+  }
   function exactRecovery(data,remoteId,account){
     var record=recoveryRoot(data)[remoteId];
     if(!record)return null;
@@ -295,6 +661,10 @@
       var recovery=exactRecovery(previous,remoteId,account);
       if(recovery&&recovery.foreign)return result(false,'foreign_recovery');
       var identity=localId(d,previous,ctx.snapshot.data.snapshot,remoteId);
+      if(ctx.forceLocalConferenceId&&
+        String(ctx.forceLocalConferenceId)!==String(identity.id)){
+        return result(false,'link_recovery_required');
+      }
       ctx.localConferenceId=identity.id;
       if(manualRelinkPending(d,identity.id,ctx.options)){
         return result(false,'manual_relink_required');
@@ -303,109 +673,157 @@
         (!recovery||String(recovery.localConferenceId)!==String(identity.id))){
         return result(false,'link_recovery_required');
       }
-      if(identity.existing&&conference(previous,identity.id)&&
-        ['linked','cloud_linked'].indexOf(identity.existing.linkStatus)>=0){
-        return {reuse:true,data:previous,localId:identity.id,link:identity.existing};
-      }
-      if(recovery&&recovery.revision!==ctx.snapshot.data.revision){
-        return cleanupStaged(
-          d,previous,recovery,remoteId,ctx,'recovery_cleaned_revision_changed'
-        );
-      }
-      var local=copy(recovery?recovery.snapshot:ctx.snapshot.data.snapshot);
-      local.id=recovery&&recovery.localConferenceId||identity.id;
-      var normalizedBase=copy(previous);
-      if(!conference(normalizedBase,local.id)){
-        normalizedBase.conferences=(normalizedBase.conferences||[]).concat([local]);
-      }
-      var normalized=d.normalize(normalizedBase);
-      var normalizedConference=conference(normalized,local.id);
-      if(!normalizedConference)return result(false,'snapshot_malformed');
-      if(!recovery){
-        var added=d.repository&&typeof d.repository.addLocalConference==='function'
-          ?d.repository.addLocalConference(previous,normalizedConference):null;
-        if(!added||!added.ok)return result(false,'local_repository_rejected');
-        normalized=added.data;
-      }
-      var stagePromise;
-      if(recovery){
-        stagePromise=Promise.resolve(result(true,'persisted',{value:previous}));
-      }else{
-        var staged=copy(previous),root=recoveryRoot(staged);
-        root[remoteId]={
-          remoteConferenceId:remoteId,localConferenceId:local.id,
-          revision:ctx.snapshot.data.revision,
-          schemaVersion:ctx.snapshot.data.schemaVersion||null,
-          authenticatedUserId:account,status:'normalized_persisted',
-          snapshot:copy(normalizedConference)
-        };
-        stagePromise=persistGuarded(
-          d,staged,ctx,'recovery_persistence_failed',previous
-        );
-      }
-      return stagePromise.then(function(stageResult){
-        if(!stageResult.ok)return stageResult;
-        var verifiedStage=stageResult.data.value;
-        var verified=exactRecovery(verifiedStage,remoteId,account);
-        if(!verified||verified.foreign||verified.localConferenceId!==local.id){
-          return result(false,'recovery_persistence_failed');
-        }
-        var pendingInput={
-          localConferenceId:local.id,remoteConferenceId:remoteId,
-          knownRevision:ctx.snapshot.data.revision,
-          linkStatus:'server_selected_pending_local_apply',
-          pendingLocalApplication:true
-        };
-        var pendingRead=d.links.get(local.id);
-        var pending=linkMatches(pendingRead,pendingInput)
-          ?result(true,'already_pending',{link:pendingRead})
-          :saveLinkGuarded(d,pendingInput,ctx,'pending_link_failed');
-        if(!pending.ok)return pending;
-        var promoted=copy(normalized);
-        promoted.conferenceImportRecovery=copy(
-          verifiedStage.conferenceImportRecovery||{}
-        );
-        var promotionPromise=conference(previous,local.id)
-          ?Promise.resolve(result(true,'persisted',{value:previous}))
-          :persistGuarded(
-            d,promoted,ctx,'promotion_persistence_failed',verifiedStage
+      var refreshContext={
+        d:d,
+        remoteId:remoteId,
+        account:account,
+        client:ctx.client,
+        token:token,
+        localConferenceId:identity.id,
+        options:ctx.options,
+        snapshot:ctx.snapshot
+      };
+      return refreshExistingLinkedLocal(
+        d,
+        previous,
+        identity,
+        refreshContext
+      ).then(function(refreshedReuse){
+        if(refreshedReuse&&refreshedReuse.ok===false)return refreshedReuse;
+        if(refreshedReuse)return refreshedReuse;
+        if(recovery&&recovery.revision!==ctx.snapshot.data.revision){
+          return cleanupStaged(
+            d,previous,recovery,remoteId,ctx,'recovery_cleaned_revision_changed'
           );
-        return promotionPromise.then(function(promotionResult){
-          if(!promotionResult.ok)return promotionResult;
-          var verifiedPromotion=promotionResult.data.value;
-          if(!conference(verifiedPromotion,local.id)||
-            !exactRecovery(verifiedPromotion,remoteId,account)){
-            return result(false,'promotion_persistence_failed');
+        }
+        var local=copy(recovery?recovery.snapshot:ctx.snapshot.data.snapshot);
+        local.id=recovery&&recovery.localConferenceId||identity.id;
+        var normalizedBase=copy(previous);
+        if(!conference(normalizedBase,local.id)){
+          normalizedBase.conferences=(normalizedBase.conferences||[]).concat([local]);
+        }
+        var normalized=d.normalize(normalizedBase);
+        var normalizedConference=conference(normalized,local.id);
+        if(!normalizedConference)return result(false,'snapshot_malformed');
+        if(!recovery){
+          var added=d.repository&&typeof d.repository.addLocalConference==='function'
+            ?d.repository.addLocalConference(previous,normalizedConference):null;
+          if(!added||!added.ok)return result(false,'local_repository_rejected');
+          normalized=added.data;
+        }
+        var stagePromise;
+        if(recovery){
+          stagePromise=Promise.resolve(result(true,'persisted',{value:previous}));
+        }else{
+          var staged=copy(previous),root=recoveryRoot(staged);
+          root[remoteId]={
+            remoteConferenceId:remoteId,localConferenceId:local.id,
+            revision:ctx.snapshot.data.revision,
+            schemaVersion:ctx.snapshot.data.schemaVersion||null,
+            authenticatedUserId:account,status:'normalized_persisted',
+            snapshot:copy(normalizedConference)
+          };
+          stagePromise=persistGuarded(
+            d,staged,ctx,'recovery_persistence_failed',previous
+          );
+        }
+        return stagePromise.then(function(stageResult){
+          if(!stageResult.ok)return stageResult;
+          var verifiedStage=stageResult.data.value;
+          var verified=exactRecovery(verifiedStage,remoteId,account);
+          if(!verified||verified.foreign||verified.localConferenceId!==local.id){
+            return result(false,'recovery_persistence_failed');
           }
-          var linked=saveLinkGuarded(d,{
+          var pendingInput={
             localConferenceId:local.id,remoteConferenceId:remoteId,
-            knownRevision:ctx.snapshot.data.revision,linkStatus:'linked',
-            pendingLocalApplication:false
-          },ctx,'link_finalization_failed');
-          if(!linked.ok)return linked;
-          var finalLink=linked.data.link;
-          var cleaned=copy(verifiedPromotion);
-          delete recoveryRoot(cleaned)[remoteId];
-          return persistGuarded(
-            d,cleaned,ctx,'recovery_cleanup_failed',verifiedPromotion
-          ).then(function(cleanupResult){
-            if(!cleanupResult.ok){
-              var compensated=compensatePendingLink(d,pendingInput);
-              return compensated.ok?cleanupResult:compensated;
+            knownRevision:ctx.snapshot.data.revision,
+            linkStatus:'server_selected_pending_local_apply',
+            pendingLocalApplication:true
+          };
+          var pendingRead=d.links.get(local.id);
+          var pending=linkMatches(pendingRead,pendingInput)
+            ?result(true,'already_pending',{link:pendingRead})
+            :saveLinkGuarded(d,pendingInput,ctx,'pending_link_failed');
+          if(!pending.ok)return pending;
+          var promoted=copy(normalized);
+          promoted.conferenceImportRecovery=copy(
+            verifiedStage.conferenceImportRecovery||{}
+          );
+          var promotionPromise=conference(previous,local.id)
+            ?Promise.resolve(result(true,'persisted',{value:previous}))
+            :persistGuarded(
+              d,promoted,ctx,'promotion_persistence_failed',verifiedStage
+            );
+          return promotionPromise.then(function(promotionResult){
+            if(!promotionResult.ok)return promotionResult;
+            var verifiedPromotion=promotionResult.data.value;
+            if(!conference(verifiedPromotion,local.id)||
+              !exactRecovery(verifiedPromotion,remoteId,account)){
+              return result(false,'promotion_persistence_failed');
             }
-            var verifiedCleanup=cleanupResult.data.value;
-            if(exactRecovery(verifiedCleanup,remoteId,account)){
-              var compensation=compensatePendingLink(d,pendingInput);
-              return compensation.ok
-                ?result(false,'recovery_cleanup_unverified')
-                :compensation;
-            }
-            return {data:verifiedCleanup,localId:local.id,link:finalLink};
+            var linked=saveLinkGuarded(d,{
+              localConferenceId:local.id,remoteConferenceId:remoteId,
+              knownRevision:ctx.snapshot.data.revision,linkStatus:'linked',
+              pendingLocalApplication:false
+            },ctx,'link_finalization_failed');
+            if(!linked.ok)return linked;
+            var finalLink=linked.data.link;
+            var cleaned=copy(verifiedPromotion);
+            delete recoveryRoot(cleaned)[remoteId];
+            return persistGuarded(
+              d,cleaned,ctx,'recovery_cleanup_failed',verifiedPromotion
+            ).then(function(cleanupResult){
+              if(!cleanupResult.ok){
+                var compensated=compensatePendingLink(d,pendingInput);
+                return compensated.ok?cleanupResult:compensated;
+              }
+              var verifiedCleanup=cleanupResult.data.value;
+              if(exactRecovery(verifiedCleanup,remoteId,account)){
+                var compensation=compensatePendingLink(d,pendingInput);
+                return compensation.ok
+                  ?result(false,'recovery_cleanup_unverified')
+                  :compensation;
+              }
+              return {data:verifiedCleanup,localId:local.id,link:finalLink};
+            });
           });
         });
       });
     }).then(function(prepared){
       if(prepared&&prepared.ok===false)return prepared;
+      if(ctx.refreshOnly===true){
+        if(prepared&&prepared.noop===true){
+          return result(true,'up_to_date',{
+            localConferenceId:prepared.localId,
+            remoteConferenceId:remoteId,
+            role:ctx.role,
+            revision:prepared.revision
+          });
+        }
+        var refreshBlocked=guardStatus(d,prepared.localId,ctx.options);
+        if(refreshBlocked)return result(false,refreshBlocked);
+        var previousRefreshMemory=copy(d.getData());
+        d.applyData(copy(prepared.data));
+        var refreshConfigured=d.integration&&
+          typeof d.integration.configureConferenceSync==='function'
+          ?d.integration.configureConferenceSync(prepared.localId,{
+            conferenceId:remoteId,
+            baseRevision:prepared.link.knownRevision,
+            schemaVersion:String(ctx.snapshot.data.schemaVersion),
+            appVersion:String(ctx.snapshot.data.appVersion)
+          })
+          :null;
+        if(!refreshConfigured||refreshConfigured.ok===false){
+          d.applyData(previousRefreshMemory);
+          return result(false,'sync_configuration_failed');
+        }
+        return result(true,'opened',{
+          localConferenceId:prepared.localId,
+          remoteConferenceId:remoteId,
+          role:ctx.role,
+          revision:prepared.link.knownRevision
+        });
+      }
       var activated=copy(prepared.data);
       activated.currentConferenceId=prepared.localId;
       return persistGuarded(
@@ -509,7 +927,150 @@
     return flight;
   }
   function invalidate(){generation++;return result(true,'invalidated');}
+  function refreshLinkedLocalConference(localConferenceId,options){
+    options=options&&typeof options==='object'?options:{};
+    localConferenceId=String(localConferenceId||'');
+    if(!localConferenceId){
+      return Promise.resolve(result(false,'invalid_local_id'));
+    }
+    if(refreshFlights[localConferenceId]){
+      return refreshFlights[localConferenceId];
+    }
+    var d=deps(options);
+    var account=userId(d);
+    var activeClient=client(d);
+    var token=++generation;
+    if(!account||!activeClient){
+      return Promise.resolve(result(false,'prerequisites_missing'));
+    }
+    if(restoreIsolationPending(d,options)){
+      return Promise.resolve(result(false,'restore_isolated'));
+    }
+    var link=d.links&&typeof d.links.get==='function'
+      ?d.links.get(localConferenceId)
+      :null;
+    if(!link||!link.remoteConferenceId||
+      ['linked','cloud_linked'].indexOf(link.linkStatus)<0){
+      return Promise.resolve(result(false,'not_linked'));
+    }
+    var remoteId=String(link.remoteConferenceId||'');
+    var flight=read(d).then(function(stored){
+      var initialGuards=evaluateLinkedRefreshGuards(
+        d,
+        localConferenceId,
+        link,
+        stored,
+        options
+      );
+      return Promise.resolve(initialGuards).then(function(guarded){
+        if(!guarded.ok){
+          return guarded;
+        }
+        return validateAccess(d,remoteId).then(function(access){
+      if(!access.ok||!alive(token,d,account,activeClient)){
+        return access.ok?result(false,'stale'):access;
+      }
+          return inspectSnapshotMetadata(d,remoteId).then(function(metadata){
+            if(!metadata.ok||!alive(token,d,account,activeClient)){
+              return metadata.ok?result(false,'stale'):metadata;
+            }
+            var knownRevision=Number(link.knownRevision);
+            if(metadata.data.revision<=knownRevision){
+              diagnostic('linked_refresh','up_to_date',{
+                refreshed:false,
+                downloadedRevision:metadata.data.revision,
+                knownRevision:knownRevision
+              });
+              return result(true,'up_to_date',{
+                localConferenceId:localConferenceId,
+                remoteConferenceId:remoteId,
+                role:access.data.role,
+                revision:knownRevision
+              });
+            }
+            return evaluateLinkedRefreshGuards(
+              d,
+              localConferenceId,
+              link,
+              stored,
+              options
+            ).then(function(preDownloadGuards){
+              if(!preDownloadGuards.ok){
+                recordRemoteReviewMarker(
+                  d,
+                  remoteId,
+                  metadata.data.revision,
+                  options
+                );
+                return result(
+                  false,
+                  preDownloadGuards.status==='local_changes_pending'
+                    ?'local_changes_pending'
+                    :'remote_update_review_required',
+                  {
+                    localConferenceId:localConferenceId,
+                    remoteConferenceId:remoteId,
+                    revision:metadata.data.revision
+                  }
+                );
+              }
+              return downloadSnapshotForRevision(
+                d,
+                remoteId,
+                account,
+                metadata.data
+              ).then(function(snapshot){
+                if(!snapshot.ok||!alive(token,d,account,activeClient)){
+                  return snapshot.ok?result(false,'stale'):snapshot;
+                }
+        var task=function(){
+          return runTransaction({
+            d:d,
+            remoteId:remoteId,
+            account:account,
+            client:activeClient,
+            token:token,
+            role:access.data.role,
+            snapshot:snapshot,
+            options:options,
+            refreshOnly:true,
+            forceLocalConferenceId:localConferenceId
+          });
+        };
+        var serialized=transactionTail
+          .catch(function(){return null;})
+          .then(task);
+        transactionTail=serialized.catch(function(){return null;});
+        return serialized.then(function(done){
+          if(done&&done.ok===true){
+            diagnostic('linked_refresh','completed',{
+              refreshed:done.status==='opened'&&
+                Number(done.data&&done.data.revision||0)>
+                Number(link.knownRevision||0),
+              resultStatus:done.status,
+              resultRevision:done.data&&done.data.revision||null
+            });
+          }
+          return done;
+        });
+              });
+            });
+          });
+        });
+      });
+    }).finally(function(){
+      if(refreshFlights[localConferenceId]===flight){
+        delete refreshFlights[localConferenceId];
+      }
+    });
+    refreshFlights[localConferenceId]=flight;
+    return flight;
+  }
   global.DiscoveredConferenceOpenService=Object.freeze({
-    open:open,invalidate:invalidate,cleanupRecovery:cleanupRecovery
+    open:open,
+    invalidate:invalidate,
+    cleanupRecovery:cleanupRecovery,
+    refreshLinkedLocalConference:refreshLinkedLocalConference,
+    getDiagnostics:getDiagnostics
   });
 })(window);

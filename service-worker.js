@@ -1,6 +1,6 @@
 const APP_VERSION = '3.1.1';
 const CACHE_PREFIX = 'conference-manager-core-';
-const CACHE_REVISION = 'queue-legacy-compat-v1';
+const CACHE_REVISION = 'member-remote-apply-safe-v1';
 const CACHE_NAME = CACHE_PREFIX + 'v' + APP_VERSION + '-' + CACHE_REVISION;
 const CORE_ASSETS = [
   './',
@@ -63,8 +63,8 @@ const CORE_ASSETS = [
   './js/sync/conference-operational-ui.js',
   './js/sync/automatic-queue-runner.js?rev=runtime-diagnostics-v1',
   './js/sync/automatic-conference-linking.js',
-  './js/sync/discovered-conference-open-service.js',
-  './js/sync/automatic-sync-orchestrator.js?rev=runtime-diagnostics-v1',
+  './js/sync/discovered-conference-open-service.js?rev=member-remote-apply-safe-v1',
+  './js/sync/automatic-sync-orchestrator.js?rev=member-remote-apply-safe-v1',
   './utils.js',
   './core.js',
   './people.js',

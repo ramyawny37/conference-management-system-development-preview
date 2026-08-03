@@ -22,6 +22,7 @@
   var realtimeGeneration=0;
   var realtimeCleanupPending=false;
   var realtimeCleanupPromise=Promise.resolve();
+  var realtimeEventRevisionKeys=Object.create(null);
   var activeOptions=null;
   var diagnostics={
     lastScheduledReason:null,
@@ -128,6 +129,69 @@
     }catch(error){return true;}
   }
 
+  function currentDeviceId(options){
+    var identity=options&&options.deviceIdentity||
+      global.SupabaseDeviceIdentity;
+    try{
+      var value=identity&&typeof identity.getOrCreate==='function'
+        ?identity.getOrCreate()
+        :null;
+      return String(value&&value.id||'');
+    }catch(error){
+      return '';
+    }
+  }
+
+  function shouldRefreshForReasons(reasons){
+    if(!Array.isArray(reasons)||reasons.length===0)return false;
+    if(reasons.length===1&&reasons[0]==='local_save')return false;
+    return reasons.some(function(reason){
+      return ['startup','conference_changed','online_event',
+        'manual_retry','backoff_elapsed','preferences_changed',
+        'auth_changed'].indexOf(reason)>=0;
+    });
+  }
+
+  function shouldRequireContextForLinked(link){
+    return !!(link&&
+      (link.linkStatus==='linked'||link.linkStatus==='cloud_linked')&&
+      Number.isInteger(link.knownRevision)&&
+      link.knownRevision>=1);
+  }
+
+  function createRealtimeEventHandler(options){
+    var externalHandler=options&&options.realtimeEventHandler;
+    return function(event,handled){
+      if(typeof externalHandler==='function'){
+        try{externalHandler(event,handled);}catch(error){}
+      }
+      if(!handled||handled.ok!==true||handled.status!=='update_marked'){
+        return;
+      }
+      if(handled.data&&handled.data.duplicate===true){
+        return;
+      }
+      var remoteEvent=handled.data&&handled.data.update;
+      if(!remoteEvent||
+        !Number.isInteger(remoteEvent.revision)||
+        remoteEvent.revision<1){
+        return;
+      }
+      var localDeviceId=currentDeviceId(options);
+      if(localDeviceId&&
+        String(remoteEvent.deviceId||'')===localDeviceId){
+        return;
+      }
+      var dedupKey=[
+        String(remoteEvent.conferenceId||''),
+        String(remoteEvent.revision||'')
+      ].join('|');
+      if(realtimeEventRevisionKeys[dedupKey]===true)return;
+      realtimeEventRevisionKeys[dedupKey]=true;
+      schedule('conference_changed',options);
+    };
+  }
+
   function disconnectRealtime(options){
     var integration=options&&options.integration||
       global.OfflineFirstIntegration;
@@ -223,7 +287,7 @@
         realtimeOptions:options&&options.realtimeOptions,
         remoteUpdateStore:options&&options.remoteUpdateStore,
         deviceIdentity:options&&options.deviceIdentity,
-        eventHandler:options&&options.realtimeEventHandler
+        eventHandler:createRealtimeEventHandler(options)
       });
     }).then(function(connected){
       if(operationGeneration!==realtimeGeneration||
@@ -543,6 +607,27 @@
                 !latestRemote||latestRemote!==expectedRemote){
                 return disconnectRealtime(options);
               }
+              var opener=options&&options.discoveredOpenService||
+                global.DiscoveredConferenceOpenService;
+              var refreshAllowed=shouldRefreshForReasons(reasons);
+              var refreshFlow=!refreshAllowed||!opener||
+                typeof opener.refreshLinkedLocalConference!=='function'
+                ?Promise.resolve({ok:true,status:'refresh_skipped'})
+                :Promise.resolve(opener.refreshLinkedLocalConference(
+                  linkingLocalConferenceId,
+                  options&&options.discoveredOpenOptions
+                )).catch(function(){
+                  return {ok:false,status:'linked_refresh_failed'};
+                });
+              return refreshFlow.then(function(refreshResult){
+                if(refreshResult&&refreshResult.ok===false&&
+                  (refreshResult.status==='restore_isolated'||
+                  refreshResult.status==='manual_relink_required')){
+                  state.conferenceState=refreshResult.status;
+                  state.linkedConferenceId=null;
+                  diagnostics.lastStopReason=refreshResult.status;
+                  return disconnectRealtime(options);
+                }
               if(latest.data&&latest.data.link&&
                 latest.data.link.linkStatus==='cloud_linked'){
                 var manager=options.realtimeManager||
@@ -566,6 +651,7 @@
                 });
               }
               return ensureRealtime(latest,options);
+              });
             });
           }).then(function(){
             return resolveState().then(function(afterRun){
@@ -668,9 +754,11 @@
               return runLinkedConference(connectivityState,resolved);
             }
             if(!linkedContext.available){
-              return stopForLinkedContext(
-                'linked_context_unavailable'
-              );
+              return shouldRequireContextForLinked(
+                linkedContext.link
+              )
+                ?stopForLinkedContext('linked_context_unavailable')
+                :runLinkedConference(connectivityState,resolved);
             }
             if(!linkedContext.link||
               linkedContext.link.linkStatus!=='linked'){
@@ -803,6 +891,7 @@
     state.connectivity='unknown';
     state.conferenceState='local_only';
     state.linkedConferenceId=null;
+    realtimeEventRevisionKeys=Object.create(null);
     onlineHandler=function(){schedule('online_event',options);};
     offlineHandler=function(){schedule('offline_event',options);};
     if(global.addEventListener){
@@ -842,6 +931,7 @@
     state.evaluating=false;
     state.checkingConnectivity=false;
     state.connectivity='stopped';
+    realtimeEventRevisionKeys=Object.create(null);
     if(global.AutomaticQueueRunner&&
       typeof global.AutomaticQueueRunner.stop==='function'){
       global.AutomaticQueueRunner.stop();

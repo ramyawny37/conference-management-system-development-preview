@@ -409,7 +409,9 @@ async function tick(){
   const worker=fs.readFileSync(path.join(
     __dirname,'..','service-worker.js'
   ),'utf8');
-  assert.match(worker,/phase-2-(?:6-realtime-integration|7-operational-ui)/);
+  assert.match(worker,
+    /(?:phase-2-(?:6-realtime-integration|7-operational-ui)|member-remote-apply-safe-v1)/
+  );
   assert.match(worker,/conference-realtime-manager\.js/);
 
   console.log('conference realtime manager phase 2.6 tests: passed');
