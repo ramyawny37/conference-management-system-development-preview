@@ -37,6 +37,7 @@ var applicationStorageState = {
   lastStorageError: null
 };
 var storageInitializationPromise = null;
+var applicationSelectionRestored = false;
 
 
 // ═══════════════════════════════════════════════════════
@@ -118,6 +119,36 @@ function readLocalStorageAppData(){
   return isValidStoredAppData(loadedAppData)?loadedAppData:null;
 }
 
+function restoreSafeSingleCurrentConferenceSelection(target){
+  if(!target||!Array.isArray(target.conferences)||target.currentConferenceId){
+    return false;
+  }
+  var candidates=target.conferences.filter(function(conference){
+    return conference&&conference.status==='active'&&
+      !(typeof isConferenceImportRecoveryPending==='function'&&
+        isConferenceImportRecoveryPending(target,conference.id));
+  });
+  if(candidates.length!==1)return false;
+  var candidate=candidates[0];
+  var backup=window.FullBackupService;
+  try{
+    if(backup&&typeof backup.isFullRestoreCloudReviewPending==='function'&&
+      backup.isFullRestoreCloudReviewPending()===true)return false;
+    if(backup&&typeof backup.isManualRelinkRequired==='function'&&
+      backup.isManualRelinkRequired(candidate.id)===true)return false;
+  }catch(error){return false;}
+  var links=window.ConferenceLinkStore;
+  var link=links&&typeof links.get==='function'?links.get(candidate.id):null;
+  if(link&&(
+    ['needs_resolution','server_selected_pending_local_apply']
+      .indexOf(String(link.linkStatus||''))>=0||
+    link.pendingLocalApplication===true||link.conflictId||
+    link.syncState&&link.syncState.pendingRemoteApplication===true
+  ))return false;
+  target.currentConferenceId=candidate.id;
+  return true;
+}
+
 function initializeApplicationStorage(){
   if(storageInitializationPromise)return storageInitializationPromise;
 
@@ -158,6 +189,8 @@ function initializeApplicationStorage(){
     .then(function(selection){
       appData=cloneApplicationStorageData(selection.data);
       normalizeAppData();
+      applicationSelectionRestored=
+        restoreSafeSingleCurrentConferenceSelection(appData);
       updateLogoText();
       var current=getCurrentConference();
       if(current)setCurrentConference(current);
@@ -170,11 +203,12 @@ function initializeApplicationStorage(){
         console.warn('تعذر تحديث بيانات localStorage:',error);
       }
 
-      if(selection.source==='indexeddb'||!repository||
+      if(selection.source==='indexeddb'&&!applicationSelectionRestored||
+        !repository||
         typeof repository.saveAppSnapshot!=='function'){
         return selection;
       }
-      return repository.saveAppSnapshot(appData)
+      return repository.saveAppSnapshot(appData,{skipSyncQueue:true})
         .then(function(){
           applicationStorageState.lastIndexedDbSaveAt=new Date().toISOString();
           return selection;

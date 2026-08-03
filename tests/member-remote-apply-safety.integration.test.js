@@ -18,6 +18,7 @@ function createEnvironment(settings={}){
   const publishWrites={count:0};
   const rpcWrites={count:0};
   let downloadCount=0;
+  let activationCount=0;
   const persistCalls=[];
   const revisions=settings.revisions||[3];
   let revisionIndex=0;
@@ -64,6 +65,13 @@ function createEnvironment(settings={}){
       activityLog:[{id:'log-1'},{id:'log-2'}],
       accommodation:{units:[{id:'a1'},{id:'a2'}]},
       restaurant:{orders:[{id:'o1'}]},
+      restaurantV3:{mealPriceOverrides:[{id:'rp1'}],
+        mealCountOverrides:[{id:'rc1'}],personOverrides:[{id:'rv1'}]},
+      accommodationV3:{roomOverrides:[{id:'ar1'},{id:'ar2'}],
+        personOverrides:[{id:'ap1'}]},
+      airConditioningV3:{roomOverrides:[{id:'ac1'},{id:'ac2'}],
+        dayOverrides:[{id:'ad1'}]},
+      financialV3:{adjustments:[{id:'f1'},{id:'f2'}]},
       accounts:{ledger:[{id:'acc-1'},{id:'acc-2'}]}
     };
   }
@@ -157,7 +165,7 @@ function createEnvironment(settings={}){
         return {ok:true,status:'configured',data:{context:clone(contexts[lid])}};
       }
     },
-    activatePersistedConferenceById:()=>true,
+    activatePersistedConferenceById:()=>{activationCount++;return true;},
     OfflineSyncQueue:{coalesceSnapshotOperation:()=>{queueWrites.count++;}},
     ConferencePublishingEngine:{publish:()=>{publishWrites.count++;}},
     SupabaseRpc:{rpc:()=>{rpcWrites.count++;}},
@@ -175,6 +183,7 @@ function createEnvironment(settings={}){
     getStored:()=>clone(currentData),
     getPersistCalls:()=>persistCalls.map(clone),
     getDownloadCount:()=>downloadCount,
+    getActivationCount:()=>activationCount,
     queueWrites,
     publishWrites,
     rpcWrites
@@ -216,9 +225,30 @@ function createEnvironment(settings={}){
     assert.strictEqual(afterFirst.conferences[0].accommodation.units.length,2);
     assert.strictEqual(afterFirst.conferences[0].restaurant.orders.length,1);
     assert.strictEqual(afterFirst.conferences[0].accounts.ledger.length,2);
+    assert.strictEqual(afterFirst.conferences[0].financialV3.adjustments.length,2);
+    assert.strictEqual(afterFirst.conferences[0].airConditioningV3.roomOverrides.length,2);
+    assert.strictEqual(afterFirst.currentConferenceId,env.localId,
+      'refresh should restore the linked conference selection');
+    assert.strictEqual(env.getActivationCount(),1,
+      'applied refresh should activate and re-render once');
     assert.strictEqual(env.queueWrites.count,0,'must not enqueue queue writes');
     assert.strictEqual(env.publishWrites.count,0,'must not publish from refresh');
     assert.strictEqual(env.rpcWrites.count,0,'must not write RPC from refresh');
+    const trace=env.api.getState();
+    ['downloadedCounts','materializedCounts','persistedCounts',
+      'readAfterWriteCounts'].forEach(function(stage){
+      assert.strictEqual(trace[stage].conferencePeopleDb,3,stage);
+      assert.strictEqual(trace[stage].assignedPeople,3,stage);
+      assert.strictEqual(trace[stage].houses,1,stage);
+      assert.strictEqual(trace[stage].activeRooms,2,stage);
+      assert.strictEqual(trace[stage].transports,2,stage);
+      assert.strictEqual(trace[stage].activityLog,2,stage);
+      assert.strictEqual(trace[stage].accommodationData,3,stage);
+      assert.strictEqual(trace[stage].restaurantData,3,stage);
+      assert.strictEqual(trace[stage].airConditioningData,3,stage);
+      assert.strictEqual(trace[stage].accounts,2,stage);
+      assert.strictEqual(trace[stage].financialCollections,2,stage);
+    });
 
     const persistCountBeforeDuplicate=env.getPersistCalls().length;
     const downloadCountBeforeDuplicate=env.getDownloadCount();
@@ -237,6 +267,45 @@ function createEnvironment(settings={}){
       downloadCountBeforeDuplicate,
       'duplicate revision must not re-download'
     );
+  });
+
+  await capture('equal-revision-incomplete-materialization-repaired',async function(){
+    const env=createEnvironment({
+      revisions:[4],
+      link:{
+        localConferenceId:'local-member-1',
+        remoteConferenceId:'11111111-1111-4111-8111-111111111111',
+        knownRevision:4,
+        linkStatus:'linked',
+        pendingLocalApplication:false,
+        syncState:{
+          pendingLocalChanges:false,
+          materializedSnapshotCounts:{
+            conferencePeopleDb:3,assignedPeople:3,houses:1,
+            activeRooms:2,transports:2,activityLog:2,
+            restaurantData:3,accommodationData:3,
+            airConditioningData:3,accounts:1,financialCollections:2
+          }
+        }
+      }
+    });
+    const repaired=await env.api.refreshLinkedLocalConference(env.localId);
+    assert.strictEqual(repaired.ok,true,JSON.stringify(repaired));
+    assert.strictEqual(repaired.status,'opened');
+    assert.strictEqual(env.getDownloadCount(),1,
+      'equal revision with incomplete local content must re-download');
+    const stored=env.getStored();
+    assert.strictEqual(stored.conferences[0].peopleDb.people.length,3);
+    assert.strictEqual(stored.conferences[0].transports.length,2);
+    assert.strictEqual(stored.conferences[0].activityLog.length,2);
+    const diagnostics=env.api.getState();
+    assert.strictEqual(diagnostics.latestCloudRevision,4);
+    assert.strictEqual(diagnostics.requestedRevision,4);
+    assert.strictEqual(diagnostics.downloadedRevision,4);
+    assert.strictEqual(diagnostics.extractedSnapshotValid,true);
+    assert.strictEqual(diagnostics.currentConferenceContentComplete,true);
+    assert.strictEqual(diagnostics.currentConferenceResolved,true);
+    assert.strictEqual(diagnostics.settingsConferenceResolved,true);
   });
 
   // Counter path contract: pending local changes must fail-closed (no auto-apply).

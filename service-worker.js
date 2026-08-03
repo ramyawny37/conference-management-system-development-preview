@@ -1,6 +1,6 @@
 const APP_VERSION = '3.1.1';
 const CACHE_PREFIX = 'conference-manager-core-';
-const CACHE_REVISION = 'member-remote-apply-safe-v1';
+const CACHE_REVISION = 'member-data-device-rerequest-v1';
 const CACHE_NAME = CACHE_PREFIX + 'v' + APP_VERSION + '-' + CACHE_REVISION;
 const CORE_ASSETS = [
   './',
@@ -27,10 +27,10 @@ const CORE_ASSETS = [
   './js/sync/organization-members-ui.js',
   './js/supabase/device-identity.js',
   './js/sync/device-authorization-operation-repository.js',
-  './js/supabase/current-device-authorization-service.js',
-  './js/supabase/device-authorization-administration-service.js',
-  './js/sync/current-device-authorization-ui.js',
-  './js/sync/device-authorization-administration-ui.js',
+  './js/supabase/current-device-authorization-service.js?rev=member-data-device-rerequest-v1',
+  './js/supabase/device-authorization-administration-service.js?rev=member-data-device-rerequest-v1',
+  './js/sync/current-device-authorization-ui.js?rev=member-data-device-rerequest-v1',
+  './js/sync/device-authorization-administration-ui.js?rev=member-data-device-rerequest-v1',
   './js/supabase/snapshot-sync.js',
   './js/sync/startup-conference-discovery.js',
   './js/sync/sync-processor.js',
@@ -63,7 +63,7 @@ const CORE_ASSETS = [
   './js/sync/conference-operational-ui.js',
   './js/sync/automatic-queue-runner.js?rev=runtime-diagnostics-v1',
   './js/sync/automatic-conference-linking.js',
-  './js/sync/discovered-conference-open-service.js?rev=member-remote-apply-safe-v1',
+  './js/sync/discovered-conference-open-service.js?rev=member-data-device-rerequest-v1',
   './js/sync/automatic-sync-orchestrator.js?rev=member-remote-apply-safe-v1',
   './utils.js',
   './core.js',
@@ -71,7 +71,7 @@ const CORE_ASSETS = [
   './houses.js',
   './transport.js',
   './houseTemplates.js',
-  './state.js',
+  './state.js?rev=member-data-device-rerequest-v1',
   './js/conference/accounts.js',
   './cards.js',
   './script.js?rev=sync-ui-1',

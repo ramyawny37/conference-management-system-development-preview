@@ -12,6 +12,9 @@ assert.match(service,/return listMemberDevices\(\{organizationId:organizationId,
 assert.doesNotMatch(service,/listMyOrganizations|listMembers/,'mutation service must not refresh organization directories');
 assert.match(ui,/اختر الجهاز البديل/);assert.match(ui,/replaceFrom/);assert.match(service,/replacement===deviceId/);
 ['إدارة أجهزة الأعضاء','تحديث الأجهزة','اعتماد الجهاز','رفض الطلب','إلغاء اعتماد الجهاز','استبدال الجهاز المعتمد','نتيجة العملية غير مؤكدة وتتطلب إعادة تحقق.'].forEach(function(text){assert.ok(ui.includes(text),text);});
+['كل الحالات','بانتظار الموافقة','معتمد','مرفوض أو ملغى','مسجل'].forEach(function(text){assert.ok(ui.includes(text),text);});
+assert.match(ui,/setStatusFilter/);
+assert.match(service,/ownerPendingRequestsCount/);
 assert.match(repository,/actorUserId===input\.actorUserId/);assert.match(repository,/operationId:operationId,state:'pending'/);assert.match(repository,/markUnknown/);
 assert.ok(index.indexOf('device-authorization-operation-repository.js')<index.indexOf('current-device-authorization-service.js'));
 assert.ok(index.indexOf('current-device-authorization-service.js')<index.indexOf('device-authorization-administration-service.js'));

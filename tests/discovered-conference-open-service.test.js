@@ -149,7 +149,21 @@ function environment(settings={}){
       }
     },
     appData:memory,
-    normalizeAppDataCandidate:value=>clone(value),
+    normalizeAppDataCandidate:value=>{
+      const next=clone(value);
+      (next.conferences||[]).forEach(conference=>{
+        conference.peopleDb=conference.peopleDb&&
+          Array.isArray(conference.peopleDb.people)
+          ?conference.peopleDb:{people:[]};
+        conference.houses=Array.isArray(conference.houses)
+          ?conference.houses:[];
+        conference.transports=Array.isArray(conference.transports)
+          ?conference.transports:[];
+        conference.activityLog=Array.isArray(conference.activityLog)
+          ?conference.activityLog:[];
+      });
+      return next;
+    },
     uid:()=>settings.generatedId||'generated-local',
     OfflineFirstIntegration:{configureConferenceSync(){
       configured++;
@@ -489,7 +503,11 @@ function environment(settings={}){
     currentConferenceId:null,conferenceImportRecovery:{'remote-1':{
       remoteConferenceId:'remote-1',localConferenceId:'resume-local',revision:1,
       authenticatedUserId:'user-a',status:'normalized_persisted',
-      snapshot:{id:'resume-local',name:'Same',status:'active'}
+      snapshot:{id:'resume-local',name:'Same',status:'active',
+        peopleDb:{people:[{id:'person-1'},{id:'person-2'}]},
+        houses:[{floors:[{rooms:[{guests:['person-1'],children:['person-2']}]}]}],
+        transports:[{id:'transport-1'}],
+        activityLog:[{id:'activity-1'},{id:'activity-2'}]}
     }}};
   const resumed=environment({appData:stagedData,existingLink:{
     localConferenceId:'resume-local',remoteConferenceId:'remote-1',knownRevision:1,
@@ -497,6 +515,12 @@ function environment(settings={}){
   }});
   assert.strictEqual((await resumed.api.open(resumed.remoteId)).status,'opened');
   assert.strictEqual(resumed.stored().conferences.length,1);
+  assert.strictEqual(
+    resumed.stored().conferences[0].peopleDb.people.length,2,
+    'recovery promotion must replace an existing shell with the snapshot'
+  );
+  assert.strictEqual(resumed.stored().conferences[0].transports.length,1);
+  assert.strictEqual(resumed.stored().conferences[0].activityLog.length,2);
   assert.strictEqual(resumed.stored().conferenceImportRecovery[resumed.remoteId],
     undefined);
 
