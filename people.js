@@ -98,6 +98,50 @@ function resolvePersonName(personId, fallback){
   return person ? person.fullName : (fallback || '');
 }
 
+function normalizeConferencePeopleReferences(confObj){
+  if(!confObj||typeof confObj!=='object')return confObj;
+  var people=confObj.peopleDb&&Array.isArray(confObj.peopleDb.people)
+    ?confObj.peopleDb.people:[];
+  var peopleById={};
+  people.forEach(function(person){
+    if(person&&person.id)peopleById[String(person.id)]=person;
+  });
+  function resolvedName(record,fallback){
+    record=record||{};
+    var personId=record.personId||(!record.name?record.id:null);
+    var person=personId?peopleById[String(personId)]:null;
+    return person&&person.fullName?person.fullName:(fallback||record.name||'');
+  }
+  function normalizePerson(record){
+    if(!record||typeof record!=='object')return;
+    var name=resolvedName(record,record.name);
+    if(name)record.name=name;
+  }
+  (confObj.houses||[]).forEach(function(house){
+    (house.floors||[]).forEach(function(floor){
+      (floor.rooms||[]).forEach(function(room){
+        (room.guests||[]).forEach(normalizePerson);
+        (room.children||[]).forEach(function(child){
+          normalizePerson(child);
+          if(child&&child.guardianPersonId){
+            var guardian=peopleById[String(child.guardianPersonId)];
+            if(guardian&&guardian.fullName)child.guardian=guardian.fullName;
+          }
+        });
+      });
+    });
+  });
+  (confObj.transports||[]).forEach(function(transport){
+    (transport.seats||[]).forEach(function(seat){
+      normalizePerson(seat);
+      (seat.riders||[]).forEach(function(entry){
+        normalizePerson(entry&&entry.r?entry.r:entry);
+      });
+    });
+  });
+  return confObj;
+}
+
 function linkRoomPeopleToDatabase(confObj){
   if(!confObj || !confObj.houses) return;
   (confObj.houses || []).forEach(function(house){

@@ -13,6 +13,8 @@ function createDefaultConferenceData(){
     airConditioningV3: createDefaultAirConditioningV3(),
     financialV3: createDefaultFinancialV3(),
     houses: [],
+    accommodationDisplayedRoomIds: [],
+    accommodationDisplayStateInitialized: true,
     activityLog: [],
     skipPeopleMigration: true,
     peopleDb: { version: '1.0.0', people: [] },
@@ -1303,6 +1305,9 @@ function normalizeAppData_core(targetAppData){
   target.conferences.forEach(function(confObj){
     normalizeConference(confObj,target);
     if(target===appData)linkRoomPeopleToDatabase(confObj);
+    if(typeof normalizeConferencePeopleReferences==='function'){
+      normalizeConferencePeopleReferences(confObj);
+    }
   });
   var currentConfExists = false;
   if (target.currentConferenceId) {
@@ -1403,6 +1408,9 @@ function normalizeConference(confObj,sourceAppData){
   confObj.houses.forEach(function(h){
     normalizeHouseStructure(h);
   });
+  if(typeof ensureAccommodationDisplayState==='function'){
+    ensureAccommodationDisplayState(confObj);
+  }
   confObj.transports.forEach(function(t){
     if(!t.id) t.id=uid();
     t.capacity = t.capacity|| (t.seats ? t.seats.length : 0);

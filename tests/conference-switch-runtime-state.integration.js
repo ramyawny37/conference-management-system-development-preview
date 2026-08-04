@@ -29,6 +29,8 @@ var conferences=[
 ];
 var sandbox={
   window:null,appData:{currentConferenceId:'A',conferences:conferences},
+  currentConferenceRuntimeAccessRole:'viewer',
+  currentConferenceRuntimeAccessRoles:{A:null,B:'viewer'},
   applicationStorageState:{},SK:'conf_v5',Date:Date,JSON:JSON,
   localStorage:{setItem:function(key,value){writes.push(JSON.parse(value));}},
   StorageRepository:{saveAppSnapshot:function(snapshot,options){
@@ -57,11 +59,13 @@ vm.runInNewContext(
 );
 
 assert.strictEqual(sandbox.setCurrentConferenceById('B',{skipToast:true}),true);
+assert.strictEqual(sandbox.currentConferenceRuntimeAccessRole,'viewer');
 assert.strictEqual(sandbox.appData.currentConferenceId,'B');
 assert.strictEqual(sandbox.getCurrentConference().houses[0].id,'hb');
 assert.strictEqual(lifecycleCalls,0);
 assert.deepStrictEqual(schedules,['conference_changed']);
 assert.strictEqual(sandbox.setCurrentConferenceById('A',{skipToast:true}),true);
+assert.strictEqual(sandbox.currentConferenceRuntimeAccessRole,null);
 assert.strictEqual(sandbox.getCurrentConference().houses[0].id,'ha');
 assert.strictEqual(sandbox.getCurrentConference().houses[0].floors[0].rooms[0].guests.length,1);
 assert.strictEqual(lifecycleCalls,0);

@@ -1,7 +1,7 @@
 (function(global){
   'use strict';
-  var RUNTIME_BUILD_REVISION='accommodation-display-state-v1';
-  var SERVICE_WORKER_CACHE_REVISION='accommodation-display-state-v1';
+  var RUNTIME_BUILD_REVISION='canonical-conference-schema-v1';
+  var SERVICE_WORKER_CACHE_REVISION='canonical-conference-schema-v1';
   var FIELDS=Object.freeze([
     'runtimeBuildRevision','serviceWorkerCacheRevision',
     'orchestratorStarted','lastScheduledReason',

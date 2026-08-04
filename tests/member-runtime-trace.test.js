@@ -4,7 +4,7 @@ const path=require('path');
 const vm=require('vm');
 
 const root=path.join(__dirname,'..');
-const marker='accommodation-display-state-v1';
+const marker='canonical-conference-schema-v1';
 const source=fs.readFileSync(path.join(
   root,'js/sync/member-runtime-diagnostics.js'),'utf8');
 const sandbox={window:null,structuredClone:value=>JSON.parse(JSON.stringify(value)),
@@ -57,14 +57,13 @@ const index=fs.readFileSync(path.join(root,'index.html'),'utf8');
 const worker=fs.readFileSync(path.join(root,'service-worker.js'),'utf8');
 assert.ok(worker.includes("const CACHE_REVISION = '"+marker+"';"));
 [
-  'js/sync/member-runtime-diagnostics.js?rev='+marker
+  'js/sync/discovered-conference-open-service.js?rev='+marker,
+  'js/sync/member-runtime-diagnostics.js?rev='+marker,
+  'core.js?rev='+marker,
+  'people.js?rev='+marker,
+  'houses.js?rev='+marker,
+  'script.js?rev='+marker
 ].forEach(asset=>{
-  assert.ok(index.includes('src="'+asset+'"'),'index missing '+asset);
-  assert.ok(worker.includes("'./"+asset+"'"),'CORE_ASSETS missing '+asset);
-});
-['js/sync/discovered-conference-open-service.js?rev=accommodation-member-view-v1',
-  'houses.js?rev=accommodation-member-view-v1',
-  'script.js?rev=accommodation-member-view-v1'].forEach(asset=>{
   assert.ok(index.includes('src="'+asset+'"'),'index missing '+asset);
   assert.ok(worker.includes("'./"+asset+"'"),'CORE_ASSETS missing '+asset);
 });
