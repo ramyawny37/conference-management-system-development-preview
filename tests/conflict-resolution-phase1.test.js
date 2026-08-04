@@ -62,6 +62,36 @@ function planInput(overrides){
 }
 
 function testComparisonEngine(){
+  var metadataOnly=api.compareSnapshots(
+    {id:'c1',updatedAt:'2026-08-01T00:00:00.000Z'},
+    {id:'c1',updatedAt:'2026-08-02T00:00:00.000Z'}
+  );
+  assert.strictEqual(metadataOnly.ok,true);
+  assert.strictEqual(metadataOnly.data.equal,true);
+  assert.strictEqual(metadataOnly.data.summary.changed,0);
+
+  var houseContent=api.compareSnapshots(
+    {id:'c1',houses:[{id:'h1',floors:[]}]},
+    {id:'c1',houses:[{id:'h1',floors:[{id:'f1',rooms:[]}]}]}
+  );
+  assert.strictEqual(houseContent.data.equal,false);
+  assert.strictEqual(
+    api.classifyConflict(houseContent.data).data.hasSensitiveChange,true
+  );
+
+  var assignmentContent=api.compareSnapshots(
+    {id:'c1',houses:[{id:'h1',floors:[{id:'f1',rooms:[
+      {id:'r1',guests:[],children:[]}
+    ]}]}]},
+    {id:'c1',houses:[{id:'h1',floors:[{id:'f1',rooms:[
+      {id:'r1',guests:[{id:'p1'}],children:[]}
+    ]}]}]}
+  );
+  assert.strictEqual(assignmentContent.data.equal,false);
+  assert.strictEqual(
+    api.classifyConflict(assignmentContent.data).data.hasSensitiveChange,true
+  );
+
   var equal=api.compareSnapshots(
     {id:'c1',items:[{id:'a',value:1}]},
     {id:'c1',items:[{id:'a',value:1}]}

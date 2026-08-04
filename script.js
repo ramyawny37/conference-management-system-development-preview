@@ -222,7 +222,7 @@ function setCurrentConferenceById(id, options){
     window.AutomaticSyncOrchestrator.schedule('conference_changed');
   }
   setCurrentConference(next);
-  if(!save())return false;
+  if(!saveCurrentConferenceSelection())return false;
   syncCurrentConferenceRefs();
 
   var currentAfterSync = getCurrentConference();

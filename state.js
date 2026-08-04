@@ -272,6 +272,34 @@ function save(){
   return true;
 }
 
+function saveCurrentConferenceSelection(){
+  var json;
+  try{
+    json=JSON.stringify(appData);
+  }catch(e){
+    applicationStorageState.lastStorageError=e;
+    return false;
+  }
+  if(window.StorageRepository&&
+    typeof window.StorageRepository.saveAppSnapshot==='function'){
+    window.StorageRepository.saveAppSnapshot(appData,{skipSyncQueue:true})
+      .then(function(){
+        applicationStorageState.lastIndexedDbSaveAt=new Date().toISOString();
+      })
+      .catch(function(indexedDbError){
+        applicationStorageState.lastStorageError=indexedDbError;
+      });
+  }
+  try{
+    localStorage.setItem(SK,json);
+    applicationStorageState.lastLocalSaveAt=new Date().toISOString();
+  }catch(e){
+    applicationStorageState.lastStorageError=e;
+    return false;
+  }
+  return true;
+}
+
 function getStorageUsageReport(){
   function measureBytes(value){
     var json;

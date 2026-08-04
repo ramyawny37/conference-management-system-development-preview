@@ -1,6 +1,6 @@
 (function(global){
   'use strict';
-  var RUNTIME_BUILD_REVISION='member-activation-completion-v1';
+  var RUNTIME_BUILD_REVISION='conference-runtime-stability-v1';
   var flights=Object.create(null);
   var refreshFlights=Object.create(null);
   var transactionTail=Promise.resolve();

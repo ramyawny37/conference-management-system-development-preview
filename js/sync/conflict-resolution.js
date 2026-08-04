@@ -343,6 +343,10 @@
     var changes=[];
     var summary={added:0,removed:0,changed:0,unchanged:0};
     var includeUnchanged=options.includeUnchanged===true;
+    var ignoredRootMetadata={
+      updatedAt:true,lastOpenedAt:true,currentConferenceId:true,
+      syncState:true,syncMetadata:true
+    };
 
     function addChange(path,type,localExists,localValue,serverExists,serverValue){
       summary[type]++;
@@ -426,6 +430,7 @@
           addChange(path,'unchanged',true,localValue,true,serverValue);
         }
         keys.forEach(function(key){
+          if(path==='/'&&ignoredRootMetadata[key])return;
           var hasLocal=Object.prototype.hasOwnProperty.call(localValue,key);
           var hasServer=Object.prototype.hasOwnProperty.call(serverValue,key);
           var keyPath=appendPath(path,key);

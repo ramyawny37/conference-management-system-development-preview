@@ -98,6 +98,11 @@
     var previousLinks=copy(links);
     var previous=links[localId]||{};
     var now=new Date().toISOString();
+    function nullableField(name){
+      return Object.prototype.hasOwnProperty.call(input,name)
+        ?String(input[name]||'')||null
+        :String(previous[name]||'')||null;
+    }
     links[localId]={
       localConferenceId:localId,
       remoteConferenceId:remoteId,
@@ -108,14 +113,10 @@
       initialOperationId:String(
         input.initialOperationId||previous.initialOperationId||''
       )||null,
-      conflictId:String(input.conflictId||previous.conflictId||'')||null,
-      conflictStatus:String(input.conflictStatus||previous.conflictStatus||'')||null,
-      resolutionStrategy:String(
-        input.resolutionStrategy||previous.resolutionStrategy||''
-      )||null,
-      resolutionOperationId:String(
-        input.resolutionOperationId||previous.resolutionOperationId||''
-      )||null,
+      conflictId:nullableField('conflictId'),
+      conflictStatus:nullableField('conflictStatus'),
+      resolutionStrategy:nullableField('resolutionStrategy'),
+      resolutionOperationId:nullableField('resolutionOperationId'),
       resolvedRevision:Number.isInteger(input.resolvedRevision)
         ?input.resolvedRevision
         :previous.resolvedRevision||null,
