@@ -1,6 +1,6 @@
 const APP_VERSION = '3.1.1';
 const CACHE_PREFIX = 'conference-manager-core-';
-const CACHE_REVISION = 'debug-binding-report-ui-v2';
+const CACHE_REVISION = 'wrong-remote-binding-repair-v1';
 const CACHE_NAME = CACHE_PREFIX + 'v' + APP_VERSION + '-' + CACHE_REVISION;
 const CORE_ASSETS = [
   './',
@@ -67,6 +67,9 @@ const CORE_ASSETS = [
   './js/sync/discovered-conference-open-service.js?rev=canonical-conference-schema-v1',
   './js/sync/member-runtime-diagnostics.js?rev=canonical-conference-schema-v1',
   './js/sync/automatic-sync-orchestrator.js?rev=member-pre-metadata-trace-v1',
+  './js/sync/wrong-remote-binding-repair-store.js?rev=wrong-remote-binding-repair-v1',
+  './js/sync/wrong-remote-binding-repair-service.js?rev=wrong-remote-binding-repair-v1',
+  './js/sync/wrong-remote-binding-repair-ui.js?rev=wrong-remote-binding-repair-v1',
   './utils.js',
   './core.js?rev=canonical-conference-schema-v1',
   './people.js?rev=canonical-conference-schema-v1',

@@ -7162,6 +7162,10 @@ function renderSettings(){
     typeof window.RealtimeLocksUI.renderSection==='function'){
     h+=window.RealtimeLocksUI.renderSection({localConference:current});
   }
+  if(window.WrongRemoteBindingRepairUI&&
+    typeof window.WrongRemoteBindingRepairUI.render==='function'){
+    h+=window.WrongRemoteBindingRepairUI.render();
+  }
   h += renderMigrationAuditSection();
   if (!current) {
     h += '<div class="settings-empty-state">يرجى اختيار مؤتمر أو إنشاء مؤتمر جديد أولًا لعرض هذا القسم.</div></div>';
