@@ -183,6 +183,7 @@ function environment(settings={}){
     downloads:()=>downloads,inspects:()=>inspects,
     manualRelinkChecks:()=>manualRelinkChecks.slice(),
     forbidden:()=>clone(forbidden),
+    setMemory:value=>{sandbox.appData=clone(value);},
     setAccount:value=>{account=value;},replaceClient:value=>{client=value;},
     setCached:value=>{cached=value;},remoteId};
 }
@@ -357,7 +358,8 @@ function environment(settings={}){
   assert.deepStrictEqual(repairDiagnostics.persistedCounts,
     repairDiagnostics.readAfterWriteCounts);
   const runtimeTrace=legacyShellRepair.api.getState();
-  assert.strictEqual(runtimeTrace.runtimeBuildRevision,'member-runtime-trace-v1');
+  assert.strictEqual(runtimeTrace.runtimeBuildRevision,
+    'member-up-to-date-activation-v1');
   assert.strictEqual(runtimeTrace.metadataRequestReached,true);
   assert.strictEqual(runtimeTrace.downloadRequestReached,true);
   assert.strictEqual(runtimeTrace.materializationTrusted,true);
@@ -381,6 +383,33 @@ function environment(settings={}){
     'existing-local')).status,'up_to_date');
   assert.strictEqual(trustedEmpty.downloads(),0);
   assert.deepStrictEqual(trustedEmpty.events,[]);
+  assert.strictEqual(trustedEmpty.activated(),1);
+  assert.strictEqual(trustedEmpty.api.getState().currentConferenceResolved,true);
+  assert.strictEqual(trustedEmpty.api.getState().settingsConferenceResolved,true);
+
+  const failedActivationMemory={conferences:[{
+    id:'existing-local',name:'Memory before failed activation',status:'active',
+    peopleDb:{people:[]},houses:[],transports:[],activityLog:[]
+  }],currentConferenceId:null};
+  const trustedActivationFailure=environment({cached:false,revision:4,
+    activationFailure:true,appData:failedActivationMemory,
+    existingLink:{localConferenceId:'existing-local',remoteConferenceId:'remote-1',
+      knownRevision:4,linkStatus:'linked',pendingLocalApplication:false,
+      syncState:{pendingLocalChanges:false,materializationStatus:'verified',
+        materializationSource:'downloaded',
+        materializationVerifiedAt:'2026-08-04T00:00:00.000Z',
+        downloadedSnapshotRevision:4,materializedSnapshotRevision:4,
+        downloadedSnapshotCounts:completeEmptyCounts,
+        materializedSnapshotCounts:completeEmptyCounts}}
+  });
+  assert.strictEqual((await trustedActivationFailure.api
+    .refreshLinkedLocalConference('existing-local')).status,
+    'runtime_activation_failed');
+  assert.deepStrictEqual(trustedActivationFailure.memory(),
+    failedActivationMemory);
+  assert.strictEqual(trustedActivationFailure.memory().currentConferenceId,null);
+  assert.strictEqual(trustedActivationFailure.downloads(),0);
+  assert.deepStrictEqual(trustedActivationFailure.events,[]);
 
   const staleProvenance=environment({cached:false,revision:4,
     snapshotByRevision:{4:refreshSnapshot4},
@@ -417,10 +446,23 @@ function environment(settings={}){
   assert.strictEqual(pendingShell.downloads(),0);
   assert.strictEqual(pendingShell.stored().conferences[0].houses.length,0);
 
+  legacyShellRepair.setMemory({conferences:[{
+    id:'existing-local',name:'Runtime shell',status:'active',
+    peopleDb:{people:[]},houses:[],transports:[],activityLog:[]
+  }],currentConferenceId:'existing-local'});
+  const persistenceEventsBeforeRepeat=legacyShellRepair.events.length;
   const repeatAfterRepair=await legacyShellRepair.api
     .refreshLinkedLocalConference('existing-local');
   assert.strictEqual(repeatAfterRepair.status,'up_to_date');
   assert.strictEqual(legacyShellRepair.downloads(),1);
+  assert.strictEqual(legacyShellRepair.events.length,persistenceEventsBeforeRepeat);
+  assert.strictEqual(legacyShellRepair.memory().conferences[0].houses.length,1);
+  assert.strictEqual(legacyShellRepair.memory().conferences[0]
+    .houses[0].floors[0].rooms.length,2);
+  assert.strictEqual(legacyShellRepair.activated(),2);
+  assert.strictEqual(legacyShellRepair.api.getState().activationReached,true);
+  assert.strictEqual(legacyShellRepair.api.getState().currentConferenceResolved,true);
+  assert.strictEqual(legacyShellRepair.api.getState().settingsConferenceResolved,true);
 
   const refreshDenied=environment({
     cached:false,

@@ -1,6 +1,6 @@
 (function(global){
   'use strict';
-  var RUNTIME_BUILD_REVISION='member-runtime-trace-v1';
+  var RUNTIME_BUILD_REVISION='member-up-to-date-activation-v1';
   var flights=Object.create(null);
   var refreshFlights=Object.create(null);
   var transactionTail=Promise.resolve();
@@ -480,6 +480,36 @@
       materializationStatus:'verified',
       materializationSource:'downloaded'
     });
+  }
+  function activateUpToDateMaterialization(d,data,localConferenceId,details){
+    var resolved=conference(data,localConferenceId);
+    if(!resolved||!materializedShapeValid(resolved)){
+      diagnosticState.currentConferenceResolved=false;
+      diagnosticState.settingsConferenceResolved=false;
+      diagnosticState.lastActivationStatus='current_conference_unresolved';
+      return result(false,'current_conference_unresolved');
+    }
+    var previousMemory=copy(d.getData());
+    var activeData=copy(data);
+    activeData.currentConferenceId=localConferenceId;
+    d.applyData(activeData);
+    diagnosticState.currentConferenceResolved=true;
+    var activated=false;
+    try{
+      diagnosticState.activationReached=true;
+      activated=typeof d.activate==='function'&&
+        d.activate(localConferenceId,{alreadyPersisted:true})===true;
+    }catch(error){activated=false;}
+    if(!activated){
+      d.applyData(previousMemory);
+      diagnosticState.currentConferenceResolved=false;
+      diagnosticState.settingsConferenceResolved=false;
+      diagnosticState.lastActivationStatus='runtime_activation_failed';
+      return result(false,'runtime_activation_failed');
+    }
+    diagnosticState.settingsConferenceResolved=true;
+    diagnosticState.lastActivationStatus='activated';
+    return result(true,'up_to_date',details);
   }
   function replaceConferenceSnapshot(data,localConferenceId,snapshot){
     var next=copy(data);
@@ -1027,7 +1057,8 @@
       if(prepared&&prepared.ok===false)return prepared;
       if(ctx.refreshOnly===true){
         if(prepared&&prepared.noop===true){
-          return result(true,'up_to_date',{
+          return activateUpToDateMaterialization(d,prepared.data,
+            prepared.localId,{
             localConferenceId:prepared.localId,
             remoteConferenceId:remoteId,
             role:ctx.role,
@@ -1331,7 +1362,8 @@
                 downloadedRevision:metadata.data.revision,
                 knownRevision:knownRevision
               });
-              return result(true,'up_to_date',{
+              return activateUpToDateMaterialization(d,stored,
+                localConferenceId,{
                 localConferenceId:localConferenceId,
                 remoteConferenceId:remoteId,
                 role:access.data.role,

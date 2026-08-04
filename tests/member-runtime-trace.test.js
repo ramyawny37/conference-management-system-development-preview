@@ -4,7 +4,7 @@ const path=require('path');
 const vm=require('vm');
 
 const root=path.join(__dirname,'..');
-const marker='member-pre-metadata-trace-v1';
+const marker='member-up-to-date-activation-v1';
 const source=fs.readFileSync(path.join(
   root,'js/sync/member-runtime-diagnostics.js'),'utf8');
 const sandbox={window:null,structuredClone:value=>JSON.parse(JSON.stringify(value)),
@@ -53,8 +53,8 @@ const index=fs.readFileSync(path.join(root,'index.html'),'utf8');
 const worker=fs.readFileSync(path.join(root,'service-worker.js'),'utf8');
 assert.ok(worker.includes("const CACHE_REVISION = '"+marker+"';"));
 [
-  'js/sync/member-runtime-diagnostics.js?rev='+marker,
-  'js/sync/automatic-sync-orchestrator.js?rev='+marker
+  'js/sync/discovered-conference-open-service.js?rev='+marker,
+  'js/sync/member-runtime-diagnostics.js?rev='+marker
 ].forEach(asset=>{
   assert.ok(index.includes('src="'+asset+'"'),'index missing '+asset);
   assert.ok(worker.includes("'./"+asset+"'"),'CORE_ASSETS missing '+asset);
@@ -66,6 +66,6 @@ assert.ok(source.includes(marker));
 assert.ok(index.includes(
   'js/sync/sync-settings-ui.js?rev=member-runtime-trace-v1'));
 assert.ok(index.includes(
-  'js/sync/discovered-conference-open-service.js?rev=member-runtime-trace-v1'));
+  'js/sync/automatic-sync-orchestrator.js?rev=member-pre-metadata-trace-v1'));
 
 console.log('member runtime trace tests passed');

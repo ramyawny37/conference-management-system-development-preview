@@ -1,7 +1,7 @@
 (function(global){
   'use strict';
-  var RUNTIME_BUILD_REVISION='member-pre-metadata-trace-v1';
-  var SERVICE_WORKER_CACHE_REVISION='member-pre-metadata-trace-v1';
+  var RUNTIME_BUILD_REVISION='member-up-to-date-activation-v1';
+  var SERVICE_WORKER_CACHE_REVISION='member-up-to-date-activation-v1';
   var FIELDS=Object.freeze([
     'runtimeBuildRevision','serviceWorkerCacheRevision',
     'orchestratorStarted','lastScheduledReason',
