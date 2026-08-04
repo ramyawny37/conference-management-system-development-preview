@@ -415,19 +415,55 @@
       return Number(left[key]||0)===Number(right[key]||0);
     });
   }
-  function localMaterialization(link,localConference){
+  function trustedMaterializationState(link,revision){
+    var state=link&&object(link.syncState)?link.syncState:null;
+    var trusted=!!(state&&
+      state.materializationStatus==='verified'&&
+      state.materializationSource==='downloaded'&&
+      Number.isInteger(state.downloadedSnapshotRevision)&&
+      state.downloadedSnapshotRevision===revision&&
+      Number.isInteger(state.materializedSnapshotRevision)&&
+      state.materializedSnapshotRevision===revision&&
+      object(state.downloadedSnapshotCounts)&&
+      object(state.materializedSnapshotCounts)&&
+      sameCounts(
+        state.downloadedSnapshotCounts,
+        state.materializedSnapshotCounts
+      )&&
+      typeof state.materializationVerifiedAt==='string'&&
+      state.materializationVerifiedAt.trim());
+    return {trusted:trusted,state:state};
+  }
+  function localMaterialization(link,localConference,revision){
     var counts=snapshotCounts(localConference);
-    var expected=link&&object(link.syncState)&&(
-      link.syncState.materializedSnapshotCounts||
-      link.syncState.downloadedSnapshotCounts
-    );
+    var provenance=trustedMaterializationState(link,revision);
+    var expected=provenance.trusted
+      ?provenance.state.materializedSnapshotCounts
+      :null;
     var shapeValid=materializedShapeValid(localConference);
     return {
-      complete:shapeValid&&object(expected)&&sameCounts(counts,expected),
+      complete:shapeValid&&provenance.trusted&&
+        sameCounts(counts,expected),
       shapeValid:shapeValid,
-      verified:object(expected),
+      verified:provenance.trusted,
+      provenanceTrusted:provenance.trusted,
       counts:counts
     };
+  }
+  function verifiedMaterializationState(previous,revision,counts){
+    return Object.assign({},object(previous)?previous:{},{
+      pendingLocalChanges:false,
+      lastRemoteApplyStatus:'applied',
+      lastRemoteApplyAt:new Date().toISOString(),
+      lastDownloadedRevision:revision,
+      downloadedSnapshotRevision:revision,
+      downloadedSnapshotCounts:copy(counts),
+      materializedSnapshotRevision:revision,
+      materializedSnapshotCounts:copy(counts),
+      materializationVerifiedAt:new Date().toISOString(),
+      materializationStatus:'verified',
+      materializationSource:'downloaded'
+    });
   }
   function replaceConferenceSnapshot(data,localConferenceId,snapshot){
     var next=copy(data);
@@ -528,18 +564,10 @@
         resolutionStrategy:null,
         resolutionOperationId:null,
         resolvedRevision:null,
-        syncState:Object.assign({},
-          identity.existing.syncState&&typeof identity.existing.syncState==='object'
-            ?identity.existing.syncState
-            :{},
-          {
-            lastRemoteApplyStatus:'applied',
-            lastRemoteApplyAt:new Date().toISOString(),
-            lastDownloadedRevision:incomingRevision,
-            pendingLocalChanges:false,
-            downloadedSnapshotCounts:verifiedCounts,
-            materializedSnapshotCounts:verifiedCounts
-          }
+        syncState:verifiedMaterializationState(
+          identity.existing.syncState,
+          incomingRevision,
+          verifiedCounts
         )
       });
       var linked=saveLinkGuarded(
@@ -923,9 +951,7 @@
                 pendingLocalChanges:false,
                 lastRemoteApplyStatus:'applied',
                 lastRemoteApplyAt:new Date().toISOString(),
-                lastDownloadedRevision:ctx.snapshot.data.revision,
-                downloadedSnapshotCounts:normalizedCounts,
-                materializedSnapshotCounts:normalizedCounts
+                lastDownloadedRevision:ctx.snapshot.data.revision
               }
             },ctx,'link_finalization_failed');
             if(!linked.ok)return linked;
@@ -955,6 +981,15 @@
                 diagnosticState.lastMaterializationStatus='verification_failed';
                 return result(false,'promotion_persistence_failed');
               }
+              var trustedLink=saveLinkGuarded(d,Object.assign({},finalLink,{
+                syncState:verifiedMaterializationState(
+                  finalLink.syncState,
+                  ctx.snapshot.data.revision,
+                  persistedCounts
+                )
+              }),ctx,'link_finalization_failed');
+              if(!trustedLink.ok)return trustedLink;
+              finalLink=trustedLink.data.link;
               diagnosticState.lastMaterializationStatus='verified';
               diagnosticState.currentConferenceContentComplete=true;
               diagnosticState.knownRevisionAfter=ctx.snapshot.data.revision;
@@ -1192,6 +1227,22 @@
       );
       return Promise.resolve(initialGuards).then(function(guarded){
         if(!guarded.ok){
+          if(guarded.status==='local_changes_pending'){
+            return inspectSnapshotMetadata(d,remoteId).then(function(metadata){
+              if(metadata.ok){
+                recordRemoteReviewMarker(
+                  d,remoteId,metadata.data.revision,options
+                );
+              }
+              diagnosticState.lastRefreshStatus='blocked';
+              diagnosticState.lastRefreshBlockedReason='local_changes_pending';
+              return result(false,'remote_update_review_required',{
+                localConferenceId:localConferenceId,
+                remoteConferenceId:remoteId,
+                revision:metadata.ok?metadata.data.revision:null
+              });
+            });
+          }
           diagnosticState.lastRefreshStatus='blocked';
           diagnosticState.lastRefreshBlockedReason=guarded.status;
           return guarded;
@@ -1207,7 +1258,8 @@
             var knownRevision=Number(link.knownRevision);
             var materialization=localMaterialization(
               link,
-              conference(stored,localConferenceId)
+              conference(stored,localConferenceId),
+              knownRevision
             );
             diagnosticState.currentConferenceContentComplete=
               materialization.complete;

@@ -221,7 +221,8 @@ function environment(settings={}){
   assert.strictEqual(opened.status,'opened');
   assert.deepStrictEqual(first.events,[
     'persist:recovery','link:server_selected_pending_local_apply',
-    'persist:promoted','link:linked','persist:promoted','persist:current'
+    'persist:promoted','link:linked','persist:promoted','link:linked',
+    'persist:current'
   ]);
   assert.strictEqual(first.downloads(),0,'matching discovery snapshot is reused');
   assert.strictEqual(first.stored().conferenceImportRecovery[first.remoteId],undefined);
@@ -318,6 +319,101 @@ function environment(settings={}){
   assert.strictEqual(diagnostics.ok,true);
   assert.ok(Array.isArray(diagnostics.data.events));
   assert.ok(diagnostics.data.events.some(entry=>entry.status==='applied'));
+
+  const completeEmptyCounts={conferencePeopleDb:0,assignedPeople:0,houses:0,
+    activeRooms:0,transports:0,activityLog:0,restaurantData:0,
+    accommodationData:0,airConditioningData:0,accounts:0,
+    financialCollections:0};
+  const legacyShellRepair=environment({cached:false,revision:4,
+    snapshotByRevision:{4:refreshSnapshot4},
+    appData:{conferences:[{id:'existing-local',name:'Shell',status:'active',
+      peopleDb:{people:[]},houses:[],transports:[],activityLog:[]}],
+      currentConferenceId:'existing-local'},
+    existingLink:{localConferenceId:'existing-local',remoteConferenceId:'remote-1',
+      knownRevision:4,linkStatus:'linked',pendingLocalApplication:false,
+      syncState:{pendingLocalChanges:false,
+        materializedSnapshotCounts:completeEmptyCounts,
+        downloadedSnapshotCounts:completeEmptyCounts}}
+  });
+  const legacyRepairResult=await legacyShellRepair.api
+    .refreshLinkedLocalConference('existing-local');
+  assert.strictEqual(legacyRepairResult.status,'opened');
+  assert.strictEqual(legacyShellRepair.downloads(),1);
+  assert.strictEqual(legacyShellRepair.stored().conferences[0].houses.length,1);
+  assert.strictEqual(legacyShellRepair.memory().conferences[0]
+    .houses[0].floors[0].rooms.length,2);
+  assert.strictEqual(legacyShellRepair.stored().currentConferenceId,
+    'existing-local');
+  const repairedState=Object.values(legacyShellRepair.links)[0].syncState;
+  assert.strictEqual(repairedState.downloadedSnapshotRevision,4);
+  assert.strictEqual(repairedState.materializedSnapshotRevision,4);
+  assert.strictEqual(repairedState.materializationStatus,'verified');
+  assert.strictEqual(repairedState.materializationSource,'downloaded');
+  assert.deepStrictEqual(repairedState.downloadedSnapshotCounts,
+    repairedState.materializedSnapshotCounts);
+  const repairDiagnostics=legacyShellRepair.api.getDiagnostics().data;
+  assert.deepStrictEqual(repairDiagnostics.materializedCounts,
+    repairDiagnostics.persistedCounts);
+  assert.deepStrictEqual(repairDiagnostics.persistedCounts,
+    repairDiagnostics.readAfterWriteCounts);
+
+  const trustedEmpty=environment({cached:false,revision:4,
+    appData:{conferences:[{id:'existing-local',name:'Empty',status:'active',
+      peopleDb:{people:[]},houses:[],transports:[],activityLog:[]}],
+      currentConferenceId:'existing-local'},
+    existingLink:{localConferenceId:'existing-local',remoteConferenceId:'remote-1',
+      knownRevision:4,linkStatus:'linked',pendingLocalApplication:false,
+      syncState:{pendingLocalChanges:false,materializationStatus:'verified',
+        materializationSource:'downloaded',
+        materializationVerifiedAt:'2026-08-04T00:00:00.000Z',
+        downloadedSnapshotRevision:4,materializedSnapshotRevision:4,
+        downloadedSnapshotCounts:completeEmptyCounts,
+        materializedSnapshotCounts:completeEmptyCounts}}
+  });
+  assert.strictEqual((await trustedEmpty.api.refreshLinkedLocalConference(
+    'existing-local')).status,'up_to_date');
+  assert.strictEqual(trustedEmpty.downloads(),0);
+  assert.deepStrictEqual(trustedEmpty.events,[]);
+
+  const staleProvenance=environment({cached:false,revision:4,
+    snapshotByRevision:{4:refreshSnapshot4},
+    appData:{conferences:[{id:'existing-local',name:'Old',status:'active',
+      peopleDb:{people:[]},houses:[],transports:[],activityLog:[]}],
+      currentConferenceId:'existing-local'},
+    existingLink:{localConferenceId:'existing-local',remoteConferenceId:'remote-1',
+      knownRevision:4,linkStatus:'linked',pendingLocalApplication:false,
+      syncState:{pendingLocalChanges:false,materializationStatus:'verified',
+        materializationVerifiedAt:'2026-08-04T00:00:00.000Z',
+        downloadedSnapshotRevision:2,materializedSnapshotRevision:2,
+        downloadedSnapshotCounts:completeEmptyCounts,
+        materializedSnapshotCounts:completeEmptyCounts}}
+  });
+  assert.strictEqual((await staleProvenance.api.refreshLinkedLocalConference(
+    'existing-local')).status,'opened');
+  assert.strictEqual(staleProvenance.downloads(),1);
+  assert.strictEqual(staleProvenance.stored().conferences[0].houses.length,1);
+
+  const pendingShell=environment({cached:false,revision:4,
+    snapshotByRevision:{4:refreshSnapshot4},
+    appData:{conferences:[{id:'existing-local',name:'Pending shell',status:'active',
+      peopleDb:{people:[]},houses:[],transports:[],activityLog:[]}],
+      currentConferenceId:'existing-local'},
+    existingLink:{localConferenceId:'existing-local',remoteConferenceId:'remote-1',
+      knownRevision:4,linkStatus:'linked',pendingLocalApplication:false,
+      syncState:{pendingLocalChanges:true,
+        materializedSnapshotCounts:completeEmptyCounts}}
+  });
+  const pendingShellResult=await pendingShell.api
+    .refreshLinkedLocalConference('existing-local');
+  assert.strictEqual(pendingShellResult.status,'remote_update_review_required');
+  assert.strictEqual(pendingShell.inspects(),1);
+  assert.strictEqual(pendingShell.downloads(),0);
+  assert.strictEqual(pendingShell.stored().conferences[0].houses.length,0);
+
+  const repeatAfterRepair=await legacyShellRepair.api
+    .refreshLinkedLocalConference('existing-local');
+  assert.strictEqual(repeatAfterRepair.status,'up_to_date');
+  assert.strictEqual(legacyShellRepair.downloads(),1);
 
   const refreshDenied=environment({
     cached:false,
