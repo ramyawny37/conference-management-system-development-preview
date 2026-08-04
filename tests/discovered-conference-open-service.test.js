@@ -321,6 +321,35 @@ function environment(settings={}){
   assert.ok(Array.isArray(diagnostics.data.events));
   assert.ok(diagnostics.data.events.some(entry=>entry.status==='applied'));
 
+  const destructiveDropBlocked=environment({cached:false,revisionSequence:[5],
+    snapshotByRevision:{5:{
+      id:'source-local',name:'Rev-5',status:'active',
+      peopleDb:{people:[]},
+      houses:[{floors:[{rooms:[{closed:false,guests:[],children:[]}]}]}],
+      transports:[],activityLog:[]
+    }},
+    appData:{conferences:[{id:'existing-local',name:'Local rich',status:'active',
+      peopleDb:{people:[{id:'p1'},{id:'p2'},{id:'p3'},{id:'p4'}]},
+      houses:[{floors:[{rooms:[{closed:false,guests:['p1'],children:['p2']}]}]}],
+      transports:[{id:'t1'}],activityLog:[{id:'a1'}]}],
+      currentConferenceId:'existing-local'},
+    existingLink:{localConferenceId:'existing-local',remoteConferenceId:'remote-1',
+      knownRevision:4,linkStatus:'linked',pendingLocalApplication:false,
+      syncState:{pendingLocalChanges:false,initialSnapshotComplete:true}}
+  });
+  const blockedDropResult=await destructiveDropBlocked.api
+    .refreshLinkedLocalConference('existing-local');
+  assert.strictEqual(blockedDropResult.status,'remote_update_review_required');
+  assert.strictEqual(destructiveDropBlocked.downloads(),1);
+  assert.strictEqual(
+    destructiveDropBlocked.stored().conferences[0].peopleDb.people.length,
+    4
+  );
+  assert.strictEqual(
+    destructiveDropBlocked.stored().conferences[0].transports.length,
+    1
+  );
+
   const completeEmptyCounts={conferencePeopleDb:0,assignedPeople:0,houses:0,
     activeRooms:0,transports:0,activityLog:0,restaurantData:0,
     accommodationData:0,airConditioningData:0,accounts:0,

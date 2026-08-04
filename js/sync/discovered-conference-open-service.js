@@ -599,6 +599,24 @@
         revision:Number.isInteger(knownRevision)?knownRevision:null
       });
     }
+    var existingConference=conference(previous,identity.id);
+    var incomingSnapshot=ctx.snapshot&&ctx.snapshot.data
+      ?ctx.snapshot.data.snapshot
+      :null;
+    if(existingConference&&incomingSnapshot){
+      var existingCounts=snapshotCounts(existingConference);
+      var incomingCounts=snapshotCounts(incomingSnapshot);
+      var destructiveZeroDrop=existingCounts.conferencePeopleDb>0&&
+        incomingCounts.conferencePeopleDb===0&&
+        existingCounts.transports>0&&incomingCounts.transports===0;
+      if(destructiveZeroDrop){
+        return Promise.resolve(result(false,'remote_update_review_required',{
+          localConferenceId:identity.id,
+          remoteConferenceId:ctx.remoteId,
+          revision:incomingRevision
+        }));
+      }
+    }
     var replaced=replaceConferenceSnapshot(
       previous,
       identity.id,
