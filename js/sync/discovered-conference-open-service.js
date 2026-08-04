@@ -1,5 +1,6 @@
 (function(global){
   'use strict';
+  var RUNTIME_BUILD_REVISION='member-runtime-trace-v1';
   var flights=Object.create(null);
   var refreshFlights=Object.create(null);
   var transactionTail=Promise.resolve();
@@ -7,6 +8,7 @@
   var MAX_DIAGNOSTICS=40;
   var diagnostics=[];
   var diagnosticState={
+    runtimeBuildRevision:RUNTIME_BUILD_REVISION,
     latestCloudRevision:null,requestedRevision:null,downloadedRevision:null,
     extractedSnapshotValid:false,downloadedCounts:null,
     materializedCounts:null,persistedCounts:null,readAfterWriteCounts:null,
@@ -15,7 +17,11 @@
     currentConferenceResolved:false,currentConferenceContentComplete:false,
     lastRefreshStatus:null,lastRefreshBlockedReason:null,
     lastMaterializationStatus:null,lastActivationStatus:null,
-    settingsConferenceResolved:false
+    settingsConferenceResolved:false,
+    lastLinkedRefreshAttemptAt:null,
+    metadataRequestReached:false,downloadRequestReached:false,
+    localMaterializedRevision:null,materializationTrusted:false,
+    materializationComplete:false,activationReached:false
   };
   var ROLES=['owner','manager','viewer','accommodation_viewer','transport_viewer'];
 
@@ -45,6 +51,16 @@
     return {ok:true,status:'read',data:{events:copy(diagnostics)}};
   }
   function getState(){return copy(diagnosticState);}
+  function traceRefreshResult(value){
+    if(value&&typeof value.status==='string'){
+      diagnosticState.lastRefreshStatus=value.status;
+      if(value.ok===false&&!diagnosticState.lastRefreshBlockedReason){
+        diagnosticState.lastRefreshBlockedReason=value.status;
+      }
+      if(value.ok===true)diagnosticState.lastRefreshBlockedReason=null;
+    }
+    return value;
+  }
   function userId(d){
     var state=d.auth&&d.auth.getState?d.auth.getState():null;
     return String(state&&state.user&&state.user.id||'');
@@ -579,6 +595,9 @@
       if(!linked.ok)return linked;
       diagnosticState.knownRevisionAfter=incomingRevision;
       diagnosticState.currentConferenceContentComplete=true;
+      diagnosticState.localMaterializedRevision=incomingRevision;
+      diagnosticState.materializationTrusted=true;
+      diagnosticState.materializationComplete=true;
       diagnosticState.lastMaterializationStatus='verified';
       diagnostic('linked_refresh','applied',{
         refreshed:true,
@@ -710,6 +729,7 @@
     });
   }
   function inspectSnapshotMetadata(d,remoteId){
+    diagnosticState.metadataRequestReached=true;
     return Promise.resolve(d.remote.inspectInitialSnapshot(remoteId))
       .then(function(inspected){
         if(!inspected||!inspected.ok||inspected.status!=='found'){
@@ -732,6 +752,7 @@
       });
   }
   function downloadSnapshotForRevision(d,remoteId,account,metadata){
+    diagnosticState.downloadRequestReached=true;
     diagnosticState.requestedRevision=metadata.revision;
     var cached=d.discovery&&d.discovery.getRecord
       ?d.discovery.getRecord(remoteId)
@@ -992,6 +1013,10 @@
               finalLink=trustedLink.data.link;
               diagnosticState.lastMaterializationStatus='verified';
               diagnosticState.currentConferenceContentComplete=true;
+              diagnosticState.localMaterializedRevision=
+                ctx.snapshot.data.revision;
+              diagnosticState.materializationTrusted=true;
+              diagnosticState.materializationComplete=true;
               diagnosticState.knownRevisionAfter=ctx.snapshot.data.revision;
               return {data:verifiedCleanup,localId:local.id,link:finalLink};
             });
@@ -1056,6 +1081,7 @@
           var activated=true;
           if(currentSelected){
             try{
+              diagnosticState.activationReached=true;
               activated=typeof d.activate==='function'&&
                 d.activate(prepared.localId,{alreadyPersisted:true})===true;
             }catch(error){activated=false;}
@@ -1108,6 +1134,7 @@
         }
         var activationOk=false;
         try{
+          diagnosticState.activationReached=true;
           activationOk=typeof d.activate==='function'&&
             d.activate(prepared.localId,{alreadyPersisted:true})===true;
         }catch(error){activationOk=false;}
@@ -1195,22 +1222,43 @@
     if(refreshFlights[localConferenceId]){
       return refreshFlights[localConferenceId];
     }
+    diagnosticState.lastLinkedRefreshAttemptAt=new Date().toISOString();
+    diagnosticState.metadataRequestReached=false;
+    diagnosticState.downloadRequestReached=false;
+    diagnosticState.activationReached=false;
+    diagnosticState.lastRefreshStatus='attempting';
+    diagnosticState.lastRefreshBlockedReason=null;
+    diagnosticState.latestCloudRevision=null;
+    diagnosticState.knownRevisionBefore=null;
+    diagnosticState.localMaterializedRevision=null;
+    diagnosticState.materializationTrusted=false;
+    diagnosticState.materializationComplete=false;
+    diagnosticState.downloadedRevision=null;
+    diagnosticState.downloadedCounts=null;
+    diagnosticState.materializedCounts=null;
+    diagnosticState.persistedCounts=null;
+    diagnosticState.readAfterWriteCounts=null;
+    diagnosticState.currentConferenceResolved=false;
+    diagnosticState.currentConferenceContentComplete=false;
+    diagnosticState.settingsConferenceResolved=false;
     var d=deps(options);
     var account=userId(d);
     var activeClient=client(d);
     var token=++generation;
     if(!account||!activeClient){
-      return Promise.resolve(result(false,'prerequisites_missing'));
+      return Promise.resolve(traceRefreshResult(
+        result(false,'prerequisites_missing')
+      ));
     }
     if(restoreIsolationPending(d,options)){
-      return Promise.resolve(result(false,'restore_isolated'));
+      return Promise.resolve(traceRefreshResult(result(false,'restore_isolated')));
     }
     var link=d.links&&typeof d.links.get==='function'
       ?d.links.get(localConferenceId)
       :null;
     if(!link||!link.remoteConferenceId||
       ['linked','cloud_linked'].indexOf(link.linkStatus)<0){
-      return Promise.resolve(result(false,'not_linked'));
+      return Promise.resolve(traceRefreshResult(result(false,'not_linked')));
     }
     var remoteId=String(link.remoteConferenceId||'');
     diagnosticState.knownRevisionBefore=Number.isInteger(
@@ -1261,6 +1309,14 @@
               conference(stored,localConferenceId),
               knownRevision
             );
+            diagnosticState.localMaterializedRevision=
+              link.syncState&&Number.isInteger(
+                link.syncState.materializedSnapshotRevision
+              )?link.syncState.materializedSnapshotRevision:null;
+            diagnosticState.materializationTrusted=
+              materialization.provenanceTrusted===true;
+            diagnosticState.materializationComplete=
+              materialization.complete===true;
             diagnosticState.currentConferenceContentComplete=
               materialization.complete;
             if(metadata.data.revision<knownRevision){
@@ -1361,7 +1417,7 @@
           });
         });
       });
-    }).finally(function(){
+    }).then(traceRefreshResult).finally(function(){
       if(refreshFlights[localConferenceId]===flight){
         delete refreshFlights[localConferenceId];
       }

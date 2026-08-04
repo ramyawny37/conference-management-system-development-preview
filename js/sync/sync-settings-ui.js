@@ -1,5 +1,6 @@
 (function(global){
   'use strict';
+  var RUNTIME_BUILD_REVISION='member-runtime-trace-v1';
 
   var busy=false;
   var explicitConnectivity='unknown';
@@ -145,6 +146,24 @@
       (positive?'sync-settings-ok':'sync-settings-muted')+'">'+
       escapeHtml(text)+'</span>';
   }
+  function renderMemberRuntimeDiagnostics(){
+    var service=global.MemberRuntimeDiagnostics;
+    var state=service&&typeof service.read==='function'?service.read():{};
+    var fields=service&&Array.isArray(service.fields)?service.fields:[];
+    var html='<section class="settings-section sync-settings-section" '+
+      'data-runtime-build="'+RUNTIME_BUILD_REVISION+'">';
+    html+='<div class="settings-section-title">تشخيص مزامنة هذا الجهاز</div>';
+    html+='<div class="sync-settings-panel"><table class="settings-table"><tbody>';
+    fields.forEach(function(field){
+      var value=state[field];
+      if(value&&typeof value==='object')value=JSON.stringify(value);
+      if(value===null||value===undefined||value==='')value='—';
+      html+='<tr><td dir="ltr">'+escapeHtml(field)+'</td><td dir="ltr">'+
+        escapeHtml(String(value))+'</td></tr>';
+    });
+    html+='</tbody></table></div></section>';
+    return html;
+  }
 
   function renderSection(){
     ensureOrchestratorSubscription();
@@ -153,7 +172,8 @@
     var device=getDevice();
     var preferences=getAutomaticSyncPreferences();
     var email=auth.user&&auth.user.email?auth.user.email:'';
-    var html='<section class="settings-section sync-settings-section">';
+    var html=renderMemberRuntimeDiagnostics();
+    html+='<section class="settings-section sync-settings-section">';
     html+='<div class="settings-section-title">المزامنة والأجهزة</div>';
     html+='<div class="sync-settings-status">';
     html+=statusBadge('الوضع المحلي متاح دائمًا',true);

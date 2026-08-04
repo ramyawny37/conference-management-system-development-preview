@@ -356,6 +356,13 @@ function environment(settings={}){
     repairDiagnostics.persistedCounts);
   assert.deepStrictEqual(repairDiagnostics.persistedCounts,
     repairDiagnostics.readAfterWriteCounts);
+  const runtimeTrace=legacyShellRepair.api.getState();
+  assert.strictEqual(runtimeTrace.runtimeBuildRevision,'member-runtime-trace-v1');
+  assert.strictEqual(runtimeTrace.metadataRequestReached,true);
+  assert.strictEqual(runtimeTrace.downloadRequestReached,true);
+  assert.strictEqual(runtimeTrace.materializationTrusted,true);
+  assert.strictEqual(runtimeTrace.materializationComplete,true);
+  assert.strictEqual(runtimeTrace.activationReached,true);
 
   const trustedEmpty=environment({cached:false,revision:4,
     appData:{conferences:[{id:'existing-local',name:'Empty',status:'active',
