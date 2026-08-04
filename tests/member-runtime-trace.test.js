@@ -4,7 +4,7 @@ const path=require('path');
 const vm=require('vm');
 
 const root=path.join(__dirname,'..');
-const marker='member-linked-refresh-trace-v1';
+const marker='member-activation-completion-v1';
 const source=fs.readFileSync(path.join(
   root,'js/sync/member-runtime-diagnostics.js'),'utf8');
 const sandbox={window:null,structuredClone:value=>JSON.parse(JSON.stringify(value)),
@@ -58,7 +58,8 @@ const worker=fs.readFileSync(path.join(root,'service-worker.js'),'utf8');
 assert.ok(worker.includes("const CACHE_REVISION = '"+marker+"';"));
 [
   'js/sync/discovered-conference-open-service.js?rev='+marker,
-  'js/sync/member-runtime-diagnostics.js?rev='+marker
+  'js/sync/member-runtime-diagnostics.js?rev='+marker,
+  'script.js?rev='+marker
 ].forEach(asset=>{
   assert.ok(index.includes('src="'+asset+'"'),'index missing '+asset);
   assert.ok(worker.includes("'./"+asset+"'"),'CORE_ASSETS missing '+asset);

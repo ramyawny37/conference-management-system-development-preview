@@ -386,25 +386,86 @@ function exportJsonFile(){
   a.click();showToast('✅ تم تصدير JSON');
 }
 
+var memberActivationDiagnosticState={
+  trace:[],currentStage:null,exceptionStage:null,settingsResolved:false
+};
+function traceMemberActivation(stage,status,reason){
+  memberActivationDiagnosticState.currentStage=String(stage||'unknown');
+  memberActivationDiagnosticState.trace.push({
+    at:new Date().toISOString(),stage:memberActivationDiagnosticState.currentStage,
+    status:String(status||'reached'),reason:reason?String(reason):null
+  });
+  memberActivationDiagnosticState.trace=
+    memberActivationDiagnosticState.trace.slice(-30);
+}
+function getMemberActivationDiagnostics(){
+  return deepClone(memberActivationDiagnosticState);
+}
+function runMemberActivationStep(stage,callback){
+  traceMemberActivation(stage,'entered',null);
+  try{
+    var value=callback();
+    traceMemberActivation(stage,'completed',null);
+    return {ok:true,value:value};
+  }catch(error){
+    memberActivationDiagnosticState.exceptionStage=stage;
+    traceMemberActivation(stage,'exception',error&&error.name||'Error');
+    return {ok:false,value:null};
+  }
+}
 function activatePersistedConferenceById(id,options){
   options=options||{};
+  memberActivationDiagnosticState={
+    trace:[],currentStage:null,exceptionStage:null,settingsResolved:false
+  };
+  traceMemberActivation('activation_enter','entered',null);
+  var matching=(appData&&Array.isArray(appData.conferences)
+    ?appData.conferences:[]).find(function(item){
+      return item&&String(item.id)===String(id);
+    });
+  if(!matching){
+    traceMemberActivation('conference_resolved','return','conference_not_found');
+    return false;
+  }
+  appData.currentConferenceId=matching.id;
+  traceMemberActivation('current_id_set','completed',null);
   var current=getCurrentConference();
-  if(!current||String(current.id)!==String(id))return false;
+  if(!current||String(current.id)!==String(id)){
+    traceMemberActivation('conference_resolved','return','conference_not_resolved');
+    return false;
+  }
+  traceMemberActivation('conference_resolved','completed',null);
   var applicationBody=ge('applicationBody');
   var wasStartup=applicationBody&&applicationBody.style.display==='none';
-  setCurrentConference(current);
-  syncCurrentConferenceRefs();
-  setApplicationMode('application');
-  refreshPeopleDatalist();
-  renderAccommodation();
-  renderTransports();
-  renderSettings();
-  if(wasStartup)restoreLastApplicationTab();
-  else if(!switchTab(currentTab))switchTab(0);
-  if(window.AutomaticSyncOrchestrator&&
+  var steps=[
+    ['set_current_conference',function(){setCurrentConference(current)}],
+    ['sync_current_references',function(){syncCurrentConferenceRefs()}],
+    ['set_application_mode',function(){setApplicationMode('application')}],
+    ['refresh_people_datalist',function(){refreshPeopleDatalist()}],
+    ['render_accommodation',function(){if(ge('tab0'))renderAccommodation()}],
+    ['render_transports',function(){if(ge('tab1'))renderTransports()}],
+    ['render_settings',function(){
+      if(ge('tab6')){
+        renderSettings();
+        memberActivationDiagnosticState.settingsResolved=true;
+      }
+    }],
+    ['render_current_tab',function(){
+      if(wasStartup)restoreLastApplicationTab();
+      else if(!switchTab(currentTab))switchTab(0);
+    }]
+  ];
+  for(var stepIndex=0;stepIndex<steps.length;stepIndex++){
+    if(!runMemberActivationStep(steps[stepIndex][0],steps[stepIndex][1]).ok){
+      traceMemberActivation('activation_return','return','step_failed');
+      return false;
+    }
+  }
+  if(options.alreadyPersisted!==true&&window.AutomaticSyncOrchestrator&&
     typeof window.AutomaticSyncOrchestrator.schedule==='function'){
     window.AutomaticSyncOrchestrator.schedule('conference_changed');
   }
+  traceMemberActivation('activation_return','completed',null);
   return true;
 }
 function downloadFullApplicationBackup(){

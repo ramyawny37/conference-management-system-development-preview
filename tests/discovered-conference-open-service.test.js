@@ -359,7 +359,7 @@ function environment(settings={}){
     repairDiagnostics.readAfterWriteCounts);
   const runtimeTrace=legacyShellRepair.api.getState();
   assert.strictEqual(runtimeTrace.runtimeBuildRevision,
-    'member-linked-refresh-trace-v1');
+    'member-activation-completion-v1');
   assert.strictEqual(runtimeTrace.metadataRequestReached,true);
   assert.strictEqual(runtimeTrace.downloadRequestReached,true);
   assert.strictEqual(runtimeTrace.materializationTrusted,true);

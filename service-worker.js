@@ -1,6 +1,6 @@
 const APP_VERSION = '3.1.1';
 const CACHE_PREFIX = 'conference-manager-core-';
-const CACHE_REVISION = 'member-linked-refresh-trace-v1';
+const CACHE_REVISION = 'member-activation-completion-v1';
 const CACHE_NAME = CACHE_PREFIX + 'v' + APP_VERSION + '-' + CACHE_REVISION;
 const CORE_ASSETS = [
   './',
@@ -63,8 +63,8 @@ const CORE_ASSETS = [
   './js/sync/conference-operational-ui.js',
   './js/sync/automatic-queue-runner.js?rev=runtime-diagnostics-v1',
   './js/sync/automatic-conference-linking.js',
-  './js/sync/discovered-conference-open-service.js?rev=member-linked-refresh-trace-v1',
-  './js/sync/member-runtime-diagnostics.js?rev=member-linked-refresh-trace-v1',
+  './js/sync/discovered-conference-open-service.js?rev=member-activation-completion-v1',
+  './js/sync/member-runtime-diagnostics.js?rev=member-activation-completion-v1',
   './js/sync/automatic-sync-orchestrator.js?rev=member-pre-metadata-trace-v1',
   './utils.js',
   './core.js',
@@ -75,7 +75,7 @@ const CORE_ASSETS = [
   './state.js?rev=member-data-device-rerequest-v1',
   './js/conference/accounts.js',
   './cards.js',
-  './script.js?rev=sync-ui-1',
+  './script.js?rev=member-activation-completion-v1',
   './version.js',
   './pwa.js',
   './libs/html2canvas.min.js',

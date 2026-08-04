@@ -1,6 +1,6 @@
 (function(global){
   'use strict';
-  var RUNTIME_BUILD_REVISION='member-linked-refresh-trace-v1';
+  var RUNTIME_BUILD_REVISION='member-activation-completion-v1';
   var flights=Object.create(null);
   var refreshFlights=Object.create(null);
   var transactionTail=Promise.resolve();
@@ -536,7 +536,13 @@
     }
     traceLinkedRefresh('activate_persisted_conference','completed',null);
     traceLinkedRefresh('resolve_settings','entered',null);
-    diagnosticState.settingsConferenceResolved=true;
+    var activationDiagnostics=
+      typeof global.getMemberActivationDiagnostics==='function'
+        ?global.getMemberActivationDiagnostics():null;
+    diagnosticState.settingsConferenceResolved=activationDiagnostics&&
+      Object.prototype.hasOwnProperty.call(
+        activationDiagnostics,'settingsResolved'
+      )?activationDiagnostics.settingsResolved===true:true;
     traceLinkedRefresh('resolve_settings','completed',null);
     diagnosticState.lastActivationStatus='activated';
     traceLinkedRefresh('completed','return','up_to_date');

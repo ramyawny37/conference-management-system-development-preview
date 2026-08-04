@@ -410,7 +410,7 @@ async function tick(){
     __dirname,'..','service-worker.js'
   ),'utf8');
   assert.match(worker,
-    /(?:phase-2-(?:6-realtime-integration|7-operational-ui)|member-remote-apply-safe-v1|member-(?:pre-metadata-trace|up-to-date-activation|linked-refresh-trace)-v1)/
+    /(?:phase-2-(?:6-realtime-integration|7-operational-ui)|member-remote-apply-safe-v1|member-(?:pre-metadata-trace|up-to-date-activation|linked-refresh-trace|activation-completion)-v1)/
   );
   assert.match(worker,/conference-realtime-manager\.js/);
 
