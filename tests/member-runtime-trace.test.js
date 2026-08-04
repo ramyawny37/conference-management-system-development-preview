@@ -5,6 +5,7 @@ const vm=require('vm');
 
 const root=path.join(__dirname,'..');
 const marker='canonical-conference-schema-v1';
+const cacheMarker='debug-binding-report-ui-v2';
 const source=fs.readFileSync(path.join(
   root,'js/sync/member-runtime-diagnostics.js'),'utf8');
 const sandbox={window:null,structuredClone:value=>JSON.parse(JSON.stringify(value)),
@@ -55,7 +56,7 @@ const serialized=JSON.stringify(first);
 
 const index=fs.readFileSync(path.join(root,'index.html'),'utf8');
 const worker=fs.readFileSync(path.join(root,'service-worker.js'),'utf8');
-assert.ok(worker.includes("const CACHE_REVISION = '"+marker+"';"));
+assert.ok(worker.includes("const CACHE_REVISION = '"+cacheMarker+"';"));
 [
   'js/sync/discovered-conference-open-service.js?rev='+marker,
   'js/sync/member-runtime-diagnostics.js?rev='+marker,
@@ -72,7 +73,7 @@ const settingsSource=fs.readFileSync(path.join(
 assert.ok(settingsSource.includes('تشخيص مزامنة هذا الجهاز'));
 assert.ok(source.includes(marker));
 assert.ok(index.includes(
-  'js/sync/sync-settings-ui.js?rev=member-runtime-trace-v1'));
+  'js/sync/sync-settings-ui.js?rev=debug-binding-report-ui-v2'));
 assert.ok(index.includes(
   'js/sync/automatic-sync-orchestrator.js?rev=member-pre-metadata-trace-v1'));
 

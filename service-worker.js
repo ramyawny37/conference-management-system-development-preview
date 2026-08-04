@@ -1,6 +1,6 @@
 const APP_VERSION = '3.1.1';
 const CACHE_PREFIX = 'conference-manager-core-';
-const CACHE_REVISION = 'canonical-conference-schema-v1';
+const CACHE_REVISION = 'debug-binding-report-ui-v2';
 const CACHE_NAME = CACHE_PREFIX + 'v' + APP_VERSION + '-' + CACHE_REVISION;
 const CORE_ASSETS = [
   './',
@@ -39,7 +39,8 @@ const CORE_ASSETS = [
   './js/sync/conflict-executor.js',
   './js/sync/conference-locks.js',
   './js/sync/offline-first-integration.js?rev=revision-publish-1',
-  './js/sync/sync-settings-ui.js?rev=member-runtime-trace-v1',
+  './js/sync/debug-binding-report-ui.js?rev=debug-binding-report-ui-v2',
+  './js/sync/sync-settings-ui.js?rev=debug-binding-report-ui-v2',
   './js/sync/conference-link-store.js',
   './js/sync/conference-membership-attempt-store.js',
   './js/sync/conference-members-service.js',

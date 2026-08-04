@@ -1,6 +1,6 @@
 (function(global){
   'use strict';
-  var RUNTIME_BUILD_REVISION='member-runtime-trace-v1';
+  var RUNTIME_BUILD_REVISION='debug-binding-report-ui-v2';
 
   var busy=false;
   var explicitConnectivity='unknown';
@@ -237,7 +237,11 @@
       (preferences.automaticSyncEnabled?'checked ':'')+
       'onchange="SyncSettingsUI.saveAutomaticSyncPreferences()"> تفعيل المزامنة التلقائية</label>';
     html+='<div id="sync_preferences_message" class="sync-settings-message"></div></div>';
-    html+='</div></section>';
+    html+='</div>';
+    if(global.DebugBindingReportUI&&typeof global.DebugBindingReportUI.render==='function'){
+      html+=global.DebugBindingReportUI.render();
+    }
+    html+='</section>';
     return html;
   }
 

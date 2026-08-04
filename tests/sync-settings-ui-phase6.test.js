@@ -64,6 +64,9 @@ function load(){
         automaticSyncEnabled:true
       };
     }},
+    DebugBindingReportUI:{render:function(){
+      return '<section id="debug_binding_section">تشخيص الربط (Debug)</section>';
+    }},
     location:{origin:'https://example.test'}
   };
   sandbox.window=sandbox;
@@ -79,6 +82,12 @@ function load(){
 
 function run(){
   var environment=load();
+  assert.ok(
+    environment.listener &&
+    fs.readFileSync(path.resolve(__dirname,'../js/sync/sync-settings-ui.js'),'utf8')
+      .includes('DebugBindingReportUI.render'),
+    'sync settings should render debug binding report section when available'
+  );
   var states=[
     'linked',
     'needs_resolution',
