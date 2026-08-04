@@ -2109,6 +2109,24 @@ function renderAccommodation() {
     return;
   }
 
+  if(
+    !Object.prototype.hasOwnProperty.call(
+      current,
+      'accommodationDisplayedRoomIds'
+    )
+  ){
+    current.accommodationDisplayedRoomIds = [];
+    (current.houses || []).forEach(function(house){
+      (house.floors || []).forEach(function(floor){
+        (floor.rooms || []).forEach(function(room){
+          if(room && room.id && !room.closed){
+            current.accommodationDisplayedRoomIds.push(room.id);
+          }
+        });
+      });
+    });
+  }
+
   var allRooms = getAllRooms();
   var displayed = ensureAccommodationDisplayState(current);
   var grouped = {};
