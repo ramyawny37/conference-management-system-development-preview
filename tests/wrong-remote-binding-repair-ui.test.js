@@ -11,7 +11,8 @@ global.ConferenceLinkStore={get:()=>({remoteConferenceId:'old-remote'})};
 global.renderSettings=()=>calls.push('render');
 global.WrongRemoteBindingRepairService={
   listOwnerConferences(){calls.push('listOwnerConferences');return Promise.resolve({
-    ok:true,data:{conferences:[{token:'conference-token',name:'Correct'}]}
+    ok:true,data:{conferences:[{token:'conference-token',name:'Correct',
+      label:'Correct — Rev 4 — أشخاص 4 — مواصلات 1 — بيوت 1 — غرف 2'}]}
   });},
   listOrganizationMembers(token){calls.push(['listOrganizationMembers',token]);return Promise.resolve({
     ok:true,data:{members:[{token:'member-token',displayName:'Member'}]}
@@ -29,6 +30,10 @@ const UI=require('../js/sync/wrong-remote-binding-repair-ui.js');
 (async function run(){
   assert.match(UI.render(),/WrongRemoteBindingRepairUI\.loadOwnerConferences/);
   await UI.loadOwnerConferences();
+  const choicesHtml=UI.render();
+  assert.match(choicesHtml,/Correct — Rev 4 — أشخاص 4 — مواصلات 1 — بيوت 1 — غرف 2/);
+  assert.doesNotMatch(choicesHtml,/[0-9a-f]{8}-[0-9a-f-]{27}/i);
+  assert.doesNotMatch(choicesHtml,/organizationId|conferenceId/);
   await UI.selectOwnerConference('conference-token');
   UI.selectMember('member-token');
   await UI.addSelectedManager();

@@ -118,6 +118,19 @@ async function selectTarget(env){
   return listed.data.conferences[0].token;
 }
 
+function listingDependencies(rows,snapshots){
+  const calls={access:0,downloads:0};
+  return {calls,deps:{
+    remote:{
+      listAvailableConferences(){return Promise.resolve({ok:true,data:{conferences:rows}});},
+      downloadSnapshot(id){calls.downloads++;return Promise.resolve({ok:true,data:snapshots[id]});}
+    },
+    members:{getCurrentAccess(){calls.access++;return Promise.resolve({
+      ok:true,data:{role:'owner'}
+    });}}
+  }};
+}
+
 (async function run(){
   const success=environment();
   const successToken=await selectTarget(success);
@@ -153,5 +166,46 @@ async function selectTarget(env){
   ['appData','links','context','manualRelink','oldLink'].forEach(field=>{
     assert.ok(Object.prototype.hasOwnProperty.call(contents,field),'backup field '+field);
   });
+
+  const duplicate=listingDependencies([
+    {id:newRemote,name:'Same Name',organizationId:'org-1'},
+    {id:newRemote,name:'Same Name',organizationId:'org-1'}
+  ],{[newRemote]:{revision:4,snapshot:conference('remote','Same Name',4)}});
+  const deduplicated=await RepairService.listOwnerConferences(duplicate.deps);
+  assert.strictEqual(deduplicated.data.conferences.length,1,
+    'same conferenceId must appear once');
+  assert.strictEqual(duplicate.calls.access,1);
+  assert.strictEqual(duplicate.calls.downloads,1);
+
+  const otherRemote='44444444-4444-4444-8444-444444444444';
+  const distinct=listingDependencies([
+    {id:newRemote,name:'Same Name',organizationId:'org-1'},
+    {id:otherRemote,name:'Same Name',organizationId:'org-1'}
+  ],{
+    [newRemote]:{revision:4,snapshot:conference('remote-1','Same Name',4)},
+    [otherRemote]:{revision:9,snapshot:Object.assign(
+      conference('remote-2','Same Name',0),{transports:[{id:'t1'}]})}
+  });
+  const distinctResult=await RepairService.listOwnerConferences(distinct.deps);
+  assert.strictEqual(distinctResult.ok,true);
+  assert.strictEqual(distinctResult.data.conferences.length,2);
+  assert.match(distinctResult.data.conferences[0].label,/Rev 4.*أشخاص 4.*مواصلات 0/);
+  assert.match(distinctResult.data.conferences[1].label,/Rev 9.*أشخاص 0.*مواصلات 1/);
+  const publicJson=JSON.stringify(distinctResult);
+  assert.strictEqual(publicJson.includes(newRemote),false,'public result leaked conferenceId');
+  assert.strictEqual(publicJson.includes(otherRemote),false,'public result leaked conferenceId');
+  assert.strictEqual(publicJson.includes('org-1'),false,'public result leaked organizationId');
+
+  const indistinguishable=listingDependencies([
+    {id:newRemote,name:'Same Name',organizationId:'org-1'},
+    {id:otherRemote,name:'Same Name',organizationId:'org-2'}
+  ],{
+    [newRemote]:{revision:4,snapshot:conference('remote-1','Same Name',4)},
+    [otherRemote]:{revision:4,snapshot:conference('remote-2','Same Name',4)}
+  });
+  const blocked=await RepairService.listOwnerConferences(indistinguishable.deps);
+  assert.strictEqual(blocked.ok,false);
+  assert.strictEqual(blocked.status,'blocked_indistinguishable_conferences');
+  assert.strictEqual(blocked.data,null);
   console.log('wrong remote binding repair service tests: passed');
 })().catch(error=>{console.error(error);process.exitCode=1;});

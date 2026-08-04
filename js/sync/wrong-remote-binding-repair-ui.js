@@ -63,6 +63,7 @@
       organization_admin_access_required:'يلزم امتلاك صلاحية إدارة أعضاء المؤسسة.',
       organization_members_unavailable:'تعذر تحميل أعضاء المؤسسة.',
       blocked_ambiguous_member:'تعذر المتابعة لأن أسماء بعض الأعضاء متطابقة.',
+      blocked_indistinguishable_conferences:'تعذر المتابعة لأن مؤتمرين مختلفين لهما نفس الاسم والمراجعة وأعداد البيانات.',
       blocked_owner_selection:'اختر العضو المطلوب أولًا.',
       membership_verification_failed:'تعذر التحقق من إضافة العضو كمدير.',
       target_unavailable:'اختر المؤتمر الصحيح أولًا.',
@@ -197,8 +198,8 @@
     var html='<option value="">'+escapeHtml(label)+'</option>';
     items.forEach(function(item){
       html+='<option value="'+escapeHtml(item.token)+'"'+
-        (item.token===selected?' selected':'')+'>'+escapeHtml(item.name||
-          item.displayName||'')+'</option>';
+        (item.token===selected?' selected':'')+'>'+escapeHtml(item.label||
+          item.name||item.displayName||'')+'</option>';
     });
     return html;
   }

@@ -36,6 +36,23 @@
     };
   }
 
+  function conferenceLabel(name,revision,counts){
+    return String(name||'')+' — Rev '+String(revision)+' — أشخاص '+
+      counts.people+' — مواصلات '+counts.transports+' — بيوت '+
+      counts.houses+' — غرف '+counts.rooms;
+  }
+
+  function choiceFingerprint(choice){
+    return [
+      choice.name,
+      choice.revision,
+      choice.counts.people,
+      choice.counts.transports,
+      choice.counts.houses,
+      choice.counts.rooms
+    ].join('\u0000');
+  }
+
   function dependencies(options){
     options=options||{};
     return {
@@ -84,7 +101,14 @@
     var deps=dependencies(options);
     return deps.remote.listAvailableConferences().then(function(response){
       if(!response||!response.ok)return result(false,'conference_list_unavailable');
-      return Promise.all((response.data.conferences||[]).map(function(conference){
+      var seenConferenceIds=Object.create(null);
+      var uniqueConferences=(response.data.conferences||[]).filter(function(conference){
+        var conferenceId=String(conference&&conference.id||'');
+        if(!conferenceId||seenConferenceIds[conferenceId])return false;
+        seenConferenceIds[conferenceId]=true;
+        return true;
+      });
+      return Promise.all(uniqueConferences.map(function(conference){
         return deps.members.getCurrentAccess({remoteConferenceId:conference.id})
           .then(function(access){
             if(!access||!access.ok||!access.data||
@@ -100,17 +124,32 @@
                 conferenceId:conference.id,
                 organizationId:conference.organizationId
               };
+              var counts=snapshotCounts(download.data.snapshot);
               return {
                 token:token,
                 name:String(conference.name||''),
                 revision:download.data.revision,
-                counts:snapshotCounts(download.data.snapshot)
+                counts:counts,
+                label:conferenceLabel(
+                  conference.name,download.data.revision,counts
+                )
               };
             });
           });
       })).then(function(items){
+        var choices=items.filter(Boolean);
+        var fingerprints=Object.create(null);
+        var indistinguishable=choices.some(function(choice){
+          var fingerprint=choiceFingerprint(choice);
+          if(fingerprints[fingerprint])return true;
+          fingerprints[fingerprint]=true;
+          return false;
+        });
+        if(indistinguishable){
+          return result(false,'blocked_indistinguishable_conferences');
+        }
         return result(true,'owner_conferences',{
-          conferences:items.filter(Boolean)
+          conferences:choices
         });
       });
     });
