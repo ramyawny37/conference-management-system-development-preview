@@ -4,7 +4,7 @@ const path=require('path');
 const vm=require('vm');
 
 const root=path.join(__dirname,'..');
-const marker='conference-runtime-stability-v1';
+const marker='accommodation-display-state-v1';
 const source=fs.readFileSync(path.join(
   root,'js/sync/member-runtime-diagnostics.js'),'utf8');
 const sandbox={window:null,structuredClone:value=>JSON.parse(JSON.stringify(value)),
