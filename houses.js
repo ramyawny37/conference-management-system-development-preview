@@ -376,10 +376,11 @@ function ensureAccommodationDisplayState(conference){
   if(!Array.isArray(conference.accommodationDisplayedRoomIds)){
     conference.accommodationDisplayedRoomIds = [];
   }
-  if(conference.accommodationDisplayStateInitialized!==true){
+  if(conference.accommodationDisplayStateInitialized!==true&&
+    conference.accommodationDisplayedRoomIds.length===0){
     conference.accommodationDisplayedRoomIds = allRoomIds.slice();
-    conference.accommodationDisplayStateInitialized = true;
   }
+  conference.accommodationDisplayStateInitialized = true;
   var valid = {};
   allRoomIds.forEach(function(id){ valid[id] = true; });
   var seen = {};

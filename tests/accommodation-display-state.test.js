@@ -41,10 +41,43 @@ sandbox.ensureAccommodationDisplayState(conference);
 assert.strictEqual(sandbox.getAllRooms().length,0,
   'initialized state must not be repopulated after activation or render');
 
+var ownerSelection={id:'c2',houses:[{id:'h2',floors:[{id:'f2',rooms:[
+  {id:'active-room',closed:false},{id:'deleted-room',closed:false}
+]}]}],accommodationDisplayedRoomIds:['active-room']};
+sandbox.appData={currentConferenceId:'c2',conferences:[ownerSelection]};
+sandbox.ensureAccommodationDisplayState(ownerSelection);
+assert.deepStrictEqual(Array.from(ownerSelection.accommodationDisplayedRoomIds),
+  ['active-room'],'a room removed by the owner must not be reintroduced');
+assert.strictEqual(sandbox.getAllRooms().length,1);
+assert.strictEqual(sandbox.getAllRooms()[0].id,'active-room');
+
+vm.runInNewContext(
+  'var currentConferenceRuntimeAccessRole=null;\n'+
+  extract(script,'getAccommodationPersonDisplayName',
+    'canEditCurrentConferenceAccommodation')+'\n'+
+  extract(script,'canEditCurrentConferenceAccommodation','renderAccommodation'),
+  sandbox
+);
+sandbox.getPersonById=function(id){
+  return id==='p1'?{id:'p1',fullName:'Member Name'}:null;
+};
+assert.strictEqual(sandbox.getAccommodationPersonDisplayName({personId:'p1'}),
+  'Member Name');
+assert.strictEqual(sandbox.getAccommodationPersonDisplayName({id:'p1'}),
+  'Member Name');
+assert.strictEqual(sandbox.getAccommodationPersonDisplayName({personId:'missing'}),
+  '','an invalid personId must not break name rendering');
+sandbox.currentConferenceRuntimeAccessRole='accommodation_viewer';
+assert.strictEqual(sandbox.canEditCurrentConferenceAccommodation(),false);
+sandbox.currentConferenceRuntimeAccessRole='owner';
+assert.strictEqual(sandbox.canEditCurrentConferenceAccommodation(),true);
+
 var renderStart=script.indexOf('function renderAccommodation()');
 var renderEnd=script.indexOf('\nvar editRoomData',renderStart);
 var renderBody=script.slice(renderStart,renderEnd);
 assert.ok(renderBody.indexOf('ensureAccommodationDisplayState(current)')<
   renderBody.indexOf('getAllRooms()'),
   'display state must be rebuilt before room selectors run');
+assert.ok(/if\(canEditAccommodation\)h \+= '<div class="accommodation-room-actions">'/.test(renderBody),
+  'read-only rendering must omit administrative room buttons');
 console.log('accommodation display state tests: passed');

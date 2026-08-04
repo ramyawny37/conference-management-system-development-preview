@@ -518,7 +518,9 @@
       diagnosticState.activationReached=true;
       traceLinkedRefresh('activate_persisted_conference','entered',null);
       activated=typeof d.activate==='function'&&
-        d.activate(localConferenceId,{alreadyPersisted:true})===true;
+        d.activate(localConferenceId,{
+          alreadyPersisted:true,accessRole:details&&details.role||null
+        })===true;
       traceLinkedRefresh('render','completed',activated?null:'activation_returned_false');
     }catch(error){
       traceLinkedRefresh('activate_persisted_conference','exception',
@@ -1155,7 +1157,9 @@
             try{
               diagnosticState.activationReached=true;
               activated=typeof d.activate==='function'&&
-                d.activate(prepared.localId,{alreadyPersisted:true})===true;
+                d.activate(prepared.localId,{
+                  alreadyPersisted:true,accessRole:ctx.role||null
+                })===true;
             }catch(error){activated=false;}
           }
           if(!activated){
@@ -1208,7 +1212,9 @@
         try{
           diagnosticState.activationReached=true;
           activationOk=typeof d.activate==='function'&&
-            d.activate(prepared.localId,{alreadyPersisted:true})===true;
+            d.activate(prepared.localId,{
+              alreadyPersisted:true,accessRole:ctx.role||null
+            })===true;
         }catch(error){activationOk=false;}
         if(!activationOk){
           d.applyData(previousMemory);

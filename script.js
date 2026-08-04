@@ -389,6 +389,7 @@ function exportJsonFile(){
 var memberActivationDiagnosticState={
   trace:[],currentStage:null,exceptionStage:null,settingsResolved:false
 };
+var currentConferenceRuntimeAccessRole=null;
 function traceMemberActivation(stage,status,reason){
   memberActivationDiagnosticState.currentStage=String(stage||'unknown');
   memberActivationDiagnosticState.trace.push({
@@ -415,6 +416,7 @@ function runMemberActivationStep(stage,callback){
 }
 function activatePersistedConferenceById(id,options){
   options=options||{};
+  currentConferenceRuntimeAccessRole=options.accessRole||null;
   memberActivationDiagnosticState={
     trace:[],currentStage:null,exceptionStage:null,settingsResolved:false
   };
@@ -2098,6 +2100,24 @@ function logAccommodationChanges(beforeHouses,afterHouses,options){
   Object.keys(before.children).forEach(function(key){var child=before.children[key];if(!after.children[key]&&(!fullMoveOccurred||child.roomId!==fullMove.sourceId))addActivityLog('child_removed','تم حذف طفل مرافق من الغرفة '+child.roomNumber,{details:child.name,section:'accommodation',entityType:'child',entityId:child.id})});
 }
 
+function getAccommodationPersonDisplayName(person){
+  if(typeof person==='string'){
+    var stringPerson=typeof getPersonById==='function'?getPersonById(person):null;
+    return stringPerson&&stringPerson.fullName?stringPerson.fullName:person;
+  }
+  person=person||{};
+  var lookupId=person.personId||(!person.name?person.id:null);
+  var resolved=lookupId&&typeof getPersonById==='function'
+    ?getPersonById(lookupId):null;
+  return resolved&&resolved.fullName?resolved.fullName:(person.name||'');
+}
+
+function canEditCurrentConferenceAccommodation(){
+  return currentConferenceRuntimeAccessRole===null||
+    currentConferenceRuntimeAccessRole==='owner'||
+    currentConferenceRuntimeAccessRole==='manager';
+}
+
 function renderAccommodation() {
   var current = getCurrentConference();
   renderGlobalConferenceHeader();
@@ -2111,6 +2131,7 @@ function renderAccommodation() {
 
   var displayed = ensureAccommodationDisplayState(current);
   var allRooms = getAllRooms();
+  var canEditAccommodation=canEditCurrentConferenceAccommodation();
   var grouped = {};
   (current.houses || []).forEach(function(house) {
     if (!grouped[house.id]) grouped[house.id] = { house: house, floors: {} };
@@ -2142,7 +2163,7 @@ function renderAccommodation() {
   Object.keys(grouped).forEach(function(houseKey) {
     var houseEntry = grouped[houseKey];
     var house = houseEntry.house;
-    h += '<div class="card"><div class="card-title" style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap"><span>🏠 ' + esc(house.name) + '</span><div class="row" style="gap:6px"><button class="btn btn-blue btn-sm" onclick="openActiveRoomsManager(\'' + house.id + '\')">إدارة غرف التسكين</button><button class="btn btn-red btn-sm" onclick="removeConferenceHouseFromAccommodation(\'' + house.id + '\')">إزالة بيت المؤتمر</button></div></div>';
+    h += '<div class="card"><div class="card-title" style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap"><span>🏠 ' + esc(house.name) + '</span>'+(canEditAccommodation?'<div class="row" style="gap:6px"><button class="btn btn-blue btn-sm" onclick="openActiveRoomsManager(\'' + house.id + '\')">إدارة غرف التسكين</button><button class="btn btn-red btn-sm" onclick="removeConferenceHouseFromAccommodation(\'' + house.id + '\')">إزالة بيت المؤتمر</button></div>':'')+'</div>';
     if (house.description) {
       h += '<p style="font-size:11px; color:#5a7a9a; margin:-8px 0 10px 0;">' + esc(house.description) + '</p>';
     }
@@ -2250,18 +2271,19 @@ function renderAccommodation() {
             guestIcon = g.extraBedPersonType==='child' ? '🧒➕🛏️' : '➕🛏️';
             guestTypeLabel = g.extraBedPersonType==='child' ? 'طفل' : (g.extraBedPersonType==='adult' ? 'بالغ' : 'غير محدد');
           }
-          h += '<div class="guest-row"><span>' + guestIcon + ' ' + esc(gn(g)) + '</span><span class="pill '+(g.extraBedPersonType==='child'?'p-child':'p-adult')+'">'+guestTypeLabel+'</span></div>';
+          h += '<div class="guest-row"><span>' + guestIcon + ' ' + esc(getAccommodationPersonDisplayName(g)) + '</span><span class="pill '+(g.extraBedPersonType==='child'?'p-child':'p-adult')+'">'+guestTypeLabel+'</span></div>';
         });
-        ac.forEach(function(c) { h += '<div class="guest-row"><span>' + (c.bedType==='extra'?'🧒➕🛏️':'👨‍👧') + ' ' + esc(c.name) + '</span><span class="pill p-child">مع ' + esc(c.guardian) + '</span></div>' });
+        ac.forEach(function(c) { h += '<div class="guest-row"><span>' + (c.bedType==='extra'?'🧒➕🛏️':'👨‍👧') + ' ' + esc(getAccommodationPersonDisplayName(c)) + '</span><span class="pill p-child">مع ' + esc(c.guardianPersonId?getAccommodationPersonDisplayName({personId:c.guardianPersonId,name:c.guardian}):c.guardian) + '</span></div>' });
         if (lg.length) h += '<div style="font-size:9px;color:#E74C3C;margin-top:3px">غادر: ' + lg.map(function(g) { return esc(gn(g)) }).join('، ') + '</div>';
         if (!totalResidents && !lg.length) h += '<div class="accommodation-empty-room">لا يوجد نزلاء</div>';
-        h += '<div class="accommodation-room-actions">';
+        if(canEditAccommodation)h += '<div class="accommodation-room-actions">';
         h += '<button class="btn btn-blue btn-sm accommodation-room-edit" onclick="openRoomEditor(\''+house.id+'\', \''+roomFloorId+'\', \''+r.id+'\')">✏️ تعديل</button>';
         h += '<button class="btn btn-blue btn-sm" onclick="openMoveRoomDialog(\'' + house.id + '\', \'' + roomFloorId + '\', \'' + r.id + '\')" title="نقل الغرفة">↔️</button>';
         h += '<button class="btn btn-teal btn-sm" onclick="clearConferenceRoom(\'' + house.id + '\', \'' + roomFloorId + '\', \'' + r.id + '\')" title="تفريغ البيانات">🧹</button>';
         h += '<button class="btn btn-gray btn-sm" onclick="toggleConferenceRoomClosed(\'' + house.id + '\', \'' + roomFloorId + '\', \'' + r.id + '\')" title="إغلاق/فتح مؤقت">' + (isClosed ? '🔓' : '🔒') + '</button>';
         h += '<button class="btn btn-red btn-sm" onclick="deleteConferenceRoom(\'' + house.id + '\', \'' + roomFloorId + '\', \'' + r.id + '\')" title="حذف الغرفة">🗑️</button>';
-        h += '</div></div></div>';
+        if(canEditAccommodation)h += '</div>';
+        h += '</div></div>';
       });
       h += '</div></div>';
     });
