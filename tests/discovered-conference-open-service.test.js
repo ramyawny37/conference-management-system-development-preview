@@ -359,7 +359,7 @@ function environment(settings={}){
     repairDiagnostics.readAfterWriteCounts);
   const runtimeTrace=legacyShellRepair.api.getState();
   assert.strictEqual(runtimeTrace.runtimeBuildRevision,
-    'member-up-to-date-activation-v1');
+    'member-linked-refresh-trace-v1');
   assert.strictEqual(runtimeTrace.metadataRequestReached,true);
   assert.strictEqual(runtimeTrace.downloadRequestReached,true);
   assert.strictEqual(runtimeTrace.materializationTrusted,true);
@@ -386,6 +386,20 @@ function environment(settings={}){
   assert.strictEqual(trustedEmpty.activated(),1);
   assert.strictEqual(trustedEmpty.api.getState().currentConferenceResolved,true);
   assert.strictEqual(trustedEmpty.api.getState().settingsConferenceResolved,true);
+  const trustedTraceStages=trustedEmpty.api.getState().linkedRefreshTrace
+    .filter(entry=>[
+      'enter','metadata_request','metadata_received','trusted_check',
+      'resolve_persisted_conference','apply_runtime',
+      'activate_persisted_conference','render','resolve_settings','completed'
+    ].indexOf(entry.stage)>=0)
+    .map(entry=>entry.stage)
+    .filter((stage,index,all)=>index===0||stage!==all[index-1]);
+  assert.deepStrictEqual(trustedTraceStages,[
+    'enter','metadata_request','metadata_received','trusted_check',
+    'resolve_persisted_conference','apply_runtime',
+    'activate_persisted_conference','render',
+    'activate_persisted_conference','resolve_settings','completed'
+  ]);
 
   const failedActivationMemory={conferences:[{
     id:'existing-local',name:'Memory before failed activation',status:'active',
@@ -410,6 +424,11 @@ function environment(settings={}){
   assert.strictEqual(trustedActivationFailure.memory().currentConferenceId,null);
   assert.strictEqual(trustedActivationFailure.downloads(),0);
   assert.deepStrictEqual(trustedActivationFailure.events,[]);
+  assert.strictEqual(trustedActivationFailure.api.getState()
+    .linkedRefreshCurrentStage,'completed');
+  assert.ok(trustedActivationFailure.api.getState().linkedRefreshTrace
+    .some(entry=>entry.stage==='activate_persisted_conference'&&
+      entry.status==='return'&&entry.reason==='runtime_activation_failed'));
 
   const staleProvenance=environment({cached:false,revision:4,
     snapshotByRevision:{4:refreshSnapshot4},

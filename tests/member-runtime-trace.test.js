@@ -4,7 +4,7 @@ const path=require('path');
 const vm=require('vm');
 
 const root=path.join(__dirname,'..');
-const marker='member-up-to-date-activation-v1';
+const marker='member-linked-refresh-trace-v1';
 const source=fs.readFileSync(path.join(
   root,'js/sync/member-runtime-diagnostics.js'),'utf8');
 const sandbox={window:null,structuredClone:value=>JSON.parse(JSON.stringify(value)),
@@ -26,7 +26,11 @@ const sandbox={window:null,structuredClone:value=>JSON.parse(JSON.stringify(valu
     currentConferenceResolved:true,currentConferenceContentComplete:true,
     activationReached:false,settingsConferenceResolved:true,
     remoteConferenceId:'sensitive-remote-id',conferenceName:'sensitive-name',
-    accessToken:'sensitive-token'
+    accessToken:'sensitive-token',
+    linkedRefreshCurrentStage:'trusted_check',
+    linkedRefreshExceptionStage:null,
+    linkedRefreshTrace:[{at:'2026-08-04T01:02:03.000Z',
+      stage:'trusted_check',status:'completed',reason:'trusted_complete'}]
   })}
 };
 sandbox.window=sandbox;

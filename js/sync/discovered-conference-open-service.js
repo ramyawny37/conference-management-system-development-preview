@@ -1,6 +1,6 @@
 (function(global){
   'use strict';
-  var RUNTIME_BUILD_REVISION='member-up-to-date-activation-v1';
+  var RUNTIME_BUILD_REVISION='member-linked-refresh-trace-v1';
   var flights=Object.create(null);
   var refreshFlights=Object.create(null);
   var transactionTail=Promise.resolve();
@@ -21,7 +21,9 @@
     lastLinkedRefreshAttemptAt:null,
     metadataRequestReached:false,downloadRequestReached:false,
     localMaterializedRevision:null,materializationTrusted:false,
-    materializationComplete:false,activationReached:false
+    materializationComplete:false,activationReached:false,
+    linkedRefreshTrace:[],linkedRefreshCurrentStage:null,
+    linkedRefreshExceptionStage:null
   };
   var ROLES=['owner','manager','viewer','accommodation_viewer','transport_viewer'];
 
@@ -51,6 +53,17 @@
     return {ok:true,status:'read',data:{events:copy(diagnostics)}};
   }
   function getState(){return copy(diagnosticState);}
+  function traceLinkedRefresh(stage,status,reason){
+    diagnosticState.linkedRefreshCurrentStage=String(stage||'unknown');
+    diagnosticState.linkedRefreshTrace.push({
+      at:new Date().toISOString(),
+      stage:diagnosticState.linkedRefreshCurrentStage,
+      status:String(status||'reached'),
+      reason:reason?String(reason):null
+    });
+    diagnosticState.linkedRefreshTrace=
+      diagnosticState.linkedRefreshTrace.slice(-40);
+  }
   function traceRefreshResult(value){
     if(value&&typeof value.status==='string'){
       diagnosticState.lastRefreshStatus=value.status;
@@ -482,33 +495,51 @@
     });
   }
   function activateUpToDateMaterialization(d,data,localConferenceId,details){
+    traceLinkedRefresh('resolve_persisted_conference','entered',null);
     var resolved=conference(data,localConferenceId);
     if(!resolved||!materializedShapeValid(resolved)){
       diagnosticState.currentConferenceResolved=false;
       diagnosticState.settingsConferenceResolved=false;
       diagnosticState.lastActivationStatus='current_conference_unresolved';
+      traceLinkedRefresh('resolve_persisted_conference','return',
+        'current_conference_unresolved');
       return result(false,'current_conference_unresolved');
     }
+    traceLinkedRefresh('resolve_persisted_conference','completed',null);
     var previousMemory=copy(d.getData());
     var activeData=copy(data);
     activeData.currentConferenceId=localConferenceId;
+    traceLinkedRefresh('apply_runtime','entered',null);
     d.applyData(activeData);
+    traceLinkedRefresh('apply_runtime','completed',null);
     diagnosticState.currentConferenceResolved=true;
     var activated=false;
     try{
       diagnosticState.activationReached=true;
+      traceLinkedRefresh('activate_persisted_conference','entered',null);
       activated=typeof d.activate==='function'&&
         d.activate(localConferenceId,{alreadyPersisted:true})===true;
-    }catch(error){activated=false;}
+      traceLinkedRefresh('render','completed',activated?null:'activation_returned_false');
+    }catch(error){
+      traceLinkedRefresh('activate_persisted_conference','exception',
+        error&&error.name||'Error');
+      activated=false;
+    }
     if(!activated){
       d.applyData(previousMemory);
       diagnosticState.currentConferenceResolved=false;
       diagnosticState.settingsConferenceResolved=false;
       diagnosticState.lastActivationStatus='runtime_activation_failed';
+      traceLinkedRefresh('activate_persisted_conference','return',
+        'runtime_activation_failed');
       return result(false,'runtime_activation_failed');
     }
+    traceLinkedRefresh('activate_persisted_conference','completed',null);
+    traceLinkedRefresh('resolve_settings','entered',null);
     diagnosticState.settingsConferenceResolved=true;
+    traceLinkedRefresh('resolve_settings','completed',null);
     diagnosticState.lastActivationStatus='activated';
+    traceLinkedRefresh('completed','return','up_to_date');
     return result(true,'up_to_date',details);
   }
   function replaceConferenceSnapshot(data,localConferenceId,snapshot){
@@ -760,8 +791,11 @@
   }
   function inspectSnapshotMetadata(d,remoteId){
     diagnosticState.metadataRequestReached=true;
+    traceLinkedRefresh('metadata_request','entered',null);
     return Promise.resolve(d.remote.inspectInitialSnapshot(remoteId))
       .then(function(inspected){
+        traceLinkedRefresh('metadata_received','reached',
+          inspected&&inspected.status||'no_result');
         if(!inspected||!inspected.ok||inspected.status!=='found'){
           return result(false,'snapshot_unavailable');
         }
@@ -778,6 +812,7 @@
           appVersion:String(inspected.data.appVersion)
         });
       }).catch(function(){
+        traceLinkedRefresh('metadata_request','return','snapshot_unavailable');
         return result(false,'snapshot_unavailable');
       });
   }
@@ -1251,8 +1286,12 @@
       return Promise.resolve(result(false,'invalid_local_id'));
     }
     if(refreshFlights[localConferenceId]){
+      traceLinkedRefresh('enter','return','existing_refresh_flight');
       return refreshFlights[localConferenceId];
     }
+    diagnosticState.linkedRefreshTrace=[];
+    diagnosticState.linkedRefreshExceptionStage=null;
+    traceLinkedRefresh('enter','entered',null);
     diagnosticState.lastLinkedRefreshAttemptAt=new Date().toISOString();
     diagnosticState.metadataRequestReached=false;
     diagnosticState.downloadRequestReached=false;
@@ -1277,11 +1316,13 @@
     var activeClient=client(d);
     var token=++generation;
     if(!account||!activeClient){
+      traceLinkedRefresh('prerequisites','return','prerequisites_missing');
       return Promise.resolve(traceRefreshResult(
         result(false,'prerequisites_missing')
       ));
     }
     if(restoreIsolationPending(d,options)){
+      traceLinkedRefresh('prerequisites','return','restore_isolated');
       return Promise.resolve(traceRefreshResult(result(false,'restore_isolated')));
     }
     var link=d.links&&typeof d.links.get==='function'
@@ -1289,6 +1330,7 @@
       :null;
     if(!link||!link.remoteConferenceId||
       ['linked','cloud_linked'].indexOf(link.linkStatus)<0){
+      traceLinkedRefresh('linked_conference','return','not_linked');
       return Promise.resolve(traceRefreshResult(result(false,'not_linked')));
     }
     var remoteId=String(link.remoteConferenceId||'');
@@ -1306,6 +1348,7 @@
       );
       return Promise.resolve(initialGuards).then(function(guarded){
         if(!guarded.ok){
+          traceLinkedRefresh('initial_guards','return',guarded.status);
           if(guarded.status==='local_changes_pending'){
             return inspectSnapshotMetadata(d,remoteId).then(function(metadata){
               if(metadata.ok){
@@ -1331,6 +1374,8 @@
         return access.ok?result(false,'stale'):access;
       }
           return inspectSnapshotMetadata(d,remoteId).then(function(metadata){
+            traceLinkedRefresh('metadata_received',metadata.ok?'completed':'return',
+              metadata.status);
             if(!metadata.ok||!alive(token,d,account,activeClient)){
               return metadata.ok?result(false,'stale'):metadata;
             }
@@ -1340,6 +1385,8 @@
               conference(stored,localConferenceId),
               knownRevision
             );
+            traceLinkedRefresh('trusted_check','completed',
+              materialization.complete?'trusted_complete':'repair_required');
             diagnosticState.localMaterializedRevision=
               link.syncState&&Number.isInteger(
                 link.syncState.materializedSnapshotRevision
@@ -1353,6 +1400,7 @@
             if(metadata.data.revision<knownRevision){
               diagnosticState.lastRefreshStatus='revision_regressed';
               diagnosticState.lastRefreshBlockedReason='revision_regressed';
+              traceLinkedRefresh('trusted_check','return','revision_regressed');
               return result(false,'revision_regressed');
             }
             if(metadata.data.revision===knownRevision&&
@@ -1381,6 +1429,8 @@
               options
             ).then(function(preDownloadGuards){
               if(!preDownloadGuards.ok){
+                traceLinkedRefresh('pre_download_guards','return',
+                  preDownloadGuards.status);
                 recordRemoteReviewMarker(
                   d,
                   remoteId,
@@ -1449,7 +1499,19 @@
           });
         });
       });
-    }).then(traceRefreshResult).finally(function(){
+    }).then(function(done){
+      if(!done||done.status!=='up_to_date'){
+        traceLinkedRefresh('completed','return',
+          done&&done.status||'no_result');
+      }
+      return traceRefreshResult(done);
+    }).catch(function(error){
+      diagnosticState.linkedRefreshExceptionStage=
+        diagnosticState.linkedRefreshCurrentStage;
+      traceLinkedRefresh(diagnosticState.linkedRefreshCurrentStage,
+        'exception',error&&error.name||'Error');
+      throw error;
+    }).finally(function(){
       if(refreshFlights[localConferenceId]===flight){
         delete refreshFlights[localConferenceId];
       }

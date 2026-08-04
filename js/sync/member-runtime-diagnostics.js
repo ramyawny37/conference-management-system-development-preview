@@ -1,7 +1,7 @@
 (function(global){
   'use strict';
-  var RUNTIME_BUILD_REVISION='member-up-to-date-activation-v1';
-  var SERVICE_WORKER_CACHE_REVISION='member-up-to-date-activation-v1';
+  var RUNTIME_BUILD_REVISION='member-linked-refresh-trace-v1';
+  var SERVICE_WORKER_CACHE_REVISION='member-linked-refresh-trace-v1';
   var FIELDS=Object.freeze([
     'runtimeBuildRevision','serviceWorkerCacheRevision',
     'orchestratorStarted','lastScheduledReason',
@@ -13,7 +13,9 @@
     'materializedCounts','persistedCounts','readAfterWriteCounts',
     'currentConferenceResolved','currentConferenceContentComplete',
     'activationReached','settingsConferenceResolved',
-    'lastPreMetadataExitReason','preMetadataTrace'
+    'lastPreMetadataExitReason','preMetadataTrace',
+    'linkedRefreshCurrentStage','linkedRefreshExceptionStage',
+    'linkedRefreshTrace'
   ]);
   function copy(value){
     if(value===undefined)return null;
@@ -58,7 +60,10 @@
       settingsConferenceResolved:openState.settingsConferenceResolved===true,
       lastPreMetadataExitReason:
         orchestratorState.lastPreMetadataExitReason||null,
-      preMetadataTrace:copy(orchestratorState.preMetadataTrace||[])
+      preMetadataTrace:copy(orchestratorState.preMetadataTrace||[]),
+      linkedRefreshCurrentStage:openState.linkedRefreshCurrentStage||null,
+      linkedRefreshExceptionStage:openState.linkedRefreshExceptionStage||null,
+      linkedRefreshTrace:copy(openState.linkedRefreshTrace||[])
     };
     var sanitized={};
     FIELDS.forEach(function(field){sanitized[field]=state[field];});
