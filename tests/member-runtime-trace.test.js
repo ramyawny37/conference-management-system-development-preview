@@ -41,7 +41,7 @@ const first=service.read();
 const second=service.read();
 assert.deepStrictEqual(first,second,'diagnostic reads must not mutate runtime state');
 assert.strictEqual(first.runtimeBuildRevision,marker);
-assert.strictEqual(first.serviceWorkerCacheRevision,marker);
+assert.strictEqual(first.serviceWorkerCacheRevision,cacheMarker);
 assert.strictEqual(first.orchestratorStarted,true);
 assert.strictEqual(first.lastScheduledReason,'startup');
 assert.strictEqual(first.materializationTrusted,true);

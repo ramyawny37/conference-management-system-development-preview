@@ -713,7 +713,7 @@
         .from('conference_members')
         .select(
           'role,conference:conferences('+
-          'id,name,owner_id,created_at,updated_at,deleted_at)'
+          'id,name,owner_id,organization_id,created_at,updated_at,deleted_at)'
         );
     })
       .then(function(response){
@@ -727,6 +727,7 @@
               id:item.conference.id,
               name:item.conference.name,
               ownerId:item.conference.owner_id,
+              organizationId:item.conference.organization_id||null,
               role:item.role,
               createdAt:item.conference.created_at,
               updatedAt:item.conference.updated_at,
