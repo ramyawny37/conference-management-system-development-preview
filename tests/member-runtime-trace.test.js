@@ -58,9 +58,13 @@ const worker=fs.readFileSync(path.join(root,'service-worker.js'),'utf8');
 assert.ok(worker.includes("const CACHE_REVISION = '"+marker+"';"));
 [
   'js/sync/discovered-conference-open-service.js?rev='+marker,
-  'js/sync/member-runtime-diagnostics.js?rev='+marker,
-  'script.js?rev='+marker
+  'js/sync/member-runtime-diagnostics.js?rev='+marker
 ].forEach(asset=>{
+  assert.ok(index.includes('src="'+asset+'"'),'index missing '+asset);
+  assert.ok(worker.includes("'./"+asset+"'"),'CORE_ASSETS missing '+asset);
+});
+['houses.js?rev=accommodation-selector-state-v1',
+  'script.js?rev=accommodation-selector-state-v1'].forEach(asset=>{
   assert.ok(index.includes('src="'+asset+'"'),'index missing '+asset);
   assert.ok(worker.includes("'./"+asset+"'"),'CORE_ASSETS missing '+asset);
 });

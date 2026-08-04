@@ -376,6 +376,10 @@ function ensureAccommodationDisplayState(conference){
   if(!Array.isArray(conference.accommodationDisplayedRoomIds)){
     conference.accommodationDisplayedRoomIds = [];
   }
+  if(conference.accommodationDisplayStateInitialized!==true){
+    conference.accommodationDisplayedRoomIds = allRoomIds.slice();
+    conference.accommodationDisplayStateInitialized = true;
+  }
   var valid = {};
   allRoomIds.forEach(function(id){ valid[id] = true; });
   var seen = {};
@@ -442,6 +446,7 @@ function commitAccommodationDisplayChange(conference, nextIds, roomsToClear){
     room.children = [];
   });
   conference.accommodationDisplayedRoomIds = nextIds;
+  conference.accommodationDisplayStateInitialized = true;
 }
 
 function saveHouseData(conference, houseId, houseData) {
