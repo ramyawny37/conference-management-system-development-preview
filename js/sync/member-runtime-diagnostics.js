@@ -1,7 +1,7 @@
 (function(global){
   'use strict';
-  var RUNTIME_BUILD_REVISION='member-runtime-trace-v1';
-  var SERVICE_WORKER_CACHE_REVISION='member-runtime-trace-v1';
+  var RUNTIME_BUILD_REVISION='member-pre-metadata-trace-v1';
+  var SERVICE_WORKER_CACHE_REVISION='member-pre-metadata-trace-v1';
   var FIELDS=Object.freeze([
     'runtimeBuildRevision','serviceWorkerCacheRevision',
     'orchestratorStarted','lastScheduledReason',
@@ -12,7 +12,8 @@
     'downloadRequestReached','downloadedRevision','downloadedCounts',
     'materializedCounts','persistedCounts','readAfterWriteCounts',
     'currentConferenceResolved','currentConferenceContentComplete',
-    'activationReached','settingsConferenceResolved'
+    'activationReached','settingsConferenceResolved',
+    'lastPreMetadataExitReason','preMetadataTrace'
   ]);
   function copy(value){
     if(value===undefined)return null;
@@ -54,7 +55,10 @@
       currentConferenceContentComplete:
         openState.currentConferenceContentComplete===true,
       activationReached:openState.activationReached===true,
-      settingsConferenceResolved:openState.settingsConferenceResolved===true
+      settingsConferenceResolved:openState.settingsConferenceResolved===true,
+      lastPreMetadataExitReason:
+        orchestratorState.lastPreMetadataExitReason||null,
+      preMetadataTrace:copy(orchestratorState.preMetadataTrace||[])
     };
     var sanitized={};
     FIELDS.forEach(function(field){sanitized[field]=state[field];});

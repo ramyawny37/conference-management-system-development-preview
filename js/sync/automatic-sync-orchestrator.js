@@ -1,5 +1,6 @@
 (function(global){
   'use strict';
+  var RUNTIME_BUILD_REVISION='member-pre-metadata-trace-v1';
 
   var DEBOUNCE_MS=2000;
   var ALLOWED_REASONS=Object.freeze([
@@ -34,8 +35,23 @@
     lastRunnerInvocationAt:null,
     lastRunnerResultStatus:'runner_not_invoked',
     lastRunnerWaitingReason:null,
-    lastStopReason:null
+    lastStopReason:null,
+    preMetadataTrace:[],
+    lastPreMetadataExitReason:null
   };
+
+  function tracePreMetadata(stage,status,reason){
+    diagnostics.preMetadataTrace.push({
+      at:new Date().toISOString(),
+      stage:String(stage||'unknown'),
+      status:String(status||'unknown'),
+      reason:reason?String(reason):null
+    });
+    diagnostics.preMetadataTrace=diagnostics.preMetadataTrace.slice(-40);
+    if(status==='return'||status==='blocked'||status==='skipped'){
+      diagnostics.lastPreMetadataExitReason=reason||stage||'unknown';
+    }
+  }
 
   function copy(value){
     if(typeof global.structuredClone==='function')return global.structuredClone(value);
@@ -62,6 +78,9 @@
     snapshot.lastRunnerResultStatus=diagnostics.lastRunnerResultStatus;
     snapshot.lastRunnerWaitingReason=diagnostics.lastRunnerWaitingReason;
     snapshot.lastStopReason=diagnostics.lastStopReason;
+    snapshot.runtimeBuildRevision=RUNTIME_BUILD_REVISION;
+    snapshot.preMetadataTrace=copy(diagnostics.preMetadataTrace);
+    snapshot.lastPreMetadataExitReason=diagnostics.lastPreMetadataExitReason;
     var runner=global.AutomaticQueueRunner;
     if(runner&&typeof runner.getState==='function'){
       Object.assign(snapshot,runner.getState());
@@ -463,6 +482,7 @@
 
   function evaluateScheduled(options){
     if(evaluationPromise){
+      tracePreMetadata('evaluateScheduled','return','evaluation_in_progress');
       evaluationFollowUpRequested=true;
       return evaluationPromise;
     }
@@ -470,22 +490,35 @@
     var reasons=state.scheduledReasons.slice();
     state.evaluating=true;
     var flight=Promise.resolve().then(function(){
-      if(generation!==state.generation||!state.started)return publicState();
+      tracePreMetadata('evaluateScheduled','entered',null);
+      if(generation!==state.generation||!state.started){
+        tracePreMetadata('evaluateScheduled','return',
+          generation!==state.generation?'generation_changed':'orchestrator_stopped');
+        return publicState();
+      }
       state.scheduledReasons=[];
       diagnostics.lastEvaluationReasons=reasons.slice();
       diagnostics.lastEvaluationStartedAt=new Date().toISOString();
       return evaluateConnectivity(options).then(function(connectivityState){
+        tracePreMetadata('connectivity','evaluated',
+          connectivityState&&connectivityState.connectivity||'unknown');
         if(generation!==state.generation||!state.started||
           connectivityState.connectivity!=='online'||
           reasons.indexOf('offline_event')>=0&&reasons.length===1){
           if(connectivityState.connectivity!=='online'){
+            tracePreMetadata('connectivity','return',
+              connectivityState.connectivity||'not_online');
             return disconnectRealtime(options).then(function(){
               return connectivityState;
             });
           }
+          tracePreMetadata('connectivity','return','offline_event_only');
           return connectivityState;
         }
         var linkingLocalConferenceId=currentLocalConferenceId(options);
+        tracePreMetadata('currentConference',
+          linkingLocalConferenceId?'passed':'return',
+          linkingLocalConferenceId?null:'no_current_conference');
         var resolver=options.stateResolver||
           global.ConferenceSyncStateResolver;
         var inspectLinkedContext=function(resolved){
@@ -521,12 +554,17 @@
           if(!linkingLocalConferenceId||!resolver||
             typeof resolver.resolve!=='function'){
             diagnostics.lastResolverStatus='resolver_unavailable';
+            tracePreMetadata('resolver','return',!linkingLocalConferenceId
+              ?'no_current_conference':'resolver_unavailable');
             return Promise.resolve(null);
           }
+          tracePreMetadata('resolver','entered',null);
           return resolver.resolve({
             localConferenceId:linkingLocalConferenceId
           },options.stateResolverOptions).then(function(resolved){
             diagnostics.lastResolverStatus=resolved&&resolved.status||null;
+            tracePreMetadata('resolver','resolved',
+              resolved&&resolved.status||'no_result');
             return resolved;
           });
         };
@@ -543,7 +581,11 @@
         };
         var runLinkedConference=function(connectivityState,resolvedState){
           diagnostics.lastRunLinkedConferenceAt=new Date().toISOString();
-          if(staleResult())return Promise.resolve(publicState());
+          tracePreMetadata('runLinkedConference','entered',null);
+          if(staleResult()){
+            tracePreMetadata('runLinkedConference','return','conference_changed');
+            return Promise.resolve(publicState());
+          }
           if(restoreIsolationPending(options)||
             manualRelinkPending(linkingLocalConferenceId,options)||
             global.navigator&&global.navigator.onLine===false){
@@ -554,6 +596,7 @@
                 :'offline';
             state.linkedConferenceId=null;
             diagnostics.lastStopReason=state.conferenceState;
+            tracePreMetadata('linkedRuntimeGuard','return',state.conferenceState);
             return disconnectRealtime(options).then(publicState);
           }
           state.conferenceState='linked';
@@ -576,6 +619,8 @@
             ));
           }
           return Promise.resolve(runQueue).then(function(queueResult){
+            tracePreMetadata('queue','completed',
+              queueResult&&queueResult.status||'runner_not_invoked');
             if(runner&&typeof runner.run==='function'){
               diagnostics.lastRunnerResultStatus=
                 queueResult&&queueResult.status||null;
@@ -593,6 +638,15 @@
                 linkingLocalConferenceId&&state.started){
                 schedule('conference_changed',options);
               }
+              tracePreMetadata('postQueueGuard','return',
+                queueResult&&queueResult.ok===false?'queue_failed':
+                generation!==state.generation?'generation_changed':
+                !state.started?'orchestrator_stopped':
+                currentLocalConferenceId(options)!==linkingLocalConferenceId
+                  ?'conference_changed':
+                global.navigator&&global.navigator.onLine===false?'offline':
+                restoreIsolationPending(options)?'restore_isolated':
+                'manual_relink_required');
               return disconnectRealtime(options);
             }
             return resolveState().then(function(latest){
@@ -605,21 +659,38 @@
                 latest.data.link&&latest.data.link.remoteConferenceId);
               if(!latest||!latest.ok||latest.status!=='linked'||
                 !latestRemote||latestRemote!==expectedRemote){
+                tracePreMetadata('postQueueResolver','return',
+                  !latest?'resolver_no_result':
+                  !latest.ok?'resolver_failed':
+                  latest.status!=='linked'?'not_linked':
+                  !latestRemote?'no_remote_context':'remote_context_changed');
                 return disconnectRealtime(options);
               }
               var opener=options&&options.discoveredOpenService||
                 global.DiscoveredConferenceOpenService;
               var refreshAllowed=shouldRefreshForReasons(reasons);
+              tracePreMetadata('refreshReason',refreshAllowed?'passed':'skipped',
+                refreshAllowed?null:'startup_reason_not_allowed');
+              tracePreMetadata('refreshService',opener&&
+                typeof opener.refreshLinkedLocalConference==='function'
+                  ?'passed':'skipped',!opener?'service_not_registered':
+                typeof opener.refreshLinkedLocalConference!=='function'
+                  ?'refresh_function_unavailable':null);
               var refreshFlow=!refreshAllowed||!opener||
                 typeof opener.refreshLinkedLocalConference!=='function'
                 ?Promise.resolve({ok:true,status:'refresh_skipped'})
-                :Promise.resolve(opener.refreshLinkedLocalConference(
+                :(tracePreMetadata('refreshLinkedLocalConference','entered',null),
+                  Promise.resolve(opener.refreshLinkedLocalConference(
                   linkingLocalConferenceId,
                   options&&options.discoveredOpenOptions
-                )).catch(function(){
+                ))).catch(function(){
+                  tracePreMetadata('refreshLinkedLocalConference','return',
+                    'linked_refresh_threw');
                   return {ok:false,status:'linked_refresh_failed'};
                 });
               return refreshFlow.then(function(refreshResult){
+                tracePreMetadata('refreshLinkedLocalConference','completed',
+                  refreshResult&&refreshResult.status||'no_result');
                 if(refreshResult&&refreshResult.ok===false&&
                   (refreshResult.status==='restore_isolated'||
                   refreshResult.status==='manual_relink_required')){
@@ -713,7 +784,11 @@
           });
         };
         var recoverOrRoute=function(resolved,connectivityState){
-          if(staleResult())return Promise.resolve(publicState());
+          tracePreMetadata('route','entered',resolved&&resolved.status||'no_result');
+          if(staleResult()){
+            tracePreMetadata('route','return','conference_changed');
+            return Promise.resolve(publicState());
+          }
           if(resolved&&resolved.ok&&
             resolved.status==='finalizing_conflict'){
             state.conferenceState='finalizing_conflict';
@@ -745,6 +820,12 @@
           }
           if(resolved&&resolved.ok&&resolved.status==='linked'){
             var linkedContext=inspectLinkedContext(resolved);
+            tracePreMetadata('linkedContext',
+              linkedContext.contextCompatible?'passed':'evaluated',
+              linkedContext.contextCompatible?null:
+              !linkedContext.available?'integration_unavailable':
+              !linkedContext.actualContextPresent?'no_context':
+              'context_incompatible');
             if(linkedContext.contextCompatible){
               return runLinkedConference(connectivityState,resolved);
             }
@@ -768,6 +849,7 @@
           }
           if(resolved&&resolved.ok&&
             resolved.status!=='local_only'){
+            tracePreMetadata('route','return',resolved.status);
             state.conferenceState=resolved.status;
             state.linkedConferenceId=null;
             return disconnectRealtime(options).then(publicState);
@@ -785,9 +867,14 @@
               ok:true,status:'unavailable',data:{linked:true}
             });
           return linking.then(function(linkResult){
-            if(staleResult())return publicState();
+            if(staleResult()){
+              tracePreMetadata('automaticLinking','return','conference_changed');
+              return publicState();
+            }
             if(linker&&(!linkResult||!linkResult.data||
               linkResult.data.linked!==true)){
+              tracePreMetadata('automaticLinking','return',
+                linkResult&&linkResult.status||'not_linked');
               return disconnectRealtime(options).then(publicState);
             }
             return resolveState().then(function(afterLink){
@@ -834,9 +921,14 @@
     reason=String(reason||'');
     options=options&&typeof options==='object'?options:{};
     if(ALLOWED_REASONS.indexOf(reason)<0){
+      tracePreMetadata('schedule','return','invalid_reason');
       return {ok:false,status:'invalid_reason'};
     }
-    if(!state.started)return {ok:false,status:'stopped'};
+    if(!state.started){
+      tracePreMetadata('schedule','return','orchestrator_stopped');
+      return {ok:false,status:'stopped'};
+    }
+    tracePreMetadata('schedule','accepted',reason);
     diagnostics.lastScheduledReason=reason;
     if(state.scheduledReasons.indexOf(reason)<0){
       state.scheduledReasons.push(reason);
@@ -854,7 +946,10 @@
 
   function start(options){
     options=options&&typeof options==='object'?options:{};
-    if(state.started)return {ok:true,status:'already_started'};
+    if(state.started){
+      tracePreMetadata('start','return','already_started');
+      return {ok:true,status:'already_started'};
+    }
     if(restoreIsolationPending(options)){
       state.conferenceState='restore_isolated';
       state.connectivity='stopped';
@@ -885,6 +980,9 @@
       return {ok:true,status:'cloud_disabled'};
     }
     state.started=true;
+    diagnostics.preMetadataTrace=[];
+    diagnostics.lastPreMetadataExitReason=null;
+    tracePreMetadata('start','passed',null);
     diagnostics.lastStopReason=null;
     activeOptions=options;
     state.generation++;

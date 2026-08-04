@@ -235,6 +235,14 @@ async function run(){
       .getState().conferenceState,
     'linked'
   );
+  var missingCurrentTrace=newlyLinked.window.AutomaticSyncOrchestrator
+    .getState().preMetadataTrace;
+  assert.ok(missingCurrentTrace.some(function(entry){
+    return entry.stage==='currentConference'&&
+      entry.reason==='no_current_conference';
+  }));
+  assert.strictEqual(JSON.stringify(missingCurrentTrace).indexOf(
+    'conference-a'),-1);
 
   var currentConference={id:'conference-a'};
   var linkingCalls=[];
@@ -445,6 +453,12 @@ async function run(){
   assert.ok(followUpState.lastRunnerInvocationAt);
   assert.strictEqual(followUpState.lastRunnerResultStatus,'empty');
   assert.strictEqual(followUpState.lastRunnerWaitingReason,null);
+  assert.ok(followUpState.preMetadataTrace.some(function(entry){
+    return entry.stage==='refreshService'&&
+      entry.reason==='service_not_registered';
+  }));
+  assert.strictEqual(followUpState.lastPreMetadataExitReason,
+    'service_not_registered');
   followUp.window.AutomaticSyncOrchestrator.stop();
   assert.strictEqual(
     followUp.window.AutomaticSyncOrchestrator.getState().lastStopReason,

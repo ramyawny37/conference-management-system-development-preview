@@ -1,6 +1,6 @@
 const APP_VERSION = '3.1.1';
 const CACHE_PREFIX = 'conference-manager-core-';
-const CACHE_REVISION = 'member-runtime-trace-v1';
+const CACHE_REVISION = 'member-pre-metadata-trace-v1';
 const CACHE_NAME = CACHE_PREFIX + 'v' + APP_VERSION + '-' + CACHE_REVISION;
 const CORE_ASSETS = [
   './',
@@ -64,8 +64,8 @@ const CORE_ASSETS = [
   './js/sync/automatic-queue-runner.js?rev=runtime-diagnostics-v1',
   './js/sync/automatic-conference-linking.js',
   './js/sync/discovered-conference-open-service.js?rev=member-runtime-trace-v1',
-  './js/sync/member-runtime-diagnostics.js?rev=member-runtime-trace-v1',
-  './js/sync/automatic-sync-orchestrator.js?rev=member-remote-apply-safe-v1',
+  './js/sync/member-runtime-diagnostics.js?rev=member-pre-metadata-trace-v1',
+  './js/sync/automatic-sync-orchestrator.js?rev=member-pre-metadata-trace-v1',
   './utils.js',
   './core.js',
   './people.js',
