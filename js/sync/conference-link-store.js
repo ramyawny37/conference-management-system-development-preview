@@ -97,6 +97,10 @@
       stackTrace:shortStack(),
       timestamp:new Date().toISOString()
     };
+    var persistent=global.LinkStatusDiagnosticStore;
+    if(persistent&&typeof persistent.append==='function'){
+      try{persistent.append(event);}catch(error){}
+    }
     diagnosticEvents.push(event);
     if(diagnosticEvents.length>MAX_DIAGNOSTIC_EVENTS){
       diagnosticEvents.splice(0,diagnosticEvents.length-MAX_DIAGNOSTIC_EVENTS);

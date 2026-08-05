@@ -170,7 +170,10 @@
       html+='<tr><td dir="ltr">'+escapeHtml(field)+'</td><td dir="ltr">'+
         escapeHtml(String(value))+'</td></tr>';
     });
-    html+='</tbody></table></div></section>';
+    html+='</tbody></table><div class="sync-settings-actions">'+
+      '<button type="button" class="btn btn-gray btn-sm" '+
+      'onclick="MemberRuntimeDiagnostics.clearPersistentLinkStatusTrace()">'+
+      'مسح سجل تشخيص Link</button></div></div></section>';
     return html;
   }
 

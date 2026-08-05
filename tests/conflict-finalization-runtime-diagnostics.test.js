@@ -54,6 +54,17 @@ async function run(){
         eventName:'LINK_STATUS_REGRESSION_DETECTED',writerName:'TestWriter'
       }];}
     },
+    LinkStatusDiagnosticStore:{
+      getState:function(){return {
+        records:[{eventName:'LINK_STATUS_REGRESSION_DETECTED',
+          writerName:'PersistentWriter'}],
+        regressionCount:1,
+        latestRegression:{eventName:'LINK_STATUS_REGRESSION_DETECTED',
+          writerName:'PersistentWriter'},
+        readError:null
+      };},
+      clear:function(){return {ok:true,status:'cleared'};}
+    },
     AutomaticSyncOrchestrator:{getState:function(){return {}; }},
     DiscoveredConferenceOpenService:{getState:function(){return {}; }},
     ConferenceRealtimeManager:{getState:function(){return {}; }},
@@ -87,6 +98,11 @@ async function run(){
   assert.strictEqual(result['link.actualRevision'],18);
   assert.strictEqual(result.linkStatusWriteTrace.length,1);
   assert.strictEqual(result.linkStatusWriteTrace[0].writerName,'TestWriter');
+  assert.strictEqual(result.persistentLinkStatusWriteTrace.length,1);
+  assert.strictEqual(result.persistentRegressionCount,1);
+  assert.strictEqual(result.latestPersistentRegression.writerName,
+    'PersistentWriter');
+  assert.strictEqual(result.traceStorageReadError,null);
   assert.strictEqual(result.firstIncompleteFlag,'linkMetadataUpdated');
 
   console.log('conflict finalization runtime diagnostics tests: passed');

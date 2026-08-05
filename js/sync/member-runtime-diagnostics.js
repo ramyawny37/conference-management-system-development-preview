@@ -1,7 +1,7 @@
 (function(global){
   'use strict';
   var RUNTIME_BUILD_REVISION='canonical-conference-schema-v1';
-  var SERVICE_WORKER_CACHE_REVISION='conference-link-writer-diagnostics-v1';
+  var SERVICE_WORKER_CACHE_REVISION='persistent-link-status-diagnostics-v1';
   var FIELDS=Object.freeze([
     'runtimeBuildRevision','serviceWorkerCacheRevision',
     'orchestratorStarted','lastScheduledReason',
@@ -14,6 +14,8 @@
     'currentConferenceResolved','currentConferenceContentComplete',
     'activationReached','settingsConferenceResolved',
     'realtimeManagerState','realtimeTrace','linkStatusWriteTrace',
+    'persistentLinkStatusWriteTrace','persistentRegressionCount',
+    'latestPersistentRegression','traceStorageReadError',
     'lastPreMetadataExitReason','preMetadataTrace',
     'linkedRefreshCurrentStage','linkedRefreshExceptionStage',
     'linkedRefreshTrace','activationCurrentStage','activationExceptionStage',
@@ -116,6 +118,10 @@
     var draft=conflict.draft||null;
     var pending=conflict.pending||null;
     var link=conflict.link||null;
+    var persistentStore=global.LinkStatusDiagnosticStore;
+    var persistentState=persistentStore&&
+      typeof persistentStore.getState==='function'
+      ?persistentStore.getState():{};
     var state={
       runtimeBuildRevision:RUNTIME_BUILD_REVISION,
       serviceWorkerCacheRevision:SERVICE_WORKER_CACHE_REVISION,
@@ -152,6 +158,14 @@
       linkStatusWriteTrace:copy(global.ConferenceLinkStore&&
         typeof global.ConferenceLinkStore.getWriteDiagnostics==='function'
           ?global.ConferenceLinkStore.getWriteDiagnostics():[]),
+      persistentLinkStatusWriteTrace:copy(persistentState.records||[]),
+      persistentRegressionCount:Number.isInteger(
+        persistentState.regressionCount
+      )?persistentState.regressionCount:0,
+      latestPersistentRegression:copy(
+        persistentState.latestRegression||null
+      ),
+      traceStorageReadError:persistentState.readError||null,
       lastPreMetadataExitReason:
         orchestratorState.lastPreMetadataExitReason||null,
       preMetadataTrace:copy(orchestratorState.preMetadataTrace||[]),
@@ -186,9 +200,17 @@
     FIELDS.forEach(function(field){sanitized[field]=state[field];});
     return sanitized;
   }
+  function clearPersistentLinkStatusTrace(){
+    var store=global.LinkStatusDiagnosticStore;
+    var result=store&&typeof store.clear==='function'
+      ?store.clear():{ok:false,status:'unavailable'};
+    if(typeof global.renderSettings==='function')global.renderSettings();
+    return result;
+  }
   global.MemberRuntimeDiagnostics=Object.freeze({
     runtimeBuildRevision:RUNTIME_BUILD_REVISION,
     serviceWorkerCacheRevision:SERVICE_WORKER_CACHE_REVISION,
-    fields:FIELDS.slice(),read:read
+    fields:FIELDS.slice(),read:read,
+    clearPersistentLinkStatusTrace:clearPersistentLinkStatusTrace
   });
 })(window);
