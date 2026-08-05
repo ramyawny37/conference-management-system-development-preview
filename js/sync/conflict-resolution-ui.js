@@ -88,7 +88,13 @@
           conflictStatus:'reviewed',
           linkStatus:'needs_resolution',
           lastConflictAt:conflict.createdAt||new Date().toISOString()
-        }));
+        }),{diagnosticWriter:{
+          writerName:'ConflictResolutionUI.loadConflict',
+          incomingRevision:Number.isInteger(conflict.actualRevision)
+            ?conflict.actualRevision:null,
+          reason:'conflict_review_loaded',
+          trigger:'loadConflict'
+        }});
         return safe(true,'reviewed',copy({
           comparison:review.comparison,
           classification:review.classification,

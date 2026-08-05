@@ -45,10 +45,15 @@ async function run(){
       },
       putRecord:function(){writes++;return Promise.resolve();}
     },
-    ConferenceLinkStore:{get:function(){return {
-      linkStatus:'needs_resolution',pendingLocalApplication:false,
-      knownRevision:18,actualRevision:18
-    };}},
+    ConferenceLinkStore:{
+      get:function(){return {
+        linkStatus:'needs_resolution',pendingLocalApplication:false,
+        knownRevision:18,actualRevision:18
+      };},
+      getWriteDiagnostics:function(){return [{
+        eventName:'LINK_STATUS_REGRESSION_DETECTED',writerName:'TestWriter'
+      }];}
+    },
     AutomaticSyncOrchestrator:{getState:function(){return {}; }},
     DiscoveredConferenceOpenService:{getState:function(){return {}; }},
     ConferenceRealtimeManager:{getState:function(){return {}; }},
@@ -80,6 +85,8 @@ async function run(){
   assert.strictEqual(result['link.pendingLocalApplication'],false);
   assert.strictEqual(result['link.knownRevision'],18);
   assert.strictEqual(result['link.actualRevision'],18);
+  assert.strictEqual(result.linkStatusWriteTrace.length,1);
+  assert.strictEqual(result.linkStatusWriteTrace[0].writerName,'TestWriter');
   assert.strictEqual(result.firstIncompleteFlag,'linkMetadataUpdated');
 
   console.log('conflict finalization runtime diagnostics tests: passed');

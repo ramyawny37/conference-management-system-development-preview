@@ -85,7 +85,11 @@
       ?outcome(true,'context_restored',{link:link})
       :outcome(false,'context_failed');
   }
-  function saveLink(d,input){return d.links.save(input);}
+  function saveLink(d,input,diagnosticWriter){
+    return d.links.save(input,diagnosticWriter?{
+      diagnosticWriter:diagnosticWriter
+    }:undefined);
+  }
 
   function createOnlineConference(input,options){
     input=input||{};
@@ -156,6 +160,12 @@
         knownRevision:result.data.revision,
         actualRevision:result.data.revision,
         linkStatus:'needs_resolution'
+      },{
+        writerName:'ConferenceSyncUI.previewRemote',
+        incomingRevision:Number.isInteger(result.data.revision)
+          ?result.data.revision:null,
+        reason:'remote_preview_differs',
+        trigger:'previewRemote'
       });
       if(!differs){
         saveLink(d,{
@@ -254,6 +264,12 @@
           conflictId:conflictId,
           conflictStatus:conflictId?'pending':null,
           lastConflictAt:conflictId?new Date().toISOString():null
+        },current.conflictActualRevision===null?null:{
+          writerName:'ConferenceSyncUI.syncNow',
+          incomingRevision:Number.isInteger(current.conflictActualRevision)
+            ?current.conflictActualRevision:null,
+          reason:'manual_sync_conflict',
+          trigger:'syncNow'
         });
         return result&&result.ok?outcome(true,'completed',result.data):
           outcome(false,'sync_failed');

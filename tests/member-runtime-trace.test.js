@@ -5,7 +5,7 @@ const vm=require('vm');
 
 const root=path.join(__dirname,'..');
 const marker='canonical-conference-schema-v1';
-const cacheMarker='conflict-finalization-diagnostics-v1';
+const cacheMarker='conference-link-writer-diagnostics-v1';
 const source=fs.readFileSync(path.join(
   root,'js/sync/member-runtime-diagnostics.js'),'utf8');
 const sandbox={window:null,structuredClone:value=>JSON.parse(JSON.stringify(value)),

@@ -1,7 +1,7 @@
 (function(global){
   'use strict';
   var RUNTIME_BUILD_REVISION='canonical-conference-schema-v1';
-  var SERVICE_WORKER_CACHE_REVISION='conflict-finalization-diagnostics-v1';
+  var SERVICE_WORKER_CACHE_REVISION='conference-link-writer-diagnostics-v1';
   var FIELDS=Object.freeze([
     'runtimeBuildRevision','serviceWorkerCacheRevision',
     'orchestratorStarted','lastScheduledReason',
@@ -13,7 +13,7 @@
     'materializedCounts','persistedCounts','readAfterWriteCounts',
     'currentConferenceResolved','currentConferenceContentComplete',
     'activationReached','settingsConferenceResolved',
-    'realtimeManagerState','realtimeTrace',
+    'realtimeManagerState','realtimeTrace','linkStatusWriteTrace',
     'lastPreMetadataExitReason','preMetadataTrace',
     'linkedRefreshCurrentStage','linkedRefreshExceptionStage',
     'linkedRefreshTrace','activationCurrentStage','activationExceptionStage',
@@ -149,6 +149,9 @@
       realtimeTrace:copy(realtimeManager&&
         typeof realtimeManager.getDiagnostics==='function'
           ?realtimeManager.getDiagnostics():[]),
+      linkStatusWriteTrace:copy(global.ConferenceLinkStore&&
+        typeof global.ConferenceLinkStore.getWriteDiagnostics==='function'
+          ?global.ConferenceLinkStore.getWriteDiagnostics():[]),
       lastPreMetadataExitReason:
         orchestratorState.lastPreMetadataExitReason||null,
       preMetadataTrace:copy(orchestratorState.preMetadataTrace||[]),

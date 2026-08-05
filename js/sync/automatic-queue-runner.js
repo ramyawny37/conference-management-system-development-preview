@@ -245,13 +245,19 @@
   function saveConflictLink(link,processResult,options){
     var store=options.linkStore||global.ConferenceLinkStore;
     if(!store||typeof store.save!=='function')return;
+    var actualRevision=processResult.data&&processResult.data.actualRevision;
     store.save(Object.assign({},link,{
       linkStatus:'needs_resolution',
-      actualRevision:processResult.data&&processResult.data.actualRevision,
+      actualRevision:actualRevision,
       conflictId:processResult.data&&processResult.data.conflictId,
       conflictStatus:'active',
       lastConflictAt:new Date().toISOString()
-    }),options.linkOptions);
+    }),Object.assign({},options.linkOptions||{}, {diagnosticWriter:{
+      writerName:'AutomaticQueueRunner.saveConflictLink',
+      incomingRevision:Number.isInteger(actualRevision)?actualRevision:null,
+      reason:'queue_processor_conflict',
+      trigger:'processor_result_conflict'
+    }}));
   }
   function publishSuccessfulRevision(item,processResult,options){
     var integration=options.integration||global.OfflineFirstIntegration;

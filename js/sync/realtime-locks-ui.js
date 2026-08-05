@@ -179,7 +179,13 @@
             actualRevision:Number.isInteger(download.data.revision)
               ?download.data.revision:null,
             lastConflictAt:new Date().toISOString()
-          }));
+          }),{diagnosticWriter:{
+            writerName:'RealtimeLocksUI.reviewRemote',
+            incomingRevision:Number.isInteger(download.data.revision)
+              ?download.data.revision:null,
+            reason:'remote_review_threshold',
+            trigger:'reviewRemote'
+          }});
         }
         reviewSummary={status:markerStatus,summary:copy(summary)};
         return {ok:true,status:markerStatus,data:copy(reviewSummary)};
