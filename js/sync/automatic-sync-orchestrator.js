@@ -93,6 +93,11 @@
 
   function notify(){
     var snapshot=publicState();
+    var manager=activeOptions&&activeOptions.realtimeManager||
+      global.ConferenceRealtimeManager;
+    var managerState=manager&&snapshot.linkedConferenceId&&
+      typeof manager.getState==='function'
+      ?manager.getState(snapshot.linkedConferenceId):null;
     var fingerprint=JSON.stringify({
       started:snapshot.started,
       connectivity:snapshot.connectivity,
@@ -105,6 +110,12 @@
       nextRetryAt:snapshot.nextRetryAt,
       realtimeStatus:realtimeStatus,
       realtimeConferenceId:realtimeConferenceId,
+      automaticRealtimeStatus:managerState&&managerState.status||null,
+      automaticRealtimeGeneration:managerState&&managerState.generation||0,
+      automaticRealtimeCloudConferenceId:
+        managerState&&managerState.cloudConferenceId||null,
+      automaticRealtimeError:managerState&&managerState.lastError&&
+        managerState.lastError.code||null,
       lastError:snapshot.lastError&&snapshot.lastError.code,
       lastSafeError:snapshot.lastSafeError&&snapshot.lastSafeError.code
     });

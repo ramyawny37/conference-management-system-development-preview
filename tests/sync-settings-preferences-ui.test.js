@@ -10,6 +10,7 @@ var values={};
 var calls=[];
 var orchestratorListener=null;
 var renderCount=0;
+var realtimeState={status:'inactive',generation:0,cloudConferenceId:null};
 var currentConference={id:'local-a'};
 var currentLink={
   localConferenceId:'local-a',
@@ -53,6 +54,9 @@ var sandbox={
     get:function(id){
       return id===currentLink.localConferenceId?currentLink:null;
     }
+  },
+  ConferenceRealtimeManager:{
+    getState:function(){return realtimeState;}
   },
   renderSettings:function(){renderCount++;},
   SupabaseRuntimeConfig:{
@@ -114,12 +118,21 @@ orchestratorListener({
 });
 assert.strictEqual(renderCount,1);
 
+realtimeState={
+  status:'subscribed',generation:1,cloudConferenceId:'remote-a'
+};
+orchestratorListener({
+  conferenceState:'linked',
+  linkedConferenceId:'local-a'
+});
+assert.strictEqual(renderCount,2);
+
 currentConference={id:'local-b'};
 orchestratorListener({
   conferenceState:'linked',
   linkedConferenceId:'local-a'
 });
-assert.strictEqual(renderCount,1);
+assert.strictEqual(renderCount,2);
 
 currentLink={
   localConferenceId:'local-b',
@@ -131,7 +144,7 @@ orchestratorListener({
   conferenceState:'linked',
   linkedConferenceId:'local-b'
 });
-assert.strictEqual(renderCount,2);
+assert.strictEqual(renderCount,3);
 
 elements.sync_cloud_enabled.checked=false;
 sandbox.SyncSettingsUI.saveAutomaticSyncPreferences();

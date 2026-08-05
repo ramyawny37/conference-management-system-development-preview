@@ -163,6 +163,20 @@ async function delay(ms){
     'SUBSCRIBE_CALLED','CHANNEL_SUBSCRIBED'
   ].forEach(stage=>assert.ok(stages.includes(stage),'missing stage '+stage));
 
+  console.log('runtime snapshot:',JSON.stringify({
+    cloudConferenceId:realtime.cloudConferenceId,
+    userId:realtime.userId,
+    identity:realtime.identity,
+    generation:realtime.generation,
+    status:realtime.status,
+    connected:realtime.connected,
+    trace:stages.filter(stage=>[
+      'ROUTE_RESOLVED','REALTIME_ROUTE_EVALUATED',
+      'PREPARE_SUBSCRIBE_CALLED','START_SUBSCRIBE','CREATE_CHANNEL',
+      'SUBSCRIBE_CALLED','CHANNEL_SUBSCRIBED'
+    ].includes(stage))
+  }));
+
   const stopped=sandbox.AutomaticSyncOrchestrator.stop();
   await stopped.promise;
   console.log('realtime startup end-to-end tests: passed');

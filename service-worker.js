@@ -1,6 +1,6 @@
 const APP_VERSION = '3.1.1';
 const CACHE_PREFIX = 'conference-manager-core-';
-const CACHE_REVISION = 'realtime-startup-e2e-v1';
+const CACHE_REVISION = 'realtime-refresh-completion-v1';
 const CACHE_NAME = CACHE_PREFIX + 'v' + APP_VERSION + '-' + CACHE_REVISION;
 const CORE_ASSETS = [
   './',
@@ -41,7 +41,7 @@ const CORE_ASSETS = [
   './js/sync/conference-locks.js',
   './js/sync/offline-first-integration.js?rev=revision-publish-1',
   './js/sync/debug-binding-report-ui.js?rev=debug-binding-report-ui-v2',
-  './js/sync/sync-settings-ui.js?rev=automatic-sync-preferences-gap-v1',
+  './js/sync/sync-settings-ui.js?rev=realtime-refresh-completion-v1',
   './js/sync/conference-link-store.js',
   './js/sync/conference-membership-attempt-store.js',
   './js/sync/conference-members-service.js',
@@ -56,18 +56,18 @@ const CORE_ASSETS = [
   './js/sync/local-snapshot-application.js?rev=phase-5',
   './js/sync/conflict-resolution-ui.js?rev=phase-6',
   './js/sync/remote-update-store.js',
-  './js/sync/realtime-locks-ui.js?rev=realtime-startup-e2e-v1',
+  './js/sync/realtime-locks-ui.js?rev=realtime-refresh-completion-v1',
   './js/sync/automatic-sync-preferences.js?rev=automatic-sync-preferences-gap-v1',
   './js/sync/sync-scheduler-state.js',
   './js/sync/conference-sync-state-resolver.js?rev=phase-5',
   './js/sync/conference-queue-integration.js?rev=queue-legacy-compat-v1',
-  './js/sync/conference-realtime-manager.js?rev=realtime-startup-e2e-v1',
+  './js/sync/conference-realtime-manager.js?rev=realtime-refresh-completion-v1',
   './js/sync/conference-operational-ui.js',
   './js/sync/automatic-queue-runner.js?rev=runtime-diagnostics-v1',
-  './js/sync/automatic-conference-linking.js?rev=realtime-startup-e2e-v1',
-  './js/sync/discovered-conference-open-service.js?rev=realtime-startup-e2e-v1',
-  './js/sync/member-runtime-diagnostics.js?rev=realtime-startup-e2e-v1',
-  './js/sync/automatic-sync-orchestrator.js?rev=realtime-startup-e2e-v1',
+  './js/sync/automatic-conference-linking.js?rev=realtime-refresh-completion-v1',
+  './js/sync/discovered-conference-open-service.js?rev=realtime-refresh-completion-v1',
+  './js/sync/member-runtime-diagnostics.js?rev=realtime-refresh-completion-v1',
+  './js/sync/automatic-sync-orchestrator.js?rev=realtime-refresh-completion-v1',
   './js/sync/wrong-remote-binding-repair-store.js?rev=wrong-remote-binding-repair-v1',
   './js/sync/wrong-remote-binding-repair-service.js?rev=wrong-remote-binding-repair-v1',
   './js/sync/wrong-remote-binding-repair-ui.js?rev=wrong-remote-binding-repair-v1',

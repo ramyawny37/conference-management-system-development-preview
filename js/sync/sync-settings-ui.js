@@ -41,6 +41,11 @@
       ?store.get(localConferenceId)
       :null;
     link=link||{};
+    var realtimeManager=global.ConferenceRealtimeManager;
+    var realtimeState=realtimeManager&&
+      typeof realtimeManager.getState==='function'
+      ?realtimeManager.getState(localConferenceId):null;
+    realtimeState=realtimeState||{};
     return [
       String(localConferenceId),
       String(state&&state.conferenceState||''),
@@ -49,7 +54,11 @@
       String(link.conflictStatus||''),
       String(link.pendingLocalApplication===true),
       String(link.knownRevision==null?'':link.knownRevision),
-      String(link.actualRevision==null?'':link.actualRevision)
+      String(link.actualRevision==null?'':link.actualRevision),
+      String(realtimeState.status||''),
+      String(realtimeState.generation==null?'':realtimeState.generation),
+      String(realtimeState.cloudConferenceId||''),
+      String(realtimeState.lastError&&realtimeState.lastError.code||'')
     ].join('|');
   }
 
