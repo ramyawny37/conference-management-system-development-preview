@@ -5,7 +5,7 @@ const vm=require('vm');
 
 const root=path.join(__dirname,'..');
 const marker='canonical-conference-schema-v1';
-const cacheMarker='realtime-subscribe-trace-v1';
+const cacheMarker='conference-lifecycle-cloud-linked-v1';
 const source=fs.readFileSync(path.join(
   root,'js/sync/member-runtime-diagnostics.js'),'utf8');
 const sandbox={window:null,structuredClone:value=>JSON.parse(JSON.stringify(value)),
@@ -68,7 +68,7 @@ const index=fs.readFileSync(path.join(root,'index.html'),'utf8');
 const worker=fs.readFileSync(path.join(root,'service-worker.js'),'utf8');
 assert.ok(worker.includes("const CACHE_REVISION = '"+cacheMarker+"';"));
 [
-  'js/sync/discovered-conference-open-service.js?rev=realtime-ui-manager-binding-v1',
+  'js/sync/discovered-conference-open-service.js?rev='+cacheMarker,
   'js/sync/member-runtime-diagnostics.js?rev='+cacheMarker,
   'core.js?rev='+marker,
   'people.js?rev='+marker,

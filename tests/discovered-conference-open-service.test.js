@@ -310,6 +310,11 @@ function environment(settings={}){
   assert.strictEqual(Object.values(linkedRefresh.links)[0].pendingLocalApplication,
     false);
   assert.strictEqual(linkedRefresh.stored().conferences[0].peopleDb.people.length,2);
+  assert.strictEqual(
+    linkedRefresh.stored().conferenceLifecycle.records['existing-local']
+      .cloudLifecycle,
+    'cloud_linked'
+  );
   assert.deepStrictEqual(linkedRefresh.forbidden(),{queue:0,publication:0,rpc:0});
   const refreshOne=await linkedRefresh.api.refreshLinkedLocalConference('existing-local');
   assert.strictEqual(refreshOne.status,'opened');

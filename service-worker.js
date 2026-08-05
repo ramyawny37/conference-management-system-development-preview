@@ -1,6 +1,6 @@
 const APP_VERSION = '3.1.1';
 const CACHE_PREFIX = 'conference-manager-core-';
-const CACHE_REVISION = 'realtime-subscribe-trace-v1';
+const CACHE_REVISION = 'conference-lifecycle-cloud-linked-v1';
 const CACHE_NAME = CACHE_PREFIX + 'v' + APP_VERSION + '-' + CACHE_REVISION;
 const CORE_ASSETS = [
   './',
@@ -61,13 +61,13 @@ const CORE_ASSETS = [
   './js/sync/sync-scheduler-state.js',
   './js/sync/conference-sync-state-resolver.js?rev=phase-5',
   './js/sync/conference-queue-integration.js?rev=queue-legacy-compat-v1',
-  './js/sync/conference-realtime-manager.js?rev=realtime-subscribe-trace-v1',
+  './js/sync/conference-realtime-manager.js?rev=conference-lifecycle-cloud-linked-v1',
   './js/sync/conference-operational-ui.js',
   './js/sync/automatic-queue-runner.js?rev=runtime-diagnostics-v1',
   './js/sync/automatic-conference-linking.js',
-  './js/sync/discovered-conference-open-service.js?rev=realtime-ui-manager-binding-v1',
-  './js/sync/member-runtime-diagnostics.js?rev=realtime-subscribe-trace-v1',
-  './js/sync/automatic-sync-orchestrator.js?rev=realtime-subscribe-trace-v1',
+  './js/sync/discovered-conference-open-service.js?rev=conference-lifecycle-cloud-linked-v1',
+  './js/sync/member-runtime-diagnostics.js?rev=conference-lifecycle-cloud-linked-v1',
+  './js/sync/automatic-sync-orchestrator.js?rev=conference-lifecycle-cloud-linked-v1',
   './js/sync/wrong-remote-binding-repair-store.js?rev=wrong-remote-binding-repair-v1',
   './js/sync/wrong-remote-binding-repair-service.js?rev=wrong-remote-binding-repair-v1',
   './js/sync/wrong-remote-binding-repair-ui.js?rev=wrong-remote-binding-repair-v1',

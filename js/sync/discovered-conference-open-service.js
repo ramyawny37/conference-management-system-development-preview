@@ -243,6 +243,27 @@
     return data&&data.conferenceLifecycle&&data.conferenceLifecycle.records&&
       data.conferenceLifecycle.records[id]||null;
   }
+  function markCloudLinkedLifecycle(data,id){
+    var next=copy(data);
+    next.conferenceLifecycle=object(next.conferenceLifecycle)
+      ?next.conferenceLifecycle:{schemaVersion:1,records:{}};
+    next.conferenceLifecycle.records=object(next.conferenceLifecycle.records)
+      ?next.conferenceLifecycle.records:{};
+    var record=lifecycle(next,id);
+    if(!record){
+      record={
+        localConferenceId:String(id),
+        localLifecycle:'active',
+        cloudLifecycle:'cloud_linked',
+        localContentVersion:0,
+        publishMetadata:null
+      };
+      next.conferenceLifecycle.records[id]=record;
+    }
+    record.cloudLifecycle='cloud_linked';
+    record.publishMetadata=null;
+    return next;
+  }
   function activeFor(id,service){
     var state=service&&typeof service.getState==='function'
       ?service.getState()
@@ -594,15 +615,27 @@
           ?knownRevision
           :null
       });
-      return Promise.resolve({
+      var linkedData=markCloudLinkedLifecycle(previous,identity.id);
+      if(!linkedData)return Promise.resolve(result(false,'link_recovery_required'));
+      var previousLifecycle=lifecycle(previous,identity.id);
+      var lifecyclePromise=previousLifecycle&&
+        previousLifecycle.cloudLifecycle==='cloud_linked'
+        ?Promise.resolve(result(true,'persisted',{value:previous}))
+        :persistGuarded(
+          d,linkedData,ctx,'linked_lifecycle_persistence_failed',previous
+        );
+      return lifecyclePromise.then(function(savedLifecycle){
+        if(!savedLifecycle.ok)return savedLifecycle;
+        return {
         noop:true,
         status:'up_to_date',
         reused:true,
         refreshed:false,
-        data:previous,
+        data:savedLifecycle.data.value,
         localId:identity.id,
         link:identity.existing,
         revision:Number.isInteger(knownRevision)?knownRevision:null
+        };
       });
     }
     var existingConference=conference(previous,identity.id);
@@ -630,6 +663,8 @@
     );
     if(!replaced)return Promise.resolve(result(false,'link_recovery_required'));
     var normalized=d.normalize(replaced);
+    normalized=markCloudLinkedLifecycle(normalized,identity.id);
+    if(!normalized)return Promise.resolve(result(false,'link_recovery_required'));
     var normalizedConference=conference(normalized,identity.id);
     if(!normalizedConference)return Promise.resolve(result(false,'snapshot_malformed'));
     var normalizedCounts=snapshotCounts(normalizedConference);
@@ -1056,6 +1091,8 @@
             :saveLinkGuarded(d,pendingInput,ctx,'pending_link_failed');
           if(!pending.ok)return pending;
           var promoted=copy(normalized);
+          promoted=markCloudLinkedLifecycle(promoted,local.id);
+          if(!promoted)return result(false,'local_repository_rejected');
           promoted.conferenceImportRecovery=copy(
             verifiedStage.conferenceImportRecovery||{}
           );
