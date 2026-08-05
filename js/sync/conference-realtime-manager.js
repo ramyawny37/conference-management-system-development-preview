@@ -508,6 +508,10 @@
     ].join('|');
     if(value.identity===identity&&
       ['connecting','subscribed'].indexOf(value.status)>=0){
+      trace('PREPARE_RETURN',{
+        reason:value.status==='subscribed'
+          ?'already_subscribed':'already_connecting'
+      });
       return value.connectPromise||Promise.resolve(outcome(
         true,value.status,publicEntry(value)
       ));
@@ -525,6 +529,7 @@
       value.lastError=null;
       if(!transition(value,options&&options.reconnect
         ?'reconnecting':'connecting')){
+        trace('PREPARE_RETURN',{reason:'illegal_transition'});
         return outcome(false,'illegal_transition',publicEntry(value));
       }
       return new Promise(function(resolve){
@@ -536,6 +541,10 @@
           resolve(response);
         }
         try{
+          trace('CREATE_CHANNEL',{
+            localConferenceIdPresent:!!id,
+            cloudConferenceIdPresent:!!ready.cloudConferenceId
+          });
           var channel=d.client.channel(
             'conference-snapshot-'+ready.cloudConferenceId+'-'+
             ready.userId
@@ -550,7 +559,9 @@
             acceptEvent(
               payload,value,generation,ready.knownRevision,options
             );
-          }).subscribe(function(status){
+          });
+          trace('SUBSCRIBE_CALLED',{channelGeneration:generation});
+          channel.subscribe(function(status){
             if(generation!==value.generation)return;
             if(status==='SUBSCRIBED'){
               trace('CHANNEL_SUBSCRIBED',{
@@ -596,13 +607,17 @@
     id=String(id||'');
     trace('START_SUBSCRIBE',{localConferenceIdPresent:!!id});
     var value=entry(id);
-    if(value.connectPromise)return value.connectPromise;
+    if(value.connectPromise){
+      trace('PREPARE_RETURN',{reason:'connect_promise_active'});
+      return value.connectPromise;
+    }
     if(value.status==='inactive'||value.status==='closed'||
       value.status==='error'||value.status==='suspended'){
       transition(value,'waiting_for_prerequisites','checking');
     }
     var flight=verifyPrerequisites(appData,id,options).then(function(ready){
       if(!ready.ok){
+        trace('PREPARE_RETURN',{reason:ready.status||'prerequisite_failed'});
         return suspend(id,ready.status,options).then(function(){
           return outcome(false,'waiting_for_prerequisites',
             publicEntry(value),{code:ready.status});

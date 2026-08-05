@@ -84,6 +84,14 @@ assert.ok(html.includes('إعادة الاتصال اللحظي'));
 assert.ok(!html.includes('بدء متابعة التحديثات'));
 assert.ok(!html.includes('Realtime: disconnected'));
 assert.ok(html.includes('realtimeTrace'));
+assert.ok(html.includes('conferenceId='+localId));
+assert.ok(html.includes('linkStatus=linked'));
+assert.ok(html.includes('cloudLifecycle=cloud_linked'));
+assert.ok(html.includes('automaticRealtimeState='));
+assert.ok(html.includes('ConferenceRealtimeManager.state='));
+assert.ok(html.includes(
+  'RealtimeLocksUI source=realtime-subscribe-trace-v1'
+));
 
 managerStatus='error';
 managerError={code:'REALTIME_CHANNEL_ERROR'};

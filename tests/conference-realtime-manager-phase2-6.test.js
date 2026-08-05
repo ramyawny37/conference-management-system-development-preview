@@ -262,9 +262,9 @@ async function tick(){
     eventEnv.manager.getState(LOCAL).remoteChangeDetected,true
   );
   assert.deepStrictEqual(
-    eventEnv.manager.getDiagnostics().map(item=>item.stage).slice(0,4),
-    ['START_SUBSCRIBE','CHANNEL_SUBSCRIBED',
-      'EVENT_RECEIVED','REVISION_RECEIVED']
+    eventEnv.manager.getDiagnostics().map(item=>item.stage).slice(0,6),
+    ['START_SUBSCRIBE','CREATE_CHANNEL','SUBSCRIBE_CALLED',
+      'CHANNEL_SUBSCRIBED','EVENT_RECEIVED','REVISION_RECEIVED']
   );
 
   channel.callback(Object.assign({},payload,{
@@ -419,7 +419,7 @@ async function tick(){
     __dirname,'..','service-worker.js'
   ),'utf8');
   assert.match(worker,
-    /(?:realtime-cloud-lifecycle-binding-v1|realtime-runtime-listener-v1|phase-2-(?:6-realtime-integration|7-operational-ui)|member-remote-apply-safe-v1|member-(?:pre-metadata-trace|up-to-date-activation|linked-refresh-trace|activation-completion)-v1)/
+    /(?:realtime-subscribe-trace-v1|realtime-cloud-lifecycle-binding-v1|realtime-runtime-listener-v1|phase-2-(?:6-realtime-integration|7-operational-ui)|member-remote-apply-safe-v1|member-(?:pre-metadata-trace|up-to-date-activation|linked-refresh-trace|activation-completion)-v1)/
   );
   assert.match(worker,/conference-realtime-manager\.js/);
 

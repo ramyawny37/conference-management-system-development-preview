@@ -6,6 +6,7 @@
   var reviewSummary=null;
   var busy=false;
   var lockRefreshedAt=null;
+  var SOURCE_REVISION='realtime-subscribe-trace-v1';
 
   function copy(value){
     if(typeof global.structuredClone==='function')return global.structuredClone(value);
@@ -259,6 +260,13 @@
     var data=lockResult&&lockResult.data;
     var owned=ownedByCurrentDevice(local.id);
     var managerState=automaticRealtimeState(local.id);
+    var manager=deps(input).realtimeManager;
+    var managerStates=manager&&typeof manager.getState==='function'
+      ?manager.getState():{};
+    var lifecycleRecord=global.appData&&
+      global.appData.conferenceLifecycle&&
+      global.appData.conferenceLifecycle.records&&
+      global.appData.conferenceLifecycle.records[local.id]||null;
     var cloudLinked=automaticRealtimeActive(
       local.id,ready,managerState,input
     );
@@ -266,6 +274,16 @@
     var displayedStatus=cloudLinked?managerView.label:connectionStatus;
     var html='<section class="settings-section realtime-locks-section">'+
       '<div class="settings-section-title">التحديثات البعيدة وقفل التعاون</div>';
+    html+='<pre class="sync-settings-message" dir="ltr">'+esc([
+      'conferenceId='+String(local.id||''),
+      'linkStatus='+String(ready.link&&ready.link.linkStatus||''),
+      'cloudLifecycle='+String(
+        lifecycleRecord&&lifecycleRecord.cloudLifecycle||''
+      ),
+      'automaticRealtimeState='+JSON.stringify(managerState),
+      'ConferenceRealtimeManager.state='+JSON.stringify(managerStates),
+      'RealtimeLocksUI source='+SOURCE_REVISION
+    ].join('\n'))+'</pre>';
     if(!ready.ready)html+='<div class="sync-settings-error">'+
       esc(ready.reasons.join(' '))+'</div>';
     html+='<div class="sync-link-summary"><span>Realtime: '+

@@ -245,6 +245,11 @@
     options=options&&typeof options==='object'?options:{};
     var manager=options.realtimeManager||global.ConferenceRealtimeManager;
     var localConferenceId=currentLocalConferenceId(options);
+    traceRealtimeManager(manager,'ENSURE_REALTIME_LISTENER',{
+      started:state.started===true,
+      localConferenceIdPresent:!!localConferenceId,
+      subscribeAvailable:!!(manager&&typeof manager.subscribe==='function')
+    });
     if(realtimeManagerUnsubscribe&&
       realtimeManagerLocalConferenceId===localConferenceId){
       return;
@@ -771,18 +776,37 @@
                   diagnostics.lastStopReason=refreshResult.status;
                   return disconnectRealtime(options);
                 }
-              if(latest.data&&cloudRealtimeLink(
+              var manager=options.realtimeManager||
+                global.ConferenceRealtimeManager;
+              var automaticRealtime=!!(latest.data&&cloudRealtimeLink(
                 latest.data.link,linkingLocalConferenceId,options
-              )){
-                var manager=options.realtimeManager||
-                  global.ConferenceRealtimeManager;
+              ));
+              traceRealtimeManager(manager,'REALTIME_ROUTE_EVALUATED',{
+                latestPresent:!!latest,
+                latestOk:!!(latest&&latest.ok),
+                latestStatus:latest&&latest.status||null,
+                linkPresent:!!(latest&&latest.data&&latest.data.link),
+                linkStatus:latest&&latest.data&&latest.data.link&&
+                  latest.data.link.linkStatus||null,
+                automaticRealtime:automaticRealtime
+              });
+              if(automaticRealtime){
                 var appData=options.appData||global.appData;
                 if(!manager||
                   typeof manager.prepareAndSubscribe!=='function'||
                   !appData){
+                  traceRealtimeManager(manager,'PREPARE_SUBSCRIBE_BLOCKED',{
+                    managerPresent:!!manager,
+                    prepareAvailable:!!(manager&&
+                      typeof manager.prepareAndSubscribe==='function'),
+                    appDataPresent:!!appData
+                  });
                   return disconnectRealtime(options);
                 }
                 return disconnectRealtime(options).then(function(){
+                  traceRealtimeManager(manager,'PREPARE_SUBSCRIBE_CALLED',{
+                    localConferenceIdPresent:!!linkingLocalConferenceId
+                  });
                   return manager.prepareAndSubscribe(
                     appData,
                     linkingLocalConferenceId,
@@ -993,6 +1017,10 @@
   function schedule(reason,options){
     reason=String(reason||'');
     options=options&&typeof options==='object'?options:{};
+    traceRealtimeManager(
+      options.realtimeManager||global.ConferenceRealtimeManager,
+      'SCHEDULE_CALLED',{reason:reason,started:state.started===true}
+    );
     if(ALLOWED_REASONS.indexOf(reason)<0){
       tracePreMetadata('schedule','return','invalid_reason');
       return {ok:false,status:'invalid_reason'};
@@ -1002,6 +1030,10 @@
       return {ok:false,status:'stopped'};
     }
     if(reason==='conference_changed'){
+      traceRealtimeManager(
+        options.realtimeManager||global.ConferenceRealtimeManager,
+        'CONFERENCE_CHANGED',{accepted:true}
+      );
       ensureRealtimeManagerListener(options);
     }
     tracePreMetadata('schedule','accepted',reason);
