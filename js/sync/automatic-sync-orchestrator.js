@@ -1157,6 +1157,44 @@
     return {ok:true,status:'scheduled',data:{reasons:state.scheduledReasons.slice()}};
   }
 
+  function wakeForLocalSave(options){
+    options=options&&typeof options==='object'?options:{};
+    var wakeOptions=state.started&&activeOptions?activeOptions:options;
+    var prefs=preferences(wakeOptions);
+    if(!prefs||prefs.cloudSyncEnabled!==true){
+      return {ok:false,status:'cloud_disabled'};
+    }
+    var startResult=null;
+    if(!state.started){
+      startResult=start(wakeOptions);
+      if(!startResult||startResult.ok===false||!state.started){
+        return {
+          ok:false,
+          status:startResult&&startResult.status||'start_failed',
+          data:{startResult:startResult||null}
+        };
+      }
+      wakeOptions=activeOptions||wakeOptions;
+    }
+    var scheduled=schedule('local_save',wakeOptions);
+    if(!scheduled||scheduled.ok===false){
+      return {
+        ok:false,
+        status:scheduled&&scheduled.status||'schedule_failed',
+        data:{startResult:startResult,scheduled:scheduled||null}
+      };
+    }
+    return {
+      ok:true,
+      status:'wake_accepted',
+      data:{
+        started:startResult&&startResult.status==='started',
+        startResult:startResult,
+        scheduled:scheduled
+      }
+    };
+  }
+
   function start(options){
     options=options&&typeof options==='object'?options:{};
     if(state.started){
@@ -1305,6 +1343,7 @@
     start:start,
     stop:stop,
     schedule:schedule,
+    wakeForLocalSave:wakeForLocalSave,
     evaluateConnectivity:evaluateConnectivity,
     getState:publicState,
     getRealtimeState:realtimeState,

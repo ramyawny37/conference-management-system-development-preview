@@ -1,13 +1,13 @@
 const APP_VERSION = '3.1.1';
 const CACHE_PREFIX = 'conference-manager-core-';
-const CACHE_REVISION = 'realtime-refresh-completion-v1';
+const CACHE_REVISION = 'local-save-queue-wake-v1';
 const CACHE_NAME = CACHE_PREFIX + 'v' + APP_VERSION + '-' + CACHE_REVISION;
 const CORE_ASSETS = [
   './',
   './index.html',
   './style.css',
   './js/storage/indexeddb.js',
-  './js/storage/storage-repository.js',
+  './js/storage/storage-repository.js?rev=local-save-queue-wake-v1',
   './js/storage/conference-repository.js',
   './js/storage/conference-publishing-engine.js',
   './js/storage/conference-publish-recovery.js',
@@ -67,7 +67,7 @@ const CORE_ASSETS = [
   './js/sync/automatic-conference-linking.js?rev=realtime-refresh-completion-v1',
   './js/sync/discovered-conference-open-service.js?rev=realtime-refresh-completion-v1',
   './js/sync/member-runtime-diagnostics.js?rev=realtime-refresh-completion-v1',
-  './js/sync/automatic-sync-orchestrator.js?rev=realtime-refresh-completion-v1',
+  './js/sync/automatic-sync-orchestrator.js?rev=local-save-queue-wake-v1',
   './js/sync/wrong-remote-binding-repair-store.js?rev=wrong-remote-binding-repair-v1',
   './js/sync/wrong-remote-binding-repair-service.js?rev=wrong-remote-binding-repair-v1',
   './js/sync/wrong-remote-binding-repair-ui.js?rev=wrong-remote-binding-repair-v1',

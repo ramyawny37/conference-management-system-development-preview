@@ -497,6 +497,59 @@ async function run(){
     false
   );
 
+  var wakeEnvironment=load({
+    authenticated:true,configured:true,available:true
+  });
+  var wakeRunnerCalls=0;
+  var wakeOptions=Object.assign({},followUpOptions,{
+    debounceMs:0,
+    preferences:{get:function(){return {
+      cloudSyncEnabled:true,
+      automaticLinkingEnabled:true,
+      automaticSyncEnabled:true
+    };}},
+    serviceCheck:function(){return Promise.resolve({available:true});},
+    queueRunner:{run:function(options){
+      wakeRunnerCalls++;
+      assert.ok(options.reasons.indexOf('local_save')>=0);
+      return Promise.resolve({ok:true,status:'empty'});
+    }}
+  });
+  var wakeResult=wakeEnvironment.window.AutomaticSyncOrchestrator
+    .wakeForLocalSave(wakeOptions);
+  assert.strictEqual(wakeResult.ok,true);
+  assert.strictEqual(wakeResult.status,'wake_accepted');
+  assert.strictEqual(wakeResult.data.started,true);
+  assert.strictEqual(
+    wakeEnvironment.window.AutomaticSyncOrchestrator.getState().started,
+    true
+  );
+  assert.strictEqual(
+    wakeEnvironment.window.AutomaticSyncOrchestrator.getState()
+      .lastScheduledReason,
+    'local_save'
+  );
+  var repeatedWake=wakeEnvironment.window.AutomaticSyncOrchestrator
+    .wakeForLocalSave();
+  assert.strictEqual(repeatedWake.ok,true);
+  assert.strictEqual(repeatedWake.data.started,null);
+  await delay(15);
+  assert.strictEqual(wakeRunnerCalls,1);
+  wakeEnvironment.window.AutomaticSyncOrchestrator.stop();
+
+  var disabledWake=load({authenticated:true,configured:true,available:true});
+  var disabledResult=disabledWake.window.AutomaticSyncOrchestrator
+    .wakeForLocalSave({preferences:{get:function(){return {
+      cloudSyncEnabled:false,
+      automaticSyncEnabled:true
+    };}}});
+  assert.strictEqual(disabledResult.ok,false);
+  assert.strictEqual(disabledResult.status,'cloud_disabled');
+  assert.strictEqual(
+    disabledWake.window.AutomaticSyncOrchestrator.getState().started,
+    false
+  );
+
   console.log('automatic-sync-orchestrator tests: passed');
 }
 

@@ -18,6 +18,7 @@
     }catch(error){
       return Promise.reject(error);
     }
+    var localSaveResult=null;
     var writeOperation = snapshotWriteQueue
       .catch(function(){})
       .then(function(){
@@ -36,12 +37,28 @@
             return integration.handleLocalSave(queuedSnapshot);
           })
           .catch(function(){ return null; })
-          .then(function(){ return saveResult; });
+          .then(function(result){
+            localSaveResult=result;
+            return saveResult;
+          });
       })
       .then(function(saveResult){
-        if(!options.skipSyncQueue&&global.AutomaticSyncOrchestrator&&
-          typeof global.AutomaticSyncOrchestrator.schedule==='function'){
-          global.AutomaticSyncOrchestrator.schedule('local_save');
+        var queued=localSaveResult&&localSaveResult.ok===true&&
+          localSaveResult.status==='queued'&&
+          localSaveResult.data&&
+          ['enqueued','coalesced'].indexOf(
+            localSaveResult.data.queueStatus
+          )>=0;
+        var orchestrator=global.AutomaticSyncOrchestrator;
+        if(queued&&orchestrator){
+          var wakeResult=typeof orchestrator.wakeForLocalSave==='function'
+            ?orchestrator.wakeForLocalSave(options.orchestratorOptions)
+            :typeof orchestrator.schedule==='function'
+              ?orchestrator.schedule('local_save',options.orchestratorOptions)
+              :null;
+          if(!wakeResult||wakeResult.ok===false){
+            return saveResult;
+          }
         }
         return saveResult;
       });
