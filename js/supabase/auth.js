@@ -19,8 +19,18 @@
   }
 
   function updateSession(session){
+    var previousUserId=String(state.user&&state.user.id||'');
     state.session=session||null;
     state.user=session&&session.user?session.user:null;
+    var nextUserId=String(state.user&&state.user.id||'');
+    var orchestrator=global.AutomaticSyncOrchestrator;
+    var orchestratorState=orchestrator&&
+      typeof orchestrator.getState==='function'
+      ?orchestrator.getState():null;
+    if(previousUserId!==nextUserId&&orchestratorState&&
+      orchestratorState.started&&typeof orchestrator.schedule==='function'){
+      orchestrator.schedule('auth_changed');
+    }
   }
 
   function initialize(options){

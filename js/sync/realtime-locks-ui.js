@@ -6,7 +6,7 @@
   var reviewSummary=null;
   var busy=false;
   var lockRefreshedAt=null;
-  var SOURCE_REVISION='linked-lifecycle-compat-v1';
+  var SOURCE_REVISION='realtime-startup-e2e-v1';
 
   function copy(value){
     if(typeof global.structuredClone==='function')return global.structuredClone(value);

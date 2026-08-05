@@ -134,6 +134,23 @@
     });
   }
 
+  function ensureLinkedLifecycle(localConferenceId,options){
+    options=options&&typeof options==='object'?options:{};
+    var d=dependencies(options);
+    var conference=typeof d.getCurrentConference==='function'
+      ?d.getCurrentConference():null;
+    var link=d.links&&typeof d.links.get==='function'
+      ?d.links.get(localConferenceId,options.linkOptions):null;
+    if(!conference||String(conference.id||'')!==String(localConferenceId||'')||
+      !link||['linked','cloud_linked'].indexOf(link.linkStatus)<0||
+      String(link.localConferenceId||'')!==String(localConferenceId||'')||
+      !uuid(String(link.remoteConferenceId||''))||
+      !Number.isInteger(link.knownRevision)||link.knownRevision<1){
+      return Promise.resolve(result(false,'linked_lifecycle_context_invalid'));
+    }
+    return repairLinkedLifecycle(d,conference,link);
+  }
+
   function initialize(options){
     options=options&&typeof options==='object'?options:{};
     bootstrapComplete=true;
@@ -267,6 +284,7 @@
     initialize:initialize,
     evaluate:evaluate,
     ensureCurrentConferenceLinked:ensureCurrentConferenceLinked,
+    ensureLinkedLifecycle:ensureLinkedLifecycle,
     getState:getState,
     resetForTests:resetForTests
   });

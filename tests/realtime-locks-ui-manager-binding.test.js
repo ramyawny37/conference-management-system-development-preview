@@ -90,7 +90,7 @@ assert.ok(html.includes('cloudLifecycle=cloud_linked'));
 assert.ok(html.includes('automaticRealtimeState='));
 assert.ok(html.includes('ConferenceRealtimeManager.state='));
 assert.ok(html.includes(
-  'RealtimeLocksUI source=linked-lifecycle-compat-v1'
+  'RealtimeLocksUI source=realtime-startup-e2e-v1'
 ));
 
 managerStatus='error';

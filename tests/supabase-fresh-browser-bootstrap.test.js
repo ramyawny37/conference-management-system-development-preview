@@ -75,6 +75,11 @@ function loadFreshBrowser(storedConfig){
 
 async function run(){
   var fresh=loadFreshBrowser();
+  var authSchedules=[];
+  fresh.window.AutomaticSyncOrchestrator={
+    getState:function(){return {started:true};},
+    schedule:function(reason){authSchedules.push(reason);}
+  };
   assert.strictEqual(fresh.createCalls.length,1);
   assert.deepStrictEqual(
     JSON.parse(JSON.stringify(fresh.window.SupabaseClientLayer.getState())),
@@ -112,6 +117,7 @@ async function run(){
     fresh.window.SupabaseAuth.getState().authenticated,
     true
   );
+  assert.deepStrictEqual(authSchedules,['auth_changed']);
   console.log('supabase fresh browser bootstrap tests: passed');
 }
 

@@ -213,60 +213,65 @@
       return outcome(false,'queue_readiness_failed');
     });
   }
+  function prerequisiteFailure(status,data){
+    trace('ELIGIBILITY_BLOCKED',{reason:status});
+    return outcome(false,status,data);
+  }
   function verifyPrerequisites(appData,id,options){
+    trace('ELIGIBILITY_CHECK_STARTED',{localConferenceIdPresent:!!id});
     var d=dependencies(options);
     var record=lifecycle(appData,id);
     if(!localConference(appData,id)){
-      return Promise.resolve(outcome(false,'local_conference_missing'));
+      return Promise.resolve(prerequisiteFailure('local_conference_missing'));
     }
     if(record&&record.localLifecycle==='archived'){
-      return Promise.resolve(outcome(false,'conference_archived'));
+      return Promise.resolve(prerequisiteFailure('conference_archived'));
     }
     if(d.links&&typeof d.links.inspect==='function'){
       var inspected=d.links.inspect(options&&options.linkOptions);
       if(!inspected||!inspected.ok){
-        return Promise.resolve(outcome(false,'link_store_invalid'));
+        return Promise.resolve(prerequisiteFailure('link_store_invalid'));
       }
     }
     var link=d.links&&typeof d.links.get==='function'
       ?d.links.get(id,options&&options.linkOptions):null;
     if(!validLink(link,record,options)){
-      return Promise.resolve(outcome(false,'conference_link_invalid'));
+      return Promise.resolve(prerequisiteFailure('conference_link_invalid'));
     }
     if(isolated(d,id,options)){
-      return Promise.resolve(outcome(false,'cloud_isolation_active'));
+      return Promise.resolve(prerequisiteFailure('cloud_isolation_active'));
     }
     if(activeFor(id,d.publishing)){
-      return Promise.resolve(outcome(false,'publishing_active'));
+      return Promise.resolve(prerequisiteFailure('publishing_active'));
     }
     if(activeFor(id,d.recovery)){
-      return Promise.resolve(outcome(false,'recovery_active'));
+      return Promise.resolve(prerequisiteFailure('recovery_active'));
     }
     if(d.navigator&&d.navigator.onLine===false){
-      return Promise.resolve(outcome(false,'offline'));
+      return Promise.resolve(prerequisiteFailure('offline'));
     }
     if(!d.client||typeof d.client.channel!=='function'){
-      return Promise.resolve(outcome(false,'supabase_unavailable'));
+      return Promise.resolve(prerequisiteFailure('supabase_unavailable'));
     }
     var userId=sessionUserId(d.auth);
     if(!uuid(userId)){
-      return Promise.resolve(outcome(false,'authentication_required'));
+      return Promise.resolve(prerequisiteFailure('authentication_required'));
     }
     if(!d.access||typeof d.access.refresh!=='function'||
       !d.membership||
       typeof d.membership.getCurrentAccess!=='function'){
-      return Promise.resolve(outcome(false,'authorization_unavailable'));
+      return Promise.resolve(prerequisiteFailure('authorization_unavailable'));
     }
     return Promise.resolve(d.access.refresh()).then(function(access){
       if(!access||access.source!=='server'||access.fresh!==true||
         access.authenticated!==true||access.userId!==userId){
-        return {halt:outcome(false,'fresh_system_access_required')};
+        return {halt:prerequisiteFailure('fresh_system_access_required')};
       }
       if(access.accountStatus==='blocked'){
-        return {halt:outcome(false,'account_blocked')};
+        return {halt:prerequisiteFailure('account_blocked')};
       }
       if(access.accountStatus!=='approved'){
-        return {halt:outcome(false,'account_not_approved')};
+        return {halt:prerequisiteFailure('account_not_approved')};
       }
       return d.membership.getCurrentAccess({
         remoteConferenceId:link.remoteConferenceId
@@ -277,10 +282,14 @@
         !access.data||access.data.userId!==userId||
         ['owner','manager','viewer','accommodation_viewer',
           'transport_viewer'].indexOf(access.data.role)<0){
-        return outcome(false,'membership_read_denied');
+        return prerequisiteFailure('membership_read_denied');
       }
       return inspectQueue(d,link,options).then(function(queue){
-        if(!queue.ok)return queue;
+        if(!queue.ok)return prerequisiteFailure(queue.status,queue.data);
+        trace('ELIGIBILITY_PASSED',{
+          cloudConferenceIdPresent:true,
+          userIdPresent:true
+        });
         return outcome(true,'ready',{
           localConferenceId:id,
           cloudConferenceId:link.remoteConferenceId,
@@ -292,7 +301,7 @@
         });
       });
     }).catch(function(){
-      return outcome(false,'prerequisite_check_failed');
+      return prerequisiteFailure('prerequisite_check_failed');
     });
   }
   function removeChannel(value,client){
@@ -605,6 +614,7 @@
   }
   function prepareAndSubscribe(appData,id,options){
     id=String(id||'');
+    trace('PREPARE_SUBSCRIBE_ENTRY',{localConferenceIdPresent:!!id});
     trace('START_SUBSCRIBE',{localConferenceIdPresent:!!id});
     var value=entry(id);
     if(value.connectPromise){

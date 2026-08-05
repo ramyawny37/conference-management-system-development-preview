@@ -223,7 +223,7 @@
   function cloudRealtimeLink(link,localConferenceId,options){
     if(!link)return false;
     if(link.linkStatus==='cloud_linked')return true;
-    var data=options&&options.appData||global.appData;
+    var data=global.appData||options&&options.appData;
     var record=data&&data.conferenceLifecycle&&
       data.conferenceLifecycle.records&&
       data.conferenceLifecycle.records[localConferenceId];
@@ -558,6 +558,13 @@
   }
 
   function evaluateScheduled(options){
+    traceRealtimeManager(
+      options&&options.realtimeManager||global.ConferenceRealtimeManager,
+      'EVALUATE_SCHEDULED_ENTRY',{
+        started:state.started===true,
+        generation:state.generation
+      }
+    );
     if(evaluationPromise){
       tracePreMetadata('evaluateScheduled','return','evaluation_in_progress');
       evaluationFollowUpRequested=true;
@@ -582,6 +589,15 @@
         if(generation!==state.generation||!state.started||
           connectivityState.connectivity!=='online'||
           reasons.indexOf('offline_event')>=0&&reasons.length===1){
+          traceRealtimeManager(
+            options.realtimeManager||global.ConferenceRealtimeManager,
+            'EVALUATION_BLOCKED',{
+              reason:generation!==state.generation?'generation_changed':
+                !state.started?'orchestrator_stopped':
+                connectivityState.connectivity!=='online'
+                  ?connectivityState.connectivity:'offline_event_only'
+            }
+          );
           if(connectivityState.connectivity!=='online'){
             tracePreMetadata('connectivity','return',
               connectivityState.connectivity||'not_online');
@@ -593,6 +609,7 @@
           return connectivityState;
         }
         var linkingLocalConferenceId=currentLocalConferenceId(options);
+        ensureRealtimeManagerListener(options);
         tracePreMetadata('currentConference',
           linkingLocalConferenceId?'passed':'return',
           linkingLocalConferenceId?null:'no_current_conference');
@@ -791,7 +808,7 @@
                 automaticRealtime:automaticRealtime
               });
               if(automaticRealtime){
-                var appData=options.appData||global.appData;
+                var appData=global.appData||options.appData;
                 if(!manager||
                   typeof manager.prepareAndSubscribe!=='function'||
                   !appData){
@@ -880,8 +897,18 @@
             });
           });
         };
-        var recoverOrRoute=function(resolved,connectivityState){
+        var recoverOrRoute=function(resolved,connectivityState,lifecycleChecked){
           tracePreMetadata('route','entered',resolved&&resolved.status||'no_result');
+          traceRealtimeManager(
+            options.realtimeManager||global.ConferenceRealtimeManager,
+            'ROUTE_RESOLVED',{
+              status:resolved&&resolved.status||null,
+              localConferenceIdPresent:!!linkingLocalConferenceId,
+              remoteConferenceIdPresent:!!(resolved&&resolved.data&&
+                (resolved.data.remoteConferenceId||resolved.data.link&&
+                  resolved.data.link.remoteConferenceId))
+            }
+          );
           if(staleResult()){
             tracePreMetadata('route','return','conference_changed');
             return Promise.resolve(publicState());
@@ -916,6 +943,61 @@
             });
           }
           if(resolved&&resolved.ok&&resolved.status==='linked'){
+            var lifecycleData=global.appData||options.appData;
+            var lifecycleRecord=lifecycleData&&
+              lifecycleData.conferenceLifecycle&&
+              lifecycleData.conferenceLifecycle.records&&
+              lifecycleData.conferenceLifecycle.records[
+                linkingLocalConferenceId
+              ];
+            var lifecycleReady=!!(lifecycleRecord&&
+              lifecycleRecord.localLifecycle==='active'&&
+              lifecycleRecord.cloudLifecycle==='cloud_linked');
+            if(lifecycleChecked!==true&&lifecycleRecord&&!lifecycleReady){
+              var lifecycleLinker=options.automaticLinking||
+                global.AutomaticConferenceLinking;
+              if(!lifecycleLinker||
+                typeof lifecycleLinker.ensureLinkedLifecycle!=='function'){
+                traceRealtimeManager(
+                  options.realtimeManager||global.ConferenceRealtimeManager,
+                  'LIFECYCLE_COMPATIBILITY_BLOCKED',{
+                    reason:'compatibility_service_unavailable'
+                  }
+                );
+                return stopForLinkedContext(
+                  'linked_lifecycle_restore_unavailable'
+                );
+              }
+              return Promise.resolve(
+                lifecycleLinker.ensureLinkedLifecycle(
+                  linkingLocalConferenceId,
+                  options.automaticLinkingOptions
+                )
+              ).then(function(lifecycleResult){
+                traceRealtimeManager(
+                  options.realtimeManager||global.ConferenceRealtimeManager,
+                  lifecycleResult&&lifecycleResult.ok
+                    ?'LIFECYCLE_READY':'LIFECYCLE_COMPATIBILITY_BLOCKED',{
+                    status:lifecycleResult&&lifecycleResult.status||null
+                  }
+                );
+                if(!lifecycleResult||!lifecycleResult.ok){
+                  return stopForLinkedContext(
+                    lifecycleResult&&lifecycleResult.status||
+                      'linked_lifecycle_restore_failed'
+                  );
+                }
+                return resolveState().then(function(afterLifecycle){
+                  return recoverOrRoute(
+                    afterLifecycle,connectivityState,true
+                  );
+                });
+              }).catch(function(){
+                return stopForLinkedContext(
+                  'linked_lifecycle_restore_failed'
+                );
+              });
+            }
             var linkedContext=inspectLinkedContext(resolved);
             tracePreMetadata('linkedContext',
               linkedContext.contextCompatible?'passed':'evaluated',
@@ -1022,10 +1104,18 @@
       'SCHEDULE_CALLED',{reason:reason,started:state.started===true}
     );
     if(ALLOWED_REASONS.indexOf(reason)<0){
+      traceRealtimeManager(
+        options.realtimeManager||global.ConferenceRealtimeManager,
+        'SCHEDULE_BLOCKED',{reason:'invalid_reason'}
+      );
       tracePreMetadata('schedule','return','invalid_reason');
       return {ok:false,status:'invalid_reason'};
     }
     if(!state.started){
+      traceRealtimeManager(
+        options.realtimeManager||global.ConferenceRealtimeManager,
+        'SCHEDULE_BLOCKED',{reason:'orchestrator_stopped'}
+      );
       tracePreMetadata('schedule','return','orchestrator_stopped');
       return {ok:false,status:'stopped'};
     }
@@ -1038,6 +1128,10 @@
     }
     tracePreMetadata('schedule','accepted',reason);
     diagnostics.lastScheduledReason=reason;
+    traceRealtimeManager(
+      options.realtimeManager||global.ConferenceRealtimeManager,
+      'ORCHESTRATOR_SCHEDULED',{reason:reason,generation:state.generation}
+    );
     if(state.scheduledReasons.indexOf(reason)<0){
       state.scheduledReasons.push(reason);
     }
@@ -1055,10 +1149,18 @@
   function start(options){
     options=options&&typeof options==='object'?options:{};
     if(state.started){
+      traceRealtimeManager(
+        options.realtimeManager||global.ConferenceRealtimeManager,
+        'STARTUP_BLOCKED',{reason:'already_started'}
+      );
       tracePreMetadata('start','return','already_started');
       return {ok:true,status:'already_started'};
     }
     if(restoreIsolationPending(options)){
+      traceRealtimeManager(
+        options.realtimeManager||global.ConferenceRealtimeManager,
+        'STARTUP_BLOCKED',{reason:'restore_isolated'}
+      );
       state.conferenceState='restore_isolated';
       state.connectivity='stopped';
       state.lastError={
@@ -1073,6 +1175,10 @@
       };
     }
     if(realtimeCleanupPending){
+      traceRealtimeManager(
+        options.realtimeManager||global.ConferenceRealtimeManager,
+        'STARTUP_BLOCKED',{reason:'realtime_cleanup_pending'}
+      );
       return {
         ok:false,
         status:'realtime_cleanup_pending',
@@ -1081,6 +1187,10 @@
       };
     }
     if(!preferences(options).cloudSyncEnabled){
+      traceRealtimeManager(
+        options.realtimeManager||global.ConferenceRealtimeManager,
+        'STARTUP_BLOCKED',{reason:'cloud_disabled'}
+      );
       state.conferenceState='cloud_disabled';
       state.connectivity='stopped';
       state.lastError=null;
@@ -1091,6 +1201,15 @@
     diagnostics.preMetadataTrace=[];
     diagnostics.lastPreMetadataExitReason=null;
     tracePreMetadata('start','passed',null);
+    traceRealtimeManager(
+      options.realtimeManager||global.ConferenceRealtimeManager,
+      'STARTUP',{
+        started:true,
+        authReady:!!(authState(options)&&authState(options).authenticated),
+        deviceIdentityPresent:!!currentDeviceId(options),
+        currentConferencePresent:!!currentLocalConferenceId(options)
+      }
+    );
     diagnostics.lastStopReason=null;
     activeOptions=options;
     state.generation++;
