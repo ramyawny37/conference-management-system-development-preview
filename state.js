@@ -155,7 +155,11 @@ function initializeApplicationStorage(){
   var defaults=cloneApplicationStorageData(appData);
   var repository=window.StorageRepository;
   var indexedDbApi=window.AppIndexedDB;
-  storageInitializationPromise=Promise.resolve()
+  var deviceApproval=window.DeviceReauthorizationFlow&&
+    typeof window.DeviceReauthorizationFlow.waitUntilApproved==='function'
+    ?window.DeviceReauthorizationFlow.waitUntilApproved()
+    :Promise.resolve();
+  storageInitializationPromise=Promise.resolve(deviceApproval)
     .then(function(){
       if(!repository||typeof repository.getAppSnapshot!=='function'){
         throw new Error('INDEXEDDB_REPOSITORY_UNAVAILABLE');
