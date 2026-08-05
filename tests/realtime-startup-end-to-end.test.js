@@ -26,6 +26,7 @@ async function delay(ms){
   let persisted=0;
   let queueOperations=0;
   let channelCreations=0;
+  let runnerInvocations=0;
   const link={
     localConferenceId:LOCAL,
     remoteConferenceId:CLOUD,
@@ -108,7 +109,10 @@ async function delay(ms){
       });},
       coalesceSnapshotOperation(){queueOperations++;}
     },
-    AutomaticQueueRunner:{run(){return Promise.resolve({ok:true,status:'empty'});}},
+    AutomaticQueueRunner:{run(){
+      runnerInvocations++;
+      return Promise.resolve({ok:true,status:'empty'});
+    }},
     ConferencePublishingEngine:{getState(){return {activeConferenceIds:[]};}},
     ConferencePublishRecovery:{
       getState(){return {activeConferenceIds:[]};},
@@ -151,6 +155,17 @@ async function delay(ms){
   assert.strictEqual(realtime.userId,USER);
   assert.ok(realtime.identity);
   assert.ok(realtime.generation>0);
+  assert.strictEqual(channelCreations,1);
+
+  const secondSchedule=sandbox.AutomaticSyncOrchestrator.schedule(
+    'local_save',{debounceMs:0}
+  );
+  assert.strictEqual(secondSchedule.ok,true);
+  await delay(40);
+  const afterSecondEvaluation=sandbox.AutomaticSyncOrchestrator.getState();
+  assert.strictEqual(afterSecondEvaluation.evaluationInProgress,false);
+  assert.strictEqual(afterSecondEvaluation.followUpPending,false);
+  assert.strictEqual(runnerInvocations,2);
   assert.strictEqual(channelCreations,1);
 
   const stages=sandbox.ConferenceRealtimeManager.getDiagnostics()

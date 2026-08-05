@@ -232,6 +232,22 @@ async function tick(){
   assert.strictEqual((await first).ok,true);
   assert.strictEqual((await second).ok,true);
 
+  const alreadySubscribed=environment();
+  await alreadySubscribed.manager.prepareAndSubscribe(
+    alreadySubscribed.appData,LOCAL,{client:alreadySubscribed.client}
+  );
+  const repeatedResult=await Promise.race([
+    alreadySubscribed.manager.prepareAndSubscribe(
+      alreadySubscribed.appData,LOCAL,{client:alreadySubscribed.client}
+    ),
+    new Promise((resolve)=>setTimeout(function(){
+      resolve({ok:false,status:'timeout'});
+    },50))
+  ]);
+  assert.strictEqual(repeatedResult.ok,true);
+  assert.strictEqual(repeatedResult.status,'already_subscribed');
+  assert.strictEqual(alreadySubscribed.channels.length,1);
+
   const eventEnv=environment();
   await eventEnv.manager.prepareAndSubscribe(
     eventEnv.appData,LOCAL,{client:eventEnv.client}

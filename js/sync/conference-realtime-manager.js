@@ -521,6 +521,11 @@
         reason:value.status==='subscribed'
           ?'already_subscribed':'already_connecting'
       });
+      if(value.status==='subscribed'){
+        return Promise.resolve(outcome(
+          true,'already_subscribed',publicEntry(value)
+        ));
+      }
       return value.connectPromise||Promise.resolve(outcome(
         true,value.status,publicEntry(value)
       ));
