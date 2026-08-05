@@ -18,6 +18,8 @@
       markers:options.markers||global.RemoteUpdateStore,
       integration:options.integration||global.OfflineFirstIntegration,
       realtime:options.realtime||global.RealtimeSync,
+      realtimeManager:options.realtimeManager||
+        global.ConferenceRealtimeManager,
       locks:options.locks||global.ConferenceLocks,
       remote:options.remote||global.SupabaseSnapshotSync,
       compare:options.compare||global.ConflictResolution,
@@ -38,7 +40,8 @@
     if(!config)reasons.push('إعداد Supabase غير موجود.');
     if(!auth)reasons.push('يجب تسجيل الدخول.');
     if(!device||!device.id)reasons.push('هوية الجهاز غير متاحة.');
-    if(!link||link.linkStatus!=='linked'||!link.remoteConferenceId){
+    if(!link||['linked','cloud_linked'].indexOf(link.linkStatus)<0||
+      !link.remoteConferenceId){
       reasons.push('المؤتمر غير مرتبط بحالة جاهزة.');
     }
     return {
@@ -76,6 +79,44 @@
     }).catch(function(){
       connectionStatus='error';return {ok:false,status:'error'};
     }).then(function(result){busy=false;return result;});
+  }
+  function automaticRealtimeState(localId,options){
+    var manager=deps(options).realtimeManager;
+    return manager&&typeof manager.getState==='function'
+      ?manager.getState(localId)||null:null;
+  }
+  function automaticRealtimePresentation(value){
+    value=value||{};
+    var status=value.status||'disconnected';
+    if(status==='inactive'||status==='closed')status='disconnected';
+    if(status==='waiting_for_prerequisites')status='suspended';
+    if(status==='reconnecting')status='connecting';
+    var labels={
+      connecting:'جارٍ الاتصال',subscribed:'متصل',suspended:'معلّق',
+      error:'خطأ',disconnected:'غير متصل'
+    };
+    return {status:status,label:labels[status]||labels.disconnected};
+  }
+  function automaticReconnect(localId,options){
+    if(busy)return Promise.resolve({ok:false,status:'busy'});
+    var d=deps(options),ready=readiness(localId,options);
+    if(!ready.ready||!d.realtimeManager||
+      typeof d.realtimeManager.prepareAndSubscribe!=='function'){
+      return Promise.resolve({ok:false,status:'prerequisites_missing'});
+    }
+    busy=true;
+    return Promise.resolve(d.realtimeManager.prepareAndSubscribe(
+      global.appData,localId,options&&options.realtimeManagerOptions
+    )).catch(function(error){
+      return {ok:false,status:'error',error:{
+        code:String(error&&error.code||'REALTIME_RECONNECT_FAILED')
+      }};
+    }).then(function(result){busy=false;return result;});
+  }
+  function automaticTrace(options){
+    var manager=deps(options).realtimeManager;
+    return manager&&typeof manager.getDiagnostics==='function'
+      ?manager.getDiagnostics():[];
   }
   function disconnect(options){
     var d=deps(options);
@@ -203,12 +244,18 @@
     var marker=latestMarker(local.id);
     var data=lockResult&&lockResult.data;
     var owned=ownedByCurrentDevice(local.id);
+    var cloudLinked=!!(ready.link&&ready.link.linkStatus==='cloud_linked');
+    var managerState=cloudLinked?automaticRealtimeState(local.id):null;
+    var managerView=automaticRealtimePresentation(managerState);
+    var displayedStatus=cloudLinked?managerView.label:connectionStatus;
     var html='<section class="settings-section realtime-locks-section">'+
       '<div class="settings-section-title">التحديثات البعيدة وقفل التعاون</div>';
     if(!ready.ready)html+='<div class="sync-settings-error">'+
       esc(ready.reasons.join(' '))+'</div>';
     html+='<div class="sync-link-summary"><span>Realtime: '+
-      esc(connectionStatus)+'</span><span>Lock: '+
+      esc(displayedStatus)+'</span>'+
+      (cloudLinked?'<span>Path: Automatic Realtime</span>':'')+
+      '<span>Lock: '+
       esc(data?(data.locked?(owned?'مملوك لهذا الجهاز':'مملوك لجهاز آخر'):'غير مقفول'):'غير مقروء')+
       '</span>';
     if(data){
@@ -217,10 +264,25 @@
         '</span><span>المتبقي: '+esc(remaining(data.expiresAt))+
         '</span><span>آخر تحديث: '+esc(lockRefreshedAt||'—')+'</span>';
     }
+    if(cloudLinked&&managerState){
+      html+='<span>Status: '+esc(managerView.status)+'</span>'+
+        '<span>Last subscribed: '+esc(managerState.lastConnectedAt||'—')+
+        '</span><span>Last event: '+esc(managerState.lastEventAt||'—')+
+        '</span><span>Last revision: '+esc(
+          managerState.lastRevision==null?'—':managerState.lastRevision
+        )+'</span>';
+      if(managerState.lastError){
+        html+='<span class="sync-settings-error">Last error: '+esc(
+          managerState.lastError.code||managerState.lastError.message||
+          managerState.lastError
+        )+'</span>';
+      }
+    }
     html+='</div><div class="sync-settings-actions">'+
       '<button class="btn btn-blue btn-sm" '+(!ready.ready?'disabled':'')+
-      ' onclick="RealtimeLocksUI.connectCurrent()">بدء متابعة التحديثات</button>'+
-      '<button class="btn btn-gray btn-sm" onclick="RealtimeLocksUI.disconnectCurrent()">إيقاف متابعة التحديثات</button>'+
+      ' onclick="RealtimeLocksUI.connectCurrent()">'+
+      (cloudLinked?'إعادة الاتصال اللحظي':'بدء متابعة التحديثات')+'</button>'+
+      (cloudLinked?'':'<button class="btn btn-gray btn-sm" onclick="RealtimeLocksUI.disconnectCurrent()">إيقاف متابعة التحديثات</button>')+
       '<button class="btn btn-gray btn-sm" '+(!ready.ready?'disabled':'')+
       ' onclick="RealtimeLocksUI.refreshCurrentLock()">تحديث حالة القفل</button>'+
       '<button class="btn btn-orange btn-sm" '+(!ready.ready?'disabled':'')+
@@ -229,6 +291,14 @@
       ' onclick="RealtimeLocksUI.renewCurrentLock()">تجديد القفل</button>'+
       '<button class="btn btn-red btn-sm" '+(!owned?'disabled':'')+
       ' onclick="RealtimeLocksUI.releaseCurrentLock()">تحرير القفل</button></div>';
+    if(cloudLinked){
+      var trace=automaticTrace();
+      html+='<details class="sync-settings-message"><summary>Realtime Trace</summary><pre dir="ltr">'+
+        esc(trace.map(function(item){
+          var suffix=item&&item.data?' '+JSON.stringify(item.data):'';
+          return String(item&&item.stage||'')+suffix;
+        }).join('\n'))+'</pre></details>';
+    }
     if(marker){
       var self=marker.status==='self_update';
       html+='<div class="remote-update-marker '+(self?'':'remote-update-warning')+
@@ -253,7 +323,7 @@
       localSnapshot:conference?copy(conference):null};
   }
   function show(text){lastMessage=text;if(global.renderSettings)global.renderSettings();}
-  function connectCurrent(){var i=current();connect(i.localConferenceId).then(function(r){show(r.ok?'تم الاتصال.':'تعذر الاتصال.');});}
+  function connectCurrent(){var i=current(),ready=readiness(i.localConferenceId);var operation=ready.link&&ready.link.linkStatus==='cloud_linked'?automaticReconnect(i.localConferenceId):connect(i.localConferenceId);operation.then(function(r){show(r.ok?'تم الاتصال.':'تعذر الاتصال.');});}
   function disconnectCurrent(){disconnect().then(function(r){show(r.ok?'تم الإيقاف يدويًا.':'تعذر الإيقاف.');});}
   function reviewCurrentUpdate(){reviewRemote(current()).then(function(r){show(r.ok?'تمت مراجعة التحديث دون تطبيقه.':'تعذرت المراجعة.');});}
   function markCurrentReviewed(){show(updateMarker(current().localConferenceId,'reviewed_changed').ok?'تم تعليم الإشعار كمراجع.':'تعذر التحديث.');}
@@ -264,6 +334,9 @@
   function releaseCurrentLock(){lockAction(current().localConferenceId,'release').then(function(r){show(r.ok?'تم تحديث نتيجة التحرير.':'تعذر التحرير.');});}
   global.RealtimeLocksUI=Object.freeze({
     readiness:readiness,onEvent:onEvent,connect:connect,disconnect:disconnect,
+    automaticRealtimeState:automaticRealtimeState,
+    automaticRealtimePresentation:automaticRealtimePresentation,
+    automaticReconnect:automaticReconnect,automaticTrace:automaticTrace,
     reviewRemote:reviewRemote,updateMarker:updateMarker,
     refreshLock:refreshLock,lockAction:lockAction,
     ownedByCurrentDevice:ownedByCurrentDevice,hasOwnedLock:hasOwnedLock,

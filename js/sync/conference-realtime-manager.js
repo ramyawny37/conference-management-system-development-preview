@@ -139,6 +139,7 @@
         recentEvents:Object.create(null),
         lastConnectedAt:null,
         lastEventAt:null,
+        lastRevision:null,
         lastError:null,
         remoteChangeDetected:false,
         potentialConflict:false
@@ -159,6 +160,7 @@
       reconnectAttempts:value.reconnectAttempts,
       lastConnectedAt:value.lastConnectedAt,
       lastEventAt:value.lastEventAt,
+      lastRevision:value.lastRevision,
       lastError:value.lastError?copy(value.lastError):null,
       remoteChangeDetected:value.remoteChangeDetected,
       potentialConflict:value.potentialConflict
@@ -430,6 +432,7 @@
     if(value.recentEvents[event.eventId])return;
     value.recentEvents[event.eventId]=time;
     value.lastEventAt=event.receivedAt;
+    value.lastRevision=event.observedRevision;
     var d=dependencies(options);
     var readiness=event.classification==='remote_change_detected'
       ?inspectQueue(d,{remoteConferenceId:event.cloudConferenceId},options)

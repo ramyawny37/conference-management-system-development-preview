@@ -1208,7 +1208,8 @@
             ?'activated':'preserved_other_current';
           traceRealtimePipeline('LOCAL_APPLY_COMPLETED',{
             revision:prepared.link.knownRevision,
-            activated:currentSelected
+            appDataUpdated:true,
+            renderRefreshInvoked:currentSelected&&activated
           });
           return result(true,'opened',{
             localConferenceId:prepared.localId,

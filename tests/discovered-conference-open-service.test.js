@@ -325,6 +325,11 @@ function environment(settings={}){
   assert.ok(pipelineStages.includes('SNAPSHOT_DOWNLOADED'));
   assert.ok(pipelineStages.includes('LOCAL_APPLY_STARTED'));
   assert.ok(pipelineStages.includes('LOCAL_APPLY_COMPLETED'));
+  const completedTrace=linkedRefresh.realtimePipeline().filter(
+    entry=>entry.stage==='LOCAL_APPLY_COMPLETED'
+  ).pop();
+  assert.strictEqual(completedTrace.data.appDataUpdated,true);
+  assert.strictEqual(completedTrace.data.renderRefreshInvoked,true);
   const diagnostics=linkedRefresh.api.getDiagnostics();
   assert.strictEqual(diagnostics.ok,true);
   assert.ok(Array.isArray(diagnostics.data.events));
