@@ -1,7 +1,7 @@
 (function(global){
   'use strict';
   var RUNTIME_BUILD_REVISION='canonical-conference-schema-v1';
-  var SERVICE_WORKER_CACHE_REVISION='realtime-refresh-completion-v1';
+  var SERVICE_WORKER_CACHE_REVISION='conflict-finalization-diagnostics-v1';
   var FIELDS=Object.freeze([
     'runtimeBuildRevision','serviceWorkerCacheRevision',
     'orchestratorStarted','lastScheduledReason',
@@ -17,8 +17,18 @@
     'lastPreMetadataExitReason','preMetadataTrace',
     'linkedRefreshCurrentStage','linkedRefreshExceptionStage',
     'linkedRefreshTrace','activationCurrentStage','activationExceptionStage',
-    'activationTrace'
+    'activationTrace',
+    'draft.exists','draft.status','draft.executionStatus',
+    'draft.executionResult','draft.finalizationState',
+    'pending.exists','pending.status','pending.revision',
+    'pending.applicationState','link.linkStatus',
+    'link.pendingLocalApplication','link.knownRevision',
+    'link.actualRevision','firstIncompleteFlag'
   ]);
+  var conflictRead={
+    localConferenceId:null,loading:false,loaded:false,generation:0,
+    draft:null,pending:null,link:null,firstIncompleteFlag:null
+  };
   function copy(value){
     if(value===undefined)return null;
     if(typeof global.structuredClone==='function')return global.structuredClone(value);
@@ -38,6 +48,55 @@
       };
     });
   }
+  function incompleteFlag(draft){
+    var finalization=draft&&draft.finalization||{};
+    var flags=[
+      'pendingApplicationStored','revisionPublished',
+      'linkMetadataUpdated','queueUpdated'
+    ];
+    for(var index=0;index<flags.length;index++){
+      if(finalization[flags[index]]!==true)return flags[index];
+    }
+    return draft&&draft.executionStatus==='completed'
+      ?null:'draftCompleted';
+  }
+  function requestConflictRead(localConferenceId){
+    localConferenceId=String(localConferenceId||'');
+    if(!localConferenceId||conflictRead.loading&&
+      conflictRead.localConferenceId===localConferenceId||
+      conflictRead.loaded&&conflictRead.localConferenceId===localConferenceId){
+      return;
+    }
+    var repository=global.AppIndexedDB;
+    if(!repository||typeof repository.getRecord!=='function')return;
+    var token=++conflictRead.generation;
+    conflictRead={
+      localConferenceId:localConferenceId,loading:true,loaded:false,
+      generation:token,draft:null,pending:null,link:null,
+      firstIncompleteFlag:null
+    };
+    Promise.all([
+      repository.getRecord('conflict_resolution_drafts',localConferenceId),
+      repository.getRecord('pending_remote_applications',localConferenceId)
+    ]).then(function(records){
+      if(token!==conflictRead.generation)return;
+      var links=global.ConferenceLinkStore;
+      var link=links&&typeof links.get==='function'
+        ?links.get(localConferenceId):null;
+      conflictRead.loading=false;
+      conflictRead.loaded=true;
+      conflictRead.draft=copy(records[0]);
+      conflictRead.pending=copy(records[1]);
+      conflictRead.link=copy(link);
+      conflictRead.firstIncompleteFlag=incompleteFlag(records[0]);
+      if(typeof global.renderSettings==='function')global.renderSettings();
+    }).catch(function(){
+      if(token!==conflictRead.generation)return;
+      conflictRead.loading=false;
+      conflictRead.loaded=true;
+      if(typeof global.renderSettings==='function')global.renderSettings();
+    });
+  }
   function read(){
     var orchestrator=global.AutomaticSyncOrchestrator;
     var openService=global.DiscoveredConferenceOpenService;
@@ -48,6 +107,15 @@
     var activationState=typeof global.getMemberActivationDiagnostics==='function'
       ?global.getMemberActivationDiagnostics():{};
     var realtimeManager=global.ConferenceRealtimeManager;
+    var current=typeof global.getCurrentConference==='function'
+      ?global.getCurrentConference():null;
+    var localConferenceId=current&&String(current.id||'')||'';
+    requestConflictRead(localConferenceId);
+    var conflict=conflictRead.localConferenceId===localConferenceId
+      ?conflictRead:{};
+    var draft=conflict.draft||null;
+    var pending=conflict.pending||null;
+    var link=conflict.link||null;
     var state={
       runtimeBuildRevision:RUNTIME_BUILD_REVISION,
       serviceWorkerCacheRevision:SERVICE_WORKER_CACHE_REVISION,
@@ -89,7 +157,27 @@
       linkedRefreshTrace:copy(openState.linkedRefreshTrace||[]),
       activationCurrentStage:activationState.currentStage||null,
       activationExceptionStage:activationState.exceptionStage||null,
-      activationTrace:copy(activationState.trace||[])
+      activationTrace:copy(activationState.trace||[]),
+      'draft.exists':conflict.loaded===true?!!draft:null,
+      'draft.status':draft&&draft.status||null,
+      'draft.executionStatus':draft&&draft.executionStatus||null,
+      'draft.executionResult':copy(draft&&draft.executionResult),
+      'draft.finalizationState':copy(draft&&draft.finalization),
+      'pending.exists':conflict.loaded===true?!!pending:null,
+      'pending.status':pending&&pending.status||null,
+      'pending.revision':pending&&Number.isInteger(pending.resolvedRevision)
+        ?pending.resolvedRevision:null,
+      'pending.applicationState':copy(pending&&pending.applicationState),
+      'link.linkStatus':link&&link.linkStatus||null,
+      'link.pendingLocalApplication':link&&
+        typeof link.pendingLocalApplication==='boolean'
+        ?link.pendingLocalApplication:null,
+      'link.knownRevision':link&&Number.isInteger(link.knownRevision)
+        ?link.knownRevision:null,
+      'link.actualRevision':link&&Number.isInteger(link.actualRevision)
+        ?link.actualRevision:null,
+      firstIncompleteFlag:conflict.loaded===true
+        ?conflict.firstIncompleteFlag:null
     };
     var sanitized={};
     FIELDS.forEach(function(field){sanitized[field]=state[field];});

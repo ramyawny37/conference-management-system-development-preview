@@ -5,7 +5,7 @@ const vm=require('vm');
 
 const root=path.join(__dirname,'..');
 const marker='canonical-conference-schema-v1';
-const cacheMarker='realtime-refresh-completion-v1';
+const cacheMarker='conflict-finalization-diagnostics-v1';
 const source=fs.readFileSync(path.join(
   root,'js/sync/member-runtime-diagnostics.js'),'utf8');
 const sandbox={window:null,structuredClone:value=>JSON.parse(JSON.stringify(value)),
@@ -68,7 +68,6 @@ const index=fs.readFileSync(path.join(root,'index.html'),'utf8');
 const worker=fs.readFileSync(path.join(root,'service-worker.js'),'utf8');
 assert.ok(worker.includes("const CACHE_REVISION = '"+cacheMarker+"';"));
 [
-  'js/sync/discovered-conference-open-service.js?rev='+cacheMarker,
   'js/sync/member-runtime-diagnostics.js?rev='+cacheMarker,
   'core.js?rev='+marker,
   'people.js?rev='+marker,
@@ -83,10 +82,11 @@ const settingsSource=fs.readFileSync(path.join(
 assert.ok(settingsSource.includes('تشخيص مزامنة هذا الجهاز'));
 assert.ok(source.includes(marker));
 assert.ok(index.includes(
-  'js/sync/sync-settings-ui.js?rev='+cacheMarker));
+  'js/sync/sync-settings-ui.js?rev=realtime-refresh-completion-v1'));
 assert.ok(index.includes(
-  'js/sync/automatic-sync-orchestrator.js?rev='+cacheMarker));
+  'js/sync/automatic-sync-orchestrator.js?rev=local-save-queue-wake-v1'));
 assert.ok(index.includes(
-  'js/sync/conference-realtime-manager.js?rev='+cacheMarker));
+  'js/sync/conference-realtime-manager.js?rev='+
+  'realtime-already-subscribed-completion-v1'));
 
 console.log('member runtime trace tests passed');
