@@ -9,11 +9,16 @@ Object.keys(mappings).forEach(function(name){assert.ok(service.includes("'"+name
 assert.doesNotMatch(service+ui,/\.from\s*\(|\.channel\s*\(|postgres_changes|P03CStaged|device_guarded_/);
 assert.doesNotMatch(service+ui,/setInterval/);
 assert.match(service,/return listMemberDevices\(\{organizationId:organizationId,targetUserId:targetUserId\}/,'terminal mutation refresh must target the affected member only');
+assert.match(service,/memberDevices:refreshed\.ok\?refreshed\.data:null/,'confirmed mutations must survive a denied terminal refresh');
 assert.doesNotMatch(service,/listMyOrganizations|listMembers/,'mutation service must not refresh organization directories');
 assert.match(ui,/اختر الجهاز البديل/);assert.match(ui,/replaceFrom/);assert.match(service,/replacement===deviceId/);
 ['إدارة أجهزة الأعضاء','تحديث الأجهزة','اعتماد الجهاز','رفض الطلب','إلغاء اعتماد الجهاز','استبدال الجهاز المعتمد','نتيجة العملية غير مؤكدة وتتطلب إعادة تحقق.'].forEach(function(text){assert.ok(ui.includes(text),text);});
 ['كل الحالات','بانتظار الموافقة','معتمد','مرفوض أو ملغى','مسجل'].forEach(function(text){assert.ok(ui.includes(text),text);});
 assert.match(ui,/setStatusFilter/);
+assert.match(ui,/action==='approve'&&approved\.length===1/,'single-device approval must route to atomic replacement');
+assert.match(ui,/effectiveAction='replace'/,'single-device approval must use the replacement RPC');
+assert.match(ui,/applyConfirmedResult/,'confirmed mutations must update local state when refresh is unavailable');
+assert.match(ui,/CurrentDeviceAuthorizationUI/,'device administration must refresh current-device state');
 assert.match(service,/ownerPendingRequestsCount/);
 assert.match(repository,/actorUserId===input\.actorUserId/);assert.match(repository,/operationId:operationId,state:'pending'/);assert.match(repository,/markUnknown/);
 assert.ok(index.indexOf('device-authorization-operation-repository.js')<index.indexOf('current-device-authorization-service.js'));
