@@ -633,6 +633,77 @@ async function testOrchestratorBlockersAndRaces(){
   if(restart.promise)await restart.promise;
 }
 
+async function testProductionManagerSubscriberLifecycle(){
+  var current={id:'local-one'};
+  var activeListeners=[];
+  var subscribeCount=0;
+  var unsubscribeCount=0;
+  var traces=[];
+  var links={
+    'local-one':{linkStatus:'cloud_linked',remoteConferenceId:REMOTE_ONE},
+    'local-two':{linkStatus:'cloud_linked',remoteConferenceId:REMOTE_TWO}
+  };
+  var manager={
+    subscribe:function(listener){
+      subscribeCount++;
+      activeListeners.push(listener);
+      return function(){
+        unsubscribeCount++;
+        var index=activeListeners.indexOf(listener);
+        if(index>=0)activeListeners.splice(index,1);
+      };
+    },
+    traceDiagnostic:function(stage){traces.push(stage);},
+    stopAll:function(){return Promise.resolve();}
+  };
+  var loaded=load([
+    'js/sync/sync-scheduler-state.js',
+    'js/sync/automatic-sync-orchestrator.js'
+  ],{
+    ConferenceRealtimeManager:manager,
+    ConferenceLinkStore:{get:function(id){return links[id]||null;}},
+    SupabaseDeviceIdentity:{getOrCreate:function(){return {id:DEVICE_ONE};}},
+    getCurrentConference:function(){return current;}
+  });
+  var orchestrator=loaded.window.AutomaticSyncOrchestrator;
+  var options={
+    debounceMs:10000,
+    preferences:{get:function(){return {cloudSyncEnabled:true};}},
+    realtimeManager:manager
+  };
+  assert.strictEqual(orchestrator.start(options).status,'started');
+  assert.strictEqual(orchestrator.start(options).status,'already_started');
+  assert.strictEqual(subscribeCount,1);
+  assert.strictEqual(activeListeners.length,1);
+  var firstListener=activeListeners[0];
+  firstListener({}, {cloudConferenceId:REMOTE_ONE,observedRevision:2,
+    sourceDeviceId:DEVICE_TWO,classification:'remote_change_detected'});
+  assert.strictEqual(orchestrator.getState().lastScheduledReason,
+    'conference_changed');
+  assert.strictEqual(traces.filter(function(stage){
+    return stage==='CHANGE_SCHEDULED';
+  }).length,1);
+  firstListener({}, {cloudConferenceId:REMOTE_ONE,observedRevision:3,
+    sourceDeviceId:DEVICE_ONE,classification:'self_update'});
+  assert.strictEqual(traces.filter(function(stage){
+    return stage==='CHANGE_SCHEDULED';
+  }).length,1);
+  current={id:'local-two'};
+  orchestrator.schedule('conference_changed',options);
+  assert.strictEqual(activeListeners.length,1);
+  assert.strictEqual(subscribeCount,2);
+  assert.strictEqual(unsubscribeCount,1);
+  firstListener({}, {cloudConferenceId:REMOTE_ONE,observedRevision:4,
+    sourceDeviceId:DEVICE_TWO,classification:'remote_change_detected'});
+  assert.strictEqual(traces.filter(function(stage){
+    return stage==='CHANGE_SCHEDULED';
+  }).length,1);
+  var stopped=orchestrator.stop();
+  await stopped.promise;
+  assert.strictEqual(activeListeners.length,0);
+  assert.strictEqual(unsubscribeCount,2);
+}
+
 async function run(){
   await testSupabaseRealtimeDeliveryAndDurableMarker();
   await testOrchestratorRealtimeLifecycle();
@@ -641,6 +712,7 @@ async function run(){
   testPayloadValidationAndNoRevisionMutation();
   testRemoteUpdateStoreContracts();
   await testOrchestratorBlockersAndRaces();
+  await testProductionManagerSubscriberLifecycle();
   console.log('realtime sync completion phase 1 tests: passed');
 }
 

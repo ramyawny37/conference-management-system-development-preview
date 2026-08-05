@@ -7,6 +7,16 @@
   var BASE_RECONNECT_MS=1000;
   var entries=Object.create(null);
   var listeners=[];
+  var runtimeTrace=[];
+
+  function trace(stage,data){
+    runtimeTrace.push({
+      stage:String(stage||''),
+      at:new Date().toISOString(),
+      data:data&&typeof data==='object'?copy(data):null
+    });
+    runtimeTrace=runtimeTrace.slice(-40);
+  }
 
   function outcome(ok,status,data,error){
     return {ok:ok,status:status,data:data||null,error:error||null};
@@ -403,10 +413,18 @@
     return event;
   }
   function acceptEvent(payload,value,generation,knownRevision,options){
+    trace('EVENT_RECEIVED',{
+      eventType:payload&&payload.eventType||null,
+      channelGeneration:generation
+    });
     var event=normalizedEvent(
       payload,value,generation,knownRevision,options
     );
     if(!event)return;
+    trace('REVISION_RECEIVED',{
+      revision:event.observedRevision,
+      classification:event.classification
+    });
     var time=now(options).getTime();
     pruneEvents(value,time);
     if(value.recentEvents[event.eventId])return;
@@ -531,6 +549,10 @@
           }).subscribe(function(status){
             if(generation!==value.generation)return;
             if(status==='SUBSCRIBED'){
+              trace('CHANNEL_SUBSCRIBED',{
+                localConferenceIdPresent:!!id,
+                cloudConferenceIdPresent:!!ready.cloudConferenceId
+              });
               transition(value,'subscribed','subscribed');
               value.reconnectAttempts=0;
               value.lastConnectedAt=now(options).toISOString();
@@ -538,6 +560,7 @@
               return;
             }
             if(['CHANNEL_ERROR','TIMED_OUT','CLOSED'].indexOf(status)>=0){
+              trace(status,{channelGeneration:generation});
               value.lastError={code:'REALTIME_'+status};
               removeChannel(value,d.client).finally(function(){
                 if(generation!==value.generation)return;
@@ -548,6 +571,9 @@
             }
           });
         }catch(error){
+          trace('SUBSCRIBE_EXCEPTION',{
+            name:String(error&&error.name||'Error')
+          });
           value.lastError={code:'REALTIME_SUBSCRIPTION_FAILED'};
           value.status='error';
           notify(value);
@@ -564,6 +590,7 @@
   }
   function prepareAndSubscribe(appData,id,options){
     id=String(id||'');
+    trace('START_SUBSCRIBE',{localConferenceIdPresent:!!id});
     var value=entry(id);
     if(value.connectPromise)return value.connectPromise;
     if(value.status==='inactive'||value.status==='closed'||
@@ -628,6 +655,7 @@
     return stopAll(options).then(function(){
       entries=Object.create(null);
       listeners=[];
+      runtimeTrace=[];
       return outcome(true,'reset');
     });
   }
@@ -647,6 +675,8 @@
     close:close,
     stopAll:stopAll,
     getState:getState,
+    getDiagnostics:function(){return copy(runtimeTrace);},
+    traceDiagnostic:function(stage,data){trace(stage,data);},
     subscribe:subscribe,
     resetForTests:resetForTests
   });

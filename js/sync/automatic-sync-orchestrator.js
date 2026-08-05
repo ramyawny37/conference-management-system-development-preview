@@ -25,6 +25,9 @@
   var realtimeCleanupPromise=Promise.resolve();
   var realtimeEventRevisionKeys=Object.create(null);
   var activeOptions=null;
+  var realtimeManagerUnsubscribe=null;
+  var realtimeManagerLocalConferenceId=null;
+  var realtimeManagerListenerGeneration=0;
   var diagnostics={
     lastScheduledReason:null,
     lastEvaluationReasons:[],
@@ -209,6 +212,63 @@
       realtimeEventRevisionKeys[dedupKey]=true;
       schedule('conference_changed',options);
     };
+  }
+
+  function traceRealtimeManager(manager,stage,data){
+    if(manager&&typeof manager.traceDiagnostic==='function'){
+      manager.traceDiagnostic(stage,data);
+    }
+  }
+
+  function detachRealtimeManagerListener(){
+    realtimeManagerListenerGeneration++;
+    if(typeof realtimeManagerUnsubscribe==='function'){
+      realtimeManagerUnsubscribe();
+    }
+    realtimeManagerUnsubscribe=null;
+    realtimeManagerLocalConferenceId=null;
+  }
+
+  function ensureRealtimeManagerListener(options){
+    options=options&&typeof options==='object'?options:{};
+    var manager=options.realtimeManager||global.ConferenceRealtimeManager;
+    var localConferenceId=currentLocalConferenceId(options);
+    if(realtimeManagerUnsubscribe&&
+      realtimeManagerLocalConferenceId===localConferenceId){
+      return;
+    }
+    detachRealtimeManagerListener();
+    if(!state.started||!localConferenceId||!manager||
+      typeof manager.subscribe!=='function')return;
+    var listenerGeneration=++realtimeManagerListenerGeneration;
+    realtimeManagerLocalConferenceId=localConferenceId;
+    realtimeManagerUnsubscribe=manager.subscribe(function(managerState,event){
+      if(listenerGeneration!==realtimeManagerListenerGeneration||
+        !state.started||
+        currentLocalConferenceId(options)!==localConferenceId||!event){
+        return;
+      }
+      var links=options.linkStore||global.ConferenceLinkStore;
+      var link=links&&typeof links.get==='function'
+        ?links.get(localConferenceId,options.linkOptions):null;
+      if(!link||link.linkStatus!=='cloud_linked'||
+        String(link.remoteConferenceId||'')!==
+          String(event.cloudConferenceId||''))return;
+      var deviceId=currentDeviceId(options);
+      if(event.classification==='self_update'||deviceId&&
+        String(event.sourceDeviceId||'')===deviceId)return;
+      if(event.classification!=='remote_change_detected')return;
+      var scheduled=schedule('conference_changed',options);
+      if(scheduled&&scheduled.ok){
+        traceRealtimeManager(manager,'CHANGE_SCHEDULED',{
+          revision:event.observedRevision,
+          classification:event.classification
+        });
+      }
+    });
+    traceRealtimeManager(manager,'LISTENER_ATTACHED',{
+      localConferenceIdPresent:true
+    });
   }
 
   function disconnectRealtime(options){
@@ -928,6 +988,9 @@
       tracePreMetadata('schedule','return','orchestrator_stopped');
       return {ok:false,status:'stopped'};
     }
+    if(reason==='conference_changed'){
+      ensureRealtimeManagerListener(options);
+    }
     tracePreMetadata('schedule','accepted',reason);
     diagnostics.lastScheduledReason=reason;
     if(state.scheduledReasons.indexOf(reason)<0){
@@ -990,6 +1053,7 @@
     state.conferenceState='local_only';
     state.linkedConferenceId=null;
     realtimeEventRevisionKeys=Object.create(null);
+    ensureRealtimeManagerListener(options);
     onlineHandler=function(){schedule('online_event',options);};
     offlineHandler=function(){schedule('offline_event',options);};
     if(global.addEventListener){
@@ -1013,6 +1077,7 @@
   }
 
   function stop(){
+    detachRealtimeManagerListener();
     if(onlineHandler&&global.removeEventListener){
       global.removeEventListener('online',onlineHandler);
       global.removeEventListener('offline',offlineHandler);

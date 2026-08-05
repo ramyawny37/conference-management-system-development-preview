@@ -49,6 +49,12 @@
     });
     diagnostics=diagnostics.slice(0,MAX_DIAGNOSTICS);
   }
+  function traceRealtimePipeline(stage,data){
+    var manager=global.ConferenceRealtimeManager;
+    if(manager&&typeof manager.traceDiagnostic==='function'){
+      manager.traceDiagnostic(stage,data);
+    }
+  }
   function getDiagnostics(){
     return {ok:true,status:'read',data:{events:copy(diagnostics)}};
   }
@@ -860,6 +866,10 @@
       if(!diagnosticState.extractedSnapshotValid){
         return Promise.resolve(result(false,'snapshot_malformed'));
       }
+      traceRealtimePipeline('SNAPSHOT_DOWNLOADED',{
+        revision:metadata.revision,
+        source:'cache'
+      });
       return Promise.resolve(result(true,'snapshot_reused',{
         snapshot:copy(cached.conference),
         revision:metadata.revision,
@@ -891,6 +901,10 @@
         if(!diagnosticState.extractedSnapshotValid){
           return result(false,'snapshot_malformed');
         }
+        traceRealtimePipeline('SNAPSHOT_DOWNLOADED',{
+          revision:downloaded.data.revision,
+          source:'remote'
+        });
         return result(true,'snapshot_downloaded',{
           snapshot:copy(downloaded.data.snapshot),
           revision:downloaded.data.revision,
@@ -1152,6 +1166,9 @@
             contextBefore.context&&
             Number.isInteger(contextBefore.context.baseRevision)
             ?contextBefore.context.baseRevision:null;
+          traceRealtimePipeline('LOCAL_APPLY_STARTED',{
+            revision:prepared.link.knownRevision
+          });
           d.applyData(copy(selectedData));
           var refreshConfigured=d.integration&&
             typeof d.integration.configureConferenceSync==='function'
@@ -1189,6 +1206,10 @@
           diagnosticState.settingsConferenceResolved=currentSelected;
           diagnosticState.lastActivationStatus=currentSelected
             ?'activated':'preserved_other_current';
+          traceRealtimePipeline('LOCAL_APPLY_COMPLETED',{
+            revision:prepared.link.knownRevision,
+            activated:currentSelected
+          });
           return result(true,'opened',{
             localConferenceId:prepared.localId,
             remoteConferenceId:remoteId,
@@ -1530,6 +1551,11 @@
         });
       });
     }).then(function(done){
+      if(done&&done.ok===false){
+        traceRealtimePipeline('LOCAL_APPLY_BLOCKED',{
+          reason:done.status||'unknown'
+        });
+      }
       if(!done||done.status!=='up_to_date'){
         traceLinkedRefresh('completed','return',
           done&&done.status||'no_result');

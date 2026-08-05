@@ -1,7 +1,7 @@
 (function(global){
   'use strict';
   var RUNTIME_BUILD_REVISION='canonical-conference-schema-v1';
-  var SERVICE_WORKER_CACHE_REVISION='wrong-remote-binding-repair-v1';
+  var SERVICE_WORKER_CACHE_REVISION='realtime-runtime-listener-v1';
   var FIELDS=Object.freeze([
     'runtimeBuildRevision','serviceWorkerCacheRevision',
     'orchestratorStarted','lastScheduledReason',
@@ -13,6 +13,7 @@
     'materializedCounts','persistedCounts','readAfterWriteCounts',
     'currentConferenceResolved','currentConferenceContentComplete',
     'activationReached','settingsConferenceResolved',
+    'realtimeManagerState','realtimeTrace',
     'lastPreMetadataExitReason','preMetadataTrace',
     'linkedRefreshCurrentStage','linkedRefreshExceptionStage',
     'linkedRefreshTrace','activationCurrentStage','activationExceptionStage',
@@ -23,6 +24,20 @@
     if(typeof global.structuredClone==='function')return global.structuredClone(value);
     return JSON.parse(JSON.stringify(value));
   }
+  function realtimeStates(manager){
+    var values=manager&&typeof manager.getState==='function'
+      ?manager.getState():{};
+    return Object.keys(values||{}).map(function(key){
+      var value=values[key]||{};
+      return {
+        status:value.status||null,
+        reason:value.reason||null,
+        lastError:value.lastError&&value.lastError.code||null,
+        lastConnectedAt:value.lastConnectedAt||null,
+        lastEventAt:value.lastEventAt||null
+      };
+    });
+  }
   function read(){
     var orchestrator=global.AutomaticSyncOrchestrator;
     var openService=global.DiscoveredConferenceOpenService;
@@ -32,6 +47,7 @@
       ?openService.getState():{};
     var activationState=typeof global.getMemberActivationDiagnostics==='function'
       ?global.getMemberActivationDiagnostics():{};
+    var realtimeManager=global.ConferenceRealtimeManager;
     var state={
       runtimeBuildRevision:RUNTIME_BUILD_REVISION,
       serviceWorkerCacheRevision:SERVICE_WORKER_CACHE_REVISION,
@@ -61,6 +77,10 @@
         openState.currentConferenceContentComplete===true,
       activationReached:openState.activationReached===true,
       settingsConferenceResolved:openState.settingsConferenceResolved===true,
+      realtimeManagerState:copy(realtimeStates(realtimeManager)),
+      realtimeTrace:copy(realtimeManager&&
+        typeof realtimeManager.getDiagnostics==='function'
+          ?realtimeManager.getDiagnostics():[]),
       lastPreMetadataExitReason:
         orchestratorState.lastPreMetadataExitReason||null,
       preMetadataTrace:copy(orchestratorState.preMetadataTrace||[]),

@@ -5,7 +5,7 @@ const vm=require('vm');
 
 const root=path.join(__dirname,'..');
 const marker='canonical-conference-schema-v1';
-const cacheMarker='wrong-remote-binding-repair-v1';
+const cacheMarker='realtime-runtime-listener-v1';
 const source=fs.readFileSync(path.join(
   root,'js/sync/member-runtime-diagnostics.js'),'utf8');
 const sandbox={window:null,structuredClone:value=>JSON.parse(JSON.stringify(value)),
@@ -32,7 +32,15 @@ const sandbox={window:null,structuredClone:value=>JSON.parse(JSON.stringify(valu
     linkedRefreshExceptionStage:null,
     linkedRefreshTrace:[{at:'2026-08-04T01:02:03.000Z',
       stage:'trusted_check',status:'completed',reason:'trusted_complete'}]
-  })}
+  })},
+  ConferenceRealtimeManager:{
+    getState:()=>({local:{status:'subscribed',reason:'subscribed',
+      lastError:null,lastConnectedAt:'2026-08-04T01:02:04.000Z',
+      lastEventAt:null}}),
+    getDiagnostics:()=>[{stage:'START_SUBSCRIBE',
+      at:'2026-08-04T01:02:04.000Z',
+      data:{localConferenceIdPresent:true}}]
+  }
 };
 sandbox.window=sandbox;
 vm.runInNewContext(source,sandbox);
@@ -46,6 +54,8 @@ assert.strictEqual(first.orchestratorStarted,true);
 assert.strictEqual(first.lastScheduledReason,'startup');
 assert.strictEqual(first.materializationTrusted,true);
 assert.strictEqual(first.downloadRequestReached,false);
+assert.strictEqual(first.realtimeManagerState[0].status,'subscribed');
+assert.strictEqual(first.realtimeTrace[0].stage,'START_SUBSCRIBE');
 assert.deepStrictEqual(Object.keys(first),Array.from(service.fields));
 const serialized=JSON.stringify(first);
 ['sensitive-local-id','sensitive-remote-id','sensitive-name','sensitive-token',
@@ -58,8 +68,8 @@ const index=fs.readFileSync(path.join(root,'index.html'),'utf8');
 const worker=fs.readFileSync(path.join(root,'service-worker.js'),'utf8');
 assert.ok(worker.includes("const CACHE_REVISION = '"+cacheMarker+"';"));
 [
-  'js/sync/discovered-conference-open-service.js?rev='+marker,
-  'js/sync/member-runtime-diagnostics.js?rev='+marker,
+  'js/sync/discovered-conference-open-service.js?rev='+cacheMarker,
+  'js/sync/member-runtime-diagnostics.js?rev='+cacheMarker,
   'core.js?rev='+marker,
   'people.js?rev='+marker,
   'houses.js?rev='+marker,
@@ -73,8 +83,10 @@ const settingsSource=fs.readFileSync(path.join(
 assert.ok(settingsSource.includes('تشخيص مزامنة هذا الجهاز'));
 assert.ok(source.includes(marker));
 assert.ok(index.includes(
-  'js/sync/sync-settings-ui.js?rev=debug-binding-report-ui-v2'));
+  'js/sync/sync-settings-ui.js?rev=automatic-sync-preferences-gap-v1'));
 assert.ok(index.includes(
-  'js/sync/automatic-sync-orchestrator.js?rev=member-pre-metadata-trace-v1'));
+  'js/sync/automatic-sync-orchestrator.js?rev='+cacheMarker));
+assert.ok(index.includes(
+  'js/sync/conference-realtime-manager.js?rev='+cacheMarker));
 
 console.log('member runtime trace tests passed');

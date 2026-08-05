@@ -15,6 +15,7 @@ function environment(settings={}){
   let manualRelinkChecks=[];
   const forbidden={queue:0,publication:0,rpc:0};
   const events=[];
+  const realtimePipeline=[];
   const persistCounts={};
   const links={};
   const remoteId=settings.remoteId||'remote-1';
@@ -53,6 +54,9 @@ function environment(settings={}){
     conference:clone(snapshot),snapshot:clone(snapshot)
   };
   const sandbox={window:null,structuredClone:clone,
+    ConferenceRealtimeManager:{traceDiagnostic:(stage,data)=>{
+      realtimePipeline.push({stage,data:clone(data||null)});
+    }},
     SupabaseAuth:{getState:()=>({user:account?{id:account}:null})},
     SupabaseClientLayer:{getClient:()=>client},
     StartupConferenceDiscovery:{getRecord:()=>cached},
@@ -181,6 +185,7 @@ function environment(settings={}){
     stored:()=>clone(stored),memory:()=>clone(sandbox.appData),
     activated:()=>activated,configured:()=>configured,
     downloads:()=>downloads,inspects:()=>inspects,
+    realtimePipeline:()=>clone(realtimePipeline),
     manualRelinkChecks:()=>manualRelinkChecks.slice(),
     forbidden:()=>clone(forbidden),
     setMemory:value=>{sandbox.appData=clone(value);},
@@ -316,6 +321,10 @@ function environment(settings={}){
   assert.strictEqual(Object.values(linkedRefresh.links)[0].syncState.pendingLocalChanges,
     false);
   assert.strictEqual(linkedRefresh.downloads(),3);
+  const pipelineStages=linkedRefresh.realtimePipeline().map(entry=>entry.stage);
+  assert.ok(pipelineStages.includes('SNAPSHOT_DOWNLOADED'));
+  assert.ok(pipelineStages.includes('LOCAL_APPLY_STARTED'));
+  assert.ok(pipelineStages.includes('LOCAL_APPLY_COMPLETED'));
   const diagnostics=linkedRefresh.api.getDiagnostics();
   assert.strictEqual(diagnostics.ok,true);
   assert.ok(Array.isArray(diagnostics.data.events));
