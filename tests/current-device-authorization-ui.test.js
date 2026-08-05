@@ -26,5 +26,12 @@ vm.runInNewContext(repository,sandbox);vm.runInNewContext(service,sandbox);vm.ru
   assert.ok(worker.includes("CACHE_REVISION = 'wrong-remote-binding-repair-v1'"));
   assert.ok(ui.includes('طلب اعتماد الجهاز مرة أخرى'));
   assert.ok(ui.includes("state.status==='revoked'&&state.accountStatus==='approved'"));
+  assert.match(service,/function rpcError\(error,fallback\)/);
+  assert.match(ui,/تعذر تسجيل الجهاز\./);
+  assert.match(ui,/تعذر إرسال طلب الاعتماد\./);
+  assert.match(ui,/تعذر تحديث حالة الجهاز\./);
+  assert.match(ui,/error\.code/);
+  assert.ok(index.includes('current-device-authorization-service.js?rev=device-reauthorization-flow-v2'));
+  assert.ok(worker.includes('current-device-authorization-service.js?rev=device-reauthorization-flow-v2'));
   console.log('current-device authorization Gate 2 tests: passed (explicit refresh/register/request; no polling)');
 })().catch(function(error){console.error(error);process.exitCode=1;});
