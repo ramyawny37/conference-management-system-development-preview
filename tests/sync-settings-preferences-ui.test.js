@@ -94,6 +94,14 @@ assert.strictEqual(
 );
 assert.ok(values.conference_manager_automatic_sync_preferences);
 assert.strictEqual(values.automatic_sync_preferences,undefined);
+var savedHtml=sandbox.SyncSettingsUI.renderSection();
+assert.ok(savedHtml.indexOf(
+  'id="sync_cloud_enabled" type="checkbox" checked'
+)>=0);
+sandbox.SyncSettingsUI.saveAutomaticSyncPreferences();
+assert.deepStrictEqual(calls,[
+  'start','preferences_changed','start','preferences_changed'
+]);
 
 orchestratorListener({
   conferenceState:'linked',
@@ -128,7 +136,14 @@ assert.strictEqual(renderCount,2);
 elements.sync_cloud_enabled.checked=false;
 sandbox.SyncSettingsUI.saveAutomaticSyncPreferences();
 assert.deepStrictEqual(calls,[
-  'start','preferences_changed','stop'
+  'start','preferences_changed','start','preferences_changed','stop'
 ]);
+
+sandbox.localStorage.setItem=function(){};
+elements.sync_cloud_enabled.checked=true;
+var failed=sandbox.SyncSettingsUI.saveAutomaticSyncPreferences();
+assert.strictEqual(failed.ok,false);
+assert.strictEqual(failed.status,'storage_failed');
+assert.strictEqual(elements.sync_cloud_enabled.checked,false);
 
 console.log('sync settings preferences UI tests: passed');

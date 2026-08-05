@@ -455,6 +455,12 @@
         ?automatic.checked
         :current.automaticSyncEnabled
     });
+    if(!saved||!saved.ok){
+      var persisted=getAutomaticSyncPreferences();
+      if(cloud)cloud.checked=persisted.cloudSyncEnabled;
+      if(linking)linking.checked=persisted.automaticLinkingEnabled;
+      if(automatic)automatic.checked=persisted.automaticSyncEnabled;
+    }
     message(
       'sync_preferences_message',
       saved&&saved.ok

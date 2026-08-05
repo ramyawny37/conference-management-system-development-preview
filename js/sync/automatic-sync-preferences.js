@@ -39,14 +39,21 @@
     if(!target)return {ok:false,status:'storage_unavailable'};
     try{
       target.setItem(STORAGE_KEY,JSON.stringify(value));
+      var persisted=normalize(JSON.parse(
+        target.getItem(STORAGE_KEY)||'null'
+      ));
+      if(persisted.cloudSyncEnabled!==value.cloudSyncEnabled||
+        persisted.automaticLinkingEnabled!==value.automaticLinkingEnabled||
+        persisted.automaticSyncEnabled!==value.automaticSyncEnabled){
+        return {ok:false,status:'storage_failed',data:persisted};
+      }
       var orchestrator=global.AutomaticSyncOrchestrator;
       if(orchestrator){
         if(previous.cloudSyncEnabled&&!value.cloudSyncEnabled&&
           typeof orchestrator.stop==='function'){
           orchestrator.stop();
         }else if(value.cloudSyncEnabled){
-          if(!previous.cloudSyncEnabled&&
-            typeof orchestrator.start==='function'){
+          if(typeof orchestrator.start==='function'){
             orchestrator.start();
           }
           if(typeof orchestrator.schedule==='function'){
@@ -54,7 +61,7 @@
           }
         }
       }
-      return {ok:true,status:'saved',data:value};
+      return {ok:true,status:'saved',data:persisted};
     }catch(error){
       return {ok:false,status:'storage_failed'};
     }
