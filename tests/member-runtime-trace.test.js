@@ -5,7 +5,7 @@ const vm=require('vm');
 
 const root=path.join(__dirname,'..');
 const marker='canonical-conference-schema-v1';
-const cacheMarker='realtime-ui-manager-binding-v1';
+const cacheMarker='realtime-cloud-lifecycle-binding-v1';
 const source=fs.readFileSync(path.join(
   root,'js/sync/member-runtime-diagnostics.js'),'utf8');
 const sandbox={window:null,structuredClone:value=>JSON.parse(JSON.stringify(value)),
@@ -68,7 +68,7 @@ const index=fs.readFileSync(path.join(root,'index.html'),'utf8');
 const worker=fs.readFileSync(path.join(root,'service-worker.js'),'utf8');
 assert.ok(worker.includes("const CACHE_REVISION = '"+cacheMarker+"';"));
 [
-  'js/sync/discovered-conference-open-service.js?rev='+cacheMarker,
+  'js/sync/discovered-conference-open-service.js?rev=realtime-ui-manager-binding-v1',
   'js/sync/member-runtime-diagnostics.js?rev='+cacheMarker,
   'core.js?rev='+marker,
   'people.js?rev='+marker,
@@ -85,7 +85,7 @@ assert.ok(source.includes(marker));
 assert.ok(index.includes(
   'js/sync/sync-settings-ui.js?rev=automatic-sync-preferences-gap-v1'));
 assert.ok(index.includes(
-  'js/sync/automatic-sync-orchestrator.js?rev=realtime-runtime-listener-v1'));
+  'js/sync/automatic-sync-orchestrator.js?rev='+cacheMarker));
 assert.ok(index.includes(
   'js/sync/conference-realtime-manager.js?rev='+cacheMarker));
 

@@ -640,7 +640,7 @@ async function testProductionManagerSubscriberLifecycle(){
   var unsubscribeCount=0;
   var traces=[];
   var links={
-    'local-one':{linkStatus:'cloud_linked',remoteConferenceId:REMOTE_ONE},
+    'local-one':{linkStatus:'linked',remoteConferenceId:REMOTE_ONE},
     'local-two':{linkStatus:'cloud_linked',remoteConferenceId:REMOTE_TWO}
   };
   var manager={
@@ -661,6 +661,11 @@ async function testProductionManagerSubscriberLifecycle(){
     'js/sync/automatic-sync-orchestrator.js'
   ],{
     ConferenceRealtimeManager:manager,
+    appData:{conferenceLifecycle:{records:{'local-one':{
+      localLifecycle:'active',cloudLifecycle:'cloud_linked'
+    },'local-two':{
+      localLifecycle:'active',cloudLifecycle:'cloud_linked'
+    }}}},
     ConferenceLinkStore:{get:function(id){return links[id]||null;}},
     SupabaseDeviceIdentity:{getOrCreate:function(){return {id:DEVICE_ONE};}},
     getCurrentConference:function(){return current;}

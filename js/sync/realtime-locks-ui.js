@@ -85,6 +85,20 @@
     return manager&&typeof manager.getState==='function'
       ?manager.getState(localId)||null:null;
   }
+  function automaticRealtimeActive(localId,ready,managerState,options){
+    var link=ready&&ready.link;
+    if(link&&link.linkStatus==='cloud_linked')return true;
+    var data=options&&options.appData||global.appData;
+    var record=data&&data.conferenceLifecycle&&
+      data.conferenceLifecycle.records&&
+      data.conferenceLifecycle.records[localId];
+    if(record&&record.cloudLifecycle==='cloud_linked')return true;
+    return !!(link&&managerState&&managerState.cloudConferenceId&&
+      String(managerState.cloudConferenceId)===
+        String(link.remoteConferenceId||'')&&
+      ['connecting','subscribed','suspended','reconnecting','error']
+        .indexOf(managerState.status)>=0);
+  }
   function automaticRealtimePresentation(value){
     value=value||{};
     var status=value.status||'disconnected';
@@ -244,8 +258,10 @@
     var marker=latestMarker(local.id);
     var data=lockResult&&lockResult.data;
     var owned=ownedByCurrentDevice(local.id);
-    var cloudLinked=!!(ready.link&&ready.link.linkStatus==='cloud_linked');
-    var managerState=cloudLinked?automaticRealtimeState(local.id):null;
+    var managerState=automaticRealtimeState(local.id);
+    var cloudLinked=automaticRealtimeActive(
+      local.id,ready,managerState,input
+    );
     var managerView=automaticRealtimePresentation(managerState);
     var displayedStatus=cloudLinked?managerView.label:connectionStatus;
     var html='<section class="settings-section realtime-locks-section">'+
@@ -293,11 +309,11 @@
       ' onclick="RealtimeLocksUI.releaseCurrentLock()">تحرير القفل</button></div>';
     if(cloudLinked){
       var trace=automaticTrace();
-      html+='<details class="sync-settings-message"><summary>Realtime Trace</summary><pre dir="ltr">'+
+      html+='<div class="sync-settings-message"><strong>realtimeTrace</strong><pre dir="ltr">'+
         esc(trace.map(function(item){
           var suffix=item&&item.data?' '+JSON.stringify(item.data):'';
           return String(item&&item.stage||'')+suffix;
-        }).join('\n'))+'</pre></details>';
+        }).join('\n'))+'</pre></div>';
     }
     if(marker){
       var self=marker.status==='self_update';
@@ -323,7 +339,7 @@
       localSnapshot:conference?copy(conference):null};
   }
   function show(text){lastMessage=text;if(global.renderSettings)global.renderSettings();}
-  function connectCurrent(){var i=current(),ready=readiness(i.localConferenceId);var operation=ready.link&&ready.link.linkStatus==='cloud_linked'?automaticReconnect(i.localConferenceId):connect(i.localConferenceId);operation.then(function(r){show(r.ok?'تم الاتصال.':'تعذر الاتصال.');});}
+  function connectCurrent(){var i=current(),ready=readiness(i.localConferenceId),managerState=automaticRealtimeState(i.localConferenceId);var operation=automaticRealtimeActive(i.localConferenceId,ready,managerState)?automaticReconnect(i.localConferenceId):connect(i.localConferenceId);operation.then(function(r){show(r.ok?'تم الاتصال.':'تعذر الاتصال.');});}
   function disconnectCurrent(){disconnect().then(function(r){show(r.ok?'تم الإيقاف يدويًا.':'تعذر الإيقاف.');});}
   function reviewCurrentUpdate(){reviewRemote(current()).then(function(r){show(r.ok?'تمت مراجعة التحديث دون تطبيقه.':'تعذرت المراجعة.');});}
   function markCurrentReviewed(){show(updateMarker(current().localConferenceId,'reviewed_changed').ok?'تم تعليم الإشعار كمراجع.':'تعذر التحديث.');}
@@ -335,6 +351,7 @@
   global.RealtimeLocksUI=Object.freeze({
     readiness:readiness,onEvent:onEvent,connect:connect,disconnect:disconnect,
     automaticRealtimeState:automaticRealtimeState,
+    automaticRealtimeActive:automaticRealtimeActive,
     automaticRealtimePresentation:automaticRealtimePresentation,
     automaticReconnect:automaticReconnect,automaticTrace:automaticTrace,
     reviewRemote:reviewRemote,updateMarker:updateMarker,

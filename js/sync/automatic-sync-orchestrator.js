@@ -220,6 +220,18 @@
     }
   }
 
+  function cloudRealtimeLink(link,localConferenceId,options){
+    if(!link)return false;
+    if(link.linkStatus==='cloud_linked')return true;
+    var data=options&&options.appData||global.appData;
+    var record=data&&data.conferenceLifecycle&&
+      data.conferenceLifecycle.records&&
+      data.conferenceLifecycle.records[localConferenceId];
+    return link.linkStatus==='linked'&&!!(record&&
+      record.localLifecycle==='active'&&
+      record.cloudLifecycle==='cloud_linked');
+  }
+
   function detachRealtimeManagerListener(){
     realtimeManagerListenerGeneration++;
     if(typeof realtimeManagerUnsubscribe==='function'){
@@ -251,7 +263,7 @@
       var links=options.linkStore||global.ConferenceLinkStore;
       var link=links&&typeof links.get==='function'
         ?links.get(localConferenceId,options.linkOptions):null;
-      if(!link||link.linkStatus!=='cloud_linked'||
+      if(!cloudRealtimeLink(link,localConferenceId,options)||
         String(link.remoteConferenceId||'')!==
           String(event.cloudConferenceId||''))return;
       var deviceId=currentDeviceId(options);
@@ -759,8 +771,9 @@
                   diagnostics.lastStopReason=refreshResult.status;
                   return disconnectRealtime(options);
                 }
-              if(latest.data&&latest.data.link&&
-                latest.data.link.linkStatus==='cloud_linked'){
+              if(latest.data&&cloudRealtimeLink(
+                latest.data.link,linkingLocalConferenceId,options
+              )){
                 var manager=options.realtimeManager||
                   global.ConferenceRealtimeManager;
                 var appData=options.appData||global.appData;

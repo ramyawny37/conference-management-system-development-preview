@@ -116,9 +116,10 @@
       conflict(link)){
       return false;
     }
-    if(link.linkStatus==='cloud_linked'){
-      return !!(record&&record.localLifecycle==='active'&&
-        record.cloudLifecycle==='cloud_linked');
+    if(record&&record.localLifecycle==='active'&&
+      record.cloudLifecycle==='cloud_linked'&&
+      ['linked','cloud_linked'].indexOf(link.linkStatus)>=0){
+      return true;
     }
     return legacyAllowed(link,options);
   }
