@@ -15,7 +15,8 @@ function environment(settings){
     ?{id:'local-1',name:'Conference'}:settings.conference;
   var calls={
     scan:0,reconcile:0,schedule:0,configure:0,
-    configureLocalId:null,configureOptions:null
+    configureLocalId:null,configureOptions:null,
+    saves:0,saveOptions:null,queue:0
   };
   var candidates=settings.candidates||[];
   var sandbox={
@@ -49,6 +50,12 @@ function environment(settings){
     ConferenceLinkStore:{get:function(){
       return settings.existingLink||null;
     }},
+    StorageRepository:{saveAppSnapshot:function(value,options){
+      calls.saves++;
+      calls.saveOptions=options;
+      return Promise.resolve({ok:true});
+    }},
+    OfflineSyncQueue:{coalesceSnapshotOperation:function(){calls.queue++;}},
     FullBackupService:{
       getFullRestoreCloudReviewMarker:function(){
         return {pending:settings.restoreMarker===true};
@@ -145,6 +152,41 @@ async function run(){
   assert.strictEqual(legacyLinked.calls.configureOptions.baseRevision,2);
   assert.strictEqual(legacyLinked.calls.scan,0);
   assert.strictEqual(legacyLinked.calls.reconcile,0);
+
+  var legacyLifecycle=environment({
+    existingLink:{
+      localConferenceId:'local-1',
+      remoteConferenceId:'22222222-2222-4222-8222-222222222222',
+      knownRevision:7,
+      linkStatus:'linked'
+    },
+    appData:{
+      conferences:[{id:'local-1',name:'Conference'}],
+      conferenceLifecycle:{schemaVersion:1,records:{
+        'local-1':{
+          localConferenceId:'local-1',localLifecycle:'active',
+          cloudLifecycle:'unpublished',localContentVersion:3,
+          publishMetadata:null
+        }
+      }}
+    }
+  });
+  var repaired=await evaluate(legacyLifecycle);
+  assert.strictEqual(repaired.status,'already_linked');
+  assert.strictEqual(repaired.data.lifecycleRepaired,true);
+  assert.strictEqual(
+    legacyLifecycle.window.appData.conferenceLifecycle.records['local-1']
+      .cloudLifecycle,
+    'cloud_linked'
+  );
+  assert.strictEqual(legacyLifecycle.calls.configureOptions.conferenceId,
+    '22222222-2222-4222-8222-222222222222');
+  assert.strictEqual(legacyLifecycle.calls.configureOptions.baseRevision,7);
+  assert.strictEqual(legacyLifecycle.calls.saves,1);
+  assert.strictEqual(legacyLifecycle.calls.saveOptions.skipSyncQueue,true);
+  assert.strictEqual(legacyLifecycle.calls.queue,0);
+  assert.strictEqual(legacyLifecycle.window.ConferenceLinkStore.get()
+    .knownRevision,7);
 
   var invalidLinks=[
     {
