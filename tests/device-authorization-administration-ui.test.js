@@ -15,8 +15,9 @@ assert.match(ui,/اختر الجهاز البديل/);assert.match(ui,/replaceFr
 ['إدارة أجهزة الأعضاء','تحديث الأجهزة','اعتماد الجهاز','رفض الطلب','إلغاء اعتماد الجهاز','استبدال الجهاز المعتمد','نتيجة العملية غير مؤكدة وتتطلب إعادة تحقق.'].forEach(function(text){assert.ok(ui.includes(text),text);});
 ['كل الحالات','بانتظار الموافقة','معتمد','مرفوض أو ملغى','مسجل'].forEach(function(text){assert.ok(ui.includes(text),text);});
 assert.match(ui,/setStatusFilter/);
-assert.match(ui,/action==='approve'&&approved\.length===1/,'single-device approval must route to atomic replacement');
-assert.match(ui,/effectiveAction='replace'/,'single-device approval must use the replacement RPC');
+assert.doesNotMatch(ui,/action==='approve'&&approved\.length===1/,'approval must not infer replacement');
+assert.doesNotMatch(ui,/effectiveAction='replace'/,'approval must not invoke replacement');
+assert.match(ui,/service\(\)\[methods\[action\]\]/,'each device action must invoke only its explicit RPC');
 assert.match(ui,/applyConfirmedResult/,'confirmed mutations must update local state when refresh is unavailable');
 assert.match(ui,/CurrentDeviceAuthorizationUI/,'device administration must refresh current-device state');
 assert.match(service,/ownerPendingRequestsCount/);
