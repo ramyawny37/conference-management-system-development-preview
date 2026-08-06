@@ -1,6 +1,6 @@
 const APP_VERSION = '3.1.1';
 const CACHE_PREFIX = 'conference-manager-core-';
-const CACHE_REVISION = 'realtime-drop-instrumentation-v1';
+const CACHE_REVISION = 'conference-template-houses-editor-v1';
 const CACHE_NAME = CACHE_PREFIX + 'v' + APP_VERSION + '-' + CACHE_REVISION;
 const CORE_ASSETS = [
   './',
@@ -83,6 +83,7 @@ const CORE_ASSETS = [
   './houseTemplates.js',
   './state.js?rev=device-reauthorization-flow-v1',
   './js/conference/accounts.js',
+  './js/conference-template-houses-editor.js',
   './cards.js',
   './script.js?rev=canonical-conference-schema-v1',
   './version.js',

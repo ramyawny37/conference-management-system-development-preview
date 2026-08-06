@@ -307,6 +307,9 @@ function moveTemplateToTrash(id){
   if (!confirm('حذف القالب؟ يمكن استعادته من سلة المحذوفات.')) return;
   pushTrashItem('templates', target);
   appData.templates = removeByIdFromArray(appData.templates, id);
+  if(window.ConferenceTemplateHousesEditor){
+    window.ConferenceTemplateHousesEditor.handleTemplateDeleted(id);
+  }
   if(!save())return false;
   renderSettings();
   showToast('🗑️ تم نقل القالب إلى سلة المحذوفات');
@@ -1122,6 +1125,9 @@ function saveToFile(){
 }
 
 function switchSettingsTab(tab) {
+  if(window.ConferenceTemplateHousesEditor){
+    window.ConferenceTemplateHousesEditor.close();
+  }
   settingsTab = tab || 'general';
   renderSettings();
 }
@@ -1335,6 +1341,9 @@ function switchTab(n){
   var tabId = typeof n === 'number' ? n : parseInt(n, 10);
   if (!isValidApplicationTab(tabId)) return false;
   var settingsTabId=getApplicationTabIdByName('settings');
+  if(tabId!==settingsTabId&&window.ConferenceTemplateHousesEditor){
+    window.ConferenceTemplateHousesEditor.close();
+  }
   if(!getCurrentConference()&&tabId!==settingsTabId){
     showToast('يرجى اختيار مؤتمر أو إنشاء مؤتمر جديد أولًا.','#E67E22');
     return false;
@@ -5936,6 +5945,9 @@ function updateStartupDateTime(){
 
 function setApplicationMode(mode){
   var startup = mode === 'startup';
+  if(startup&&window.ConferenceTemplateHousesEditor){
+    window.ConferenceTemplateHousesEditor.close();
+  }
   var startupScreen = ge('startupScreen');
   var topbar = ge('applicationTopbar');
   var body = ge('applicationBody');
@@ -7285,6 +7297,7 @@ function renderSettings(){
       h+='<div class="settings-list-item">';
       h+='<div><div style="font-weight:700">'+esc(t.name)+'</div><div style="font-size:10px;color:#5a7a9a">'+esc(t.createdAt||'')+'</div></div>';
       h+='<div class="row" style="gap:6px">';
+      h+='<button class="btn btn-purple btn-sm" onclick="ConferenceTemplateHousesEditor.open(\''+t.id+'\')">إدارة بيوت وغرف القالب</button>';
       h+='<button class="btn btn-blue btn-sm" onclick="applyTemplate(\''+t.id+'\')">تشغيل</button>';
       h+='<button class="btn btn-red btn-sm" onclick="moveTemplateToTrash(\''+t.id+'\')">حذف</button>';
       h+='</div></div>';
