@@ -1,6 +1,6 @@
 const APP_VERSION = '3.1.1';
 const CACHE_PREFIX = 'conference-manager-core-';
-const CACHE_REVISION = 'conference-template-houses-editor-v1';
+const CACHE_REVISION = 'targeted-stuck-operation-recovery-v1';
 const CACHE_NAME = CACHE_PREFIX + 'v' + APP_VERSION + '-' + CACHE_REVISION;
 const CORE_ASSETS = [
   './',
@@ -14,6 +14,7 @@ const CORE_ASSETS = [
   './js/storage/conference-publish-manager.js',
   './js/storage/full-backup.js',
   './js/sync/sync-queue.js',
+  './js/sync/targeted-stuck-operation-recovery.js',
   './js/storage/migration-audit.js',
   './js/storage/migration-repair.js',
   './js/supabase/public-config.js',
@@ -44,7 +45,7 @@ const CORE_ASSETS = [
   './js/sync/debug-binding-report-ui.js?rev=debug-binding-report-ui-v2',
   './js/sync/device-rescue-export.js?rev=device-rescue-export-v1',
   './js/sync/experimental-conference-reset.js?rev=experimental-reset-v1',
-  './js/sync/sync-settings-ui.js?rev=pwa-deterministic-update-test-v1',
+  './js/sync/sync-settings-ui.js?rev=targeted-stuck-operation-recovery-v1',
   './js/sync/link-status-diagnostic-store.js',
   './js/sync/conference-link-store.js',
   './js/sync/conference-membership-attempt-store.js',
@@ -70,7 +71,7 @@ const CORE_ASSETS = [
   './js/sync/automatic-queue-runner.js?rev=runtime-diagnostics-v1',
   './js/sync/automatic-conference-linking.js?rev=realtime-refresh-completion-v1',
   './js/sync/discovered-conference-open-service.js?rev=realtime-refresh-completion-v1',
-  './js/sync/member-runtime-diagnostics.js?rev=realtime-drop-instrumentation-v1',
+  './js/sync/member-runtime-diagnostics.js?rev=targeted-stuck-operation-recovery-v1',
   './js/sync/automatic-sync-orchestrator.js?rev=realtime-drop-instrumentation-v1',
   './js/sync/wrong-remote-binding-repair-store.js?rev=wrong-remote-binding-repair-v1',
   './js/sync/wrong-remote-binding-repair-service.js?rev=wrong-remote-binding-repair-v1',

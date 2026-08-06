@@ -183,6 +183,18 @@
       'مسح سجل تشخيص Link</button></div></div></section>';
     var current=typeof global.getCurrentConference==='function'
       ?global.getCurrentConference():null;
+    var targeted=global.TargetedStuckOperationRecovery;
+    if(current&&current.id==='e711a3ba-fea3-416a-ba1d-7caf4c3e931e'&&targeted){
+      var recoveryState=typeof targeted.getState==='function'?targeted.getState():{};
+      var recoveryResult=recoveryState.lastResult;
+      html+='<section class="settings-section sync-settings-section">'+
+        '<div class="settings-section-title">استعادة عملية مزامنة تجريبية محددة</div>'+
+        '<div class="sync-settings-message">أداة مؤقتة للعملية d41902b7…0d23 فقط. لا تعيد رفع أو تنزيل Snapshot.</div>'+
+        '<button type="button" class="btn btn-red btn-sm" '+
+        'onclick="SyncSettingsUI.recoverTargetedStuckOperation()">إصلاح العملية المرفوعة العالقة</button>'+
+        (recoveryResult?'<pre dir="ltr" class="sync-settings-diagnostic-output">'+
+          escapeHtml(JSON.stringify(recoveryResult,null,2))+'</pre>':'')+'</section>';
+    }
     var link=current&&global.ConferenceLinkStore&&
       global.ConferenceLinkStore.get(current.id);
     if(link&&link.linkStatus==='needs_resolution'){
@@ -215,6 +227,29 @@
         global.showToast('تعذر تصدير حزمة إنقاذ هذا الجهاز.','#E74C3C');
       }
       return false;
+    });
+  }
+
+  function recoverTargetedStuckOperation(){
+    var service=global.TargetedStuckOperationRecovery;
+    if(!service||typeof service.recover!=='function'){
+      message('sync_settings_message','تعذر تشغيل أداة إصلاح العملية العالقة.',true);
+      return Promise.resolve(false);
+    }
+    if(typeof global.confirm==='function'&&!global.confirm(
+      'سيتم استكمال الحالة المحلية للعملية المرفوعة d41902b7…0d23 دون إعادة رفع أو تنزيل البيانات. هل تريد المتابعة؟'
+    ))return Promise.resolve({ok:false,status:'cancelled'});
+    return service.recover().then(function(outcome){
+      var ok=outcome&&outcome.ok===true;
+      var detail=ok?'تم إصلاح العملية المرفوعة العالقة بأمان.':
+        outcome&&outcome.status==='already_recovered'
+          ?'تم إصلاح هذه العملية سابقًا.':
+          'توقف الإصلاح بأمان عند '+String(outcome&&outcome.failedStage||'unknown')+
+            ': '+String(outcome&&outcome.reason||outcome&&outcome.status||'error');
+      message('sync_settings_message',detail,!ok&&
+        !(outcome&&outcome.status==='already_recovered'));
+      rerender();
+      return outcome;
     });
   }
 
@@ -574,6 +609,7 @@
     refreshAuthState:refreshAuthState,
     saveDeviceName:saveDeviceName,
     exportDeviceRescueBundle:exportDeviceRescueBundle,
+    recoverTargetedStuckOperation:recoverTargetedStuckOperation,
     refreshAccommodationLockDiagnostics:refreshAccommodationLockDiagnostics,
     releaseOwnedAccommodationLock:releaseOwnedAccommodationLock,
     saveAutomaticSyncPreferences:saveAutomaticSyncPreferences,

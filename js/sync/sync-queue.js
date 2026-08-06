@@ -785,6 +785,10 @@
             :operation.conferenceId,
           operationId:operation.operationId
         };
+        if(typeof applyResult.recoveryReason==='string'&&
+          applyResult.recoveryReason.trim()){
+          operation.result.recoveryReason=applyResult.recoveryReason.trim();
+        }
         operation.conflict = null;
         operation.nextAttemptAt = null;
         operation.lastError = null;
