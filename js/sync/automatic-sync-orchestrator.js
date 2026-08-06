@@ -39,6 +39,9 @@
     lastRunnerResultStatus:'runner_not_invoked',
     lastRunnerWaitingReason:null,
     lastStopReason:null,
+    lastRealtimeListenerResult:null,
+    lastScheduledReasons:null,
+    lastRefreshDecision:null,
     preMetadataTrace:[],
     lastPreMetadataExitReason:null
   };
@@ -81,6 +84,11 @@
     snapshot.lastRunnerResultStatus=diagnostics.lastRunnerResultStatus;
     snapshot.lastRunnerWaitingReason=diagnostics.lastRunnerWaitingReason;
     snapshot.lastStopReason=diagnostics.lastStopReason;
+    snapshot.lastRealtimeListenerResult=copy(
+      diagnostics.lastRealtimeListenerResult
+    );
+    snapshot.lastScheduledReasons=copy(diagnostics.lastScheduledReasons);
+    snapshot.lastRefreshDecision=copy(diagnostics.lastRefreshDecision);
     snapshot.runtimeBuildRevision=RUNTIME_BUILD_REVISION;
     snapshot.preMetadataTrace=copy(diagnostics.preMetadataTrace);
     snapshot.lastPreMetadataExitReason=diagnostics.lastPreMetadataExitReason;
@@ -267,13 +275,45 @@
     }
     detachRealtimeManagerListener();
     if(!state.started||!localConferenceId||!manager||
-      typeof manager.subscribe!=='function')return;
+      typeof manager.subscribe!=='function'){
+      diagnostics.lastRealtimeListenerResult={
+        accepted:false,
+        reason:'listener_not_bound',
+        orchestratorStarted:state.started===true,
+        currentConferencePresent:!!localConferenceId
+      };
+      if(manager&&typeof manager.recordListenerDecision==='function'){
+        manager.recordListenerDecision(Object.assign(
+          {stage:'listener_binding'},
+          diagnostics.lastRealtimeListenerResult
+        ));
+      }
+      return;
+    }
     var listenerGeneration=++realtimeManagerListenerGeneration;
     realtimeManagerLocalConferenceId=localConferenceId;
     realtimeManagerUnsubscribe=manager.subscribe(function(managerState,event){
-      if(listenerGeneration!==realtimeManagerListenerGeneration||
-        !state.started||
-        currentLocalConferenceId(options)!==localConferenceId||!event){
+      var rejection=null;
+      if(listenerGeneration!==realtimeManagerListenerGeneration){
+        rejection='generation_mismatch';
+      }else if(!state.started){
+        rejection='orchestrator_stopped';
+      }else if(currentLocalConferenceId(options)!==localConferenceId){
+        rejection='current_conference_mismatch';
+      }else if(!event){
+        rejection='event_missing';
+      }
+      if(rejection){
+        diagnostics.lastRealtimeListenerResult={
+          accepted:false,reason:rejection,
+          revision:event&&event.observedRevision||null
+        };
+        if(typeof manager.recordListenerDecision==='function'){
+          manager.recordListenerDecision(Object.assign(
+            {stage:'orchestrator_listener'},
+            diagnostics.lastRealtimeListenerResult
+          ));
+        }
         return;
       }
       var links=options.linkStore||global.ConferenceLinkStore;
@@ -281,11 +321,57 @@
         ?links.get(localConferenceId,options.linkOptions):null;
       if(!cloudRealtimeLink(link,localConferenceId,options)||
         String(link.remoteConferenceId||'')!==
-          String(event.cloudConferenceId||''))return;
+          String(event.cloudConferenceId||'')){
+        diagnostics.lastRealtimeListenerResult={
+          accepted:false,reason:'remote_conference_mismatch',
+          revision:event.observedRevision
+        };
+        if(typeof manager.recordListenerDecision==='function'){
+          manager.recordListenerDecision(Object.assign(
+            {stage:'orchestrator_listener'},
+            diagnostics.lastRealtimeListenerResult
+          ));
+        }
+        return;
+      }
       var deviceId=currentDeviceId(options);
       if(event.classification==='self_update'||deviceId&&
-        String(event.sourceDeviceId||'')===deviceId)return;
-      if(event.classification!=='remote_change_detected')return;
+        String(event.sourceDeviceId||'')===deviceId){
+        diagnostics.lastRealtimeListenerResult={
+          accepted:false,reason:'self_update',revision:event.observedRevision
+        };
+        if(typeof manager.recordListenerDecision==='function'){
+          manager.recordListenerDecision(Object.assign(
+            {stage:'orchestrator_listener'},
+            diagnostics.lastRealtimeListenerResult
+          ));
+        }
+        return;
+      }
+      if(event.classification!=='remote_change_detected'){
+        diagnostics.lastRealtimeListenerResult={
+          accepted:false,reason:'classification_not_supported',
+          classification:event.classification,
+          revision:event.observedRevision
+        };
+        if(typeof manager.recordListenerDecision==='function'){
+          manager.recordListenerDecision(Object.assign(
+            {stage:'orchestrator_listener'},
+            diagnostics.lastRealtimeListenerResult
+          ));
+        }
+        return;
+      }
+      diagnostics.lastRealtimeListenerResult={
+        accepted:true,reason:null,classification:event.classification,
+        revision:event.observedRevision
+      };
+      if(typeof manager.recordListenerDecision==='function'){
+        manager.recordListenerDecision(Object.assign(
+          {stage:'orchestrator_listener'},
+          diagnostics.lastRealtimeListenerResult
+        ));
+      }
       var scheduled=schedule('conference_changed',options);
       if(scheduled&&scheduled.ok){
         traceRealtimeManager(manager,'CHANGE_SCHEDULED',{
@@ -774,8 +860,18 @@
               var opener=options&&options.discoveredOpenService||
                 global.DiscoveredConferenceOpenService;
               var refreshAllowed=shouldRefreshForReasons(reasons);
+              var refreshSkipReason=refreshAllowed?null:
+                reasons.length===0?'no_scheduled_reasons':
+                reasons.length===1&&reasons[0]==='local_save'
+                  ?'local_save_only':'no_refresh_eligible_reason';
+              diagnostics.lastRefreshDecision={
+                reasons:reasons.slice(),
+                conferenceChanged:reasons.indexOf('conference_changed')>=0,
+                allowed:refreshAllowed,
+                skipReason:refreshSkipReason
+              };
               tracePreMetadata('refreshReason',refreshAllowed?'passed':'skipped',
-                refreshAllowed?null:'startup_reason_not_allowed');
+                refreshSkipReason);
               tracePreMetadata('refreshService',opener&&
                 typeof opener.refreshLinkedLocalConference==='function'
                   ?'passed':'skipped',!opener?'service_not_registered':
@@ -1137,6 +1233,7 @@
       );
       ensureRealtimeManagerListener(options);
     }
+    var reasonsBefore=state.scheduledReasons.slice();
     tracePreMetadata('schedule','accepted',reason);
     diagnostics.lastScheduledReason=reason;
     traceRealtimeManager(
@@ -1146,6 +1243,15 @@
     if(state.scheduledReasons.indexOf(reason)<0){
       state.scheduledReasons.push(reason);
     }
+    diagnostics.lastScheduledReasons={
+      reason:reason,
+      before:reasonsBefore,
+      after:state.scheduledReasons.slice()
+    };
+    traceRealtimeManager(
+      options.realtimeManager||global.ConferenceRealtimeManager,
+      'SCHEDULE_REASONS',diagnostics.lastScheduledReasons
+    );
     if(debounceTimer)global.clearTimeout(debounceTimer);
     debounceTimer=global.setTimeout(function(){
       debounceTimer=null;
@@ -1249,6 +1355,9 @@
     state.started=true;
     diagnostics.preMetadataTrace=[];
     diagnostics.lastPreMetadataExitReason=null;
+    diagnostics.lastRealtimeListenerResult=null;
+    diagnostics.lastScheduledReasons=null;
+    diagnostics.lastRefreshDecision=null;
     tracePreMetadata('start','passed',null);
     traceRealtimeManager(
       options.realtimeManager||global.ConferenceRealtimeManager,

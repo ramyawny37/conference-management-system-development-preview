@@ -15,6 +15,7 @@ function environment(settings={}){
   const stored=[];
   const suspendedQueue=[];
   const timers=[];
+  let readinessReads=0;
   let operations=settings.operations||[];
   let link=settings.noLink?null:Object.assign({
     localConferenceId:LOCAL,
@@ -129,6 +130,7 @@ function environment(settings={}){
     },
     OfflineSyncQueue:{
       getConferenceReadiness(){
+        readinessReads++;
         const active=operations.filter(operation=>
           ['pending','processing','failed','server_applied',
             'requires_reconciliation'].includes(operation.status));
@@ -159,6 +161,7 @@ function environment(settings={}){
     manager:sandbox.ConferenceRealtimeManager,
     sandbox,appData,client,channels,removed,events,stored,
     suspendedQueue,timers,
+    readinessReads(){return readinessReads;},
     setOperations(value){operations=value;},
     setLink(value){link=value;}
   };
@@ -265,6 +268,7 @@ async function tick(){
       updated_at:'2026-07-30T10:00:00.000Z'
     }
   };
+  const eventReadinessBefore=eventEnv.readinessReads();
   channel.callback(payload);
   channel.callback(payload);
   await tick();
@@ -277,6 +281,14 @@ async function tick(){
   assert.strictEqual(
     eventEnv.manager.getState(LOCAL).remoteChangeDetected,true
   );
+  const acceptedDiagnostic=eventEnv.manager.getEventDiagnostics();
+  assert.strictEqual(acceptedDiagnostic.lastAcceptedRevision,4);
+  assert.strictEqual(
+    acceptedDiagnostic.lastPostQueueClassification,'remote_change_detected'
+  );
+  assert.strictEqual(acceptedDiagnostic.lastNotifyResult.executed,true);
+  assert.strictEqual(eventEnv.readinessReads()-eventReadinessBefore,1,
+    'one remote event performs one queue readiness read');
   assert.deepStrictEqual(
     eventEnv.manager.getDiagnostics().map(item=>item.stage).slice(0,9),
     ['PREPARE_SUBSCRIBE_ENTRY','START_SUBSCRIBE',
@@ -345,11 +357,28 @@ async function tick(){
     conflict.appData,LOCAL,{client:conflict.client}
   );
   conflict.setOperations([{status:'pending'}]);
+  const conflictReadinessBefore=conflict.readinessReads();
   conflict.channels[0].callback(payload);
   await tick();
   assert.strictEqual(
     conflict.events[0].event.classification,'potential_conflict'
   );
+  const conflictDiagnostic=conflict.manager.getEventDiagnostics();
+  assert.strictEqual(
+    conflictDiagnostic.lastPostQueueClassification,'potential_conflict'
+  );
+  assert.strictEqual(conflictDiagnostic.lastDropStage,
+    'post_queue_classification');
+  assert.strictEqual(conflictDiagnostic.lastDropReason,'potential_conflict');
+  const conflictQueueTrace=conflict.manager.getDiagnostics()
+    .filter(item=>item.stage==='QUEUE_INSPECTION_COMPLETED').at(-1);
+  assert.strictEqual(conflictQueueTrace.data.queueStable,false);
+  assert.strictEqual(conflictQueueTrace.data.pendingCount,1);
+  assert.strictEqual(conflictQueueTrace.data.processingCount,0);
+  assert.strictEqual(conflictQueueTrace.data.failedCount,0);
+  assert.strictEqual(conflictQueueTrace.data.conflictCount,0);
+  assert.strictEqual(conflict.readinessReads()-conflictReadinessBefore,1,
+    'potential conflict performs no additional queue inspection');
   assert.strictEqual(conflict.suspendedQueue.length,1);
   assert.strictEqual(conflict.manager.getState(LOCAL).status,'suspended');
   assert.strictEqual(

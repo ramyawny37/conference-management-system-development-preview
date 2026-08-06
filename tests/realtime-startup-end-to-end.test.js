@@ -167,6 +167,13 @@ async function delay(ms){
   assert.strictEqual(afterSecondEvaluation.followUpPending,false);
   assert.strictEqual(runnerInvocations,2);
   assert.strictEqual(channelCreations,1);
+  assert.strictEqual(afterSecondEvaluation.lastRefreshDecision.allowed,false);
+  assert.strictEqual(
+    afterSecondEvaluation.lastRefreshDecision.skipReason,'local_save_only'
+  );
+  assert.deepStrictEqual(
+    Array.from(afterSecondEvaluation.lastEvaluationReasons),['local_save']
+  );
 
   const stages=sandbox.ConferenceRealtimeManager.getDiagnostics()
     .map(item=>item.stage);

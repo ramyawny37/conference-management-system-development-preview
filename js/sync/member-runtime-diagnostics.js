@@ -1,7 +1,7 @@
 (function(global){
   'use strict';
   var RUNTIME_BUILD_REVISION='canonical-conference-schema-v1';
-  var SERVICE_WORKER_CACHE_REVISION='conference-lock-release-diagnostics-v1';
+  var SERVICE_WORKER_CACHE_REVISION='realtime-drop-instrumentation-v1';
   var FIELDS=Object.freeze([
     'runtimeBuildRevision','serviceWorkerCacheRevision',
     'orchestratorStarted','lastScheduledReason',
@@ -14,6 +14,13 @@
     'currentConferenceResolved','currentConferenceContentComplete',
     'activationReached','settingsConferenceResolved',
     'realtimeManagerState','realtimeTrace','linkStatusWriteTrace',
+    'realtime.lastAcceptedRevision',
+    'realtime.lastPostQueueClassification','realtime.lastDropStage',
+    'realtime.lastDropReason','realtime.lastNotifyResult',
+    'orchestrator.lastRealtimeListenerResult',
+    'orchestrator.lastScheduledReasons',
+    'orchestrator.lastEvaluationReasons',
+    'orchestrator.lastRefreshDecision',
     'persistentLinkStatusWriteTrace','persistentRegressionCount',
     'latestPersistentRegression','traceStorageReadError',
     'lastPreMetadataExitReason','preMetadataTrace',
@@ -116,6 +123,9 @@
     var activationState=typeof global.getMemberActivationDiagnostics==='function'
       ?global.getMemberActivationDiagnostics():{};
     var realtimeManager=global.ConferenceRealtimeManager;
+    var realtimeEventDiagnostics=realtimeManager&&
+      typeof realtimeManager.getEventDiagnostics==='function'
+      ?realtimeManager.getEventDiagnostics():{};
     var current=typeof global.getCurrentConference==='function'
       ?global.getCurrentConference():null;
     var localConferenceId=current&&String(current.id||'')||'';
@@ -169,6 +179,30 @@
       realtimeTrace:copy(realtimeManager&&
         typeof realtimeManager.getDiagnostics==='function'
           ?realtimeManager.getDiagnostics():[]),
+      'realtime.lastAcceptedRevision':Number.isInteger(
+        realtimeEventDiagnostics.lastAcceptedRevision
+      )?realtimeEventDiagnostics.lastAcceptedRevision:null,
+      'realtime.lastPostQueueClassification':
+        realtimeEventDiagnostics.lastPostQueueClassification||null,
+      'realtime.lastDropStage':
+        realtimeEventDiagnostics.lastDropStage||null,
+      'realtime.lastDropReason':
+        realtimeEventDiagnostics.lastDropReason||null,
+      'realtime.lastNotifyResult':copy(
+        realtimeEventDiagnostics.lastNotifyResult||null
+      ),
+      'orchestrator.lastRealtimeListenerResult':copy(
+        orchestratorState.lastRealtimeListenerResult||null
+      ),
+      'orchestrator.lastScheduledReasons':copy(
+        orchestratorState.lastScheduledReasons||null
+      ),
+      'orchestrator.lastEvaluationReasons':copy(
+        orchestratorState.lastEvaluationReasons||[]
+      ),
+      'orchestrator.lastRefreshDecision':copy(
+        orchestratorState.lastRefreshDecision||null
+      ),
       linkStatusWriteTrace:copy(global.ConferenceLinkStore&&
         typeof global.ConferenceLinkStore.getWriteDiagnostics==='function'
           ?global.ConferenceLinkStore.getWriteDiagnostics():[]),

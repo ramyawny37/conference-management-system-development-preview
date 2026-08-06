@@ -8,6 +8,18 @@
   var entries=Object.create(null);
   var listeners=[];
   var runtimeTrace=[];
+  var eventDiagnostics={
+    lastAcceptedRevision:null,
+    lastPostQueueClassification:null,
+    lastDropStage:null,
+    lastDropReason:null,
+    lastNotifyResult:null
+  };
+
+  function shortId(value){
+    var text=String(value||'');
+    return text?text.slice(0,8)+'...'+text.slice(-4):null;
+  }
 
   function trace(stage,data){
     runtimeTrace.push({
@@ -169,9 +181,57 @@
   }
   function notify(value,event){
     var snapshot=publicEntry(value);
+    var listenerCount=listeners.length;
+    var notifiedCount=0;
     listeners.slice().forEach(function(listener){
-      try{listener(snapshot,event?copy(event):null);}catch(error){}
+      try{
+        listener(snapshot,event?copy(event):null);
+        notifiedCount++;
+      }catch(error){}
     });
+    if(event){
+      eventDiagnostics.lastNotifyResult={
+        executed:true,
+        classification:event.classification||null,
+        generation:value.generation,
+        listenerCount:listenerCount,
+        notifiedCount:notifiedCount
+      };
+      if(listenerCount===0){
+        eventDiagnostics.lastDropStage='notify';
+        eventDiagnostics.lastDropReason='listener_not_bound';
+      }
+    }
+  }
+
+  function queueCounts(readiness){
+    var data=readiness&&readiness.data;
+    if(data&&data.data&&typeof data.data==='object')data=data.data;
+    var operations=data&&Array.isArray(data.blockingOperations)
+      ?data.blockingOperations:[];
+    var counts={pendingCount:0,processingCount:0,failedCount:0,conflictCount:0};
+    operations.forEach(function(operation){
+      var status=String(operation&&operation.status||'');
+      if(status==='pending')counts.pendingCount++;
+      if(status==='processing')counts.processingCount++;
+      if(status==='failed')counts.failedCount++;
+      if(status==='conflict'||status==='requires_reconciliation'){
+        counts.conflictCount++;
+      }
+    });
+    return counts;
+  }
+
+  function recordListenerDecision(decision){
+    decision=object(decision)?copy(decision):{};
+    if(decision.accepted===true){
+      eventDiagnostics.lastDropStage=null;
+      eventDiagnostics.lastDropReason=null;
+    }else if(decision.reason){
+      eventDiagnostics.lastDropStage=decision.stage||'orchestrator_listener';
+      eventDiagnostics.lastDropReason=String(decision.reason);
+    }
+    trace('ORCHESTRATOR_LISTENER_DECISION',decision);
   }
   function transition(value,next,reason){
     var allowed={
@@ -433,9 +493,19 @@
       payload,value,generation,knownRevision,options
     );
     if(!event)return;
+    eventDiagnostics.lastAcceptedRevision=event.observedRevision;
+    eventDiagnostics.lastPostQueueClassification=event.classification;
+    eventDiagnostics.lastDropStage=null;
+    eventDiagnostics.lastDropReason=null;
     trace('REVISION_RECEIVED',{
       revision:event.observedRevision,
       classification:event.classification
+    });
+    trace('EVENT_NORMALIZED',{
+      revision:event.observedRevision,
+      conferenceId:shortId(event.cloudConferenceId),
+      sourceDeviceId:shortId(event.sourceDeviceId),
+      initialClassification:event.classification
     });
     var time=now(options).getTime();
     pruneEvents(value,time);
@@ -444,15 +514,30 @@
     value.lastEventAt=event.receivedAt;
     value.lastRevision=event.observedRevision;
     var d=dependencies(options);
+    trace('QUEUE_INSPECTION_STARTED',{
+      revision:event.observedRevision,
+      classification:event.classification
+    });
     var readiness=event.classification==='remote_change_detected'
       ?inspectQueue(d,{remoteConferenceId:event.cloudConferenceId},options)
       :Promise.resolve(outcome(true,'queue_stable'));
     Promise.resolve(readiness).then(function(queue){
-      if(generation!==value.generation)return;
+      if(generation!==value.generation){
+        eventDiagnostics.lastDropStage='post_queue';
+        eventDiagnostics.lastDropReason='generation_mismatch';
+        trace('EVENT_DROPPED',{
+          revision:event.observedRevision,
+          stage:'post_queue',reason:'generation_mismatch'
+        });
+        return;
+      }
+      var counts=queueCounts(queue);
+      var reclassificationReason=null;
       if(event.classification==='remote_change_detected'){
         value.remoteChangeDetected=true;
         if(!queue.ok){
           event.classification='potential_conflict';
+          reclassificationReason=queue.status||'queue_not_stable';
           value.potentialConflict=true;
           var runner=options&&options.queueRunner||
             global.AutomaticQueueRunner;
@@ -463,6 +548,17 @@
           }
         }
       }
+      eventDiagnostics.lastPostQueueClassification=event.classification;
+      if(event.classification==='potential_conflict'){
+        eventDiagnostics.lastDropStage='post_queue_classification';
+        eventDiagnostics.lastDropReason='potential_conflict';
+      }
+      trace('QUEUE_INSPECTION_COMPLETED',Object.assign({
+        revision:event.observedRevision,
+        queueStable:!!(queue&&queue.ok&&queue.status==='queue_stable'),
+        finalClassification:event.classification,
+        reclassificationReason:reclassificationReason
+      },counts));
       if(event.observedRevision!==null&&event.sourceDeviceId&&
         d.remoteUpdates&&typeof d.remoteUpdates.add==='function'){
         d.remoteUpdates.add({
@@ -476,6 +572,18 @@
               ?'needs_resolution':'unreviewed'
         },options&&options.remoteUpdateOptions);
       }
+      var current=typeof global.getCurrentConference==='function'
+        ?global.getCurrentConference():null;
+      trace('NOTIFY_ATTEMPT',{
+        revision:event.observedRevision,
+        notifyExecuted:true,
+        classification:event.classification,
+        generation:generation,
+        currentConferenceMatch:current
+          ?String(current.id||'')===String(value.localConferenceId||''):null,
+        remoteConferenceMatch:String(event.cloudConferenceId||'')===
+          String(value.cloudConferenceId||'')
+      });
       notify(value,event);
       if(event.classification==='potential_conflict'){
         suspend(value.localConferenceId,
@@ -690,6 +798,10 @@
       entries=Object.create(null);
       listeners=[];
       runtimeTrace=[];
+      eventDiagnostics={
+        lastAcceptedRevision:null,lastPostQueueClassification:null,
+        lastDropStage:null,lastDropReason:null,lastNotifyResult:null
+      };
       return outcome(true,'reset');
     });
   }
@@ -710,6 +822,8 @@
     stopAll:stopAll,
     getState:getState,
     getDiagnostics:function(){return copy(runtimeTrace);},
+    getEventDiagnostics:function(){return copy(eventDiagnostics);},
+    recordListenerDecision:recordListenerDecision,
     traceDiagnostic:function(stage,data){trace(stage,data);},
     subscribe:subscribe,
     resetForTests:resetForTests

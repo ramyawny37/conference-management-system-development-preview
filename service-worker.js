@@ -1,6 +1,6 @@
 const APP_VERSION = '3.1.1';
 const CACHE_PREFIX = 'conference-manager-core-';
-const CACHE_REVISION = 'conference-lock-release-diagnostics-v1';
+const CACHE_REVISION = 'realtime-drop-instrumentation-v1';
 const CACHE_NAME = CACHE_PREFIX + 'v' + APP_VERSION + '-' + CACHE_REVISION;
 const CORE_ASSETS = [
   './',
@@ -65,13 +65,13 @@ const CORE_ASSETS = [
   './js/sync/sync-scheduler-state.js',
   './js/sync/conference-sync-state-resolver.js?rev=phase-5',
   './js/sync/conference-queue-integration.js?rev=queue-legacy-compat-v1',
-  './js/sync/conference-realtime-manager.js?rev=realtime-already-subscribed-completion-v1',
+  './js/sync/conference-realtime-manager.js?rev=realtime-drop-instrumentation-v1',
   './js/sync/conference-operational-ui.js',
   './js/sync/automatic-queue-runner.js?rev=runtime-diagnostics-v1',
   './js/sync/automatic-conference-linking.js?rev=realtime-refresh-completion-v1',
   './js/sync/discovered-conference-open-service.js?rev=realtime-refresh-completion-v1',
-  './js/sync/member-runtime-diagnostics.js?rev=conference-lock-release-diagnostics-v1',
-  './js/sync/automatic-sync-orchestrator.js?rev=local-save-queue-wake-v1',
+  './js/sync/member-runtime-diagnostics.js?rev=realtime-drop-instrumentation-v1',
+  './js/sync/automatic-sync-orchestrator.js?rev=realtime-drop-instrumentation-v1',
   './js/sync/wrong-remote-binding-repair-store.js?rev=wrong-remote-binding-repair-v1',
   './js/sync/wrong-remote-binding-repair-service.js?rev=wrong-remote-binding-repair-v1',
   './js/sync/wrong-remote-binding-repair-ui.js?rev=wrong-remote-binding-repair-v1',
@@ -86,7 +86,7 @@ const CORE_ASSETS = [
   './cards.js',
   './script.js?rev=canonical-conference-schema-v1',
   './version.js',
-  './pwa.js?rev=conference-lock-release-diagnostics-v1',
+  './pwa.js?rev=realtime-drop-instrumentation-v1',
   './libs/html2canvas.min.js',
   './assets/logo.jpg',
   './assets/startup-bg.png',
