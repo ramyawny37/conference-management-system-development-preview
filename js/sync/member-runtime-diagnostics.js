@@ -1,7 +1,7 @@
 (function(global){
   'use strict';
   var RUNTIME_BUILD_REVISION='canonical-conference-schema-v1';
-  var SERVICE_WORKER_CACHE_REVISION='exclusive-edit-lock-v1';
+  var SERVICE_WORKER_CACHE_REVISION='section-accommodation-edit-lock-v1';
   var FIELDS=Object.freeze([
     'runtimeBuildRevision','serviceWorkerCacheRevision',
     'orchestratorStarted','lastScheduledReason',
@@ -20,6 +20,11 @@
     'linkedRefreshCurrentStage','linkedRefreshExceptionStage',
     'linkedRefreshTrace','activationCurrentStage','activationExceptionStage',
     'activationTrace',
+    'lock.section','lock.lockOwnerDeviceId','lock.lockOwnerUserId',
+    'lock.lockOwnerEmail','lock.acquiredAt','lock.expiresAt',
+    'lock.serverNow','lock.heartbeatAt','lock.isExpired',
+    'lock.localManagerState','lock.lastAcquireResult',
+    'lock.lastRenewResult','lock.lastReleaseResult','lock.heartbeatTimerCount',
     'draft.exists','draft.status','draft.executionStatus',
     'draft.executionResult','draft.finalizationState',
     'pending.exists','pending.status','pending.revision',
@@ -36,6 +41,7 @@
     if(typeof global.structuredClone==='function')return global.structuredClone(value);
     return JSON.parse(JSON.stringify(value));
   }
+  function shortId(value){var text=String(value||'');return text?text.slice(0,8)+'…'+text.slice(-4):null;}
   function realtimeStates(manager){
     var values=manager&&typeof manager.getState==='function'
       ?manager.getState():{};
@@ -122,6 +128,10 @@
     var persistentState=persistentStore&&
       typeof persistentStore.getState==='function'
       ?persistentStore.getState():{};
+    var editLock=global.ConferenceEditLockManager&&
+      typeof global.ConferenceEditLockManager.getDiagnostics==='function'
+      ?global.ConferenceEditLockManager.getDiagnostics():{};
+    var lockData=editLock.lock||{};
     var state={
       runtimeBuildRevision:RUNTIME_BUILD_REVISION,
       serviceWorkerCacheRevision:SERVICE_WORKER_CACHE_REVISION,
@@ -175,6 +185,20 @@
       activationCurrentStage:activationState.currentStage||null,
       activationExceptionStage:activationState.exceptionStage||null,
       activationTrace:copy(activationState.trace||[]),
+      'lock.section':editLock.section||'accommodation',
+      'lock.lockOwnerDeviceId':shortId(lockData.deviceId),
+      'lock.lockOwnerUserId':lockData.userId||null,
+      'lock.lockOwnerEmail':null,
+      'lock.acquiredAt':lockData.acquiredAt||null,
+      'lock.expiresAt':lockData.expiresAt||null,
+      'lock.serverNow':lockData.serverNow||null,
+      'lock.heartbeatAt':lockData.lastRenewedAt||null,
+      'lock.isExpired':typeof lockData.isExpired==='boolean'?lockData.isExpired:null,
+      'lock.localManagerState':editLock.status||'viewing',
+      'lock.lastAcquireResult':copy(editLock.lastAcquireResult),
+      'lock.lastRenewResult':copy(editLock.lastRenewResult),
+      'lock.lastReleaseResult':copy(editLock.lastReleaseResult),
+      'lock.heartbeatTimerCount':Number.isInteger(editLock.heartbeatTimerCount)?editLock.heartbeatTimerCount:0,
       'draft.exists':conflict.loaded===true?!!draft:null,
       'draft.status':draft&&draft.status||null,
       'draft.executionStatus':draft&&draft.executionStatus||null,

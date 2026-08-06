@@ -13,6 +13,7 @@ function addActivityLog(action,title,options){
   var conference=getCurrentConference();
   if(!conference)return null;
   options=options||{};
+  if(options.section==='accommodation'&&!requireAccommodationMutation())return null;
   conference.activityLog=Array.isArray(conference.activityLog)?conference.activityLog:[];
   var entry={
     id:uid(),
@@ -70,6 +71,7 @@ function openHouseModal(id){
 }
 function closeHouseModal(){ge('houseModal').style.display='none';}
 function saveHouse() {
+  if(!requireAccommodationMutation())return false;
   var current = getCurrentConference();
   if(!current) return;
 
@@ -102,6 +104,7 @@ function saveHouse() {
   return true;
 }
 function deleteHouse(){
+  if(!requireAccommodationMutation())return false;
   var current = getCurrentConference(); if(!current) return;
   if(!editHouseId) return;
   var houseToDelete = null;
@@ -204,6 +207,12 @@ function restoreArchive(id){
 }
 function setCurrentConferenceById(id, options){
   options = options || {};
+  if(window.ConferenceEditLockManager&&
+    window.ConferenceEditLockManager.getState&&
+    ['editing','acquiring','lost'].indexOf(
+      window.ConferenceEditLockManager.getState().status)>=0){
+    window.ConferenceEditLockManager.endAccommodationEdit();
+  }
   var next = null;
   var conferences = appData.conferences || [];
   for (var i = 0; i < conferences.length; i++) {
@@ -225,11 +234,6 @@ function setCurrentConferenceById(id, options){
     window.AutomaticSyncOrchestrator.schedule('conference_changed');
   }
   setCurrentConference(next);
-  if(window.ConferenceEditLockManager){
-    Promise.resolve(window.ConferenceEditLockManager.release()).then(function(){
-      return window.ConferenceEditLockManager.begin(next.id);
-    });
-  }
   if(!saveCurrentConferenceSelection())return false;
   syncCurrentConferenceRefs();
 
@@ -2134,21 +2138,45 @@ function canEditCurrentConferenceData(){
 }
 
 function canEditCurrentConferenceAccommodation(){
-  return canEditCurrentConferenceData();
+  return canEditCurrentConferenceData()&&!!(window.ConferenceEditLockManager&&
+    window.ConferenceEditLockManager.canMutateAccommodation());
+}
+
+function beginAccommodationEditing(){
+  if(!window.ConferenceEditLockManager)return Promise.resolve(false);
+  return window.ConferenceEditLockManager.beginAccommodationEdit();
+}
+
+function endAccommodationEditing(){
+  if(!window.ConferenceEditLockManager)return Promise.resolve(false);
+  return window.ConferenceEditLockManager.endAccommodationEdit();
+}
+
+function requireAccommodationMutation(){
+  return !!(window.ConferenceEditLockManager&&
+    window.ConferenceEditLockManager.requireAccommodationMutation());
 }
 
 function renderAccommodation() {
   var current = getCurrentConference();
   renderGlobalConferenceHeader();
-  var h = statsHtml();
+  var lockState=window.ConferenceEditLockManager&&
+    window.ConferenceEditLockManager.getState?window.ConferenceEditLockManager.getState():{status:'viewing'};
+  var h='<div class="accommodation-edit-mode-toolbar">';
+  if(lockState.status==='editing')h+='<button class="btn btn-red" onclick="endAccommodationEditing()">إنهاء تعديل التسكين</button><span class="accommodation-edit-state">وضع التعديل فعّال على هذا الجهاز</span>';
+  else h+='<button class="btn btn-blue" '+(lockState.status==='acquiring'?'disabled':'')+' onclick="beginAccommodationEditing()">'+(lockState.status==='acquiring'?'جارٍ طلب القفل...':'بدء تعديل التسكين')+'</button><span class="accommodation-edit-state">وضع مشاهدة فقط</span>';
+  h+='</div>'+statsHtml();
   if (!current || !current.houses || !current.houses.length) {
     h += '<div class="card" style="text-align:center;padding:20px;color:#95a5a6;">لم يتم اختيار بيت للمؤتمر.';
-    h += '<div style="margin-top:10px"><button class="btn btn-blue" onclick="openAssignConferenceHouseSelector()">اختيار بيت المؤتمر</button></div></div>';
+    if(canEditCurrentConferenceAccommodation())h += '<div style="margin-top:10px"><button class="btn btn-blue" onclick="openAssignConferenceHouseSelector()">اختيار بيت المؤتمر</button></div>';
+    h += '</div>';
     ge('tab0').innerHTML = h;
     return;
   }
 
-  var displayed = ensureAccommodationDisplayState(current);
+  var displayed = canEditCurrentConferenceAccommodation()
+    ?ensureAccommodationDisplayState(current)
+    :ensureAccommodationDisplayState(deepClone(current));
   var allRooms = getAllRooms();
   var canEditAccommodation=canEditCurrentConferenceAccommodation();
   var grouped = {};
@@ -2295,13 +2323,15 @@ function renderAccommodation() {
         ac.forEach(function(c) { h += '<div class="guest-row"><span>' + (c.bedType==='extra'?'🧒➕🛏️':'👨‍👧') + ' ' + esc(getAccommodationPersonDisplayName(c)) + '</span><span class="pill p-child">مع ' + esc(c.guardianPersonId?getAccommodationPersonDisplayName({personId:c.guardianPersonId,name:c.guardian}):c.guardian) + '</span></div>' });
         if (lg.length) h += '<div style="font-size:9px;color:#E74C3C;margin-top:3px">غادر: ' + lg.map(function(g) { return esc(gn(g)) }).join('، ') + '</div>';
         if (!totalResidents && !lg.length) h += '<div class="accommodation-empty-room">لا يوجد نزلاء</div>';
-        if(canEditAccommodation)h += '<div class="accommodation-room-actions">';
-        h += '<button class="btn btn-blue btn-sm accommodation-room-edit" onclick="openRoomEditor(\''+house.id+'\', \''+roomFloorId+'\', \''+r.id+'\')">✏️ تعديل</button>';
-        h += '<button class="btn btn-blue btn-sm" onclick="openMoveRoomDialog(\'' + house.id + '\', \'' + roomFloorId + '\', \'' + r.id + '\')" title="نقل الغرفة">↔️</button>';
-        h += '<button class="btn btn-teal btn-sm" onclick="clearConferenceRoom(\'' + house.id + '\', \'' + roomFloorId + '\', \'' + r.id + '\')" title="تفريغ البيانات">🧹</button>';
-        h += '<button class="btn btn-gray btn-sm" onclick="toggleConferenceRoomClosed(\'' + house.id + '\', \'' + roomFloorId + '\', \'' + r.id + '\')" title="إغلاق/فتح مؤقت">' + (isClosed ? '🔓' : '🔒') + '</button>';
-        h += '<button class="btn btn-red btn-sm" onclick="deleteConferenceRoom(\'' + house.id + '\', \'' + roomFloorId + '\', \'' + r.id + '\')" title="حذف الغرفة">🗑️</button>';
-        if(canEditAccommodation)h += '</div>';
+        if(canEditAccommodation){
+          h += '<div class="accommodation-room-actions">';
+          h += '<button class="btn btn-blue btn-sm accommodation-room-edit" onclick="openRoomEditor(\''+house.id+'\', \''+roomFloorId+'\', \''+r.id+'\')">✏️ تعديل</button>';
+          h += '<button class="btn btn-blue btn-sm" onclick="openMoveRoomDialog(\'' + house.id + '\', \'' + roomFloorId + '\', \'' + r.id + '\')" title="نقل الغرفة">↔️</button>';
+          h += '<button class="btn btn-teal btn-sm" onclick="clearConferenceRoom(\'' + house.id + '\', \'' + roomFloorId + '\', \'' + r.id + '\')" title="تفريغ البيانات">🧹</button>';
+          h += '<button class="btn btn-gray btn-sm" onclick="toggleConferenceRoomClosed(\'' + house.id + '\', \'' + roomFloorId + '\', \'' + r.id + '\')" title="إغلاق/فتح مؤقت">' + (isClosed ? '🔓' : '🔒') + '</button>';
+          h += '<button class="btn btn-red btn-sm" onclick="deleteConferenceRoom(\'' + house.id + '\', \'' + roomFloorId + '\', \'' + r.id + '\')" title="حذف الغرفة">🗑️</button>';
+          h += '</div>';
+        }
         h += '</div></div>';
       });
       h += '</div></div>';
@@ -2318,6 +2348,7 @@ var searchableSelectState = { title: '', items: [], onSelect: null };
 var partialTransferState;
 
 function deactivateAccommodationRoom(roomId){
+  if(!requireAccommodationMutation())return false;
   var current = getCurrentConference();
   var result = current ? findRoomByIdInHouses(current.houses || [], roomId) : null;
   if(!current || !result || !result.room) return false;
@@ -2484,6 +2515,7 @@ function openAssignConferenceHouseSelector(){
   });
   openSearchableSelectDialog('إسناد بيت للمؤتمر', items, function(template){
     if(!template) return;
+    if(!requireAccommodationMutation())return;
     current.houses = current.houses || [];
     var alreadyAssigned = current.houses.some(function(house) { return house.sourceTemplateId === template.id; });
     if (alreadyAssigned) {
@@ -2503,6 +2535,7 @@ function openAssignConferenceHouseSelector(){
 }
 
 function removeConferenceHouseFromAccommodation(houseId){
+  if(!requireAccommodationMutation())return false;
   var current = getCurrentConference();
   if(!current || !current.houses) return;
   var idx = -1;
@@ -2593,6 +2626,7 @@ function confirmAddRoomFromTemplate(){
 }
 
 function openActiveRoomsManager(houseId){
+  if(!requireAccommodationMutation())return false;
   var house = getHouseById(houseId);
   if(!house){
     alert('لا يمكن فتح إدارة الغرف النشطة: البيت غير موجود في المؤتمر الحالي.');
@@ -2638,6 +2672,7 @@ function renderActiveRoomsManager(){
 }
 
 function toggleActiveRoom(roomId, checked){
+  if(!requireAccommodationMutation())return false;
   var current = getCurrentConference();
   if(!current) return;
   var result = findRoomByIdInHouses(current.houses || [], roomId);
@@ -2665,6 +2700,7 @@ function toggleActiveRoom(roomId, checked){
 }
 
 function setAllActiveRoomsForFloor(houseId, floorId, checked){
+  if(!requireAccommodationMutation())return false;
   var current = getCurrentConference();
   var house = getHouseById(houseId);
   var floor = null;
@@ -2693,6 +2729,7 @@ function setAllActiveRoomsForFloor(houseId, floorId, checked){
 }
 
 function setAllActiveRoomsForHouse(checked){
+  if(!requireAccommodationMutation())return false;
   var current = getCurrentConference();
   var house = getHouseById(activeRoomsManager.houseId);
   if(!current || !house) return;
@@ -2809,6 +2846,7 @@ function renderRoomEditorFromDraft(){
 }
 
 function openRoomEditor(houseId, floorId, roomId) {
+  if(!requireAccommodationMutation())return false;
   var result = roomId ? (getRoomByContext(houseId, floorId, roomId) || getRoomById(roomId)) : null;
   var room = result ? result.room : null;
   var floor = result ? result.floor : null;
@@ -3283,6 +3321,7 @@ function openMoveGuestDialog(rowId){
 }
 
 function openMoveRoomDialog(houseId, floorId, roomId){
+  if(!requireAccommodationMutation())return false;
   var useDraft = !!(editRoomData && editRoomData.draftHouses);
   var sourceResult = useDraft
     ? (findRoomInHouses(editRoomData.draftHouses, houseId, floorId, roomId) || findRoomByIdInHouses(editRoomData.draftHouses, roomId))
@@ -3299,6 +3338,7 @@ function openMoveRoomDialog(houseId, floorId, roomId){
     sourceHouseId: sourceResult.house.id
   }, function(targetRoomResult){
     if(!targetRoomResult) return;
+    if(!requireAccommodationMutation())return;
 
     var sourceRoom = sourceResult.room;
     var targetRoom = targetRoomResult.room;
@@ -3414,6 +3454,7 @@ function partialTransferContinue(){
 }
 
 function partialTransferSelectGuests(){
+  if(!requireAccommodationMutation())return false;
   renderPartialTransferGuestView();
 }
 
@@ -3565,6 +3606,7 @@ function cleanupAutoExtraBeds(room){
 }
 
 function partialTransferGuest(guestId){
+  if(!requireAccommodationMutation())return false;
   var state = partialTransferState;
   if(!state || !state.sourceRoom || !state.targetRoom) return;
   var available = Math.max(state.targetCapacity - state.currentOccupancy, 0);
@@ -3623,6 +3665,7 @@ function addCI(name,guardian,leftDay,personId,guardianPersonId,childId,arrivalDa
 }
 
 function saveRoomData(options){
+  if(!requireAccommodationMutation())return false;
   options = options || {};
   if(!editRoomData || !editRoomData.draftHouses) return false;
 
@@ -3646,6 +3689,7 @@ function saveRoomData(options){
 }
 
 function clearConferenceRoom(houseId, floorId, roomId) {
+  if(!requireAccommodationMutation())return false;
   var result = getRoomByContext(houseId, floorId, roomId) || getRoomById(roomId);
   if (!result) return;
   if (!confirm('تفريغ بيانات الغرفة بالكامل؟ سيتم حذف النزلاء فقط مع بقاء رقم الغرفة والأسرة والملاحظات.')) return;
@@ -3665,6 +3709,7 @@ function clearConferenceRoom(houseId, floorId, roomId) {
 }
 
 function toggleConferenceRoomClosed(houseId, floorId, roomId) {
+  if(!requireAccommodationMutation())return false;
   var result = getRoomByContext(houseId, floorId, roomId) || getRoomById(roomId);
   if (!result) return;
   result.room.closed = !result.room.closed;
@@ -3675,6 +3720,7 @@ function toggleConferenceRoomClosed(houseId, floorId, roomId) {
 }
 
 function deleteConferenceRoom(houseId, floorId, roomId) {
+  if(!requireAccommodationMutation())return false;
   var result = getRoomByContext(houseId, floorId, roomId) || getRoomById(roomId);
   if (!result) return;
   if (!deactivateAccommodationRoom(result.room.id)) return;
@@ -6054,7 +6100,9 @@ function openDiscoveredConferenceFromStartup(remoteConferenceId){
   var flight=window.DiscoveredConferenceOpenService.open(remoteConferenceId)
     .then(function(result){
       if(!result||!result.ok){
-        showToast('تعذر إكمال العملية بأمان.','#E74C3C');
+        var failedStage=result&&(result.failedStage||result.status||
+          result.data&&result.data.failedStage)||'unknown';
+        showToast('تعذر إكمال العملية بأمان. المرحلة: '+failedStage,'#E74C3C');
       }
       return result;
     })
@@ -6734,6 +6782,7 @@ function clearActivityLog(){
 }
 
 function updateAccommodationV3Setting(field,value){
+  if(!requireAccommodationMutation())return false;
   var current=getCurrentConference();
   if(!current)return false;
   var plan=getConferenceAccommodationPlan(current);
@@ -6761,6 +6810,7 @@ function updateAccommodationV3Setting(field,value){
 }
 
 function updateAccommodationV3RoomTypePrice(roomType,value){
+  if(!requireAccommodationMutation())return false;
   var current=getCurrentConference();
   if(!current)return false;
   var validTypes=['single','double','triple','quadruple','quintuple','sextuple','sevenPlus'];
@@ -7869,6 +7919,7 @@ function saveSettings(){
 }
 
 function applyConferenceHouseTemplate(){
+  if(!requireAccommodationMutation())return false;
   var current = getCurrentConference();
   if (!current) return;
   var conf = current.conf || {};
@@ -8506,6 +8557,7 @@ function closeImportHouseModal() {
 }
 
 function importHouseFromTemplate(templateId) {
+  if(!requireAccommodationMutation())return false;
   var template = null;
   var templates = appData.houseTemplates || [];
   for (var i = 0; i < templates.length; i++) {
@@ -8722,8 +8774,5 @@ window.applicationStorageReadyPromise.then(function(){
       window.AutomaticSyncOrchestrator.start();
     }
     var currentConference=getCurrentConference();
-    if(currentConference&&window.ConferenceEditLockManager){
-      window.ConferenceEditLockManager.begin(currentConference.id);
-    }
   });
 });

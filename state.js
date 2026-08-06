@@ -237,11 +237,6 @@ function initializeApplicationStorage(){
 
 function save(options){
   options=options||{};
-  if(window.ConferenceEditLockManager&&
-    typeof window.ConferenceEditLockManager.guard==='function'){
-    var lockGuard=window.ConferenceEditLockManager.guard(appData,options);
-    if(!lockGuard||lockGuard.ok!==true)return false;
-  }
   var json;
   try{
     if(!options.skipCurrentConferenceUpdate)updateCurrentConferenceData();
@@ -277,10 +272,6 @@ function save(options){
   }
   try{
     localStorage.setItem(SK,json);
-    if(window.ConferenceEditLockManager&&
-      typeof window.ConferenceEditLockManager.committed==='function'){
-      window.ConferenceEditLockManager.committed(appData);
-    }
     applicationStorageState.lastLocalSaveAt=new Date().toISOString();
     var b=ge('syncBar');if(b){b.textContent='✔ '+new Date().toLocaleTimeString('ar-EG');}
   }catch(e){

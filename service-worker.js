@@ -1,6 +1,6 @@
 const APP_VERSION = '3.1.1';
 const CACHE_PREFIX = 'conference-manager-core-';
-const CACHE_REVISION = 'exclusive-edit-lock-v1';
+const CACHE_REVISION = 'section-accommodation-edit-lock-v1';
 const CACHE_NAME = CACHE_PREFIX + 'v' + APP_VERSION + '-' + CACHE_REVISION;
 const CORE_ASSETS = [
   './',
@@ -39,12 +39,12 @@ const CORE_ASSETS = [
   './js/sync/conflict-resolution.js',
   './js/sync/conflict-executor.js',
   './js/sync/conference-locks.js',
-  './js/sync/conference-edit-lock-manager.js?rev=exclusive-edit-lock-v1',
+  './js/sync/conference-edit-lock-manager.js?rev=section-accommodation-edit-lock-v1',
   './js/sync/offline-first-integration.js?rev=revision-publish-1',
   './js/sync/debug-binding-report-ui.js?rev=debug-binding-report-ui-v2',
   './js/sync/device-rescue-export.js?rev=device-rescue-export-v1',
   './js/sync/experimental-conference-reset.js?rev=experimental-reset-v1',
-  './js/sync/sync-settings-ui.js?rev=realtime-refresh-completion-v1',
+  './js/sync/sync-settings-ui.js?rev=section-accommodation-edit-lock-v1',
   './js/sync/link-status-diagnostic-store.js',
   './js/sync/conference-link-store.js',
   './js/sync/conference-membership-attempt-store.js',
@@ -70,7 +70,7 @@ const CORE_ASSETS = [
   './js/sync/automatic-queue-runner.js?rev=runtime-diagnostics-v1',
   './js/sync/automatic-conference-linking.js?rev=realtime-refresh-completion-v1',
   './js/sync/discovered-conference-open-service.js?rev=realtime-refresh-completion-v1',
-  './js/sync/member-runtime-diagnostics.js?rev=exclusive-edit-lock-v1',
+  './js/sync/member-runtime-diagnostics.js?rev=section-accommodation-edit-lock-v1',
   './js/sync/automatic-sync-orchestrator.js?rev=local-save-queue-wake-v1',
   './js/sync/wrong-remote-binding-repair-store.js?rev=wrong-remote-binding-repair-v1',
   './js/sync/wrong-remote-binding-repair-service.js?rev=wrong-remote-binding-repair-v1',

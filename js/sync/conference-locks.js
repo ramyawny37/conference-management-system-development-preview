@@ -9,8 +9,16 @@
   var state={
     lastStatus:null,
     lastError:null,
-    lastConferenceId:null
+    lastConferenceId:null,
+    lastSection:null
   };
+
+  function normalizeSection(options){
+    var section=String(options&&options.section||'conference').trim().toLowerCase();
+    return /^[a-z][a-z0-9_]{0,31}$/.test(section)?section:null;
+  }
+
+  function lockKey(conferenceId,section){return conferenceId+'::'+section;}
 
   function result(ok,status,data,error){
     return {
@@ -132,10 +140,11 @@
     };
   }
 
-  function normalizeLockData(rpcData,conferenceId){
+  function normalizeLockData(rpcData,conferenceId,section){
     rpcData=rpcData&&typeof rpcData==='object'?rpcData:{};
     return {
       conferenceId:conferenceId,
+      section:String(rpcData.section||section||'conference'),
       lockToken:isUuid(String(rpcData.lockToken||''))
         ?String(rpcData.lockToken)
         :null,
@@ -149,7 +158,9 @@
         :null,
       acquiredAt:rpcData.acquiredAt||null,
       expiresAt:rpcData.expiresAt||null,
-      lastRenewedAt:rpcData.lastRenewedAt||null
+      lastRenewedAt:rpcData.lastRenewedAt||null,
+      serverNow:rpcData.serverNow||null,
+      isExpired:rpcData.isExpired===true
     };
   }
 
@@ -157,15 +168,15 @@
     if((status==='acquired'||status==='already_owned'||
       status==='renewed'||status==='locked')&&
       data.owned&&data.lockToken){
-      ownedLocks[data.conferenceId]=cloneValue(data);
+      ownedLocks[lockKey(data.conferenceId,data.section)]=cloneValue(data);
     }
     if(status==='released'||status==='not_found'||
       status==='expired'){
-      delete ownedLocks[data.conferenceId];
+      delete ownedLocks[lockKey(data.conferenceId,data.section)];
     }
   }
 
-  function normalizeRpcResult(response,conferenceId,allowedStatuses){
+  function normalizeRpcResult(response,conferenceId,section,allowedStatuses){
     if(response.error)throw response.error;
     var rpcData=response.data&&typeof response.data==='object'
       ?response.data
@@ -177,7 +188,7 @@
         'The lock request returned an unexpected result.'
       ));
     }
-    var data=normalizeLockData(rpcData,conferenceId);
+    var data=normalizeLockData(rpcData,conferenceId,section);
     data.locked=[
       'acquired',
       'already_owned',
@@ -189,6 +200,7 @@
     state.lastStatus=status;
     state.lastError=null;
     state.lastConferenceId=conferenceId;
+    state.lastSection=section;
     return result(true,status,data,null);
   }
 
@@ -196,6 +208,7 @@
     name,
     args,
     conferenceId,
+    section,
     allowedStatuses,
     context,
     failureData
@@ -206,7 +219,7 @@
       return normalizeRpcResult(
         response,
         conferenceId,
-        allowedStatuses
+        section,allowedStatuses
       );
     }).catch(function(error){
       state.lastError=normalizeThrownError(error);
@@ -236,7 +249,8 @@
       )));
     }
     var ttl=normalizeTtl(options);
-    if(ttl===null){
+    var section=normalizeSection(options);
+    if(ttl===null||!section){
       return Promise.resolve(result(false,'error',null,safeError(
         'INVALID_LOCK_TTL',
         'ttlSeconds must be an integer between 30 and 300.'
@@ -246,9 +260,9 @@
     if(context.error){
       return Promise.resolve(result(false,'error',null,context.error));
     }
-    var lockToken=options.lockToken||
-      pendingTokens[conferenceId]||
-      (ownedLocks[conferenceId]&&ownedLocks[conferenceId].lockToken);
+    var key=lockKey(conferenceId,section);
+    var lockToken=options.lockToken||pendingTokens[key]||
+      (ownedLocks[key]&&ownedLocks[key].lockToken);
     try{
       lockToken=lockToken?String(lockToken):createUuid();
     }catch(error){
@@ -263,13 +277,16 @@
         'lockToken must be a valid UUID.'
       )));
     }
-    pendingTokens[conferenceId]=lockToken;
-    return runRpc('acquire_conference_lock',{
+    pendingTokens[key]=lockToken;
+    var acquireArgs={
       p_conference_id:conferenceId,
+      p_section:section,
       p_device_id:context.deviceId,
       p_lock_token:lockToken,
       p_ttl_seconds:ttl
-    },conferenceId,[
+    };
+    if(section==='conference')delete acquireArgs.p_section;
+    return runRpc(section==='conference'?'acquire_conference_lock':'acquire_conference_section_lock',acquireArgs,conferenceId,section,[
       'acquired',
       'already_owned',
       'locked'
@@ -280,15 +297,15 @@
       if(acquireResult.status==='acquired'||
         acquireResult.status==='already_owned'||
         acquireResult.status==='locked'){
-        delete pendingTokens[conferenceId];
+        delete pendingTokens[key];
       }
       return acquireResult;
     });
   }
 
-  function resolveOwnedToken(conferenceId,options){
+  function resolveOwnedToken(conferenceId,section,options){
     var token=options.lockToken||
-      (ownedLocks[conferenceId]&&ownedLocks[conferenceId].lockToken);
+      (ownedLocks[lockKey(conferenceId,section)]&&ownedLocks[lockKey(conferenceId,section)].lockToken);
     token=token?String(token):'';
     return isUuid(token)?token:null;
   }
@@ -303,13 +320,14 @@
       )));
     }
     var ttl=normalizeTtl(options);
-    if(ttl===null){
+    var section=normalizeSection(options);
+    if(ttl===null||!section){
       return Promise.resolve(result(false,'error',null,safeError(
         'INVALID_LOCK_TTL',
         'ttlSeconds must be an integer between 30 and 300.'
       )));
     }
-    var token=resolveOwnedToken(conferenceId,options);
+    var token=resolveOwnedToken(conferenceId,section,options);
     if(!token){
       return Promise.resolve(result(false,'error',null,safeError(
         'LOCK_TOKEN_REQUIRED',
@@ -320,12 +338,15 @@
     if(context.error){
       return Promise.resolve(result(false,'error',null,context.error));
     }
-    return runRpc('renew_conference_lock',{
+    var renewArgs={
       p_conference_id:conferenceId,
+      p_section:section,
       p_device_id:context.deviceId,
       p_lock_token:token,
       p_ttl_seconds:ttl
-    },conferenceId,[
+    };
+    if(section==='conference')delete renewArgs.p_section;
+    return runRpc(section==='conference'?'renew_conference_lock':'renew_conference_section_lock',renewArgs,conferenceId,section,[
       'renewed',
       'expired',
       'not_owner',
@@ -342,7 +363,8 @@
         'conferenceId must be a valid UUID.'
       )));
     }
-    var token=resolveOwnedToken(conferenceId,options);
+    var section=normalizeSection(options);
+    var token=section&&resolveOwnedToken(conferenceId,section,options);
     if(!token){
       return Promise.resolve(result(false,'error',null,safeError(
         'LOCK_TOKEN_REQUIRED',
@@ -353,11 +375,14 @@
     if(context.error){
       return Promise.resolve(result(false,'error',null,context.error));
     }
-    return runRpc('release_conference_lock',{
+    var releaseArgs={
       p_conference_id:conferenceId,
+      p_section:section,
       p_device_id:context.deviceId,
       p_lock_token:token
-    },conferenceId,[
+    };
+    if(section==='conference')delete releaseArgs.p_section;
+    return runRpc(section==='conference'?'release_conference_lock':'release_conference_section_lock',releaseArgs,conferenceId,section,[
       'released',
       'not_owner',
       'not_found'
@@ -373,24 +398,30 @@
         'conferenceId must be a valid UUID.'
       )));
     }
+    var section=normalizeSection(options);
+    if(!section)return Promise.resolve(result(false,'error',null,safeError('INVALID_LOCK_SECTION','A valid lock section is required.')));
     var context=resolveContext(options);
     if(context.error){
       return Promise.resolve(result(false,'error',null,context.error));
     }
-    return runRpc('get_conference_lock',{
+    var statusArgs={
       p_conference_id:conferenceId,
+      p_section:section,
       p_device_id:context.deviceId
-    },conferenceId,[
+    };
+    if(section==='conference')delete statusArgs.p_section;
+    return runRpc(section==='conference'?'get_conference_lock':'get_conference_section_lock',statusArgs,conferenceId,section,[
       'locked',
       'not_found'
     ],context);
   }
 
-  function getOwnedLock(conferenceId){
+  function getOwnedLock(conferenceId,section){
     if(conferenceId!==undefined&&conferenceId!==null){
       conferenceId=validateConferenceId(conferenceId);
-      return conferenceId&&ownedLocks[conferenceId]
-        ?cloneValue(ownedLocks[conferenceId])
+      section=String(section||'conference');
+      return conferenceId&&ownedLocks[lockKey(conferenceId,section)]
+        ?cloneValue(ownedLocks[lockKey(conferenceId,section)])
         :null;
     }
     return Object.keys(ownedLocks).sort().map(function(key){
@@ -404,6 +435,7 @@
       pendingAcquireCount:Object.keys(pendingTokens).length,
       lastStatus:state.lastStatus,
       lastConferenceId:state.lastConferenceId,
+      lastSection:state.lastSection,
       lastError:state.lastError
         ?{code:state.lastError.code,message:state.lastError.message}
         :null
@@ -416,6 +448,7 @@
     state.lastStatus=null;
     state.lastError=null;
     state.lastConferenceId=null;
+    state.lastSection=null;
   }
 
   global.ConferenceLocks=Object.freeze({

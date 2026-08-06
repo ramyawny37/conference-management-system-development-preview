@@ -175,6 +175,10 @@
       'onclick="SyncSettingsUI.exportDeviceRescueBundle()">'+
       'تصدير حزمة إنقاذ هذا الجهاز</button>'+
       '<button type="button" class="btn btn-gray btn-sm" '+
+      'onclick="SyncSettingsUI.refreshAccommodationLockDiagnostics()">تحديث تشخيص قفل التسكين</button>'+
+      '<button type="button" class="btn btn-red btn-sm" '+
+      'onclick="SyncSettingsUI.releaseOwnedAccommodationLock()">تحرير القفل المملوك لهذا الجهاز</button>'+
+      '<button type="button" class="btn btn-gray btn-sm" '+
       'onclick="MemberRuntimeDiagnostics.clearPersistentLinkStatusTrace()">'+
       'مسح سجل تشخيص Link</button></div></div></section>';
     var current=typeof global.getCurrentConference==='function'
@@ -211,6 +215,23 @@
         global.showToast('تعذر تصدير حزمة إنقاذ هذا الجهاز.','#E74C3C');
       }
       return false;
+    });
+  }
+
+  function refreshAccommodationLockDiagnostics(){
+    var manager=global.ConferenceEditLockManager;
+    if(!manager||typeof manager.refreshDiagnostics!=='function')return Promise.resolve(false);
+    return manager.refreshDiagnostics().then(function(result){rerender();return result;});
+  }
+
+  function releaseOwnedAccommodationLock(){
+    var manager=global.ConferenceEditLockManager;
+    if(!manager||typeof manager.endAccommodationEdit!=='function')return Promise.resolve(false);
+    var state=manager.getState();
+    if(!state.canWrite){message('sync_settings_message','هذا الجهاز لا يملك قفل تعديل التسكين.',true);return Promise.resolve({ok:false,status:'not_owner'});}
+    return manager.endAccommodationEdit().then(function(result){
+      message('sync_settings_message',result&&result.status==='released'?'تم تحرير قفل التسكين المملوك لهذا الجهاز.':'تعذر تحرير القفل: '+String(result&&result.status||'error'),!(result&&result.status==='released'));
+      rerender();return result;
     });
   }
 
@@ -553,6 +574,8 @@
     refreshAuthState:refreshAuthState,
     saveDeviceName:saveDeviceName,
     exportDeviceRescueBundle:exportDeviceRescueBundle,
+    refreshAccommodationLockDiagnostics:refreshAccommodationLockDiagnostics,
+    releaseOwnedAccommodationLock:releaseOwnedAccommodationLock,
     saveAutomaticSyncPreferences:saveAutomaticSyncPreferences,
     setConnectivity:setConnectivity,
     getState:getState
