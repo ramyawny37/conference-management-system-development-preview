@@ -15,6 +15,49 @@ let lastUpdateCheckAt = 0;
 let versionRequestWorker = null;
 let versionRequestPromise = null;
 let displayedUpdateWorker = null;
+const appShellRevision = window.APP_SHELL_REVISION || 'unknown';
+
+function requestWorkerDiagnostics(worker) {
+  if (!worker) return Promise.resolve(null);
+  return new Promise(resolve => {
+    const channel = new MessageChannel();
+    const timeoutId = setTimeout(() => resolve(null), 2000);
+    channel.port1.onmessage = event => {
+      clearTimeout(timeoutId);
+      resolve(event.data && event.data.action === 'updateDiagnostics'
+        ? event.data : null);
+    };
+    try {
+      worker.postMessage({ action: 'getUpdateDiagnostics' }, [channel.port2]);
+    } catch (error) {
+      clearTimeout(timeoutId);
+      resolve(null);
+    }
+  });
+}
+
+function refreshPwaUpdateDiagnostics() {
+  const target = document.getElementById('pwa-update-diagnostics');
+  const registration = serviceWorkerRegistration;
+  const controller = navigator.serviceWorker && navigator.serviceWorker.controller;
+  return Promise.all([
+    requestWorkerDiagnostics(registration && registration.active),
+    requestWorkerDiagnostics(registration && registration.waiting),
+    requestWorkerDiagnostics(registration && registration.installing)
+  ]).then(values => {
+    const diagnostic = {
+      activeWorkerCacheRevision: values[0] && values[0].cacheRevision || null,
+      waitingWorker: values[1] && values[1].cacheRevision || null,
+      installingWorker: values[2] && values[2].cacheRevision || null,
+      controllerScriptURL: controller && controller.scriptURL || null,
+      appShellRevision: appShellRevision
+    };
+    if (target) target.textContent = JSON.stringify(diagnostic, null, 2);
+    return diagnostic;
+  });
+}
+
+window.PWAUpdateDiagnostics = Object.freeze({getState:refreshPwaUpdateDiagnostics});
 
 window.addEventListener('beforeinstallprompt', (e) => {
   // Prevent the mini-infobar from appearing on mobile
@@ -176,6 +219,7 @@ function showUpdateBar(worker) {
         }
       });
     }
+    refreshPwaUpdateDiagnostics();
     updateButton.onclick = () => {
       if (updateInProgress) return;
       updateInProgress = true;
@@ -208,7 +252,9 @@ function showUpdateBar(worker) {
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./service-worker.js').then(registration => {
+    navigator.serviceWorker.register('./service-worker.js',{
+      updateViaCache:'none'
+    }).then(registration => {
       serviceWorkerRegistration = registration;
       console.log('ServiceWorker registration successful with scope: ', registration.scope);
 
@@ -229,6 +275,7 @@ if ('serviceWorker' in navigator) {
       });
 
       checkForServiceWorkerUpdate();
+      refreshPwaUpdateDiagnostics();
     }).catch(err => {
       console.log('ServiceWorker registration failed: ', err);
     });

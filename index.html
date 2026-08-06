@@ -452,6 +452,10 @@
     <button id="update-later" class="btn btn-gray btn-sm">لاحقًا</button>
   </div>
 </div>
+<details class="no-print" style="margin:6px 12px;font-size:10px">
+  <summary>تشخيص تحديث التطبيق</summary>
+  <pre id="pwa-update-diagnostics" dir="ltr" style="white-space:pre-wrap"></pre>
+</details>
 <script src="js/storage/indexeddb.js"></script>
 <script src="js/storage/storage-repository.js?rev=local-save-queue-wake-v1"></script>
 <script src="js/storage/conference-repository.js"></script>
@@ -491,7 +495,7 @@
 <script src="js/sync/debug-binding-report-ui.js?rev=debug-binding-report-ui-v2"></script>
 <script src="js/sync/device-rescue-export.js?rev=device-rescue-export-v1"></script>
 <script src="js/sync/experimental-conference-reset.js?rev=experimental-reset-v1"></script>
-<script src="js/sync/sync-settings-ui.js?rev=section-accommodation-edit-lock-v1"></script>
+<script src="js/sync/sync-settings-ui.js?rev=pwa-deterministic-update-test-v1"></script>
 <script src="js/sync/link-status-diagnostic-store.js"></script>
 <script src="js/sync/conference-link-store.js"></script>
 <script src="js/sync/conference-membership-attempt-store.js"></script>
@@ -517,7 +521,7 @@
 <script src="js/sync/automatic-queue-runner.js?rev=runtime-diagnostics-v1"></script>
 <script src="js/sync/automatic-conference-linking.js?rev=realtime-refresh-completion-v1"></script>
 <script src="js/sync/discovered-conference-open-service.js?rev=realtime-refresh-completion-v1"></script>
-<script src="js/sync/member-runtime-diagnostics.js?rev=section-accommodation-edit-lock-v1"></script>
+<script src="js/sync/member-runtime-diagnostics.js?rev=pwa-deterministic-update-test-v1"></script>
 <script src="js/sync/automatic-sync-orchestrator.js?rev=local-save-queue-wake-v1"></script>
 <script src="js/sync/wrong-remote-binding-repair-store.js?rev=wrong-remote-binding-repair-v1"></script>
 <script src="js/sync/wrong-remote-binding-repair-service.js?rev=wrong-remote-binding-repair-v1"></script>
@@ -556,6 +560,7 @@
     });
   });
 </script>
-<script src="pwa.js"></script>
+<script>window.APP_SHELL_REVISION='pwa-deterministic-update-test-v1';</script>
+<script src="pwa.js?rev=pwa-deterministic-update-test-v1"></script>
 </body>
 </html>
