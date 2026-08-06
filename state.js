@@ -235,12 +235,20 @@ function initializeApplicationStorage(){
   return storageInitializationPromise;
 }
 
-function save(){
+function save(options){
+  options=options||{};
+  if(window.ConferenceEditLockManager&&
+    typeof window.ConferenceEditLockManager.guard==='function'){
+    var lockGuard=window.ConferenceEditLockManager.guard(appData,options);
+    if(!lockGuard||lockGuard.ok!==true)return false;
+  }
   var json;
   try{
-    updateCurrentConferenceData();
-    var currentConference=getCurrentConference();
-    if(currentConference&&window.ConferenceRepository&&
+    if(!options.skipCurrentConferenceUpdate)updateCurrentConferenceData();
+    var currentConference=options.skipConferenceTracking
+      ?null:getCurrentConference();
+    if(currentConference&&
+      window.ConferenceRepository&&
       typeof window.ConferenceRepository.recordLocalChange==='function'){
       var tracked=window.ConferenceRepository.recordLocalChange(
         appData,currentConference.id
@@ -255,7 +263,10 @@ function save(){
   }
   if(window.StorageRepository&&
     typeof window.StorageRepository.saveAppSnapshot==='function'){
-    window.StorageRepository.saveAppSnapshot(appData)
+    window.StorageRepository.saveAppSnapshot(
+      appData,
+      options.skipSyncQueue===true?{skipSyncQueue:true}:undefined
+    )
       .then(function(){
         applicationStorageState.lastIndexedDbSaveAt=new Date().toISOString();
       })
@@ -266,6 +277,10 @@ function save(){
   }
   try{
     localStorage.setItem(SK,json);
+    if(window.ConferenceEditLockManager&&
+      typeof window.ConferenceEditLockManager.committed==='function'){
+      window.ConferenceEditLockManager.committed(appData);
+    }
     applicationStorageState.lastLocalSaveAt=new Date().toISOString();
     var b=ge('syncBar');if(b){b.textContent='✔ '+new Date().toLocaleTimeString('ar-EG');}
   }catch(e){

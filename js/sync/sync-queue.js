@@ -994,6 +994,32 @@
     });
   }
 
+  function discardConferenceOperations(conferenceId,options){
+    conferenceId=String(conferenceId||'');
+    if(!isUuid(conferenceId))return Promise.resolve(result(false,'error',null,
+      safeError('INVALID_CONFERENCE_ID','A valid conference ID is required.')));
+    var repository=getRepository();
+    if(!repository)return Promise.resolve(result(false,'error',null,
+      safeError('SYNC_QUEUE_UNAVAILABLE','The sync queue is unavailable.')));
+    var now=resolveNow(options).toISOString(),discarded=[];
+    return repository.runTransaction(STORE_NAME,'readwrite',function(stores){
+      var store=stores[STORE_NAME];
+      return requestToPromise(store.getAll()).then(function(operations){
+        return Promise.all(operations.filter(function(operation){
+          return operation.conferenceId===conferenceId&&
+            ['pending','processing','failed','conflict'].indexOf(operation.status)>=0;
+        }).map(function(operation){
+          operation.status='discarded';operation.updatedAt=now;
+          operation.nextAttemptAt=null;
+          operation.resetDisposition={reason:'experimental_conference_reset',discardedAt:now};
+          discarded.push(operation.operationId);
+          return requestToPromise(store.put(operation));
+        }));
+      });
+    }).then(function(){return result(true,'discarded',{operationIds:discarded,count:discarded.length},null);})
+      .catch(function(error){return result(false,'error',null,normalizeStorageError(error));});
+  }
+
   global.OfflineSyncQueue = Object.freeze({
     statuses:STATUSES,
     enqueueSnapshotOperation:enqueueSnapshotOperation,
@@ -1014,6 +1040,7 @@
     recoverStaleProcessing:recoverStaleProcessing,
     deleteAppliedOperation:deleteAppliedOperation,
     deleteAppliedBefore:deleteAppliedBefore,
+    discardConferenceOperations:discardConferenceOperations,
     calculateBackoffDelay:calculateBackoffDelay
   });
 })(window);

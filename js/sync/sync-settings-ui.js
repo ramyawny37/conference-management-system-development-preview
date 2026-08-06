@@ -177,6 +177,16 @@
       '<button type="button" class="btn btn-gray btn-sm" '+
       'onclick="MemberRuntimeDiagnostics.clearPersistentLinkStatusTrace()">'+
       'مسح سجل تشخيص Link</button></div></div></section>';
+    var current=typeof global.getCurrentConference==='function'
+      ?global.getCurrentConference():null;
+    var link=current&&global.ConferenceLinkStore&&
+      global.ConferenceLinkStore.get(current.id);
+    if(link&&link.linkStatus==='needs_resolution'){
+      html+='<section class="settings-section sync-settings-section">'+
+        '<div class="settings-section-title">تنظيف مؤتمر تجريبي متعارض</div>'+
+        '<div class="sync-settings-message">أداة مؤقتة لعزل المؤتمر التجريبي وإنهاء عملياته قبل إنشاء مؤتمر جديد.</div>'+
+        '<button type="button" class="btn btn-red btn-sm" onclick="ExperimentalConferenceReset.resetCurrent()">تنظيف المؤتمر التجريبي الحالي</button></section>';
+    }
     return html;
   }
 
@@ -440,10 +450,17 @@
         'هذا الجهاز يملك قفلًا ساريًا. تسجيل الخروج لن يحرره تلقائيًا. هل تريد المتابعة؟'
       ))return;
     setBusy(true);
-    var cleanup=global.ConferenceOperationalUI&&
-      typeof global.ConferenceOperationalUI.logoutCleanup==='function'
-      ?global.ConferenceOperationalUI.logoutCleanup()
+    var editLockCleanup=global.ConferenceEditLockManager&&
+      typeof global.ConferenceEditLockManager.release==='function'
+      ?Promise.resolve(global.ConferenceEditLockManager.release())
+        .catch(function(){return {ok:false,status:'release_failed_ttl_fallback'};})
       :Promise.resolve();
+    var cleanup=Promise.resolve(editLockCleanup).then(function(){
+      return global.ConferenceOperationalUI&&
+        typeof global.ConferenceOperationalUI.logoutCleanup==='function'
+        ?global.ConferenceOperationalUI.logoutCleanup()
+        :Promise.resolve();
+    });
     Promise.resolve(cleanup).then(function(){
       return global.SupabaseAuth.signOut();
     }).then(function(result){

@@ -225,6 +225,11 @@ function setCurrentConferenceById(id, options){
     window.AutomaticSyncOrchestrator.schedule('conference_changed');
   }
   setCurrentConference(next);
+  if(window.ConferenceEditLockManager){
+    Promise.resolve(window.ConferenceEditLockManager.release()).then(function(){
+      return window.ConferenceEditLockManager.begin(next.id);
+    });
+  }
   if(!saveCurrentConferenceSelection())return false;
   syncCurrentConferenceRefs();
 
@@ -8715,6 +8720,10 @@ window.applicationStorageReadyPromise.then(function(){
     if(window.AutomaticSyncOrchestrator&&
       typeof window.AutomaticSyncOrchestrator.start==='function'){
       window.AutomaticSyncOrchestrator.start();
+    }
+    var currentConference=getCurrentConference();
+    if(currentConference&&window.ConferenceEditLockManager){
+      window.ConferenceEditLockManager.begin(currentConference.id);
     }
   });
 });
