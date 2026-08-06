@@ -5,7 +5,7 @@ const vm=require('vm');
 
 const root=path.join(__dirname,'..');
 const marker='canonical-conference-schema-v1';
-const cacheMarker='pwa-deterministic-update-test-v1';
+const cacheMarker='conference-lock-release-diagnostics-v1';
 const source=fs.readFileSync(path.join(
   root,'js/sync/member-runtime-diagnostics.js'),'utf8');
 const sandbox={window:null,structuredClone:value=>JSON.parse(JSON.stringify(value)),
@@ -40,7 +40,11 @@ const sandbox={window:null,structuredClone:value=>JSON.parse(JSON.stringify(valu
     getDiagnostics:()=>[{stage:'START_SUBSCRIBE',
       at:'2026-08-04T01:02:04.000Z',
       data:{localConferenceIdPresent:true}}]
-  }
+  },
+  ConferenceLocks:{getState:()=>({lastReleaseDiagnostic:{
+    rpcName:'release_conference_section_lock',outcome:'response_error',
+    deviceId:'22222222...2222',lockToken:'333333...3333'
+  }})}
 };
 sandbox.window=sandbox;
 vm.runInNewContext(source,sandbox);
@@ -56,6 +60,8 @@ assert.strictEqual(first.materializationTrusted,true);
 assert.strictEqual(first.downloadRequestReached,false);
 assert.strictEqual(first.realtimeManagerState[0].status,'subscribed');
 assert.strictEqual(first.realtimeTrace[0].stage,'START_SUBSCRIBE');
+assert.strictEqual(first['lock.lastReleaseDiagnostic'].outcome,'response_error');
+assert.strictEqual(first['lock.lastReleaseDiagnostic'].lockToken,'333333...3333');
 assert.deepStrictEqual(Object.keys(first),Array.from(service.fields));
 const serialized=JSON.stringify(first);
 ['sensitive-local-id','sensitive-remote-id','sensitive-name','sensitive-token',
@@ -69,6 +75,7 @@ const worker=fs.readFileSync(path.join(root,'service-worker.js'),'utf8');
 assert.ok(worker.includes("const CACHE_REVISION = '"+cacheMarker+"';"));
 [
   'js/sync/member-runtime-diagnostics.js?rev='+cacheMarker,
+  'js/sync/conference-locks.js?rev='+cacheMarker,
   'core.js?rev='+marker,
   'people.js?rev='+marker,
   'houses.js?rev='+marker,
@@ -82,7 +89,7 @@ const settingsSource=fs.readFileSync(path.join(
 assert.ok(settingsSource.includes('تشخيص مزامنة هذا الجهاز'));
 assert.ok(source.includes(marker));
 assert.ok(index.includes(
-  'js/sync/sync-settings-ui.js?rev='+cacheMarker));
+  'js/sync/sync-settings-ui.js?rev=pwa-deterministic-update-test-v1'));
 assert.ok(index.includes(
   'js/sync/automatic-sync-orchestrator.js?rev=local-save-queue-wake-v1'));
 assert.ok(index.includes(

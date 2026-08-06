@@ -10,8 +10,79 @@
     lastStatus:null,
     lastError:null,
     lastConferenceId:null,
-    lastSection:null
+    lastSection:null,
+    lastReleaseDiagnostic:null
   };
+
+  function shortId(value){
+    var text=String(value||'');
+    return text?text.slice(0,8)+'...'+text.slice(-4):null;
+  }
+
+  function shortToken(value){
+    var text=String(value||'');
+    return text?text.slice(0,6)+'...'+text.slice(-4):null;
+  }
+
+  function errorDetails(error,response){
+    error=error&&typeof error==='object'?error:{};
+    response=response&&typeof response==='object'?response:{};
+    return {
+      code:error.code===undefined?null:error.code,
+      message:error.message===undefined?null:error.message,
+      details:error.details===undefined?null:error.details,
+      hint:error.hint===undefined?null:error.hint,
+      status:error.status===undefined
+        ?response.status===undefined?null:response.status
+        :error.status,
+      statusText:error.statusText===undefined
+        ?response.statusText===undefined?null:response.statusText
+        :error.statusText,
+      name:error.name===undefined?null:error.name
+    };
+  }
+
+  function exceptionStack(error){
+    var stack=error&&typeof error.stack==='string'?error.stack:'';
+    return stack?stack.split('\n').slice(0,5).join('\n'):null;
+  }
+
+  function beginReleaseDiagnostic(name,args,conferenceId,section,context){
+    if(name!=='release_conference_section_lock')return null;
+    var startedAt=new Date().toISOString();
+    return {
+      rpcName:name,
+      conferenceId:shortId(conferenceId),
+      section:section,
+      deviceId:shortId(context&&context.deviceId),
+      lockToken:shortToken(args&&args.p_lock_token),
+      startedAt:startedAt,
+      endedAt:null,
+      durationMs:null,
+      outcome:'pending',
+      error:null,
+      stack:null,
+      startedMs:Date.now()
+    };
+  }
+
+  function finishReleaseDiagnostic(diagnostic,outcome,error,response){
+    if(!diagnostic)return;
+    try{
+      var endedMs=Date.now();
+      diagnostic.endedAt=new Date(endedMs).toISOString();
+      diagnostic.durationMs=Math.max(0,endedMs-diagnostic.startedMs);
+      diagnostic.outcome=outcome;
+      diagnostic.error=error?errorDetails(error,response):null;
+      diagnostic.responseStatus=response&&response.status!==undefined
+        ?response.status:null;
+      diagnostic.responseStatusText=response&&
+        response.statusText!==undefined?response.statusText:null;
+      diagnostic.stack=outcome==='exception'?exceptionStack(error):null;
+      delete diagnostic.startedMs;
+      state.lastReleaseDiagnostic=cloneValue(diagnostic);
+    }catch(ignored){}
+  }
 
   function normalizeSection(options){
     var section=String(options&&options.section||'conference').trim().toLowerCase();
@@ -213,15 +284,30 @@
     context,
     failureData
   ){
+    var releaseDiagnostic=beginReleaseDiagnostic(
+      name,args,conferenceId,section,context
+    );
+    var responseError=null;
     return Promise.resolve().then(function(){
       return context.client.rpc(name,args);
     }).then(function(response){
+      responseError=response&&response.error||null;
+      finishReleaseDiagnostic(
+        releaseDiagnostic,
+        responseError?'response_error':'response',
+        responseError,response
+      );
       return normalizeRpcResult(
         response,
         conferenceId,
         section,allowedStatuses
       );
     }).catch(function(error){
+      if(!responseError){
+        finishReleaseDiagnostic(
+          releaseDiagnostic,'exception',error
+        );
+      }
       state.lastError=normalizeThrownError(error);
       state.lastStatus='error';
       state.lastConferenceId=conferenceId;
@@ -436,6 +522,8 @@
       lastStatus:state.lastStatus,
       lastConferenceId:state.lastConferenceId,
       lastSection:state.lastSection,
+      lastReleaseDiagnostic:state.lastReleaseDiagnostic
+        ?cloneValue(state.lastReleaseDiagnostic):null,
       lastError:state.lastError
         ?{code:state.lastError.code,message:state.lastError.message}
         :null
@@ -449,6 +537,7 @@
     state.lastError=null;
     state.lastConferenceId=null;
     state.lastSection=null;
+    state.lastReleaseDiagnostic=null;
   }
 
   global.ConferenceLocks=Object.freeze({

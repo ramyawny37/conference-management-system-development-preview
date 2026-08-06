@@ -1,7 +1,7 @@
 (function(global){
   'use strict';
   var RUNTIME_BUILD_REVISION='canonical-conference-schema-v1';
-  var SERVICE_WORKER_CACHE_REVISION='pwa-deterministic-update-test-v1';
+  var SERVICE_WORKER_CACHE_REVISION='conference-lock-release-diagnostics-v1';
   var FIELDS=Object.freeze([
     'runtimeBuildRevision','serviceWorkerCacheRevision',
     'orchestratorStarted','lastScheduledReason',
@@ -24,7 +24,8 @@
     'lock.lockOwnerEmail','lock.acquiredAt','lock.expiresAt',
     'lock.serverNow','lock.heartbeatAt','lock.isExpired',
     'lock.localManagerState','lock.lastAcquireResult',
-    'lock.lastRenewResult','lock.lastReleaseResult','lock.heartbeatTimerCount',
+    'lock.lastRenewResult','lock.lastReleaseResult',
+    'lock.lastReleaseDiagnostic','lock.heartbeatTimerCount',
     'draft.exists','draft.status','draft.executionStatus',
     'draft.executionResult','draft.finalizationState',
     'pending.exists','pending.status','pending.revision',
@@ -132,6 +133,9 @@
       typeof global.ConferenceEditLockManager.getDiagnostics==='function'
       ?global.ConferenceEditLockManager.getDiagnostics():{};
     var lockData=editLock.lock||{};
+    var lockClientState=global.ConferenceLocks&&
+      typeof global.ConferenceLocks.getState==='function'
+      ?global.ConferenceLocks.getState():{};
     var state={
       runtimeBuildRevision:RUNTIME_BUILD_REVISION,
       serviceWorkerCacheRevision:SERVICE_WORKER_CACHE_REVISION,
@@ -198,6 +202,9 @@
       'lock.lastAcquireResult':copy(editLock.lastAcquireResult),
       'lock.lastRenewResult':copy(editLock.lastRenewResult),
       'lock.lastReleaseResult':copy(editLock.lastReleaseResult),
+      'lock.lastReleaseDiagnostic':copy(
+        lockClientState.lastReleaseDiagnostic||null
+      ),
       'lock.heartbeatTimerCount':Number.isInteger(editLock.heartbeatTimerCount)?editLock.heartbeatTimerCount:0,
       'draft.exists':conflict.loaded===true?!!draft:null,
       'draft.status':draft&&draft.status||null,
