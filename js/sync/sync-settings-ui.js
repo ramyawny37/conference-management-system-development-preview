@@ -171,10 +171,37 @@
         escapeHtml(String(value))+'</td></tr>';
     });
     html+='</tbody></table><div class="sync-settings-actions">'+
+      '<button type="button" class="btn btn-blue btn-sm" '+
+      'onclick="SyncSettingsUI.exportDeviceRescueBundle()">'+
+      'تصدير حزمة إنقاذ هذا الجهاز</button>'+
       '<button type="button" class="btn btn-gray btn-sm" '+
       'onclick="MemberRuntimeDiagnostics.clearPersistentLinkStatusTrace()">'+
       'مسح سجل تشخيص Link</button></div></div></section>';
     return html;
+  }
+
+  function exportDeviceRescueBundle(){
+    var service=global.DeviceRescueExport;
+    if(!service||typeof service.exportCurrentConference!=='function'){
+      if(typeof global.showToast==='function'){
+        global.showToast('تعذر تشغيل أداة تصدير حزمة الإنقاذ.','#E74C3C');
+      }
+      return Promise.resolve(false);
+    }
+    return service.exportCurrentConference().then(function(result){
+      if(typeof global.showToast==='function'){
+        global.showToast('تم تصدير حزمة إنقاذ هذا الجهاز: '+result.fileName);
+      }
+      return result;
+    }).catch(function(error){
+      if(typeof global.console!=='undefined'&&global.console.error){
+        global.console.error('تعذر تصدير حزمة إنقاذ هذا الجهاز:',error);
+      }
+      if(typeof global.showToast==='function'){
+        global.showToast('تعذر تصدير حزمة إنقاذ هذا الجهاز.','#E74C3C');
+      }
+      return false;
+    });
   }
 
   function renderSection(){
@@ -508,6 +535,7 @@
     signOut:signOut,
     refreshAuthState:refreshAuthState,
     saveDeviceName:saveDeviceName,
+    exportDeviceRescueBundle:exportDeviceRescueBundle,
     saveAutomaticSyncPreferences:saveAutomaticSyncPreferences,
     setConnectivity:setConnectivity,
     getState:getState
