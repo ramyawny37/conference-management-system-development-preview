@@ -431,7 +431,7 @@
       });
     });
   }
-  function performRun(options){
+  function performQueueRun(options){
     var reason=waitingReason(options);
     if(reason){
       state.lastEligibilityStatus='waiting';
@@ -530,6 +530,28 @@
       state.activeConferenceId=null;
       setStatus('error','AUTOMATIC_QUEUE_RUN_FAILED');
       return result(false,'error',null,safeError('AUTOMATIC_QUEUE_RUN_FAILED'));
+    });
+  }
+  function performRun(options){
+    var recovery=options.startupRecovery||global.StartupQueueRecovery;
+    if(!recovery||typeof recovery.run!=='function'){
+      return performQueueRun(options);
+    }
+    setStatus('verifying_server');
+    return recovery.run(Object.assign({},options.startupRecoveryOptions||{}, {
+      queue:options.queue||global.OfflineSyncQueue,
+      snapshotSync:options.snapshotSync||global.SupabaseSnapshotSync,
+      linkStore:options.linkStore||global.ConferenceLinkStore,
+      processor:options.processor||global.SyncQueueProcessor,
+      integration:options.integration||global.OfflineFirstIntegration,
+      orchestrator:options.orchestrator||global.AutomaticSyncOrchestrator,
+      queueOptions:options.queueOptions,
+      linkOptions:options.linkOptions
+    })).then(function(){
+      return performQueueRun(options);
+    }).catch(function(){
+      setStatus('requires_reconciliation','STARTUP_RECOVERY_FAILED');
+      return performQueueRun(options);
     });
   }
   function run(options){

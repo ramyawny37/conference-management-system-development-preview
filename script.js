@@ -8782,6 +8782,11 @@ window.applicationStorageReadyPromise.then(function(){
   }).catch(function(){
     return null;
   }).then(function(){
+    var recovery=window.StartupQueueRecovery&&
+      typeof window.StartupQueueRecovery.run==='function'
+      ?window.StartupQueueRecovery.run():Promise.resolve();
+    return Promise.resolve(recovery).catch(function(){return null;});
+  }).then(function(){
     if(window.AutomaticSyncOrchestrator&&
       typeof window.AutomaticSyncOrchestrator.start==='function'){
       window.AutomaticSyncOrchestrator.start();

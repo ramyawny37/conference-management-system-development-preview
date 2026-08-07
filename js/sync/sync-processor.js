@@ -143,15 +143,34 @@
           uploadResult.status==='duplicate')){
           var appliedData=uploadResult.data||{};
           if(options&&options.deferAppliedFinalization===true){
-            return result(true,'server_applied',{
-              operationId:operationId,
+            if(typeof queue.checkpointServerApplied!=='function'){
+              return result(false,'error',null,safeError(
+                'QUEUE_CHECKPOINT_UNAVAILABLE',
+                'The server result could not be checkpointed.'
+              ));
+            }
+            return queue.checkpointServerApplied(operationId,{
               revision:appliedData.revision,
               previousRevision:appliedData.previousRevision,
-              conferenceId:appliedData.conferenceId||
-                operation.conferenceId,
-              operation:publicOperationData(operation),
-              serverStatus:uploadResult.status
-            },null);
+              conferenceId:appliedData.conferenceId||operation.conferenceId,
+              serverAppliedAt:new Date().toISOString()
+            },options&&options.queueOptions).then(function(checkpointed){
+              if(!checkpointed||!checkpointed.ok){
+                return result(false,'error',null,safeError(
+                  'QUEUE_CHECKPOINT_FAILED',
+                  'The server result could not be checkpointed.'
+                ));
+              }
+              return result(true,'server_applied',{
+                operationId:operationId,
+                revision:appliedData.revision,
+                previousRevision:appliedData.previousRevision,
+                conferenceId:appliedData.conferenceId||
+                  operation.conferenceId,
+                operation:publicOperationData(checkpointed.data),
+                serverStatus:uploadResult.status
+              },null);
+            });
           }
           return queue.markApplied(operationId,{
             revision:appliedData.revision,

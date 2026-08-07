@@ -264,6 +264,15 @@
       link.remoteConferenceId,
       options&&options.queueOptions
     )).then(function(readiness){
+      var blocking=readiness&&readiness.data&&
+        Array.isArray(readiness.data.blockingOperations)
+        ?readiness.data.blockingOperations:[];
+      if(readiness&&readiness.status==='not_stable'&&blocking.length&&
+        blocking.every(function(operation){
+          return operation&&operation.status==='requires_reconciliation';
+        })){
+        return outcome(true,'queue_reconciliation_required',readiness.data);
+      }
       if(!readiness||!readiness.ok||
         readiness.status!=='stable'){
         return outcome(false,'queue_not_stable',readiness);
@@ -535,7 +544,11 @@
       var reclassificationReason=null;
       if(event.classification==='remote_change_detected'){
         value.remoteChangeDetected=true;
-        if(!queue.ok){
+        if(queue&&queue.status==='queue_reconciliation_required'){
+          event.classification='reconciliation_review_required';
+          reclassificationReason='requires_reconciliation';
+          value.potentialConflict=true;
+        }else if(!queue.ok){
           event.classification='potential_conflict';
           reclassificationReason=queue.status||'queue_not_stable';
           value.potentialConflict=true;
@@ -552,6 +565,10 @@
       if(event.classification==='potential_conflict'){
         eventDiagnostics.lastDropStage='post_queue_classification';
         eventDiagnostics.lastDropReason='potential_conflict';
+      }
+      if(event.classification==='reconciliation_review_required'){
+        eventDiagnostics.lastDropStage='post_queue_classification';
+        eventDiagnostics.lastDropReason='requires_reconciliation';
       }
       trace('QUEUE_INSPECTION_COMPLETED',Object.assign({
         revision:event.observedRevision,

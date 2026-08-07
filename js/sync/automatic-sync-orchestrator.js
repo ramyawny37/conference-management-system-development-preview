@@ -1421,6 +1421,10 @@
       typeof global.AutomaticQueueRunner.stop==='function'){
       global.AutomaticQueueRunner.stop();
     }
+    if(global.StartupQueueRecovery&&
+      typeof global.StartupQueueRecovery.stop==='function'){
+      global.StartupQueueRecovery.stop();
+    }
     var realtimeStop=disconnectRealtime(activeOptions);
     var manager=activeOptions&&activeOptions.realtimeManager||
       global.ConferenceRealtimeManager;

@@ -1,6 +1,6 @@
 const APP_VERSION = '3.1.1';
 const CACHE_PREFIX = 'conference-manager-core-';
-const CACHE_REVISION = 'targeted-stuck-operation-recovery-v1';
+const CACHE_REVISION = 'startup-queue-recovery-v1';
 const CACHE_NAME = CACHE_PREFIX + 'v' + APP_VERSION + '-' + CACHE_REVISION;
 const CORE_ASSETS = [
   './',
@@ -13,7 +13,8 @@ const CORE_ASSETS = [
   './js/storage/conference-publish-recovery.js',
   './js/storage/conference-publish-manager.js',
   './js/storage/full-backup.js',
-  './js/sync/sync-queue.js',
+  './js/sync/sync-queue.js?rev=startup-queue-recovery-v1',
+  './js/sync/startup-queue-recovery.js?rev=startup-queue-recovery-v1',
   './js/sync/targeted-stuck-operation-recovery.js',
   './js/storage/migration-audit.js',
   './js/storage/migration-repair.js',
@@ -33,9 +34,9 @@ const CORE_ASSETS = [
   './js/sync/current-device-authorization-ui.js?rev=device-reauthorization-flow-v2',
   './js/sync/device-reauthorization-flow.js?rev=device-reauthorization-flow-v1',
   './js/sync/device-authorization-administration-ui.js?rev=multi-device-authorization-v1',
-  './js/supabase/snapshot-sync.js',
+  './js/supabase/snapshot-sync.js?rev=startup-queue-recovery-v1',
   './js/sync/startup-conference-discovery.js',
-  './js/sync/sync-processor.js',
+  './js/sync/sync-processor.js?rev=startup-queue-recovery-v1',
   './js/sync/realtime.js',
   './js/sync/conflict-resolution.js',
   './js/sync/conflict-executor.js',
@@ -66,13 +67,13 @@ const CORE_ASSETS = [
   './js/sync/sync-scheduler-state.js',
   './js/sync/conference-sync-state-resolver.js?rev=phase-5',
   './js/sync/conference-queue-integration.js?rev=queue-legacy-compat-v1',
-  './js/sync/conference-realtime-manager.js?rev=realtime-drop-instrumentation-v1',
+  './js/sync/conference-realtime-manager.js?rev=startup-queue-recovery-v1',
   './js/sync/conference-operational-ui.js',
-  './js/sync/automatic-queue-runner.js?rev=runtime-diagnostics-v1',
+  './js/sync/automatic-queue-runner.js?rev=startup-queue-recovery-v1',
   './js/sync/automatic-conference-linking.js?rev=realtime-refresh-completion-v1',
   './js/sync/discovered-conference-open-service.js?rev=realtime-refresh-completion-v1',
-  './js/sync/member-runtime-diagnostics.js?rev=targeted-stuck-operation-recovery-v1',
-  './js/sync/automatic-sync-orchestrator.js?rev=realtime-drop-instrumentation-v1',
+  './js/sync/member-runtime-diagnostics.js?rev=startup-queue-recovery-v1',
+  './js/sync/automatic-sync-orchestrator.js?rev=startup-queue-recovery-v1',
   './js/sync/wrong-remote-binding-repair-store.js?rev=wrong-remote-binding-repair-v1',
   './js/sync/wrong-remote-binding-repair-service.js?rev=wrong-remote-binding-repair-v1',
   './js/sync/wrong-remote-binding-repair-ui.js?rev=wrong-remote-binding-repair-v1',
@@ -86,7 +87,7 @@ const CORE_ASSETS = [
   './js/conference/accounts.js',
   './js/conference-template-houses-editor.js',
   './cards.js',
-  './script.js?rev=canonical-conference-schema-v1',
+  './script.js?rev=startup-queue-recovery-v1',
   './version.js',
   './pwa.js?rev=realtime-drop-instrumentation-v1',
   './libs/html2canvas.min.js',

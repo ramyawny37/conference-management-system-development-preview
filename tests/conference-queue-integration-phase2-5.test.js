@@ -652,6 +652,7 @@ async function run(){
     processorSandbox
   );
   var processorMarkApplied=0;
+  var processorCheckpoint=0;
   var deferredQueue={
     getOperation:function(){
       return Promise.resolve({
@@ -688,6 +689,16 @@ async function run(){
       processorMarkApplied++;
       return Promise.resolve({ok:true});
     },
+    checkpointServerApplied:function(id,input){
+      processorCheckpoint++;
+      return Promise.resolve({ok:true,data:{
+        operationId:id,conferenceId:cloudId,deviceId:deviceId,
+        status:'server_applied',attempts:1,result:{
+          revision:input.revision,
+          previousRevision:input.previousRevision
+        }
+      }});
+    },
     markConflict:function(){return Promise.resolve({ok:true});},
     markFailed:function(){return Promise.resolve({ok:true});}
   };
@@ -704,6 +715,7 @@ async function run(){
       }}
     });
   assert.strictEqual(deferredResult.status,'server_applied');
+  assert.strictEqual(processorCheckpoint,1);
   assert.strictEqual(processorMarkApplied,0);
 
   var indexSource=source('index.html');

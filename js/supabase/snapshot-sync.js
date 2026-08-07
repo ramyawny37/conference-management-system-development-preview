@@ -23,12 +23,16 @@
 
   function normalizeRequestError(error){
     var code=error&&typeof error.code==='string'?error.code:'';
+    var status=Number(error&&error.status);
     if(code==='PGRST116'){
       return safeError('NOT_FOUND','The requested record was not found.');
     }
     return safeError(
-      code==='42501'?'ACCESS_DENIED':'SUPABASE_REQUEST_FAILED',
-      code==='42501'?'Access denied.':'Supabase request failed.'
+      /jwt.*expired|token.*expired/i.test(code)?'TOKEN_EXPIRED':
+        code==='42501'||status===401||status===403
+          ?'ACCESS_DENIED':'SUPABASE_REQUEST_FAILED',
+      code==='42501'||status===401||status===403
+        ?'Access denied.':'Supabase request failed.'
     );
   }
 
@@ -95,6 +99,12 @@
     if(!session||!session.user||!isUuid(String(session.user.id||''))){
       return {
         error:safeError('AUTH_REQUIRED','An authenticated session is required.')
+      };
+    }
+    if(Number.isFinite(Number(session.expires_at))&&
+      Number(session.expires_at)*1000<=Date.now()){
+      return {
+        error:safeError('TOKEN_EXPIRED','The authenticated session has expired.')
       };
     }
     return {
@@ -493,6 +503,108 @@
     });
   }
 
+  function inspectSnapshotOperation(input){
+    input=input&&typeof input==='object'?input:{};
+    var operationId=String(input.operationId||'');
+    var conferenceId=String(input.conferenceId||'');
+    var deviceId=String(input.deviceId||'');
+    var baseRevision=input.baseRevision;
+    if(!isUuid(operationId)||!isUuid(conferenceId)||!isUuid(deviceId)||
+      !Number.isInteger(baseRevision)||baseRevision<0){
+      return Promise.resolve(validationError(
+        'INVALID_OPERATION_INSPECTION',
+        'Valid operation and conference IDs are required.'
+      ));
+    }
+    var context=getOnlineContext();
+    if(context.error){
+      return Promise.resolve(result(false,'error',{
+        operationId:operationId,conferenceId:conferenceId
+      },context.error));
+    }
+    return Promise.resolve().then(function(){
+      return context.client.from('sync_operations')
+        .select('operation_id,conference_id,user_id,device_id,status,base_revision,resulting_revision,processed_at')
+        .eq('operation_id',operationId)
+        .maybeSingle();
+    }).then(function(response){
+      if(response.error){
+        return result(false,'error',null,normalizeRequestError(response.error));
+      }
+      if(!response.data){
+        return result(true,'not_found',{
+          operationId:operationId,conferenceId:conferenceId
+        },null);
+      }
+      var row=response.data;
+      if(String(row.operation_id||'')!==operationId||
+        String(row.conference_id||'')!==conferenceId||
+        String(row.user_id||'')!==String(context.user.id)||
+        String(row.device_id||'')!==deviceId||
+        Number(row.base_revision)!==baseRevision){
+        return result(false,'integrity_conflict',null,safeError(
+          'OPERATION_RESULT_MISMATCH',
+          'The server operation did not match the local operation.'
+        ));
+      }
+      var inspected={
+        operationId:operationId,
+        conferenceId:conferenceId,
+        userId:row.user_id||null,
+        deviceId:row.device_id||null,
+        status:String(row.status||'unknown'),
+        baseRevision:Number.isInteger(Number(row.base_revision))
+          ?Number(row.base_revision):null,
+        resultingRevision:row.resulting_revision===null||
+          row.resulting_revision===undefined
+          ?null:Number(row.resulting_revision),
+        processedAt:row.processed_at||null
+      };
+      var knownStatuses=['pending','processing','applied','failed',
+        'rejected','conflict'];
+      if(knownStatuses.indexOf(inspected.status)<0||
+        !Number.isInteger(inspected.baseRevision)||
+        inspected.baseRevision<0||
+        inspected.status==='applied'&&(
+          !Number.isInteger(inspected.resultingRevision)||
+          inspected.resultingRevision<=inspected.baseRevision)){
+        return result(false,'integrity_conflict',null,safeError(
+          'INVALID_OPERATION_RESULT',
+          'The server operation result was incomplete or invalid.'
+        ));
+      }
+      if(inspected.status!=='conflict'){
+        return result(true,inspected.status,inspected,null);
+      }
+      return context.client.from('sync_conflicts')
+        .select('id,expected_revision,actual_revision,status')
+        .eq('operation_id',operationId)
+        .maybeSingle().then(function(conflictResponse){
+          if(conflictResponse.error){
+            return result(false,'error',null,
+              normalizeRequestError(conflictResponse.error));
+          }
+          var conflict=conflictResponse.data||{};
+          inspected.conflictId=conflict.id||null;
+          inspected.expectedRevision=Number(conflict.expected_revision);
+          inspected.actualRevision=Number(conflict.actual_revision);
+          inspected.conflictStatus=conflict.status||null;
+          if(!conflict.id||!Number.isInteger(inspected.expectedRevision)||
+            inspected.expectedRevision<0||
+            !Number.isInteger(inspected.actualRevision)||
+            inspected.actualRevision<0){
+            return result(false,'integrity_conflict',null,safeError(
+              'INVALID_CONFLICT_RESULT',
+              'The server conflict result was incomplete or invalid.'
+            ));
+          }
+          return result(true,'conflict',inspected,null);
+        });
+    }).catch(function(error){
+      return result(false,'error',null,normalizeThrownError(error));
+    });
+  }
+
   function verifyOwnerMembership(input){
     input=input&&typeof input==='object'?input:{};
     var conferenceId=String(input.conferenceId||'');
@@ -750,6 +862,7 @@
     inspectInitialSnapshot:inspectInitialSnapshot,
     uploadInitialSnapshot:uploadInitialSnapshot,
     uploadSnapshot:uploadSnapshot,
+    inspectSnapshotOperation:inspectSnapshotOperation,
     downloadSnapshot:downloadSnapshot,
     listAvailableConferences:listAvailableConferences
   });

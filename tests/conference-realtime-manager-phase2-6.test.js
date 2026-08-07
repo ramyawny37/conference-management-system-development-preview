@@ -208,8 +208,6 @@ async function tick(){
     [{archived:true},'conference_archived'],
     [{operations:[{status:'processing'}]},'queue_not_stable'],
     [{operations:[{status:'server_applied'}]},'queue_not_stable'],
-    [{operations:[{status:'requires_reconciliation'}]},
-      'queue_not_stable'],
     [{operations:[{status:'pending'}]},'queue_not_stable']
   ];
   for(const [settings,code] of blockers){
@@ -221,6 +219,13 @@ async function tick(){
     assert.strictEqual(result.error.code,code);
     assert.strictEqual(env.channels.length,0,code);
   }
+
+  const reconciliation=environment({
+    operations:[{status:'requires_reconciliation'}]
+  });
+  assert.strictEqual((await reconciliation.manager.prepareAndSubscribe(
+    reconciliation.appData,LOCAL,{client:reconciliation.client}
+  )).status,'subscribed');
 
   const duplicate=environment({deferSubscribe:true});
   const first=duplicate.manager.prepareAndSubscribe(

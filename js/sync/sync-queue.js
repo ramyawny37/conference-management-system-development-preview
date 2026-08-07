@@ -5,6 +5,9 @@
   var STATUSES = Object.freeze([
     'pending',
     'processing',
+    'verifying_server',
+    'server_applied',
+    'requires_reconciliation',
     'applied',
     'conflict',
     'failed',
@@ -13,7 +16,12 @@
   ]);
   var TRANSITIONS = Object.freeze({
     pending: Object.freeze(['processing']),
-    processing: Object.freeze(['pending','applied','conflict','failed']),
+    processing: Object.freeze(['verifying_server','server_applied']),
+    verifying_server: Object.freeze([
+      'pending','server_applied','requires_reconciliation','conflict','failed'
+    ]),
+    server_applied: Object.freeze(['applied']),
+    requires_reconciliation: Object.freeze(['verifying_server']),
     applied: Object.freeze([]),
     conflict: Object.freeze(['resolved','discarded']),
     failed: Object.freeze(['pending']),
@@ -604,6 +612,9 @@
       var counts = {
         pending:0,
         processing:0,
+        verifying_server:0,
+        server_applied:0,
+        requires_reconciliation:0,
         applied:0,
         conflict:0,
         failed:0
@@ -702,6 +713,79 @@
       },
       options
     );
+  }
+
+  function beginServerVerification(operationId,options){
+    return updateOperation(operationId,'verifying_server',function(operation,now){
+      operation.recovery=Object.assign({},operation.recovery||{}, {
+        operationId:operation.operationId,
+        verificationStartedAt:now
+      });
+      operation.nextAttemptAt=null;
+    },options);
+  }
+
+  function checkpointServerApplied(operationId,applyResult,options){
+    applyResult=applyResult&&typeof applyResult==='object'?applyResult:{};
+    if(!Number.isInteger(applyResult.revision)||applyResult.revision<1){
+      return Promise.resolve(result(false,'error',null,safeError(
+        'INVALID_REVISION','A positive applied revision is required.'
+      )));
+    }
+    return updateOperation(operationId,'server_applied',function(operation,now){
+      operation.result={
+        revision:applyResult.revision,
+        previousRevision:Number.isInteger(applyResult.previousRevision)
+          ?applyResult.previousRevision:operation.baseRevision,
+        conferenceId:operation.conferenceId,
+        operationId:operation.operationId,
+        serverAppliedAt:applyResult.serverAppliedAt||now
+      };
+      operation.lastError=null;
+      operation.nextAttemptAt=null;
+    },options);
+  }
+
+  function requireReconciliation(operationId,error,options){
+    return updateOperation(operationId,'requires_reconciliation',
+      function(operation,now){
+        var previousAttempts=Number.isInteger(
+          operation.recovery&&operation.recovery.verificationAttempts
+        )?operation.recovery.verificationAttempts:0;
+        var delays=[15000,60000,300000];
+        var verificationAttempts=previousAttempts+1;
+        operation.lastError=sanitizedAttemptError(error||{
+          code:'SERVER_VERIFICATION_UNAVAILABLE'
+        });
+        operation.recovery=Object.assign({},operation.recovery||{}, {
+          operationId:operation.operationId,
+          reconciliationRequiredAt:now,
+          verificationAttempts:verificationAttempts,
+          nextVerificationAt:new Date(new Date(now).getTime()+delays[
+            Math.min(verificationAttempts-1,delays.length-1)
+          ]).toISOString()
+        });
+        operation.nextAttemptAt=null;
+      },options);
+  }
+
+  function resumeServerVerification(operationId,options){
+    return updateOperation(operationId,'verifying_server',function(operation,now){
+      operation.recovery=Object.assign({},operation.recovery||{}, {
+        operationId:operation.operationId,
+        verificationStartedAt:now,
+        nextVerificationAt:null
+      });
+      operation.lastError=null;
+    },options);
+  }
+
+  function restoreVerifiedMissingToPending(operationId,options){
+    return updateOperation(operationId,'pending',function(operation){
+      operation.nextAttemptAt=null;
+      operation.lastError=null;
+      operation.recovery=null;
+    },options);
   }
 
   function markConflictResolved(operationId,input,options){
@@ -896,12 +980,12 @@
           return operation.status==='processing'&&lastAttempt&&
             lastAttempt.getTime()<=cutoff;
         }).map(function(operation){
-          operation.status = 'pending';
+          operation.status = 'verifying_server';
           operation.updatedAt = now.toISOString();
           operation.nextAttemptAt = null;
           operation.lastError = {
-            code:'STALE_PROCESSING_RECOVERED',
-            message:'A stale processing operation was restored.'
+            code:'STALE_PROCESSING_REQUIRES_VERIFICATION',
+            message:'A stale processing operation requires server verification.'
           };
           recovered.push(operation.operationId);
           return requestToPromise(store.put(operation));
@@ -1011,7 +1095,9 @@
       return requestToPromise(store.getAll()).then(function(operations){
         return Promise.all(operations.filter(function(operation){
           return operation.conferenceId===conferenceId&&
-            ['pending','processing','failed','conflict'].indexOf(operation.status)>=0;
+            ['pending','processing','verifying_server','server_applied',
+              'requires_reconciliation','failed','conflict']
+              .indexOf(operation.status)>=0;
         }).map(function(operation){
           operation.status='discarded';operation.updatedAt=now;
           operation.nextAttemptAt=null;
@@ -1037,6 +1123,11 @@
     countOperationsByStatus:countOperationsByStatus,
     markConflictResolved:markConflictResolved,
     startProcessing:startProcessing,
+    beginServerVerification:beginServerVerification,
+    checkpointServerApplied:checkpointServerApplied,
+    requireReconciliation:requireReconciliation,
+    resumeServerVerification:resumeServerVerification,
+    restoreVerifiedMissingToPending:restoreVerifiedMissingToPending,
     markApplied:markApplied,
     markConflict:markConflict,
     markFailed:markFailed,

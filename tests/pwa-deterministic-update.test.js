@@ -9,7 +9,7 @@ const index=fs.readFileSync(path.join(root,'index.html'),'utf8');
 const manager=fs.readFileSync(path.join(root,'js/sync/conference-edit-lock-manager.js'),'utf8');
 
 const previous='exclusive-edit-lock-v1';
-const next='pwa-deterministic-update-test-v1';
+const next='startup-queue-recovery-v1';
 const appAssetRevision='section-accommodation-edit-lock-v1';
 assert(worker.includes("CACHE_REVISION = '"+next+"'"));
 assert(index.includes("window.APP_SHELL_REVISION='"+next+"'"));

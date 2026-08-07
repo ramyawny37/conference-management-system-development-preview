@@ -5,8 +5,8 @@ const vm=require('vm');
 
 const root=path.join(__dirname,'..');
 const marker='canonical-conference-schema-v1';
-const cacheMarker='targeted-stuck-operation-recovery-v1';
-const realtimeMarker='realtime-drop-instrumentation-v1';
+const cacheMarker='startup-queue-recovery-v1';
+const realtimeMarker='startup-queue-recovery-v1';
 const source=fs.readFileSync(path.join(
   root,'js/sync/member-runtime-diagnostics.js'),'utf8');
 const sandbox={window:null,structuredClone:value=>JSON.parse(JSON.stringify(value)),
@@ -100,7 +100,7 @@ assert.ok(worker.includes("const CACHE_REVISION = '"+cacheMarker+"';"));
   'core.js?rev='+marker,
   'people.js?rev='+marker,
   'houses.js?rev='+marker,
-  'script.js?rev='+marker
+  'script.js?rev='+cacheMarker
 ].forEach(asset=>{
   assert.ok(index.includes('src="'+asset+'"'),'index missing '+asset);
   assert.ok(worker.includes("'./"+asset+"'"),'CORE_ASSETS missing '+asset);
@@ -110,6 +110,6 @@ const settingsSource=fs.readFileSync(path.join(
 assert.ok(settingsSource.includes('تشخيص مزامنة هذا الجهاز'));
 assert.ok(source.includes(marker));
 assert.ok(index.includes(
-  'js/sync/sync-settings-ui.js?rev='+cacheMarker));
+  'js/sync/sync-settings-ui.js?rev=targeted-stuck-operation-recovery-v1'));
 
 console.log('member runtime trace tests passed');
