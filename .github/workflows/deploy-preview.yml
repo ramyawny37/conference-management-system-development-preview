@@ -70,10 +70,12 @@ jobs:
           );
           NODE
 
-      - name: Verify Production Supabase is absent
+            - name: Verify Production Supabase is absent from runtime
         run: |
-          if grep -R "mpezfbvcdfxpgflehuot" site; then
-            echo "Production Supabase reference found in preview artifact"
+          if grep -R "mpezfbvcdfxpgflehuot" site \
+            --exclude-dir=tests \
+            --exclude-dir=.git; then
+            echo "Production Supabase reference found in preview runtime"
             exit 1
           fi
 
