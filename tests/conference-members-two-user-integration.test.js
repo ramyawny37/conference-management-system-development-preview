@@ -214,8 +214,7 @@ function membershipBackend(){
       });
     }
 
-    if(name==='add_conference_manager'||
-      name==='remove_conference_manager'){
+    if(name==='manage_conference_member'){
       if(actorRole!=='owner'){
         return Promise.resolve({
           data:null,
@@ -253,14 +252,16 @@ function membershipBackend(){
   function membershipMutation(actor,name,args,remoteConferenceId){
     var operationId=String(args.p_operation_id||'');
     var targetUserId=String(args.p_target_user_id||'');
-    var action=name==='add_conference_manager'
-      ?'add_manager':'remove_manager';
+    var action=String(args.p_action||'');
+    var requestedRole=args.p_requested_role==null
+      ?null:String(args.p_requested_role);
     var existing=operations[operationId];
     if(existing){
       if(existing.actor!==actor||
         existing.remoteConferenceId!==remoteConferenceId||
         existing.targetUserId!==targetUserId||
-        existing.action!==action){
+        existing.action!==action||
+        existing.requestedRole!==requestedRole){
         return Promise.resolve({
           data:null,
           error:{message:'operation id belongs to another operation'}
@@ -272,9 +273,9 @@ function membershipBackend(){
     }
     var status;
     var role;
-    if(action==='add_manager'){
+    if(action==='add'){
       status=members[remoteConferenceId][targetUserId]==='manager'
-        ?'already_manager':'added';
+        ?'unchanged':'added';
       members[remoteConferenceId][targetUserId]='manager';
       role='manager';
     }else{
@@ -296,6 +297,7 @@ function membershipBackend(){
       remoteConferenceId:remoteConferenceId,
       targetUserId:targetUserId,
       action:action,
+      requestedRole:requestedRole,
       result:result
     };
     return response(result);
@@ -437,11 +439,10 @@ async function run(){
   manager.render();
   assert.strictEqual((await manager.ui.refresh()).status,'listed');
   assert.ok(html(manager).indexOf('Manager B')>=0);
-  assert.strictEqual(html(manager).indexOf('إضافة مدير'),-1);
-  assert.strictEqual(html(manager).indexOf('إزالة المدير'),-1);
+  assert.strictEqual(html(manager).indexOf('إضافة عضو'),-1);
+  assert.strictEqual(html(manager).indexOf('إزالة العضو'),-1);
   var mutationCallsBefore=backend.calls.filter(function(call){
-    return call.name==='add_conference_manager'||
-      call.name==='remove_conference_manager';
+    return call.name==='manage_conference_member';
   }).length;
   assert.strictEqual(
     (await manager.ui.addManager()).status,
@@ -453,8 +454,7 @@ async function run(){
   );
   assert.strictEqual(
     backend.calls.filter(function(call){
-      return call.name==='add_conference_manager'||
-        call.name==='remove_conference_manager';
+      return call.name==='manage_conference_member';
     }).length,
     mutationCallsBefore
   );
@@ -536,8 +536,7 @@ async function run(){
   assert.strictEqual(
     backend.calls.some(function(call){
       return call.actor===ids.manager&&
-        (call.name==='add_conference_manager'||
-          call.name==='remove_conference_manager');
+        call.name==='manage_conference_member';
     }),
     false
   );

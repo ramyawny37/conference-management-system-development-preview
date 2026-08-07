@@ -163,6 +163,15 @@
     return 'مشاهد';
   }
 
+  function roleOptions(selected){
+    return ['manager','viewer','accommodation_viewer',
+      'transport_viewer'].map(function(role){
+      return '<option value="'+role+'" '+
+        (role===selected?'selected ':'')+'>'+escapeHtml(roleText(role))+
+        '</option>';
+    }).join('');
+  }
+
   function renderMembers(){
     if(state.membersStatus==='loading'){
       return '<div class="settings-empty-state">جارٍ تحميل أعضاء المؤتمر…</div>';
@@ -183,12 +192,18 @@
         escapeHtml(roleText(member.role))+
         (member.isCurrentUser?' — الحساب الحالي':'')+
         '</div></div>';
-      if(state.canManageMembers&&member.role==='manager'){
-        html+='<button type="button" class="btn btn-red btn-sm" '+
+      if(state.canManageMembers&&member.role!=='owner'){
+        html+='<div class="sync-settings-actions">'+
+          '<select aria-label="Member role" '+(busy?'disabled ':'')+
+          'onchange="ConferenceMembersUI.changeRole(\''+
+          escapeHtml(targetId)+'\',this.value)">'+
+          roleOptions(member.role)+'</select>'+
+          '<button type="button" class="btn btn-red btn-sm" '+
           (busy?'disabled ':'')+
-          'onclick="ConferenceMembersUI.removeManager(\''+
+          'onclick="ConferenceMembersUI.removeMember(\''+
           escapeHtml(targetId)+'\')">'+
-          (busy?'جارٍ التنفيذ…':'إزالة المدير')+'</button>';
+          (busy?'جارٍ التنفيذ…':'إزالة العضو')+'</button>';
+        html+='</div>';
       }
       html+='</div>';
     });
@@ -198,7 +213,7 @@
   function renderManagement(){
     if(!state.canManageMembers)return '';
     var html='<div class="sync-settings-panel">'+
-      '<h3>إضافة مدير</h3>'+
+      '<h3>إضافة عضو</h3>'+
       '<label class="lbl" for="conference_member_lookup_email">البريد الإلكتروني</label>'+
       '<input id="conference_member_lookup_email" type="email" dir="ltr" '+
       'autocomplete="off" placeholder="manager@example.com">'+
@@ -216,10 +231,12 @@
       if(owner){
         html+='<span class="sync-settings-message">هذا المستخدم هو مالك المؤتمر.</span>';
       }else{
-        html+='<button type="button" class="btn btn-green btn-sm" '+
+        html+='<select id="conference_member_role" aria-label="Member role">'+
+          roleOptions('manager')+'</select>'+
+          '<button type="button" class="btn btn-green btn-sm" '+
           (targetFlights[targetId]?'disabled ':'')+
-          'onclick="ConferenceMembersUI.addManager()">'+
-          (targetFlights[targetId]?'جارٍ التنفيذ…':'إضافة كمدير')+
+          'onclick="ConferenceMembersUI.addMember()">'+
+          (targetFlights[targetId]?'جارٍ التنفيذ…':'إضافة العضو')+
           '</button>';
       }
       html+='</div><div class="sync-settings-message">المستخدم: <strong>'+
@@ -458,7 +475,33 @@
     return flight;
   }
 
-  function mutation(action,targetUserId){
+  function mutationSuccessMessage(result,action){
+    if(result&&result.data&&result.data.replayed===true){
+      return '\u062a\u0645 \u062a\u0623\u0643\u064a\u062f \u0646\u062a\u064a\u062c\u0629 \u0627\u0644\u0639\u0645\u0644\u064a\u0629 \u0627\u0644\u0633\u0627\u0628\u0642\u0629.';
+    }
+    if(result.status==='added')return action==='add_manager'
+      ?'\u062a\u0645\u062a \u0625\u0636\u0627\u0641\u0629 \u0627\u0644\u0645\u062f\u064a\u0631.'
+      :'\u062a\u0645\u062a \u0625\u0636\u0627\u0641\u0629 \u0627\u0644\u0639\u0636\u0648.';
+    if(result.status==='role_changed')return '\u062a\u0645 \u062a\u063a\u064a\u064a\u0631 \u062f\u0648\u0631 \u0627\u0644\u0639\u0636\u0648.';
+    if(result.status==='removed')return action==='remove_manager'
+      ?'\u062a\u0645\u062a \u0625\u0632\u0627\u0644\u0629 \u0627\u0644\u0645\u062f\u064a\u0631.'
+      :'\u062a\u0645\u062a \u0625\u0632\u0627\u0644\u0629 \u0627\u0644\u0639\u0636\u0648.';
+    if(result.status==='already_removed')return '\u0627\u0644\u0645\u0633\u062a\u062e\u062f\u0645 \u0644\u0645 \u064a\u0639\u062f \u0645\u062f\u064a\u0631\u064b\u0627.';
+    if(result.status==='already_manager')return '\u0627\u0644\u0645\u0633\u062a\u062e\u062f\u0645 \u0645\u062f\u064a\u0631 \u0628\u0627\u0644\u0641\u0639\u0644.';
+    return '\u0644\u0645 \u064a\u062a\u063a\u064a\u0631 \u062f\u0648\u0631 \u0627\u0644\u0639\u0636\u0648.';
+  }
+
+  function mutationFailureMessage(result){
+    if(result&&result.status==='role_conflict'){
+      return '\u0644\u0644\u0639\u0636\u0648 \u062f\u0648\u0631 \u0645\u062e\u062a\u0644\u0641 \u062d\u0627\u0644\u064a\u064b\u0627.';
+    }
+    if(result&&result.status==='not_member'){
+      return '\u0627\u0644\u0645\u0633\u062a\u062e\u062f\u0645 \u0644\u064a\u0633 \u0639\u0636\u0648\u064b\u0627 \u0641\u064a \u0627\u0644\u0645\u0624\u062a\u0645\u0631.';
+    }
+    return errorMessage(result);
+  }
+
+  function mutation(action,targetUserId,requestedRole){
     targetUserId=String(targetUserId||'');
     if(!context||!state.canManageMembers||!targetUserId){
       return Promise.resolve({ok:false,status:'invalid_input'});
@@ -470,19 +513,25 @@
     setMessage('', 'info');
     paint(scope);
     var api=service();
-    var method=action==='add_manager'?'addManager':'removeManager';
+    var method=action==='add_manager'?'addManager':
+      action==='remove_manager'?'removeManager':
+      action==='add'?'addMember':
+      action==='change_role'?'changeRole':'removeMember';
     var flight=Promise.resolve().then(function(){
-      return api[method]({
+      var input={
         remoteConferenceId:scope.remoteConferenceId,
         targetUserId:targetUserId
-      });
+      };
+      return action==='remove'||action==='add_manager'||
+        action==='remove_manager'
+        ?api[method](input)
+        :api[method](input,requestedRole);
     }).then(function(result){
       if(!isActive(scope,'mutation',targetUserId)){
         return {status:'stale'};
       }
-      var trustedStatuses=action==='add_manager'
-        ?['added','already_manager']
-        :['removed','already_removed'];
+      var trustedStatuses=['added','unchanged','role_changed',
+        'removed','already_removed','already_manager'];
       if(result&&result.ok&&trustedStatuses.indexOf(result.status)>=0){
         state.mutationStatus='success';
         state.lookupStatus='idle';
@@ -499,6 +548,7 @@
                   :'المستخدم لم يعد مديرًا.',
           'success'
         );
+        setMessage(mutationSuccessMessage(result,action),'success');
         paint(scope);
         return runRefresh(true).then(function(){return result;});
       }
@@ -509,7 +559,7 @@
         state.lookupResult=null;
         state.lookupStatus='not_found';
       }
-      setMessage(errorMessage(result),
+      setMessage(mutationFailureMessage(result),
         result&&result.status==='unknown_completion_state'
           ?'info':'error');
       paint(scope);
@@ -534,11 +584,17 @@
 
   function addManager(){
     var target=state.lookupResult&&state.lookupResult.targetUserId;
-    return mutation('add_manager',target);
+    return mutation('add_manager',target,'manager');
   }
 
   function removeManager(targetUserId){
     targetUserId=String(targetUserId||'');
+    var member=state.members.find(function(item){
+      return item.userId===targetUserId;
+    });
+    if(member&&member.role==='owner'){
+      return Promise.resolve({ok:false,status:'invalid_input'});
+    }
     if(targetFlights[targetUserId]){
       return targetFlights[targetUserId];
     }
@@ -546,7 +602,41 @@
       !global.confirm('هل تريد إزالة هذا المدير من المؤتمر؟')){
       return Promise.resolve({ok:false,status:'cancelled'});
     }
-    return mutation('remove_manager',targetUserId);
+    return mutation('remove_manager',targetUserId,null);
+  }
+
+  function addMember(){
+    var target=state.lookupResult&&state.lookupResult.targetUserId;
+    var selector=element('conference_member_role');
+    return mutation('add',target,
+      String(selector&&selector.value||'manager'));
+  }
+
+  function changeRole(targetUserId,role){
+    var member=state.members.find(function(item){
+      return item.userId===String(targetUserId||'');
+    });
+    if(!member||member.role==='owner'){
+      return Promise.resolve({ok:false,status:'invalid_input'});
+    }
+    return mutation('change_role',targetUserId,String(role||''));
+  }
+
+  function removeMember(targetUserId){
+    var member=state.members.find(function(item){
+      return item.userId===String(targetUserId||'');
+    });
+    if(!member||member.role==='owner'){
+      return Promise.resolve({ok:false,status:'invalid_input'});
+    }
+    if(targetFlights[targetUserId]){
+      return targetFlights[targetUserId];
+    }
+    if(global.confirm&&
+      !global.confirm('\u0647\u0644 \u062a\u0631\u064a\u062f \u0625\u0632\u0627\u0644\u0629 \u0647\u0630\u0627 \u0627\u0644\u0639\u0636\u0648 \u0645\u0646 \u0627\u0644\u0645\u0624\u062a\u0645\u0631\u061f')){
+      return Promise.resolve({ok:false,status:'cancelled'});
+    }
+    return mutation('remove',targetUserId,null);
   }
 
   function resetForTests(){
@@ -565,6 +655,9 @@
     renderSection:renderSection,
     refresh:refresh,
     lookup:lookup,
+    addMember:addMember,
+    changeRole:changeRole,
+    removeMember:removeMember,
     addManager:addManager,
     removeManager:removeManager,
     resetForTests:resetForTests

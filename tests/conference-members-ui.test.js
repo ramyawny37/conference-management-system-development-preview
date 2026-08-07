@@ -64,7 +64,8 @@ function environment(overrides){
   };
   var elements={
     conference_members_content:{innerHTML:''},
-    conference_member_lookup_email:{value:'manager@example.test'}
+    conference_member_lookup_email:{value:'manager@example.test'},
+    conference_member_role:{value:'manager'}
   };
   var calls=[];
   var service=overrides.service||{
@@ -95,14 +96,20 @@ function environment(overrides){
         }
       });
     },
-    addManager:function(input){
-      calls.push({method:'addManager',input:input});
+    addMember:function(input,role){
+      calls.push({method:'addMember',input:input,role:role});
       return Promise.resolve({
         ok:true,status:'added',data:{replayed:false}
       });
     },
-    removeManager:function(input){
-      calls.push({method:'removeManager',input:input});
+    changeRole:function(input,role){
+      calls.push({method:'changeRole',input:input,role:role});
+      return Promise.resolve({
+        ok:true,status:'role_changed',data:{replayed:false}
+      });
+    },
+    removeMember:function(input){
+      calls.push({method:'removeMember',input:input});
       return Promise.resolve({
         ok:true,status:'removed',data:{replayed:false}
       });
@@ -154,7 +161,7 @@ async function run(){
   );
   assert.ok(
     env.elements.conference_members_content.innerHTML
-      .indexOf('إزالة المدير')>=0
+      .indexOf('إزالة العضو')>=0
   );
   assert.ok(
     env.elements.conference_members_content.innerHTML
@@ -181,12 +188,12 @@ async function run(){
   );
   assert.ok(
     env.elements.conference_members_content.innerHTML
-      .indexOf('إضافة كمدير')>=0
+      .indexOf('conference_member_role')>=0
   );
   await env.ui.addManager();
   assert.strictEqual(
     env.calls.filter(function(call){
-      return call.method==='addManager';
+      return call.method==='addMember';
     })[0].input.targetUserId,
     ids.manager
   );
@@ -198,16 +205,45 @@ async function run(){
   );
   assert.ok(
     env.elements.conference_members_content.innerHTML
-      .indexOf('تمت إضافة المدير')>=0
+      .indexOf('تمت إضافة العضو')>=0
   );
 
   await env.ui.removeManager(ids.manager);
   assert.strictEqual(
     env.calls.filter(function(call){
-      return call.method==='removeManager';
+      return call.method==='removeMember';
     })[0].input.targetUserId,
     ids.manager
   );
+  assert.strictEqual(
+    (await env.ui.changeRole(ids.owner,'viewer')).status,
+    'invalid_input'
+  );
+  await env.ui.changeRole(ids.manager,'viewer');
+  assert.strictEqual(
+    env.calls.filter(function(call){
+      return call.method==='changeRole';
+    })[0].role,
+    'viewer'
+  );
+  ['manager','viewer','accommodation_viewer',
+    'transport_viewer'].forEach(function(role){
+    assert.ok(
+      env.elements.conference_members_content.innerHTML
+        .indexOf('value="'+role+'"')>=0
+    );
+  });
+  var selectableRoles=['manager','viewer','accommodation_viewer',
+    'transport_viewer'];
+  for(var roleIndex=0;roleIndex<selectableRoles.length;roleIndex++){
+    await env.ui.lookup();
+    env.elements.conference_member_role.value=selectableRoles[roleIndex];
+    await env.ui.addMember();
+    var latestAdd=env.calls.filter(function(call){
+      return call.method==='addMember';
+    }).slice(-1)[0];
+    assert.strictEqual(latestAdd.role,selectableRoles[roleIndex]);
+  }
 
   var manager=environment({
     service:{
@@ -222,7 +258,7 @@ async function run(){
   await manager.ui.refresh();
   assert.strictEqual(
     manager.elements.conference_members_content.innerHTML
-      .indexOf('إضافة مدير'),
+      .indexOf('إضافة عضو'),
     -1
   );
 
@@ -296,7 +332,7 @@ async function run(){
           }
         });
       },
-      addManager:function(){
+      addMember:function(){
         doubleCalls++;
         return addDeferred.promise;
       }
@@ -411,7 +447,7 @@ async function run(){
           }
         });
       },
-      addManager:function(){
+      addMember:function(){
         return Promise.resolve({
           ok:true,status:'added',data:{replayed:false}
         });
@@ -428,7 +464,7 @@ async function run(){
   var mutationFailureHtml=
     mutationRefreshFailure.elements
       .conference_members_content.innerHTML;
-  assert.ok(mutationFailureHtml.indexOf('تمت إضافة المدير')>=0);
+  assert.ok(mutationFailureHtml.indexOf('تمت إضافة العضو')>=0);
   assert.ok(
     mutationFailureHtml.indexOf(
       'قد تكون البيانات المعروضة قديمة'
@@ -438,9 +474,12 @@ async function run(){
 
   var publicApi=Object.keys(env.ui).sort();
   assert.deepStrictEqual(Array.from(publicApi),[
+    'addMember',
     'addManager',
+    'changeRole',
     'lookup',
     'refresh',
+    'removeMember',
     'removeManager',
     'renderSection',
     'resetForTests'

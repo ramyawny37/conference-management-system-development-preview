@@ -50,7 +50,8 @@
     return {
       clientLayer:options.clientLayer||global.SupabaseClientLayer,
       auth:options.auth||global.SupabaseAuth,
-      attempts:options.attempts||global.ConferenceMembershipAttemptStore
+      attempts:options.attempts||global.ConferenceMembershipAttemptStore,
+      deviceIdentity:options.deviceIdentity||global.SupabaseDeviceIdentity
     };
   }
 
@@ -77,7 +78,10 @@
       return {error:safeError('AUTH_REQUIRED',
         'An authenticated session is required.')};
     }
-    return {client:client,userId:userId,attempts:d.attempts};
+    return {
+      client:client,userId:userId,attempts:d.attempts,
+      deviceIdentity:d.deviceIdentity
+    };
   }
 
   function requestError(error){
@@ -298,11 +302,22 @@
   function runMutation(action,input,options,ctx){
     var remoteConferenceId=String(input.remoteConferenceId||'');
     var targetUserId=String(input.targetUserId||'');
+    var requestedRole=input.requestedRole==null
+      ?null:String(input.requestedRole);
+    var allowedRoles=['manager','viewer','accommodation_viewer',
+      'transport_viewer'];
     if(!isUuid(remoteConferenceId)||!isUuid(targetUserId)){
       return Promise.resolve(outcome(false,'invalid_input',null,
         safeError('INVALID_MEMBERSHIP_INPUT',
           'Membership input is invalid.')));
     }
+    if((action==='add'||action==='change_role')&&
+      allowedRoles.indexOf(requestedRole)<0){
+      return Promise.resolve(outcome(false,'invalid_input',null,
+        safeError('INVALID_MEMBERSHIP_ROLE',
+          'Membership role is invalid.')));
+    }
+    if(action==='remove')requestedRole=null;
     ctx=ctx||context(options);
     if(ctx.error){
       return Promise.resolve(outcome(false,
@@ -311,11 +326,21 @@
           targetUserId:targetUserId
         },ctx.error));
     }
+    var deviceId=null;
+    try{
+      var identity=ctx.deviceIdentity&&
+        typeof ctx.deviceIdentity.getOrCreate==='function'
+        ?ctx.deviceIdentity.getOrCreate():null;
+      if(isUuid(String(identity&&identity.id||''))){
+        deviceId=String(identity.id);
+      }
+    }catch(error){deviceId=null;}
     var scope={
       actorUserId:ctx.userId,
       remoteConferenceId:remoteConferenceId,
       targetUserId:targetUserId,
-      action:action
+      action:action,
+      requestedRole:requestedRole
     };
     return resolveAttempt(ctx,scope,options).then(function(attempt){
       if(!attempt.ok){
@@ -327,13 +352,19 @@
           'The membership attempt could not be prepared.'));
       }
       var operationId=attempt.data.operationId;
-      var rpcName=action==='add_manager'
-        ?'add_conference_manager':'remove_conference_manager';
-      return runRpc(ctx.client,rpcName,{
+      var guarded=!!deviceId;
+      var rpcName=guarded
+        ?'device_guarded_manage_conference_member'
+        :'manage_conference_member';
+      var rpcArgs={
         p_conference_id:remoteConferenceId,
         p_target_user_id:targetUserId,
-        p_operation_id:operationId
-      },options).then(function(settled){
+        p_operation_id:operationId,
+        p_action:action,
+        p_requested_role:requestedRole
+      };
+      if(guarded)rpcArgs.p_actor_device_id=deviceId;
+      return runRpc(ctx.client,rpcName,rpcArgs,options).then(function(settled){
         var resultScope={
           remoteConferenceId:remoteConferenceId,
           targetUserId:targetUserId,
@@ -350,9 +381,8 @@
           thrown.data=resultScope;
           return thrown;
         }
-        var allowed=action==='add_manager'
-          ?['added','already_manager']
-          :['removed','already_removed'];
+        var allowed=['added','unchanged','role_conflict',
+          'role_changed','not_member','removed','already_removed'];
         var normalized=normalizeSimple(
           settled.response,resultScope,allowed
         );
@@ -363,11 +393,26 @@
         var data=normalized.data;
         if(String(data.targetUserId||'')!==targetUserId||
           String(data.operationId||'')!==operationId||
-          (action==='add_manager'&&data.role!=='manager')||
-          (action==='remove_manager'&&data.role!==null)){
+          (['added','unchanged','role_changed'].indexOf(
+            normalized.status)>=0&&data.role!==requestedRole)||
+          (action==='remove'&&data.role!==null)){
           return malformed(resultScope);
         }
-        var success=outcome(true,normalized.status,{
+        if(['role_conflict','not_member'].indexOf(
+          normalized.status)>=0){
+          return outcome(false,normalized.status,{
+            remoteConferenceId:remoteConferenceId,
+            targetUserId:targetUserId,
+            operationId:operationId,
+            role:data.role,
+            replayed:data.replayed===true
+          },safeError('MEMBERSHIP_NOT_CHANGED',
+            'The membership was not changed.'));
+        }
+        var finalStatus=input.legacyManagerResponse===true&&
+          normalized.status==='unchanged'
+          ?'already_manager':normalized.status;
+        var success=outcome(true,finalStatus,{
           remoteConferenceId:remoteConferenceId,
           targetUserId:targetUserId,
           operationId:operationId,
@@ -393,7 +438,8 @@
     var actor=ctx.userId||'unauthenticated';
     var remote=String(input.remoteConferenceId||'');
     var target=String(input.targetUserId||'');
-    var intentKey=[actor,remote,action,target].join('|');
+    var requestedRole=String(input.requestedRole||'-');
+    var intentKey=[actor,remote,action,target,requestedRole].join('|');
     var targetKey=[actor,remote,target].join('|');
     if(intentFlights[intentKey])return intentFlights[intentKey];
     var previous=targetFlights[targetKey]||Promise.resolve();
@@ -426,6 +472,68 @@
     return {ok:true,status:'reset'};
   }
 
+  function memberArguments(conferenceId,targetUserId,role,options){
+    if(conferenceId&&typeof conferenceId==='object'){
+      return {
+        input:Object.assign({},conferenceId,{
+          requestedRole:role==null
+            ?conferenceId.requestedRole||conferenceId.role||null:role
+        }),
+        options:options
+      };
+    }
+    return {
+      input:{
+        remoteConferenceId:conferenceId,
+        targetUserId:targetUserId,
+        requestedRole:role
+      },
+      options:options
+    };
+  }
+
+  function addMember(conferenceId,targetUserId,role,options){
+    var args;
+    if(conferenceId&&typeof conferenceId==='object'){
+      args=memberArguments(conferenceId,null,targetUserId,role);
+    }else{
+      args=memberArguments(conferenceId,targetUserId,role,options);
+    }
+    return mutation('add',args.input,args.options);
+  }
+
+  function changeRole(conferenceId,targetUserId,role,options){
+    var args;
+    if(conferenceId&&typeof conferenceId==='object'){
+      args=memberArguments(conferenceId,null,targetUserId,role);
+    }else{
+      args=memberArguments(conferenceId,targetUserId,role,options);
+    }
+    return mutation('change_role',args.input,args.options);
+  }
+
+  function removeMember(conferenceId,targetUserId,options){
+    var input;
+    if(conferenceId&&typeof conferenceId==='object'){
+      input=Object.assign({},conferenceId,{requestedRole:null});
+      options=targetUserId;
+    }else{
+      input={remoteConferenceId:conferenceId,
+        targetUserId:targetUserId,requestedRole:null};
+    }
+    return mutation('remove',input,options);
+  }
+
+  function addManager(input,options){
+    return addMember(Object.assign({},input,{
+      legacyManagerResponse:true
+    }),'manager',options);
+  }
+
+  function removeManager(input,options){
+    return removeMember(input,options);
+  }
+
   global.ConferenceMembersService=Object.freeze({
     getCurrentAccess:function(input,options){
       return readOperation('access',input,options);
@@ -436,12 +544,11 @@
     lookupUser:function(input,options){
       return readOperation('lookup',input,options);
     },
-    addManager:function(input,options){
-      return mutation('add_manager',input,options);
-    },
-    removeManager:function(input,options){
-      return mutation('remove_manager',input,options);
-    },
+    addMember:addMember,
+    changeRole:changeRole,
+    removeMember:removeMember,
+    addManager:addManager,
+    removeManager:removeManager,
     getState:getState,
     resetForTests:resetForTests
   });

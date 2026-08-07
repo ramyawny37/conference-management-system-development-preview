@@ -27,12 +27,32 @@
 
   function buildAttemptKey(input){
     input=input||{};
-    return [
+    var parts=[
       String(input.actorUserId||''),
       String(input.remoteConferenceId||''),
       String(input.action||''),
       String(input.targetUserId||'')
-    ].join('|');
+    ];
+    if(['add','change_role','remove'].indexOf(input.action)>=0){
+      parts.push(String(input.requestedRole||'-'));
+    }
+    return parts.join('|');
+  }
+
+  function validRole(value){
+    return ['manager','viewer','accommodation_viewer',
+      'transport_viewer'].indexOf(value)>=0;
+  }
+
+  function validIntent(input){
+    if(['add_manager','remove_manager'].indexOf(input.action)>=0){
+      return input.requestedRole==null||input.requestedRole==='';
+    }
+    if(input.action==='remove'){
+      return input.requestedRole==null||input.requestedRole==='';
+    }
+    return ['add','change_role'].indexOf(input.action)>=0&&
+      validRole(input.requestedRole);
   }
 
   function valid(input){
@@ -40,16 +60,14 @@
       isUuid(String(input.actorUserId||''))&&
       isUuid(String(input.remoteConferenceId||''))&&
       isUuid(String(input.targetUserId||''))&&
-      isUuid(String(input.operationId||''))&&
-      ['add_manager','remove_manager'].indexOf(input.action)>=0);
+      isUuid(String(input.operationId||''))&&validIntent(input));
   }
 
   function validScope(input){
     return !!(input&&
       isUuid(String(input.actorUserId||''))&&
       isUuid(String(input.remoteConferenceId||''))&&
-      isUuid(String(input.targetUserId||''))&&
-      ['add_manager','remove_manager'].indexOf(input.action)>=0);
+      isUuid(String(input.targetUserId||''))&&validIntent(input));
   }
 
   function validTimestamp(value){
@@ -70,7 +88,9 @@
       record.remoteConferenceId===
         String(input.remoteConferenceId||'')&&
       record.targetUserId===String(input.targetUserId||'')&&
-      record.action===String(input.action||'');
+      record.action===String(input.action||'')&&
+      String(record.requestedRole||'')===
+        String(input.requestedRole||'');
   }
 
   function requestPromise(request){
@@ -159,7 +179,9 @@
       remoteConferenceId:String(input.remoteConferenceId||''),
       targetUserId:String(input.targetUserId||''),
       operationId:String(input.operationId||''),
-      action:String(input.action||'')
+      action:String(input.action||''),
+      requestedRole:input.requestedRole==null
+        ?null:String(input.requestedRole)
     });
     candidate.attemptKey=buildAttemptKey(candidate);
     if(!valid(candidate)){
@@ -184,6 +206,7 @@
         remoteConferenceId:candidate.remoteConferenceId,
         targetUserId:candidate.targetUserId,
         action:candidate.action,
+        requestedRole:candidate.requestedRole,
         operationId:candidate.operationId,
         createdAt:String(input.createdAt||now),
         updatedAt:now

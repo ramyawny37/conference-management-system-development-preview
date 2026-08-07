@@ -13,7 +13,8 @@ var ids={
   conference:'22222222-2222-4222-8222-222222222222',
   target:'33333333-3333-4333-8333-333333333333',
   operation:'44444444-4444-4444-8444-444444444444',
-  secondTarget:'55555555-5555-4555-8555-555555555555'
+  secondTarget:'55555555-5555-4555-8555-555555555555',
+  device:'66666666-6666-4666-8666-666666666666'
 };
 
 function delay(milliseconds){
@@ -30,14 +31,16 @@ function load(settings){
   var attempts={
     get:function(scope){
       var key=[scope.actorUserId,scope.remoteConferenceId,
-        scope.action,scope.targetUserId].join('|');
+        scope.action,scope.targetUserId,
+        scope.requestedRole||'-'].join('|');
       return Promise.resolve(records[key]
         ?{ok:true,status:'found',data:records[key]}
         :{ok:false,status:'not_found'});
     },
     save:function(input){
       var key=[input.actorUserId,input.remoteConferenceId,
-        input.action,input.targetUserId].join('|');
+        input.action,input.targetUserId,
+        input.requestedRole||'-'].join('|');
       records[key]=Object.assign({},input);
       return Promise.resolve(settings.attemptSaveFails
         ?{ok:false,status:'storage_error'}
@@ -46,7 +49,8 @@ function load(settings){
     remove:function(scope){
       removals++;
       var key=[scope.actorUserId,scope.remoteConferenceId,
-        scope.action,scope.targetUserId].join('|');
+        scope.action,scope.targetUserId,
+        scope.requestedRole||'-'].join('|');
       if(!settings.cleanupFails)delete records[key];
       return Promise.resolve(settings.cleanupFails
         ?{ok:false,status:'storage_error'}
@@ -202,7 +206,9 @@ async function run(){
   },lookup.options)).status,'found');
 
   var added=load({rpc:function(name,args){
-    assert.strictEqual(name,'add_conference_manager');
+    assert.strictEqual(name,'manage_conference_member');
+    assert.strictEqual(args.p_action,'add');
+    assert.strictEqual(args.p_requested_role,'manager');
     return Promise.resolve({data:{
       success:true,status:'added',
       conferenceId:ids.conference,
@@ -219,7 +225,9 @@ async function run(){
   assert.strictEqual(added.removals(),1);
 
   var removed=load({rpc:function(name,args){
-    assert.strictEqual(name,'remove_conference_manager');
+    assert.strictEqual(name,'manage_conference_member');
+    assert.strictEqual(args.p_action,'remove');
+    assert.strictEqual(args.p_requested_role,null);
     return Promise.resolve({data:{
       success:true,status:'removed',
       conferenceId:ids.conference,
@@ -281,7 +289,7 @@ async function run(){
     return new Promise(function(resolve){
       releaseRpc=function(){
         resolve({data:{
-          success:true,status:'already_manager',
+          success:true,status:'unchanged',
           conferenceId:ids.conference,
           targetUserId:ids.target,
           operationId:args.p_operation_id,
@@ -348,7 +356,7 @@ async function run(){
     cleanupFails:true,
     rpc:function(name,args){
       return Promise.resolve({data:{
-        success:true,status:'already_manager',
+        success:true,status:'unchanged',
         conferenceId:ids.conference,
         targetUserId:ids.target,
         operationId:args.p_operation_id,
@@ -366,7 +374,7 @@ async function run(){
   var serial=load({
     operationIds:[ids.operation,ids.secondTarget],
     rpc:function(name,args){
-      if(name==='add_conference_manager'){
+      if(args.p_action==='add'){
         return new Promise(function(resolve){
           releaseFirst=function(){
             resolve({data:{
@@ -426,7 +434,7 @@ async function run(){
 
   var sessionReads=0;
   var sessionChange=load({cleanupFails:true,rpc:function(name,args){
-    assert.strictEqual(name,'add_conference_manager');
+    assert.strictEqual(name,'manage_conference_member');
     return Promise.resolve({data:{
       success:true,status:'added',
       conferenceId:ids.conference,
@@ -453,6 +461,57 @@ async function run(){
     Object.keys(sessionChange.records)[0].split('|')[0],
     ids.actor
   );
+
+  var roles=['manager','viewer','accommodation_viewer',
+    'transport_viewer'];
+  for(var roleIndex=0;roleIndex<roles.length;roleIndex++){
+    var requestedRole=roles[roleIndex];
+    var roleEnv=load({rpc:function(name,args){
+      assert.strictEqual(name,'manage_conference_member');
+      assert.strictEqual(args.p_action,'add');
+      assert.strictEqual(args.p_requested_role,requestedRole);
+      return Promise.resolve({data:{
+        success:true,status:'added',
+        conferenceId:ids.conference,
+        targetUserId:ids.target,
+        operationId:args.p_operation_id,
+        role:requestedRole
+      },error:null});
+    }});
+    assert.strictEqual((await roleEnv.service.addMember(
+      ids.conference,ids.target,requestedRole,roleEnv.options
+    )).status,'added');
+  }
+
+  var changed=load({rpc:function(name,args){
+    assert.strictEqual(args.p_action,'change_role');
+    assert.strictEqual(args.p_requested_role,'viewer');
+    return Promise.resolve({data:{
+      success:true,status:'role_changed',
+      conferenceId:ids.conference,targetUserId:ids.target,
+      operationId:args.p_operation_id,role:'viewer'
+    },error:null});
+  }});
+  assert.strictEqual((await changed.service.changeRole(
+    ids.conference,ids.target,'viewer',changed.options
+  )).status,'role_changed');
+
+  var guarded=load({rpc:function(name,args){
+    assert.strictEqual(name,
+      'device_guarded_manage_conference_member');
+    assert.strictEqual(args.p_actor_device_id,ids.device);
+    return Promise.resolve({data:{
+      success:true,status:'removed',
+      conferenceId:ids.conference,targetUserId:ids.target,
+      operationId:args.p_operation_id,role:null
+    },error:null});
+  }});
+  guarded.options.deviceIdentity={
+    getOrCreate:function(){return {id:ids.device};}
+  };
+  assert.strictEqual((await guarded.service.removeMember(
+    ids.conference,ids.target,guarded.options
+  )).status,'removed');
 
   var sourceText=source;
   [

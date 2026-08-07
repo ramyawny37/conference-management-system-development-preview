@@ -194,6 +194,32 @@ async function run(){
     env.store.buildAttemptKey(removeIntent)
   );
 
+  var managerChange=input({
+    action:'change_role',requestedRole:'manager'
+  });
+  var viewerChange=input({
+    action:'change_role',requestedRole:'viewer'
+  });
+  assert.notStrictEqual(
+    env.store.buildAttemptKey(managerChange),
+    env.store.buildAttemptKey(viewerChange)
+  );
+  assert.strictEqual(
+    (await env.store.save(managerChange,env.options)).status,
+    'saved'
+  );
+  assert.strictEqual(
+    (await env.store.save(viewerChange,env.options)).status,
+    'saved'
+  );
+  var removeMember=input({
+    action:'remove',requestedRole:null,operationId:ids.other
+  });
+  assert.strictEqual(
+    (await env.store.save(removeMember,env.options)).status,
+    'saved'
+  );
+
   assert.strictEqual(
     (await env.store.save(input({targetUserId:'invalid'}),env.options))
       .status,
