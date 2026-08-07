@@ -2487,11 +2487,12 @@ function cloneHouseTemplateToConference(template, options){
     floors: []
   };
   (source.floors || []).forEach(function(floor){
-    var newFloor = { id: uid(), name: floor.name || 'دور غير مسمى', rooms: [] };
+    var newFloor = { id: uid(), sourceTemplateFloorId: floor.id || null, name: floor.name || 'دور غير مسمى', rooms: [] };
     (floor.rooms || []).forEach(function(room){
       if (options.selectedRooms && !options.selectedRooms[floor.id + '::' + room.id]) return;
       newFloor.rooms.push({
         id: uid(),
+        sourceTemplateRoomId: room.id || null,
         number: room.number || '',
         beds: parseInt(room.beds, 10) || 1,
         extraBeds: parseInt(room.extraBeds, 10) || 0,
@@ -3686,6 +3687,7 @@ function saveRoomData(options){
   var previousHouses=deepClone(current.houses||[]);
   var fullRoomMove=editRoomData.fullRoomMove||null;
   current.houses = deepClone(editRoomData.draftHouses);
+  linkRoomPeopleToDatabase(current);
   ensureAccommodationDisplayState(current);
 
   refreshPeopleDatalist({ excludeAssigned: true, excludeRoomId: applyRes.room.id });
@@ -8043,6 +8045,8 @@ function saveHouseTemplate() {
     appData.houseTemplates.push(template);
   }
   selectedHouseTemplateId = template.id;
+  var currentConference = getCurrentConference();
+  var updatedConferenceHouseCount = updateConferenceHousesFromTemplate(currentConference, template);
 
   if(!save()){
     appData = previousAppData;
@@ -8052,6 +8056,7 @@ function saveHouseTemplate() {
   }
   closeHouseTemplateEditor();
   renderSettings();
+  if(updatedConferenceHouseCount) renderAccommodation();
   showToast('✅ تم حفظ خريطة البيت بنجاح');
 }
 

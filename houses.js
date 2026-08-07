@@ -489,6 +489,113 @@ function saveHouseData(conference, houseId, houseData) {
   }
 }
 
+function updateConferenceHousesFromTemplate(conference, template){
+  if(!conference || !template || !template.id) return 0;
+  var updated = 0;
+  (conference.houses || []).forEach(function(house){
+    if(!house || String(house.sourceTemplateId || '') !== String(template.id)) return;
+    house.name = template.name || house.name || '';
+    house.description = template.description || '';
+    house.floors = reconcileConferenceFloors(house.floors || [], template.floors || []);
+    updated++;
+  });
+  return updated;
+}
+
+function reconcileConferenceFloors(currentFloors, templateFloors){
+  var used = {};
+  var reconciled = [];
+  (templateFloors || []).forEach(function(templateFloor, floorIndex){
+    var match = null;
+    for(var i=0;i<currentFloors.length;i++){
+      var candidate = currentFloors[i];
+      if(used[i]) continue;
+      if(String(candidate.sourceTemplateFloorId || '') === String(templateFloor.id || '')){
+        match = candidate;
+        used[i] = true;
+        break;
+      }
+    }
+    if(!match){
+      for(var namedFloorIndex=0;namedFloorIndex<currentFloors.length;namedFloorIndex++){
+        if(used[namedFloorIndex]) continue;
+        if(String(currentFloors[namedFloorIndex].name || '') === String(templateFloor.name || '')){
+          match = currentFloors[namedFloorIndex];
+          used[namedFloorIndex] = true;
+          break;
+        }
+      }
+    }
+    if(!match && currentFloors[floorIndex] && !used[floorIndex]){
+      match = currentFloors[floorIndex];
+      used[floorIndex] = true;
+    }
+    if(!match) match = { id: uid(), rooms: [] };
+    match.sourceTemplateFloorId = templateFloor.id || null;
+    match.name = templateFloor.name || '';
+    match.rooms = reconcileConferenceRooms(match.rooms || [], templateFloor.rooms || []);
+    reconciled.push(match);
+  });
+  (currentFloors || []).forEach(function(floor, index){
+    if(!used[index] && conferenceFloorHasOccupants(floor)) reconciled.push(floor);
+  });
+  return reconciled;
+}
+
+function reconcileConferenceRooms(currentRooms, templateRooms){
+  var used = {};
+  var reconciled = [];
+  (templateRooms || []).forEach(function(templateRoom, roomIndex){
+    var match = null;
+    for(var i=0;i<currentRooms.length;i++){
+      var candidate = currentRooms[i];
+      if(used[i]) continue;
+      if(String(candidate.sourceTemplateRoomId || '') === String(templateRoom.id || '')){
+        match = candidate;
+        used[i] = true;
+        break;
+      }
+    }
+    if(!match){
+      for(var numberedRoomIndex=0;numberedRoomIndex<currentRooms.length;numberedRoomIndex++){
+        if(used[numberedRoomIndex]) continue;
+        if(String(currentRooms[numberedRoomIndex].number || '') === String(templateRoom.number || '')){
+          match = currentRooms[numberedRoomIndex];
+          used[numberedRoomIndex] = true;
+          break;
+        }
+      }
+    }
+    if(!match && currentRooms[roomIndex] && !used[roomIndex]){
+      match = currentRooms[roomIndex];
+      used[roomIndex] = true;
+    }
+    if(!match) match = { id: uid(), guests: [], children: [] };
+    match.sourceTemplateRoomId = templateRoom.id || null;
+    match.number = templateRoom.number || '';
+    match.beds = parseInt(templateRoom.beds, 10) || 1;
+    match.extraBeds = parseInt(templateRoom.extraBeds, 10) || 0;
+    match.notes = templateRoom.notes || '';
+    match.closed = !!templateRoom.closed;
+    match.closedDay = templateRoom.closedDay === undefined ? null : templateRoom.closedDay;
+    match.guests = match.guests || [];
+    match.children = match.children || [];
+    reconciled.push(match);
+  });
+  (currentRooms || []).forEach(function(room, index){
+    if(!used[index] && ((room.guests || []).length || (room.children || []).length)){
+      reconciled.push(room);
+    }
+  });
+  return reconciled;
+}
+
+function conferenceFloorHasOccupants(floor){
+  return (floor && floor.rooms || []).some(function(room){
+    return (room.guests || []).length || (room.children || []).length;
+  });
+}
+
 function setRoomDisplayedInAccommodation(conference, roomId, checked){
   if(!conference || !roomId) return;
   var prepared = prepareAccommodationDisplayedRoomIds(conference, [roomId], checked);

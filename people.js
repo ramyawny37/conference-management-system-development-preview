@@ -77,6 +77,18 @@ function findExistingPerson(fullName, phone){
 function upsertPerson(personData, allowUpdate){
   var normalized = normalizePersonRecord(personData);
   if(!normalized.fullName) return null;
+  var existingById = allowUpdate && personData && personData.id
+    ? getPersonById(personData.id) : null;
+  if(existingById){
+    existingById.fullName = normalized.fullName;
+    existingById.church = normalized.church;
+    existingById.phone = normalized.phone;
+    existingById.gender = normalized.gender;
+    existingById.age = normalized.age;
+    existingById.notes = normalized.notes;
+    existingById.updatedAt = new Date().toISOString();
+    return existingById;
+  }
   var existing = findExistingPerson(normalized.fullName, normalized.phone);
   if(existing){
     if(allowUpdate){
