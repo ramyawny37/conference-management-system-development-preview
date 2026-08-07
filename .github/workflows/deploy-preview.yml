@@ -70,7 +70,7 @@ jobs:
           );
           NODE
 
-            - name: Verify Production Supabase is absent from runtime
+      - name: Verify Production Supabase is absent from runtime
         run: |
           if grep -R "mpezfbvcdfxpgflehuot" site \
             --exclude-dir=tests \
