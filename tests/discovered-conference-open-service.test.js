@@ -555,6 +555,20 @@ function environment(settings={}){
     'existing-local'
   )).status,'not_linked');
 
+  const changedRuntime=environment({cached:false,revision:2,
+    appData:{conferences:[{id:'existing-local',name:'Local',status:'active'}],
+      currentConferenceId:'existing-local'},
+    existingLink:{localConferenceId:'existing-local',remoteConferenceId:'remote-1',
+      knownRevision:1,linkStatus:'linked',pendingLocalApplication:false,
+      syncState:{pendingLocalChanges:false}}});
+  const changedRuntimeResult=await changedRuntime.api
+    .refreshLinkedLocalConference('existing-local',{
+      runtimeContextGuard:function(){return false;}
+    });
+  assert.strictEqual(changedRuntimeResult.status,'runtime_context_changed');
+  assert.strictEqual(changedRuntime.downloads(),0);
+  assert.strictEqual(Object.values(changedRuntime.links)[0].knownRevision,1);
+
   const redownload=environment({revision:2});
   await redownload.api.open(redownload.remoteId);
   assert.strictEqual(redownload.downloads(),1);

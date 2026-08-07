@@ -6,7 +6,7 @@
   var ALLOWED_REASONS=Object.freeze([
     'startup','local_save','online_event','offline_event','auth_changed',
     'conference_changed','manual_retry','backoff_elapsed',
-    'preferences_changed'
+    'preferences_changed','realtime_reconnected'
   ]);
   var state=global.SyncSchedulerState.create();
   var listeners=[];
@@ -28,6 +28,7 @@
   var realtimeManagerUnsubscribe=null;
   var realtimeManagerLocalConferenceId=null;
   var realtimeManagerListenerGeneration=0;
+  var reconnectCatchups=Object.create(null);
   var diagnostics={
     lastScheduledReason:null,
     lastEvaluationReasons:[],
@@ -189,7 +190,120 @@
     return reasons.some(function(reason){
       return ['startup','conference_changed','online_event',
         'manual_retry','backoff_elapsed','preferences_changed',
-        'auth_changed'].indexOf(reason)>=0;
+        'auth_changed','realtime_reconnected'].indexOf(reason)>=0;
+    });
+  }
+
+  function reconnectCatchupKey(payload){
+    return [String(payload&&payload.localConferenceId||''),
+      String(payload&&payload.generation||''),
+      String(payload&&payload.knownRevision||'')].join('|');
+  }
+  function reconnectCatchupContext(payload,options,allowAdvancedRevision){
+    var auth=authState(options);
+    var links=options&&options.linkStore||global.ConferenceLinkStore;
+    var manager=options&&options.realtimeManager||
+      global.ConferenceRealtimeManager;
+    var localId=String(payload&&payload.localConferenceId||'');
+    var remoteId=String(payload&&payload.cloudConferenceId||'');
+    var link=links&&typeof links.get==='function'
+      ?links.get(localId,options&&options.linkOptions):null;
+    var managerState=manager&&typeof manager.getState==='function'
+      ?manager.getState(localId):null;
+    var conflict=!!(link&&(link.conflictId||
+      ['active','pending','reviewed','changed'].indexOf(
+        link.conflictStatus
+      )>=0));
+    return {
+      valid:!!(state.started&&localId&&remoteId&&
+        currentLocalConferenceId(options)===localId&&
+        auth&&auth.authenticated===true&&auth.user&&auth.user.id&&
+        currentDeviceId(options)&&link&&
+        ['linked','cloud_linked'].indexOf(link.linkStatus)>=0&&
+        String(link.remoteConferenceId||'')===remoteId&&
+        link.pendingLocalApplication!==true&&!conflict&&
+        Number.isInteger(link.knownRevision)&&(
+          link.knownRevision===payload.knownRevision||
+          allowAdvancedRevision===true&&
+            link.knownRevision>payload.knownRevision
+        )&&managerState&&
+        managerState.status==='subscribed'&&
+        managerState.generation===payload.generation),
+      userId:auth&&auth.user&&String(auth.user.id||'')||'',
+      deviceId:currentDeviceId(options),
+      link:link,
+      managerState:managerState
+    };
+  }
+  function catchupTrace(options,stage,data){
+    traceRealtimeManager(
+      options&&options.realtimeManager||global.ConferenceRealtimeManager,
+      stage,data
+    );
+  }
+  function handleReconnectSubscribed(payload,options){
+    payload=payload&&typeof payload==='object'?payload:{};
+    var key=reconnectCatchupKey(payload);
+    var context=reconnectCatchupContext(payload,options);
+    if(!context.valid){
+      catchupTrace(options,'RECONNECT_CATCHUP_STALE',{
+        key:key,reason:'context_mismatch'
+      });
+      return {ok:false,status:'stale'};
+    }
+    if(reconnectCatchups[key]){
+      return {ok:true,status:'duplicate'};
+    }
+    Object.keys(reconnectCatchups).forEach(function(existingKey){
+      var existing=reconnectCatchups[existingKey];
+      if(existing.payload.localConferenceId===payload.localConferenceId){
+        catchupTrace(options,'RECONNECT_CATCHUP_STALE',{
+          key:existingKey,reason:'superseded'
+        });
+        delete reconnectCatchups[existingKey];
+      }
+    });
+    reconnectCatchups[key]={
+      key:key,payload:copy(payload),userId:context.userId,
+      deviceId:context.deviceId,started:false
+    };
+    catchupTrace(options,'RECONNECT_CATCHUP_SCHEDULED',{
+      key:key,generation:payload.generation,
+      knownRevision:payload.knownRevision
+    });
+    return schedule('realtime_reconnected',options);
+  }
+  function validateReconnectCatchup(descriptor,options){
+    if(!descriptor||reconnectCatchups[descriptor.key]!==descriptor){
+      return Promise.resolve({ok:false,status:'stale'});
+    }
+    var context=reconnectCatchupContext(descriptor.payload,options);
+    if(!context.valid||context.userId!==descriptor.userId||
+      context.deviceId!==descriptor.deviceId){
+      return Promise.resolve({ok:false,status:'stale'});
+    }
+    var queue=options&&options.queue||global.OfflineSyncQueue;
+    if(!queue||typeof queue.getConferenceReadiness!=='function'){
+      return Promise.resolve({ok:false,status:'queue_unavailable'});
+    }
+    return Promise.resolve(queue.getConferenceReadiness(
+      descriptor.payload.cloudConferenceId,
+      options&&options.queueOptions
+    )).then(function(readiness){
+      if(reconnectCatchups[descriptor.key]!==descriptor){
+        return {ok:false,status:'stale'};
+      }
+      var latest=reconnectCatchupContext(descriptor.payload,options);
+      if(!latest.valid||latest.userId!==descriptor.userId||
+        latest.deviceId!==descriptor.deviceId){
+        return {ok:false,status:'stale'};
+      }
+      if(!readiness||!readiness.ok||readiness.status!=='stable'){
+        return {ok:false,status:'queue_not_stable'};
+      }
+      return {ok:true,status:'ready'};
+    }).catch(function(){
+      return {ok:false,status:'queue_readiness_failed'};
     });
   }
 
@@ -773,6 +887,46 @@
         var runLinkedConference=function(connectivityState,resolvedState){
           diagnostics.lastRunLinkedConferenceAt=new Date().toISOString();
           tracePreMetadata('runLinkedConference','entered',null);
+          var reconnectReason=reasons.indexOf('realtime_reconnected')>=0;
+          var reconnectDescriptor=null;
+          Object.keys(reconnectCatchups).some(function(key){
+            var candidate=reconnectCatchups[key];
+            if(candidate.payload.localConferenceId===linkingLocalConferenceId){
+              reconnectDescriptor=candidate;
+              return true;
+            }
+            return false;
+          });
+          if(reconnectReason&&!reconnectDescriptor){
+            catchupTrace(options,'RECONNECT_CATCHUP_STALE',{
+              reason:'descriptor_missing'
+            });
+            return Promise.resolve(publicState());
+          }
+          if(reconnectDescriptor&&!reconnectDescriptor.started){
+            reconnectDescriptor.started=true;
+            catchupTrace(options,'RECONNECT_CATCHUP_STARTED',{
+              key:reconnectDescriptor.key,
+              knownRevision:reconnectDescriptor.payload.knownRevision
+            });
+            return validateReconnectCatchup(
+              reconnectDescriptor,options
+            ).then(function(validated){
+              if(!validated.ok){
+                catchupTrace(options,
+                  validated.status==='stale'
+                    ?'RECONNECT_CATCHUP_STALE'
+                    :'RECONNECT_CATCHUP_BLOCKED',{
+                    key:reconnectDescriptor.key,
+                    reason:validated.status
+                  });
+                delete reconnectCatchups[reconnectDescriptor.key];
+                return publicState();
+              }
+              reconnectDescriptor.validated=true;
+              return runLinkedConference(connectivityState,resolvedState);
+            });
+          }
           if(staleResult()){
             tracePreMetadata('runLinkedConference','return','conference_changed');
             return Promise.resolve(publicState());
@@ -881,9 +1035,23 @@
                 typeof opener.refreshLinkedLocalConference!=='function'
                 ?Promise.resolve({ok:true,status:'refresh_skipped'})
                 :(tracePreMetadata('refreshLinkedLocalConference','entered',null),
+                  reconnectDescriptor&&catchupTrace(options,
+                    'RECONNECT_CATCHUP_METADATA',{
+                      key:reconnectDescriptor.key,
+                      knownRevision:reconnectDescriptor.payload.knownRevision
+                    }),
                   Promise.resolve(opener.refreshLinkedLocalConference(
                   linkingLocalConferenceId,
-                  options&&options.discoveredOpenOptions
+                  Object.assign({},options&&options.discoveredOpenOptions||{},
+                    reconnectDescriptor?{
+                      runtimeContextGuard:function(){
+                        return reconnectCatchups[reconnectDescriptor.key]===
+                          reconnectDescriptor&&reconnectCatchupContext(
+                            reconnectDescriptor.payload,options,true
+                          ).valid;
+                      }
+                    }:{}
+                  )
                 ))).catch(function(){
                   tracePreMetadata('refreshLinkedLocalConference','return',
                     'linked_refresh_threw');
@@ -900,6 +1068,34 @@
                   diagnostics.lastStopReason=refreshResult.status;
                   return disconnectRealtime(options);
                 }
+              if(reconnectDescriptor){
+                var resultRevision=refreshResult&&refreshResult.data&&
+                  refreshResult.data.revision;
+                if(refreshResult&&refreshResult.ok===true&&
+                  Number.isInteger(resultRevision)&&resultRevision<=
+                    reconnectDescriptor.payload.knownRevision){
+                  catchupTrace(options,'RECONNECT_CATCHUP_UP_TO_DATE',{
+                    key:reconnectDescriptor.key,revision:resultRevision
+                  });
+                }else if(refreshResult&&refreshResult.ok===true&&
+                  Number.isInteger(resultRevision)&&resultRevision>
+                    reconnectDescriptor.payload.knownRevision){
+                  catchupTrace(options,
+                    'RECONNECT_CATCHUP_DOWNLOAD_REQUIRED',{
+                      key:reconnectDescriptor.key,revision:resultRevision
+                    });
+                  catchupTrace(options,'RECONNECT_CATCHUP_COMPLETED',{
+                    key:reconnectDescriptor.key,revision:resultRevision
+                  });
+                }else{
+                  catchupTrace(options,'RECONNECT_CATCHUP_BLOCKED',{
+                    key:reconnectDescriptor.key,
+                    reason:refreshResult&&refreshResult.status||
+                      'refresh_failed'
+                  });
+                }
+                delete reconnectCatchups[reconnectDescriptor.key];
+              }
               var manager=options.realtimeManager||
                 global.ConferenceRealtimeManager;
               var automaticRealtime=!!(latest.data&&cloudRealtimeLink(
@@ -931,14 +1127,23 @@
                   traceRealtimeManager(manager,'PREPARE_SUBSCRIBE_CALLED',{
                     localConferenceIdPresent:!!linkingLocalConferenceId
                   });
+                  var managerOptions=Object.assign(
+                    {},options.realtimeManagerOptions||{}, {
+                      realtime:options.realtime
+                    }
+                  );
+                  var externalReconnectCallback=
+                    managerOptions.onReconnectSubscribed;
+                  managerOptions.onReconnectSubscribed=function(payload){
+                    if(typeof externalReconnectCallback==='function'){
+                      try{externalReconnectCallback(payload);}catch(error){}
+                    }
+                    return handleReconnectSubscribed(payload,options);
+                  };
                   return manager.prepareAndSubscribe(
                     appData,
                     linkingLocalConferenceId,
-                    Object.assign(
-                      {},options.realtimeManagerOptions||{},{
-                        realtime:options.realtime
-                      }
-                    )
+                    managerOptions
                   );
                 });
               }
@@ -1375,6 +1580,7 @@
     state.conferenceState='local_only';
     state.linkedConferenceId=null;
     realtimeEventRevisionKeys=Object.create(null);
+    reconnectCatchups=Object.create(null);
     ensureRealtimeManagerListener(options);
     onlineHandler=function(){schedule('online_event',options);};
     offlineHandler=function(){schedule('offline_event',options);};

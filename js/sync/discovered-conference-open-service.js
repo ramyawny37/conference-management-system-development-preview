@@ -147,6 +147,13 @@
     }
   }
   function guardStatus(d,localConferenceId,options){
+    if(options&&typeof options.runtimeContextGuard==='function'){
+      try{
+        if(options.runtimeContextGuard()!==true){
+          return 'runtime_context_changed';
+        }
+      }catch(error){return 'runtime_context_changed';}
+    }
     if(restoreIsolationPending(d,options))return 'restore_isolated';
     if(localConferenceId&&manualRelinkPending(
       d,localConferenceId,options

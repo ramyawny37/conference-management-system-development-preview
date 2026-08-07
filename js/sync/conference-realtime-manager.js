@@ -816,6 +816,23 @@
                 trace('RECONNECT_SUBSCRIBED',{
                   attemptId:attempt.id,generation:generation
                 });
+                if(typeof options.onReconnectSubscribed==='function'&&
+                  generation===value.generation&&
+                  value.status==='subscribed'){
+                  try{
+                    options.onReconnectSubscribed({
+                      localConferenceId:id,
+                      cloudConferenceId:ready.cloudConferenceId,
+                      knownRevision:ready.knownRevision,
+                      generation:generation,
+                      attemptId:attempt.id
+                    });
+                  }catch(error){
+                    trace('RECONNECT_CATCHUP_BLOCKED',{
+                      reason:'callback_failed',generation:generation
+                    });
+                  }
+                }
               }
               finish(outcome(true,'subscribed',publicEntry(value)));
               return;

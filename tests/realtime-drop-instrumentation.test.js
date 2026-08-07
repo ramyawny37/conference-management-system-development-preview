@@ -100,7 +100,9 @@ function load(manager){
 
   const source=fs.readFileSync(path.join(root,
     'js/sync/automatic-sync-orchestrator.js'),'utf8');
-  assert.strictEqual(/\.rpc\(|getConferenceReadiness|coalesceSnapshotOperation|enqueue/.test(source),false,
-    'listener instrumentation adds no RPC or queue operation');
+  assert.strictEqual(/\.rpc\(|coalesceSnapshotOperation|enqueue/.test(source),
+    false,'listener instrumentation adds no RPC or queue write');
+  assert.match(source,/function validateReconnectCatchup[\s\S]*getConferenceReadiness/,
+    'reconnect catch-up performs one read-only queue readiness guard');
   console.log('realtime drop instrumentation tests passed');
 })();
