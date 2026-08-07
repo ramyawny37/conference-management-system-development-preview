@@ -1,0 +1,49 @@
+name: Deploy development preview
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '*/5 * * * *'
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: development-preview-pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout preview controller
+        uses: actions/checkout@v4
+        with:
+          path: controller
+
+      - name: Checkout develop source
+        uses: actions/checkout@v4
+        with:
+          repository: ramyawny37/conference-management-system-v1
+          ref: develop
+          path: site
+
+      - name: Disable Supabase in preview artifact
+        run: cp controller/preview-public-config.js site/js/supabase/public-config.js
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload preview artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+      - name: Deploy preview
+        id: deployment
+        uses: actions/deploy-pages@v4
