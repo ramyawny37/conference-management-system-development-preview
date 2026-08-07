@@ -6,7 +6,7 @@ const CACHE_NAMESPACE = IS_DEVELOPMENT
   ? 'cms:development:' + DEVELOPMENT_PROJECT_REF + ':'
   : '';
 const CACHE_PREFIX = CACHE_NAMESPACE + 'conference-manager-core-';
-const CACHE_REVISION = 'house-template-propagation-v1';
+const CACHE_REVISION = 'conference-role-management-v1';
 const CACHE_NAME = CACHE_PREFIX + 'v' + APP_VERSION + '-' + CACHE_REVISION;
 const CORE_ASSETS = [
   './',
@@ -58,7 +58,7 @@ const CORE_ASSETS = [
   './js/sync/conference-link-store.js',
   './js/sync/conference-membership-attempt-store.js',
   './js/sync/conference-members-service.js',
-  './js/sync/conference-members-ui.js',
+  './js/sync/conference-members-ui.js?rev=conference-role-management-v1',
   './js/sync/conference-linking-attempt-store.js',
   './js/sync/conference-linking-service.js',
   './js/sync/conference-sync-ui.js',
