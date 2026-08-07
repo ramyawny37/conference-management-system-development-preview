@@ -1,11 +1,18 @@
 const APP_VERSION = '3.1.1';
-const CACHE_PREFIX = 'conference-manager-core-';
+const DEVELOPMENT_PROJECT_REF = 'gppwltrifgfxrkzvvxoe';
+const DEVELOPMENT_PATH = '/conference-management-system-development-preview/';
+const IS_DEVELOPMENT = self.location.pathname.indexOf(DEVELOPMENT_PATH) === 0;
+const CACHE_NAMESPACE = IS_DEVELOPMENT
+  ? 'cms:development:' + DEVELOPMENT_PROJECT_REF + ':'
+  : '';
+const CACHE_PREFIX = CACHE_NAMESPACE + 'conference-manager-core-';
 const CACHE_REVISION = 'realtime-reconnect-catchup-v1';
 const CACHE_NAME = CACHE_PREFIX + 'v' + APP_VERSION + '-' + CACHE_REVISION;
 const CORE_ASSETS = [
   './',
   './index.html',
   './style.css',
+  './js/storage/environment-namespace.js',
   './js/storage/indexeddb.js',
   './js/storage/storage-repository.js?rev=local-save-queue-wake-v1',
   './js/storage/conference-repository.js',

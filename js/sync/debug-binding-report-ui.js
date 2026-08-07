@@ -32,7 +32,13 @@
   function appDataSnapshot(){
     var raw=null;
     var parsed=null;
-    try{raw=global.localStorage&&global.localStorage.getItem('conf_v5');}
+    try{
+      raw=global.localStorage&&global.localStorage.getItem(
+        (global.BrowserStorageNamespace||{
+          key:function(name){return name;}
+        }).key('conf_v5')
+      );
+    }
     catch(error){raw=null;}
     try{parsed=raw?JSON.parse(raw):null;}
     catch(error){parsed=null;}

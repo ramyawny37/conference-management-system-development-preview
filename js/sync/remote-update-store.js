@@ -1,6 +1,11 @@
 (function(global){
   'use strict';
-  var KEY='conference_manager_remote_update_markers';
+  var namespace=global.BrowserStorageNamespace||{
+    key:function(name){return name;}
+  };
+  var KEY=namespace.key(
+    'conference_manager_remote_update_markers'
+  );
   var MAX_RECORDS_PER_CONFERENCE=10;
   var MAX_CONFERENCES=50;
   var STATUSES=[

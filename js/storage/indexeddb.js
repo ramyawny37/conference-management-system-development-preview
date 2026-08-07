@@ -1,7 +1,12 @@
 (function(global){
   'use strict';
 
-  var DATABASE_NAME = 'conference_manager_v3';
+  var namespace=global.BrowserStorageNamespace||{
+    databaseName:function(name){return name;}
+  };
+  var DATABASE_NAME = namespace.databaseName(
+    'conference_manager_v3'
+  );
   var DATABASE_VERSION = 4;
   var STORE_NAMES = Object.freeze({
     conferences: 'conferences',

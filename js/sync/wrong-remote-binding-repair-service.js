@@ -1,7 +1,12 @@
 (function(global){
   'use strict';
 
-  var LINK_STORAGE_KEY='conference_manager_sync_links';
+  var namespace=global.BrowserStorageNamespace||{
+    key:function(name){return name;}
+  };
+  var LINK_STORAGE_KEY=namespace.key(
+    'conference_manager_sync_links'
+  );
   var ownerChoices=Object.create(null);
   var memberChoices=Object.create(null);
   var choiceCounter=0;

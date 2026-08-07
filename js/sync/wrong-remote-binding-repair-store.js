@@ -1,7 +1,12 @@
 (function(global){
   'use strict';
 
-  var STORAGE_KEY='conference_manager_wrong_remote_binding_repair_v1';
+  var namespace=global.BrowserStorageNamespace||{
+    key:function(name){return name;}
+  };
+  var STORAGE_KEY=namespace.key(
+    'conference_manager_wrong_remote_binding_repair_v1'
+  );
 
   function clone(value){
     return JSON.parse(JSON.stringify(value));

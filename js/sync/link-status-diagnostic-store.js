@@ -1,7 +1,14 @@
 (function(global){
   'use strict';
-  var KEY='conference_manager_link_status_diagnostics_v1';
-  var SESSION_KEY='conference_manager_link_status_diagnostic_session_v1';
+  var namespace=global.BrowserStorageNamespace||{
+    key:function(name){return name;}
+  };
+  var KEY=namespace.key(
+    'conference_manager_link_status_diagnostics_v1'
+  );
+  var SESSION_KEY=namespace.key(
+    'conference_manager_link_status_diagnostic_session_v1'
+  );
   var LIMIT=50;
   var memoryFallback=[];
   var lastReadError=null;

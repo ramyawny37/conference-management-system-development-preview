@@ -1,7 +1,12 @@
 (function(global){
   'use strict';
 
-  var CACHE_PREFIX='conference_system_access_v1:';
+  var namespace=global.BrowserStorageNamespace||{
+    key:function(name){return name;}
+  };
+  var CACHE_PREFIX=namespace.key(
+    'conference_system_access_v1:'
+  );
   var state=createState('idle');
   var loadPromise=null;
   var initializationPromise=null;

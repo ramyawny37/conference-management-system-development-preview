@@ -1,6 +1,11 @@
 (function(global){
   'use strict';
-  var KEY='conference_manager_device_authorization_operations';
+  var namespace=global.BrowserStorageNamespace||{
+    key:function(name){return name;}
+  };
+  var KEY=namespace.key(
+    'conference_manager_device_authorization_operations'
+  );
   function storage(options){try{return options&&options.storage||global.localStorage||null;}catch(error){return null;}}
   function read(options){var target=storage(options);if(!target)return [];try{var value=JSON.parse(target.getItem(KEY)||'[]');return Array.isArray(value)?value:[];}catch(error){return [];}}
   function write(records,options){var target=storage(options);if(!target)return false;try{target.setItem(KEY,JSON.stringify(records));return true;}catch(error){return false;}}

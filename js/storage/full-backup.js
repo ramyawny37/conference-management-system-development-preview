@@ -1,17 +1,25 @@
 (function(global){
   'use strict';
 
+  var namespace=global.BrowserStorageNamespace||{
+    key:function(name){return name;}
+  };
   var BACKUP_TYPE='conference-manager-full-backup';
   var FORMAT_VERSION=1;
   var MAXIMUM_FILE_SIZE=100*1024*1024;
-  var FULL_RESTORE_STORAGE_KEY='conf_v5';
+  var storageKey=namespace.key;
+  var FULL_RESTORE_STORAGE_KEY=storageKey('conf_v5');
   var CLOUD_REVIEW_MARKER_KEY=
-    'conference_manager_full_restore_pending_cloud_review';
-  var SYNC_LINKS_STORAGE_KEY='conference_manager_sync_links';
-  var LINKING_ATTEMPTS_STORAGE_KEY='conference_manager_linking_attempts_v1';
-  var REMOTE_UPDATES_STORAGE_KEY='conference_manager_remote_update_markers';
+    storageKey('conference_manager_full_restore_pending_cloud_review');
+  var SYNC_LINKS_STORAGE_KEY=storageKey('conference_manager_sync_links');
+  var LINKING_ATTEMPTS_STORAGE_KEY=storageKey(
+    'conference_manager_linking_attempts_v1'
+  );
+  var REMOTE_UPDATES_STORAGE_KEY=storageKey(
+    'conference_manager_remote_update_markers'
+  );
   var MANUAL_RELINK_STORAGE_KEY=
-    'conference_manager_full_restore_manual_relink_required';
+    storageKey('conference_manager_full_restore_manual_relink_required');
   var FINAL_QUEUE_STATUSES=Object.freeze([
     'applied','resolved','discarded'
   ]);

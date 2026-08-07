@@ -1,7 +1,12 @@
 (function(global){
   'use strict';
 
-  var DATABASE_NAME='conference_manager_membership_attempts';
+  var namespace=global.BrowserStorageNamespace||{
+    databaseName:function(name){return name;}
+  };
+  var DATABASE_NAME=namespace.databaseName(
+    'conference_manager_membership_attempts'
+  );
   var DATABASE_VERSION=1;
   var STORE_NAME='membership_attempts_v1';
   var openingPromise=null;

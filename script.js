@@ -519,7 +519,10 @@ function closeFullRestorePreflight(){
 function readFullRestoreSyncLinks(){
   var result={syncLinks:[],warnings:[]};
   try{
-    var raw=localStorage.getItem('conference_manager_sync_links');
+    var raw=localStorage.getItem(
+      (window.BrowserStorageNamespace||browserStorageNamespace)
+        .key('conference_manager_sync_links')
+    );
     if(!raw)return result;
     var parsed=JSON.parse(raw);
     if(!parsed||typeof parsed!=='object'){
@@ -705,7 +708,10 @@ function closePostRestoreCloudReviewModal(){
   if(modal)modal.remove();
 }
 function readPostRestoreSyncLinksStrict(){
-  var raw=localStorage.getItem('conference_manager_sync_links');
+  var raw=localStorage.getItem(
+    (window.BrowserStorageNamespace||browserStorageNamespace)
+      .key('conference_manager_sync_links')
+  );
   if(!raw)return {};
   var parsed=JSON.parse(raw);
   if(!parsed||typeof parsed!=='object'||Array.isArray(parsed)){
@@ -1265,8 +1271,12 @@ function renderRoomTypeStatCards(rooms,includeTotal){
 // ═══════════════════════════════════════════════════════
 // TABS
 // ═══════════════════════════════════════════════════════
-var LAST_APPLICATION_TAB_KEY = 'conference_manager_last_tab';
-var APPLICATION_VIEW_KEY = 'conference_manager_view';
+var LAST_APPLICATION_TAB_KEY = browserStorageNamespace.key(
+  'conference_manager_last_tab'
+);
+var APPLICATION_VIEW_KEY = browserStorageNamespace.key(
+  'conference_manager_view'
+);
 var currentApplicationView = 'application';
 
 function getValidApplicationTabIds(){

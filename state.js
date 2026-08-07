@@ -21,14 +21,19 @@ var templateRoomDialog = { houseId: null, floorId: null, roomId: null };
 var importHouseDialog = { templateId: null, selectedRooms: {} };
 var conferenceDraft = null;
 var conferenceDialogMode = 'create';
-var CARDS_VIEW_MODE_KEY='conference_cards_view_mode';
+var browserStorageNamespace=window.BrowserStorageNamespace||{
+  key:function(name){return name;}
+};
+var CARDS_VIEW_MODE_KEY=browserStorageNamespace.key(
+  'conference_cards_view_mode'
+);
 var savedCardsMode=null;
 try{savedCardsMode=localStorage.getItem(CARDS_VIEW_MODE_KEY)}catch(e){}
 var cardMode=savedCardsMode==='room'?'room':'person',selectedCards={},cardsSelectionMode=false;
 var DAYS;
 
 // Constants
-var SK='conf_v5';
+var SK=browserStorageNamespace.key('conf_v5');
 var applicationStorageState = {
   storageReady: false,
   loadedSource: null,

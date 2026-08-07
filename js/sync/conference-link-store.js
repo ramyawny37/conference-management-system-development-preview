@@ -1,6 +1,9 @@
 (function(global){
   'use strict';
-  var KEY='conference_manager_sync_links';
+  var namespace=global.BrowserStorageNamespace||{
+    key:function(name){return name;}
+  };
+  var KEY=namespace.key('conference_manager_sync_links');
   var STATUSES=[
     'linked','upload_pending','needs_resolution','unsynced','disconnected',
     'server_selected_pending_local_apply','linking','cloud_linked',

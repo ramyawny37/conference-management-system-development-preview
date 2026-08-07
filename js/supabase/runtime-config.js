@@ -1,7 +1,12 @@
 (function(global){
   'use strict';
 
-  var STORAGE_KEY='conference_manager_supabase_runtime_config';
+  var namespace=global.BrowserStorageNamespace||{
+    key:function(name){return name;}
+  };
+  var STORAGE_KEY=namespace.key(
+    'conference_manager_supabase_runtime_config'
+  );
   var memoryConfig=null;
 
   function decodeJwtPayload(token){
