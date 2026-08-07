@@ -19,7 +19,9 @@ jobs:
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
+
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout preview controller
         uses: actions/checkout@v4
@@ -33,8 +35,51 @@ jobs:
           ref: develop
           path: site
 
-      - name: Disable Supabase in preview artifact
-        run: cp controller/preview-public-config.js site/js/supabase/public-config.js
+      - name: Configure Development Supabase in preview artifact
+        env:
+          SUPABASE_URL_DEV: ${{ secrets.SUPABASE_URL_DEV }}
+          SUPABASE_ANON_KEY_DEV: ${{ secrets.SUPABASE_ANON_KEY_DEV }}
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+
+          const url = process.env.SUPABASE_URL_DEV || '';
+          const key = process.env.SUPABASE_ANON_KEY_DEV || '';
+
+          if (!url || !key) {
+            throw new Error('Development Supabase configuration is missing');
+          }
+
+          if (!url.includes('gppwltrifgfxrkzvvxoe.supabase.co')) {
+            throw new Error('Refusing non-Development Supabase target');
+          }
+
+          const content =
+            "(function(global){\n" +
+            "  'use strict';\n\n" +
+            "  global.SUPABASE_RUNTIME_CONFIG=Object.freeze({\n" +
+            "    url:" + JSON.stringify(url) + ",\n" +
+            "    publishableKey:" + JSON.stringify(key) + "\n" +
+            "  });\n" +
+            "})(window);\n";
+
+          fs.writeFileSync(
+            'site/js/supabase/public-config.js',
+            content,
+            'utf8'
+          );
+          NODE
+
+      - name: Verify Production Supabase is absent
+        run: |
+          if grep -R "mpezfbvcdfxpgflehuot" site; then
+            echo "Production Supabase reference found in preview artifact"
+            exit 1
+          fi
+
+      - name: Verify Development Supabase target
+        run: |
+          grep -q "gppwltrifgfxrkzvvxoe.supabase.co" site/js/supabase/public-config.js
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
