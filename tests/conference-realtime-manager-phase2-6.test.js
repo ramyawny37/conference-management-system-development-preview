@@ -15,6 +15,8 @@ function environment(settings={}){
   const stored=[];
   const suspendedQueue=[];
   const timers=[];
+  let accessOverride=null;
+  let loggedOut=settings.logout===true;
   let readinessReads=0;
   let operations=settings.operations||[];
   let link=settings.noLink?null:Object.assign({
@@ -52,6 +54,8 @@ function environment(settings={}){
     }
   };
   const appData={
+    currentConferenceId:settings.currentConferenceId===undefined
+      ?LOCAL:settings.currentConferenceId,
     conferences:[{id:LOCAL,name:'Local data'}],
     conferenceLifecycle:{records:{
       [LOCAL]:{
@@ -99,12 +103,13 @@ function environment(settings={}){
     },
     SupabaseAuth:{
       getSession(){
-        return settings.logout?null:{user:{id:USER}};
+        return loggedOut?null:{user:{id:USER}};
       }
     },
     SystemAccessService:{
       refresh(){
         if(settings.accessFails)return Promise.reject(new Error('access'));
+        if(accessOverride)return accessOverride;
         return Promise.resolve({
           source:settings.cached?'cache':'server',
           fresh:settings.cached?false:true,
@@ -155,7 +160,12 @@ function environment(settings={}){
     filename:'conference-realtime-manager.js'
   });
   sandbox.ConferenceRealtimeManager.subscribe((state,event)=>{
-    if(event)events.push({state,event});
+    if(event){
+      events.push({state,event});
+      if(typeof settings.onRealtimeEvent==='function'){
+        settings.onRealtimeEvent(event);
+      }
+    }
   });
   return {
     manager:sandbox.ConferenceRealtimeManager,
@@ -163,13 +173,26 @@ function environment(settings={}){
     suspendedQueue,timers,
     readinessReads(){return readinessReads;},
     setOperations(value){operations=value;},
-    setLink(value){link=value;}
+    setLink(value){link=value;},
+    setAccessPromise(value){accessOverride=value;},
+    setLoggedOut(value){loggedOut=value;},
+    setCurrentConference(value){appData.currentConferenceId=value;},
+    runTimer(index){timers[index].fn();}
   };
 }
 
 async function tick(){
   await Promise.resolve();
   await new Promise(resolve=>setImmediate(resolve));
+}
+function deferred(){
+  let resolve;
+  const promise=new Promise(done=>{resolve=done;});
+  return {promise,resolve};
+}
+function accessResult(){
+  return {source:'server',fresh:true,authenticated:true,userId:USER,
+    accountStatus:'approved'};
 }
 
 (async function(){
@@ -295,8 +318,9 @@ async function tick(){
   assert.strictEqual(eventEnv.readinessReads()-eventReadinessBefore,1,
     'one remote event performs one queue readiness read');
   assert.deepStrictEqual(
-    eventEnv.manager.getDiagnostics().map(item=>item.stage).slice(0,9),
+    eventEnv.manager.getDiagnostics().map(item=>item.stage).slice(0,10),
     ['PREPARE_SUBSCRIBE_ENTRY','START_SUBSCRIBE',
+      'SUBSCRIBE_ATTEMPT_STARTED',
       'ELIGIBILITY_CHECK_STARTED','ELIGIBILITY_PASSED',
       'CREATE_CHANNEL','SUBSCRIBE_CALLED',
       'CHANNEL_SUBSCRIBED','EVENT_RECEIVED','REVISION_RECEIVED']
@@ -414,6 +438,144 @@ async function tick(){
   assert.strictEqual(
     reconnect.manager.maxReconnectAttempts,5
   );
+
+  // A/B: a slow old eligibility attempt cannot race a reconnect cycle.
+  let simulatedIphoneRevision=29;
+  const slowReconnect=environment({link:{knownRevision:29},
+    onRealtimeEvent:event=>{
+      if(event.classification==='remote_change_detected'){
+        simulatedIphoneRevision=event.observedRevision;
+      }
+    }});
+  await slowReconnect.manager.prepareAndSubscribe(
+    slowReconnect.appData,LOCAL,{client:slowReconnect.client}
+  );
+  const slowOldChannel=slowReconnect.channels[0];
+  const slowAccess=deferred();
+  slowReconnect.setAccessPromise(slowAccess.promise);
+  const staleFlight=slowReconnect.manager.prepareAndSubscribe(
+    slowReconnect.appData,LOCAL,{client:slowReconnect.client}
+  );
+  await tick();
+  slowOldChannel.statusCallback('CHANNEL_ERROR');
+  await tick();
+  assert.strictEqual(slowReconnect.timers.length,1);
+  slowAccess.resolve(accessResult());
+  assert.strictEqual((await staleFlight).status,'stale_attempt');
+  slowReconnect.setAccessPromise(Promise.resolve(accessResult()));
+  slowReconnect.runTimer(0);
+  await tick();
+  const recoveredState=slowReconnect.manager.getState(LOCAL);
+  assert.strictEqual(recoveredState.status,'subscribed');
+  assert.strictEqual(recoveredState.activeAttemptId,null,
+    'successful reconnect releases the active connectPromise/attempt');
+  assert.strictEqual(slowReconnect.channels.length,2);
+  const slowStages=slowReconnect.manager.getDiagnostics()
+    .map(item=>item.stage);
+  assert.ok(slowStages.includes('SUBSCRIBE_ATTEMPT_STALE'));
+  assert.ok(slowStages.includes('SUBSCRIBE_ATTEMPT_CANCELLED'));
+  assert.ok(slowStages.includes('RECONNECT_SCHEDULED'));
+  assert.ok(slowStages.includes('RECONNECT_ATTEMPT_STARTED'));
+  assert.ok(slowStages.includes('RECONNECT_SUBSCRIBED'));
+  assert.strictEqual(slowStages.includes('ILLEGAL_TRANSITION_PREVENTED'),false);
+
+  // Practical regression: the replacement channel accepts the latest laptop
+  // revision without refresh or a second channel.
+  slowReconnect.channels[1].callback({eventType:'UPDATE',new:{
+    id:'latest',conference_id:CLOUD,revision:34,
+    updated_by_device_id:DEVICE,updated_by_user_id:USER,
+    updated_at:'2026-08-07T10:00:00.000Z'
+  }});
+  await tick();
+  assert.strictEqual(slowReconnect.events.at(-1).event.observedRevision,34);
+  assert.strictEqual(simulatedIphoneRevision,34);
+  assert.strictEqual(slowReconnect.manager.getState(LOCAL).status,
+    'subscribed');
+
+  // C: repeated failures from one channel produce one timer and one attempt.
+  const repeatedErrors=environment();
+  await repeatedErrors.manager.prepareAndSubscribe(
+    repeatedErrors.appData,LOCAL,{client:repeatedErrors.client}
+  );
+  repeatedErrors.channels[0].statusCallback('CHANNEL_ERROR');
+  repeatedErrors.channels[0].statusCallback('CHANNEL_ERROR');
+  repeatedErrors.channels[0].statusCallback('CLOSED');
+  await tick();
+  assert.strictEqual(repeatedErrors.timers.length,1);
+  repeatedErrors.runTimer(0);
+  await tick();
+  assert.strictEqual(repeatedErrors.channels.length,2);
+  assert.strictEqual(repeatedErrors.manager.getState(LOCAL).status,
+    'subscribed');
+
+  // D: changing conference context invalidates eligibility in flight.
+  const conferenceRace=environment();
+  const conferenceAccess=deferred();
+  conferenceRace.setAccessPromise(conferenceAccess.promise);
+  const conferenceFlight=conferenceRace.manager.prepareAndSubscribe(
+    conferenceRace.appData,LOCAL,{client:conferenceRace.client}
+  );
+  conferenceRace.setCurrentConference(
+    '55555555-5555-4555-8555-555555555555'
+  );
+  conferenceAccess.resolve(accessResult());
+  assert.strictEqual((await conferenceFlight).status,'stale_attempt');
+  assert.strictEqual(conferenceRace.channels.length,0);
+
+  // E: logout invalidates the captured authenticated context.
+  const logoutRace=environment();
+  const logoutAccess=deferred();
+  logoutRace.setAccessPromise(logoutAccess.promise);
+  const logoutFlight=logoutRace.manager.prepareAndSubscribe(
+    logoutRace.appData,LOCAL,{client:logoutRace.client}
+  );
+  logoutRace.setLoggedOut(true);
+  logoutAccess.resolve(accessResult());
+  assert.strictEqual((await logoutFlight).status,'stale_attempt');
+  assert.strictEqual(logoutRace.channels.length,0);
+
+  // F: a terminal callback from an old generation cannot dirty the new one.
+  const oldClose=environment();
+  await oldClose.manager.prepareAndSubscribe(
+    oldClose.appData,LOCAL,{client:oldClose.client}
+  );
+  const supersededChannel=oldClose.channels[0];
+  supersededChannel.statusCallback('CHANNEL_ERROR');
+  await tick();
+  oldClose.runTimer(0);
+  await tick();
+  const replacementState=oldClose.manager.getState(LOCAL);
+  const replacementGeneration=replacementState.generation;
+  const replacementTimerCount=oldClose.timers.length;
+  const replacementRemovedCount=oldClose.removed.length;
+  assert.strictEqual(replacementState.status,'subscribed');
+  assert.strictEqual(replacementState.activeAttemptId,null);
+  supersededChannel.statusCallback('CLOSED');
+  await tick();
+  const afterLateClose=oldClose.manager.getState(LOCAL);
+  assert.strictEqual(afterLateClose.status,'subscribed');
+  assert.strictEqual(afterLateClose.generation,replacementGeneration);
+  assert.strictEqual(oldClose.timers.length,replacementTimerCount);
+  assert.strictEqual(oldClose.removed.length,replacementRemovedCount);
+  assert.strictEqual(oldClose.channels.length,2);
+  assert.strictEqual(oldClose.manager.getDiagnostics().some(item=>
+    item.stage==='ILLEGAL_TRANSITION_PREVENTED'),false);
+
+  // stop/logout invalidates an in-flight attempt and its reconnect timer.
+  const stoppedAttempt=environment();
+  const stoppedAccess=deferred();
+  stoppedAttempt.setAccessPromise(stoppedAccess.promise);
+  const stoppedFlight=stoppedAttempt.manager.prepareAndSubscribe(
+    stoppedAttempt.appData,LOCAL,{client:stoppedAttempt.client}
+  );
+  const stoppedResult=stoppedAttempt.manager.stopAll({
+    client:stoppedAttempt.client
+  });
+  stoppedAccess.resolve(accessResult());
+  assert.strictEqual((await stoppedFlight).status,'stale_attempt');
+  await stoppedResult;
+  assert.strictEqual(stoppedAttempt.manager.getState(LOCAL).status,'closed');
+  assert.strictEqual(stoppedAttempt.channels.length,0);
 
   const identityChange=environment();
   await identityChange.manager.prepareAndSubscribe(

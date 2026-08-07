@@ -7,6 +7,7 @@
   var BASE_RECONNECT_MS=1000;
   var entries=Object.create(null);
   var listeners=[];
+  var attemptSequence=0;
   var runtimeTrace=[];
   var eventDiagnostics={
     lastAcceptedRevision:null,
@@ -143,6 +144,7 @@
         userId:null,
         identity:null,
         generation:0,
+        activeAttemptId:null,
         status:'inactive',
         reason:null,
         channel:null,
@@ -167,6 +169,7 @@
       userId:value.userId,
       identity:value.identity,
       generation:value.generation,
+      activeAttemptId:value.activeAttemptId,
       status:value.status,
       reason:value.reason,
       connected:value.status==='subscribed',
@@ -240,11 +243,17 @@
       connecting:['subscribed','reconnecting','error','suspended','closed'],
       subscribed:['suspended','reconnecting','error','closed'],
       suspended:['waiting_for_prerequisites','connecting','closed'],
-      reconnecting:['subscribed','reconnecting','error','suspended','closed'],
+      reconnecting:[
+        'waiting_for_prerequisites','subscribed','reconnecting','error',
+        'suspended','closed'
+      ],
       error:['waiting_for_prerequisites','connecting','closed'],
       closed:['waiting_for_prerequisites','connecting','closed']
     };
     if(!allowed[value.status]||allowed[value.status].indexOf(next)<0){
+      trace('ILLEGAL_TRANSITION_PREVENTED',{
+        from:value.status,next:next,reason:reason||null
+      });
       value.status='error';
       value.reason='illegal_transition';
       value.lastError={code:'REALTIME_ILLEGAL_TRANSITION'};
@@ -255,6 +264,67 @@
     value.reason=reason||null;
     notify(value);
     return true;
+  }
+  function currentContext(appData,id,options){
+    var d=dependencies(options);
+    return {
+      userId:sessionUserId(d.auth),
+      currentConferenceId:appData&&appData.currentConferenceId
+        ?String(appData.currentConferenceId):null,
+      requestedConferenceId:String(id||'')
+    };
+  }
+  function startAttempt(value,appData,id,options){
+    var context=currentContext(appData,id,options);
+    var attempt={
+      id:++attemptSequence,
+      generation:value.generation,
+      userId:context.userId,
+      currentConferenceId:context.currentConferenceId,
+      requestedConferenceId:context.requestedConferenceId,
+      staleTraced:false
+    };
+    value.activeAttemptId=attempt.id;
+    trace('SUBSCRIBE_ATTEMPT_STARTED',{
+      attemptId:attempt.id,
+      generation:attempt.generation,
+      reconnect:!!(options&&options.reconnect)
+    });
+    return attempt;
+  }
+  function attemptCurrent(value,attempt,appData,options,stage){
+    var context=currentContext(
+      appData,attempt.requestedConferenceId,options
+    );
+    var current=value.activeAttemptId===attempt.id&&
+      value.generation===attempt.generation&&
+      context.userId===attempt.userId&&
+      context.currentConferenceId===attempt.currentConferenceId;
+    if(!current&&!attempt.staleTraced){
+      attempt.staleTraced=true;
+      trace('SUBSCRIBE_ATTEMPT_STALE',{
+        attemptId:attempt.id,
+        stage:stage||null,
+        generation:attempt.generation,
+        currentGeneration:value.generation
+      });
+    }
+    return current;
+  }
+  function cancelAttempt(value,reason){
+    if(value.activeAttemptId!==null){
+      trace('SUBSCRIBE_ATTEMPT_CANCELLED',{
+        attemptId:value.activeAttemptId,
+        reason:String(reason||'cancelled'),
+        generation:value.generation
+      });
+    }
+    value.activeAttemptId=null;
+    value.connectPromise=null;
+    value.generation++;
+  }
+  function staleOutcome(value){
+    return outcome(false,'stale_attempt',publicEntry(value),null);
   }
   function inspectQueue(d,link,options){
     if(!d.queue||typeof d.queue.getConferenceReadiness!=='function'){
@@ -286,7 +356,7 @@
     trace('ELIGIBILITY_BLOCKED',{reason:status});
     return outcome(false,status,data);
   }
-  function verifyPrerequisites(appData,id,options){
+  function verifyPrerequisites(appData,id,options,value,attempt){
     trace('ELIGIBILITY_CHECK_STARTED',{localConferenceIdPresent:!!id});
     var d=dependencies(options);
     var record=lifecycle(appData,id);
@@ -332,6 +402,9 @@
       return Promise.resolve(prerequisiteFailure('authorization_unavailable'));
     }
     return Promise.resolve(d.access.refresh()).then(function(access){
+      if(!attemptCurrent(value,attempt,appData,options,'system_access')){
+        return {stale:true};
+      }
       if(!access||access.source!=='server'||access.fresh!==true||
         access.authenticated!==true||access.userId!==userId){
         return {halt:prerequisiteFailure('fresh_system_access_required')};
@@ -346,6 +419,10 @@
         remoteConferenceId:link.remoteConferenceId
       },options&&options.membershipOptions);
     }).then(function(access){
+      if(access&&access.stale)return access;
+      if(!attemptCurrent(value,attempt,appData,options,'membership')){
+        return {stale:true};
+      }
       if(access&&access.halt)return access.halt;
       if(!access||!access.ok||access.status!=='available'||
         !access.data||access.data.userId!==userId||
@@ -354,6 +431,9 @@
         return prerequisiteFailure('membership_read_denied');
       }
       return inspectQueue(d,link,options).then(function(queue){
+        if(!attemptCurrent(value,attempt,appData,options,'queue_readiness')){
+          return {stale:true};
+        }
         if(!queue.ok)return prerequisiteFailure(queue.status,queue.data);
         trace('ELIGIBILITY_PASSED',{
           cloudConferenceIdPresent:true,
@@ -392,7 +472,7 @@
   function close(id,options){
     var value=entry(String(id||''));
     var d=dependencies(options);
-    value.generation++;
+    cancelAttempt(value,'close');
     clearReconnect(value);
     value.connectPromise=null;
     transition(value,'closed','closed');
@@ -412,7 +492,7 @@
   function suspend(id,reason,options){
     var value=entry(String(id||''));
     var d=dependencies(options);
-    value.generation++;
+    cancelAttempt(value,reason||'suspend');
     clearReconnect(value);
     value.connectPromise=null;
     transition(value,'suspended',reason||'prerequisite_lost');
@@ -622,6 +702,7 @@
       return;
     }
     if(value.reconnectTimer)return;
+    cancelAttempt(value,'reconnect_scheduled');
     value.reconnectAttempts++;
     transition(value,'reconnecting','temporary_connection_error');
     var delay=Math.min(
@@ -630,16 +711,27 @@
     );
     value.reconnectTimer=global.setTimeout(function(){
       value.reconnectTimer=null;
+      trace('RECONNECT_ATTEMPT_STARTED',{
+        reconnectAttempt:value.reconnectAttempts,
+        generation:value.generation
+      });
       prepareAndSubscribe(appData,value.localConferenceId,
         Object.assign({},options||{},{reconnect:true}));
     },delay);
+    trace('RECONNECT_SCHEDULED',{
+      reconnectAttempt:value.reconnectAttempts,
+      delay:delay,generation:value.generation
+    });
   }
-  function subscribeReady(appData,ready,options){
+  function subscribeReady(appData,ready,options,attempt){
     var id=ready.localConferenceId;
     var value=entry(id);
     var identity=[
       ready.userId,id,ready.cloudConferenceId,'snapshot_notifications'
     ].join('|');
+    if(!attemptCurrent(value,attempt,appData,options,'subscribe_ready')){
+      return Promise.resolve(staleOutcome(value));
+    }
     if(value.identity===identity&&
       ['connecting','subscribed'].indexOf(value.status)>=0){
       trace('PREPARE_RETURN',{
@@ -647,6 +739,7 @@
           ?'already_subscribed':'already_connecting'
       });
       if(value.status==='subscribed'){
+        value.activeAttemptId=null;
         return Promise.resolve(outcome(
           true,'already_subscribed',publicEntry(value)
         ));
@@ -656,18 +749,26 @@
       ));
     }
     var d=dependencies(options);
-    var replace=value.channel
-      ?close(id,options):Promise.resolve();
+    var replace=Promise.resolve();
+    if(value.channel){
+      value.generation++;
+      attempt.generation=value.generation;
+      transition(value,'closed','replacing_channel');
+      replace=removeChannel(value,d.client);
+    }
     var flight=Promise.resolve(replace).then(function(){
       value=entry(id);
+      if(!attemptCurrent(value,attempt,appData,options,'channel_replaced')){
+        return staleOutcome(value);
+      }
       value.generation++;
+      attempt.generation=value.generation;
       var generation=value.generation;
       value.cloudConferenceId=ready.cloudConferenceId;
       value.userId=ready.userId;
       value.identity=identity;
       value.lastError=null;
-      if(!transition(value,options&&options.reconnect
-        ?'reconnecting':'connecting')){
+      if(!transition(value,'connecting','creating_channel')){
         trace('PREPARE_RETURN',{reason:'illegal_transition'});
         return outcome(false,'illegal_transition',publicEntry(value));
       }
@@ -708,16 +809,25 @@
                 cloudConferenceIdPresent:!!ready.cloudConferenceId
               });
               transition(value,'subscribed','subscribed');
+              value.activeAttemptId=null;
               value.reconnectAttempts=0;
               value.lastConnectedAt=now(options).toISOString();
+              if(options&&options.reconnect){
+                trace('RECONNECT_SUBSCRIBED',{
+                  attemptId:attempt.id,generation:generation
+                });
+              }
               finish(outcome(true,'subscribed',publicEntry(value)));
               return;
             }
             if(['CHANNEL_ERROR','TIMED_OUT','CLOSED'].indexOf(status)>=0){
+              if(generation!==value.generation)return;
               trace(status,{channelGeneration:generation});
               value.lastError={code:'REALTIME_'+status};
+              cancelAttempt(value,'channel_'+status.toLowerCase());
+              var failureGeneration=value.generation;
               removeChannel(value,d.client).finally(function(){
-                if(generation!==value.generation)return;
+                if(failureGeneration!==value.generation)return;
                 finish(outcome(false,'connection_error',
                   publicEntry(value),copy(value.lastError)));
                 scheduleReconnect(value,appData,options);
@@ -751,11 +861,21 @@
       trace('PREPARE_RETURN',{reason:'connect_promise_active'});
       return value.connectPromise;
     }
+    var attempt=startAttempt(value,appData,id,options);
+    if(value.status==='reconnecting'){
+      transition(value,'waiting_for_prerequisites','reconnect_checking');
+    }
     if(value.status==='inactive'||value.status==='closed'||
       value.status==='error'||value.status==='suspended'){
       transition(value,'waiting_for_prerequisites','checking');
     }
-    var flight=verifyPrerequisites(appData,id,options).then(function(ready){
+    var flight=verifyPrerequisites(
+      appData,id,options,value,attempt
+    ).then(function(ready){
+      if(ready&&ready.stale||
+        !attemptCurrent(value,attempt,appData,options,'eligibility_complete')){
+        return staleOutcome(value);
+      }
       if(!ready.ok){
         trace('PREPARE_RETURN',{reason:ready.status||'prerequisite_failed'});
         return suspend(id,ready.status,options).then(function(){
@@ -763,7 +883,7 @@
             publicEntry(value),{code:ready.status});
         });
       }
-      return subscribeReady(appData,ready.data,options);
+      return subscribeReady(appData,ready.data,options,attempt);
     }).finally(function(){
       if(value.connectPromise===flight)value.connectPromise=null;
     });
