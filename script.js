@@ -7717,6 +7717,22 @@ function closeTemplateFloorModal() {
   templateFloorDialog.floorId = null;
 }
 
+function refreshConferenceHouseAfterTemplateMutation(template){
+  var currentConference = getCurrentConference();
+  var updatedConferenceHouseCount = updateConferenceHousesFromTemplate(currentConference, template);
+  return {
+    count: updatedConferenceHouseCount,
+    render: function(){
+      if(!updatedConferenceHouseCount) return;
+      renderAccommodation();
+      var activeRoomsModal = ge('addRoomFromTemplateModal');
+      if(activeRoomsModal && activeRoomsModal.style.display !== 'none'){
+        renderActiveRoomsManager();
+      }
+    }
+  };
+}
+
 function saveTemplateFloor() {
   var house = getHouseTemplateById(templateFloorDialog.houseId);
   if (!house) return;
@@ -7740,6 +7756,8 @@ function saveTemplateFloor() {
     alert('يوجد دور آخر بنفس الاسم في هذا البيت');
     return;
   }
+  var previousAppData = deepClone(appData);
+  var previousSelectedHouseTemplateId = selectedHouseTemplateId;
   if (floor) {
     floor.name = floorName;
   } else {
@@ -7747,12 +7765,18 @@ function saveTemplateFloor() {
     house.floors.push(createDefaultFloor(floorName));
   }
   selectedHouseTemplateId = house.id;
-  if(!save())return false;
+  var conferenceRefresh = refreshConferenceHouseAfterTemplateMutation(house);
+  if(!save()){
+    appData = previousAppData;
+    selectedHouseTemplateId = previousSelectedHouseTemplateId;
+    return false;
+  }
   if (editHouseTemplateId === house.id && ge('houseTemplateModal').style.display !== 'none') {
     ht_renderTemplate(house);
   }
   closeTemplateFloorModal();
   renderSettings();
+  conferenceRefresh.render();
 }
 
 function renderTemplateRoomModal() {
@@ -7877,6 +7901,8 @@ function saveTemplateRoom() {
     alert('يوجد غرفة أخرى بنفس الرقم في هذا البيت');
     return;
   }
+  var previousAppData = deepClone(appData);
+  var previousSelectedHouseTemplateId = selectedHouseTemplateId;
   if (room) {
     room.number = number;
     room.beds = beds;
@@ -7894,12 +7920,18 @@ function saveTemplateRoom() {
     floor.rooms.push({ id: uid(), number: number, beds: beds, extraBeds: extraBeds, notes: notes, guests: [], children: [], closed: closed, closedDay: closedDay });
   }
   selectedHouseTemplateId = house.id;
-  if(!save())return false;
+  var conferenceRefresh = refreshConferenceHouseAfterTemplateMutation(house);
+  if(!save()){
+    appData = previousAppData;
+    selectedHouseTemplateId = previousSelectedHouseTemplateId;
+    return false;
+  }
   if (editHouseTemplateId === house.id && ge('houseTemplateModal').style.display !== 'none') {
     ht_renderTemplate(house);
   }
   closeTemplateRoomModal();
   renderSettings();
+  conferenceRefresh.render();
 }
 
 function saveSettings(){
@@ -8055,8 +8087,7 @@ function saveHouseTemplate() {
     appData.houseTemplates.push(template);
   }
   selectedHouseTemplateId = template.id;
-  var currentConference = getCurrentConference();
-  var updatedConferenceHouseCount = updateConferenceHousesFromTemplate(currentConference, template);
+  var conferenceRefresh = refreshConferenceHouseAfterTemplateMutation(template);
 
   if(!save()){
     appData = previousAppData;
@@ -8066,7 +8097,7 @@ function saveHouseTemplate() {
   }
   closeHouseTemplateEditor();
   renderSettings();
-  if(updatedConferenceHouseCount) renderAccommodation();
+  conferenceRefresh.render();
   showToast('✅ تم حفظ خريطة البيت بنجاح');
 }
 

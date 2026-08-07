@@ -570,14 +570,17 @@ function reconcileConferenceRooms(currentRooms, templateRooms){
       match = currentRooms[roomIndex];
       used[roomIndex] = true;
     }
+    var isNewRoom = !match;
     if(!match) match = { id: uid(), guests: [], children: [] };
     match.sourceTemplateRoomId = templateRoom.id || null;
     match.number = templateRoom.number || '';
     match.beds = parseInt(templateRoom.beds, 10) || 1;
     match.extraBeds = parseInt(templateRoom.extraBeds, 10) || 0;
     match.notes = templateRoom.notes || '';
-    match.closed = !!templateRoom.closed;
-    match.closedDay = templateRoom.closedDay === undefined ? null : templateRoom.closedDay;
+    if(isNewRoom){
+      match.closed = !!templateRoom.closed;
+      match.closedDay = templateRoom.closedDay === undefined ? null : templateRoom.closedDay;
+    }
     match.guests = match.guests || [];
     match.children = match.children || [];
     reconciled.push(match);

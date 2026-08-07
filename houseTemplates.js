@@ -70,6 +70,7 @@ function ht_deleteRoomFromTemplate(houseId, floorId, roomId) {
   });
   floor.rooms = rooms;
   selectedHouseTemplateId = house.id;
+  var conferenceRefresh = refreshConferenceHouseAfterTemplateMutation(house);
   if (!save()) {
     appData = previousAppData;
     selectedHouseTemplateId = previousSelectedHouseTemplateId;
@@ -84,6 +85,7 @@ function ht_deleteRoomFromTemplate(houseId, floorId, roomId) {
     ht_renderTemplate(house);
   }
   renderSettings();
+  conferenceRefresh.render();
 }
 
 function ht_roomHtml(floorId, room) {
@@ -147,6 +149,7 @@ function ht_deleteFloorFromTemplate(houseId, floorId) {
   });
   house.floors = floors;
   selectedHouseTemplateId = house.id;
+  var conferenceRefresh = refreshConferenceHouseAfterTemplateMutation(house);
   if (!save()) {
     appData = previousAppData;
     selectedHouseTemplateId = previousSelectedHouseTemplateId;
@@ -161,4 +164,5 @@ function ht_deleteFloorFromTemplate(houseId, floorId) {
     ht_renderTemplate(house);
   }
   renderSettings();
+  conferenceRefresh.render();
 }
