@@ -9,11 +9,17 @@ const index=fs.readFileSync(path.join(root,'index.html'),'utf8');
 const manager=fs.readFileSync(path.join(root,'js/sync/conference-edit-lock-manager.js'),'utf8');
 
 const previous='exclusive-edit-lock-v1';
-const next='startup-queue-recovery-v1';
+const next='house-template-propagation-v1';
+const pwaAssetRevision='startup-queue-recovery-v1';
 const appAssetRevision='section-accommodation-edit-lock-v1';
 assert(worker.includes("CACHE_REVISION = '"+next+"'"));
 assert(index.includes("window.APP_SHELL_REVISION='"+next+"'"));
-assert(index.includes('pwa.js?rev='+next));
+assert(index.includes('pwa.js?rev='+pwaAssetRevision));
+['script.js','houses.js','houseTemplates.js'].forEach(asset=>{
+  const versionedAsset=asset+'?rev='+next;
+  assert(index.includes(versionedAsset),'index missing '+versionedAsset);
+  assert(worker.includes("'./"+versionedAsset+"'"),'app shell missing '+versionedAsset);
+});
 assert(index.includes('conference-edit-lock-manager.js?rev='+appAssetRevision));
 assert(!index.includes('conference-edit-lock-manager.js?rev='+previous));
 assert(manager.includes('beginAccommodationEdit'));

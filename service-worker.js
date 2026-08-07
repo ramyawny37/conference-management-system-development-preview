@@ -6,7 +6,7 @@ const CACHE_NAMESPACE = IS_DEVELOPMENT
   ? 'cms:development:' + DEVELOPMENT_PROJECT_REF + ':'
   : '';
 const CACHE_PREFIX = CACHE_NAMESPACE + 'conference-manager-core-';
-const CACHE_REVISION = 'realtime-reconnect-catchup-v1';
+const CACHE_REVISION = 'house-template-propagation-v1';
 const CACHE_NAME = CACHE_PREFIX + 'v' + APP_VERSION + '-' + CACHE_REVISION;
 const CORE_ASSETS = [
   './',
@@ -87,14 +87,14 @@ const CORE_ASSETS = [
   './utils.js',
   './core.js?rev=canonical-conference-schema-v1',
   './people.js?rev=canonical-conference-schema-v1',
-  './houses.js?rev=canonical-conference-schema-v1',
+  './houses.js?rev=house-template-propagation-v1',
   './transport.js',
-  './houseTemplates.js',
+  './houseTemplates.js?rev=house-template-propagation-v1',
   './state.js?rev=device-reauthorization-flow-v1',
   './js/conference/accounts.js',
   './js/conference-template-houses-editor.js',
   './cards.js',
-  './script.js?rev=startup-queue-recovery-v1',
+  './script.js?rev=house-template-propagation-v1',
   './version.js',
   './pwa.js?rev=realtime-drop-instrumentation-v1',
   './libs/html2canvas.min.js',
