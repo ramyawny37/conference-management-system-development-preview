@@ -25,12 +25,23 @@ async function currentDeviceProvisioning(){
 
 async function startupPolling(){
   const source=fs.readFileSync('js/sync/startup-access-gate.js','utf8'),ids=['startupAccessGate','applicationTopbar','applicationBody','startupScreen','globalConferenceHeader','device_authorization_administration_root','current_device_authorization_root','tab0','tab1','tab2','tab3','tab4','tab5','tab6'],nodes={};ids.forEach(id=>nodes[id]={style:{},innerHTML:''});
-  let status='not_registered',ensures=0,home=0,poll=null;
-  const window={document:{getElementById:id=>nodes[id]},setTimeout:fn=>{poll=fn;return 1;},clearTimeout:()=>{poll=null;},
+  let status='not_registered',ensures=0,home=0,poll=null,visibilityListener=null;
+  const window={document:{visibilityState:'visible',getElementById:id=>nodes[id],addEventListener:(event,listener)=>{if(event==='visibilitychange')visibilityListener=listener;}},setTimeout:fn=>{poll=fn;return 1;},clearTimeout:()=>{poll=null;},
     SupabaseAuth:{initialize:()=>Promise.resolve(),getState:()=>({authenticated:true})},SupabaseClientLayer:{getClient:()=>({auth:{onAuthStateChange:()=>({data:{subscription:{}}})}})},FirstSystemBootstrapService:{getStatus:()=>Promise.resolve({ok:true,status:'completed'})},SystemAccessService:{initialize:()=>Promise.resolve(),refresh:()=>Promise.resolve(),getState:()=>({accountStatus:'approved',fresh:true})},SupabaseDeviceIdentity:{getOrCreate:()=>({id:'22222222-2222-4222-8222-222222222222',deviceName:'iPhone',platform:'iOS'})},CurrentDeviceAuthorizationUI:{initialize:()=>Promise.resolve(),refresh:()=>Promise.resolve(),getState:()=>({status}),ensurePendingAuthorization:()=>{ensures++;status='pending';return Promise.resolve({ok:true,status:'pending'});}},SyncSettingsUI:{}};
   vm.runInNewContext(source,{window,Promise});
   let result=await window.StartupAccessGate.run({completeApplicationStartup:()=>{home++;}});assert.equal(result.status,'device');assert.equal(ensures,1);assert.equal(home,0);assert(nodes.startupAccessGate.innerHTML.includes('iPhone'));assert(nodes.startupAccessGate.innerHTML.includes('22222222…'));assert(poll);
+  assert(visibilityListener,'visible lifecycle retry must be attached for mobile browsers');
   status='approved';const callback=poll;callback();await new Promise(resolve=>setImmediate(resolve));assert.equal(home,1,'approval must continue startup without logout or reload');assert.equal(window.StartupAccessGate.isAllowed(),true);
+}
+
+function startupPipelineContract(){
+  const source=fs.readFileSync('script.js','utf8');
+  const gateIndex=source.indexOf('StartupAccessGate.run({');
+  const storageResetIndex=source.indexOf('window.applicationStorageReadyPromise=null;');
+  assert(storageResetIndex>=0&&storageResetIndex<gateIndex,'auth/device gate must start before application storage');
+  assert.match(source,/function completeApplicationStartup\(\)[\s\S]*initializeApplicationStorage\(\)/);
+  assert.match(source,/function completeAuthorizedApplicationStartup\(\)[\s\S]*StartupConferenceDiscovery[\s\S]*StartupQueueRecovery[\s\S]*AutomaticSyncOrchestrator\.start\(\)/);
+  assert(source.includes('completeApplicationStartup:completeAuthorizedApplicationStartup'),'gate release must resume the entire authorized startup pipeline');
 }
 
 async function pendingAdministration(){
@@ -43,4 +54,4 @@ async function pendingAdministration(){
   await window.DeviceAuthorizationAdministrationUI.actPending('reject',organizations[0].organizationId,'41111111-1111-4111-8111-111111111111','51111111-1111-4111-8111-111111111111');assert.equal(mutation.action,'reject');
 }
 
-(async()=>{await currentDeviceProvisioning();await startupPolling();await pendingAdministration();console.log('device onboarding flow: PASS');})().catch(error=>{console.error(error);process.exit(1);});
+(async()=>{startupPipelineContract();await currentDeviceProvisioning();await startupPolling();await pendingAdministration();console.log('device onboarding flow: PASS');})().catch(error=>{console.error(error);process.exit(1);});

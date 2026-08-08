@@ -8885,31 +8885,31 @@ function doBulkAssign(){
 //__S__
 //__E__
 function completeApplicationStartup(){
-  syncCurrentConferenceRefs();
-  if(!getCurrentConference()){
-    showSelectConferenceModal();
-  }else if(getStoredApplicationView()==='startup'){
-    openStartupScreen({clearCurrentConference:false,persistView:false});
-  }else{
-    setApplicationMode('application');
-    restoreLastApplicationTab();
+  if(!window.applicationStorageReadyPromise){
+    window.applicationStorageReadyPromise=initializeApplicationStorage()
+      .then(function(){
+        syncCurrentConferenceRefs();
+        return true;
+      }).catch(function(e){
+        alert('خطأ: '+e.message);
+        return false;
+      });
   }
-  return true;
+  return Promise.resolve(window.applicationStorageReadyPromise).then(function(){
+    syncCurrentConferenceRefs();
+    if(!getCurrentConference()){
+      showSelectConferenceModal();
+    }else if(getStoredApplicationView()==='startup'){
+      openStartupScreen({clearCurrentConference:false,persistView:false});
+    }else{
+      setApplicationMode('application');
+      restoreLastApplicationTab();
+    }
+    return true;
+  });
 }
-window.applicationStorageReadyPromise=initializeApplicationStorage().then(function(){
-  syncCurrentConferenceRefs();
-  return true;
-}).catch(function(e){
-  alert('خطأ: '+e.message);
-  return false;
-});
-window.applicationStorageReadyPromise.then(function(){
-  if(window.StartupAccessGate&&typeof window.StartupAccessGate.run==='function'){
-    return window.StartupAccessGate.run({completeApplicationStartup:completeApplicationStartup});
-  }
-  return Promise.reject(new Error('STARTUP_ACCESS_GATE_REQUIRED'));
-}).then(function(gateResult){
-  if(!gateResult||gateResult.status!=='allowed')return;
+function completeAuthorizedApplicationStartup(){
+  return Promise.resolve(completeApplicationStartup()).then(function(){
   try{
     if(window.FullBackupService&&
       typeof window.FullBackupService.isFullRestoreCloudReviewPending==='function'&&
@@ -8927,7 +8927,7 @@ window.applicationStorageReadyPromise.then(function(){
     typeof window.SystemAccessService.initialize==='function'
     ?window.SystemAccessService.initialize()
     :Promise.resolve();
-  Promise.resolve(accessBootstrap).catch(function(){
+  return Promise.resolve(accessBootstrap).catch(function(){
     return null;
   }).then(function(){
     if(window.StartupConferenceDiscovery&&
@@ -8951,5 +8951,15 @@ window.applicationStorageReadyPromise.then(function(){
       window.AutomaticSyncOrchestrator.start();
     }
     var currentConference=getCurrentConference();
+    return true;
   });
-});
+  });
+}
+window.applicationStorageReadyPromise=null;
+if(window.StartupAccessGate&&typeof window.StartupAccessGate.run==='function'){
+  window.StartupAccessGate.run({
+    completeApplicationStartup:completeAuthorizedApplicationStartup
+  });
+}else{
+  throw new Error('STARTUP_ACCESS_GATE_REQUIRED');
+}

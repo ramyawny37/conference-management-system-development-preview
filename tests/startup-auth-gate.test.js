@@ -14,8 +14,9 @@ function scenario(authenticated,accountStatus,deviceStatus){
   const noSession=await scenario(false,null,null);assert.strictEqual(noSession.result.status,'auth');assert(noSession.nodes.startupAccessGate.innerHTML.includes('إدارة المؤتمرات'));assert(!noSession.nodes.startupAccessGate.innerHTML.includes('sync_auth_email'));noSession.gate.showAuthView('login');assert(noSession.nodes.startupAccessGate.innerHTML.includes('sync_auth_email'));assert(!noSession.nodes.startupAccessGate.innerHTML.includes('sync_signup_email'));noSession.gate.showAuthView('signup');assert(noSession.nodes.startupAccessGate.innerHTML.includes('sync_signup_email'));assert(!noSession.nodes.startupAccessGate.innerHTML.includes('sync_auth_email'));assert.strictEqual(noSession.home,0);assert.strictEqual(noSession.nodes.applicationBody.style.display,'none');
   const approved=await scenario(true,'approved','approved');assert.strictEqual(approved.result.status,'allowed');assert.strictEqual(approved.home,1);
   approved.authState.authenticated=false;approved.listener('SIGNED_OUT',null);await new Promise(resolve=>setImmediate(resolve));assert.strictEqual(approved.nodes.applicationBody.style.display,'none');assert(approved.nodes.startupAccessGate.innerHTML.includes('إدارة المؤتمرات'));
-  assert.match(fs.readFileSync(path.resolve(__dirname,'../script.js'),'utf8'),/StartupAccessGate\.run[\s\S]*gateResult\.status!==['"]allowed['"]/);
   const script=fs.readFileSync(path.resolve(__dirname,'../script.js'),'utf8');
+  assert.match(script,/window\.applicationStorageReadyPromise=null;[\s\S]*StartupAccessGate\.run/);
+  assert.match(script,/completeApplicationStartup:completeAuthorizedApplicationStartup/);
   ['switchTab','openSettingsFromHome','openNewConferenceModal','setCurrentConferenceById','loadFromFile','showSelectConferenceModal'].forEach(name=>assert.match(script,new RegExp('function '+name+'\\([^)]*\\)\\{\\s*if\\(window\\.StartupAccessGate')));
   console.log('startup auth gate tests: passed');
 })().catch(e=>{console.error(e);process.exitCode=1;});

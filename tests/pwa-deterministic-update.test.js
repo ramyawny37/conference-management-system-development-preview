@@ -9,7 +9,8 @@ const index=fs.readFileSync(path.join(root,'index.html'),'utf8');
 const manager=fs.readFileSync(path.join(root,'js/sync/conference-edit-lock-manager.js'),'utf8');
 
 const previous='exclusive-edit-lock-v1';
-const next='device-onboarding-v1';
+const next='startup-device-realtime-v1';
+const deviceOnboardingRevision='device-onboarding-v1';
 const organizationTemplateRevision='organization-template-sync-v1';
 const bootstrapRevision='first-owner-bootstrap-hardening-v1';
 const userManagementUiRevision='organization-archive-restore-v1';
@@ -53,7 +54,8 @@ const readAsset='js/sync/user-management-read-service.js?rev='+
   userManagementReadRevision;
 assert(index.includes(readAsset));
 assert(worker.includes("'./"+readAsset+"'"));
-assert(index.includes('script.js?rev='+organizationTemplateRevision));
+assert(index.includes('script.js?rev='+next));
+assert(worker.includes("'./script.js?rev="+next+"'"));
 [
   'js/storage/indexeddb.js','js/storage/storage-repository.js',
   'js/sync/startup-conference-discovery.js',
@@ -64,14 +66,15 @@ assert(index.includes('script.js?rev='+organizationTemplateRevision));
   assert(worker.includes("'./"+versioned+"'"),'app shell missing '+versioned);
 });
 [
-  'js/sync/current-device-authorization-ui.js',
-  'js/sync/device-authorization-administration-ui.js',
-  'js/sync/startup-access-gate.js'
+  'js/sync/current-device-authorization-ui.js'
 ].forEach(asset=>{
-  const versioned=asset+'?rev='+next;
+  const versioned=asset+'?rev='+deviceOnboardingRevision;
   assert(index.includes(versioned),'index missing '+versioned);
   assert(worker.includes("'./"+versioned+"'"),'app shell missing '+versioned);
 });
+const multiDeviceAsset='js/sync/device-authorization-administration-ui.js?rev=multi-device-authorization-v1';
+assert(index.includes(multiDeviceAsset),'index missing '+multiDeviceAsset);
+assert(worker.includes("'./"+multiDeviceAsset+"'"),'app shell missing '+multiDeviceAsset);
 [
   ['js/sync/organization-management-attempt-store.js','organization-management-v1'],
   ['js/supabase/organization-management-service.js','organization-archive-restore-v1'],
