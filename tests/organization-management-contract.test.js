@@ -1,0 +1,14 @@
+'use strict';
+const assert=require('assert'),fs=require('fs'),path=require('path');
+const sql=fs.readFileSync(path.resolve(__dirname,'../supabase/migrations/20260810_6_6_0_organization_management.sql'),'utf8');
+const resolution=fs.readFileSync(path.resolve(__dirname,'../supabase/migrations/20260810_6_6_1_security_definer_extension_resolution.sql'),'utf8');
+['organization_management_operations','organization_management_audit_log','get_organization_management_overview','manage_organization','require_current_approved_device','SYSTEM_OWNER_REQUIRED','ORGANIZATION_OWNER_REQUIRED','ORGANIZATION_OPERATION_MISMATCH','pg_advisory_xact_lock'].forEach(value=>assert(sql.includes(value),'missing '+value));
+assert.match(sql,/status text not null default 'active'[\s\S]*status in \('active','archived'\)/i);
+assert.match(sql,/p_action='create'[\s\S]*insert into public\.organizations[\s\S]*insert into public\.organization_members/i);
+assert.doesNotMatch(sql,/insert into public\.conferences|insert into public\.conference_members|insert into public\.templates/i);
+assert.match(sql,/revoke all on function public\.manage_organization[\s\S]*from public,anon/i);
+assert.match(sql,/grant execute on function public\.manage_organization[\s\S]*to authenticated/i);
+assert.match(resolution,/has_schema_privilege\('authenticated','extensions','create'\)/i);
+assert.match(resolution,/alter function public\.manage_organization[\s\S]*set search_path=pg_catalog,public,extensions/i);
+assert.match(resolution,/alter function public\.complete_first_system_bootstrap[\s\S]*set search_path=pg_catalog,public,extensions/i);
+console.log('organization management SQL contract tests: passed');

@@ -9,9 +9,10 @@ const index=fs.readFileSync(path.join(root,'index.html'),'utf8');
 const manager=fs.readFileSync(path.join(root,'js/sync/conference-edit-lock-manager.js'),'utf8');
 
 const previous='exclusive-edit-lock-v1';
-const next='first-owner-bootstrap-hardening-v1';
+const next='organization-management-v1';
+const bootstrapRevision='first-owner-bootstrap-hardening-v1';
 const userManagementUiRevision='user-onboarding-flow-v1';
-const userManagementStyleRevision='first-owner-bootstrap-hardening-v1';
+const userManagementStyleRevision='organization-management-v1';
 const userManagementReadRevision='user-management-scoped-v1';
 const conferenceRoleRevision='conference-role-management-v1';
 const houseTemplateRevision='house-template-propagation-v1';
@@ -22,10 +23,10 @@ assert(index.includes("window.APP_SHELL_REVISION='"+next+"'"));
 assert(index.includes('pwa.js?rev='+pwaAssetRevision));
 assert(index.includes('js/sync/sync-settings-ui.js?rev=first-use-auth-v1'));
 assert(worker.includes("'./js/sync/sync-settings-ui.js?rev=first-use-auth-v1'"));
-assert(index.includes('js/supabase/first-system-bootstrap-service.js?rev='+next));
-assert(worker.includes("'./js/supabase/first-system-bootstrap-service.js?rev="+next+"'"));
-assert(index.includes('js/sync/startup-access-gate.js?rev='+next));
-assert(worker.includes("'./js/sync/startup-access-gate.js?rev="+next+"'"));
+assert(index.includes('js/supabase/first-system-bootstrap-service.js?rev='+bootstrapRevision));
+assert(worker.includes("'./js/supabase/first-system-bootstrap-service.js?rev="+bootstrapRevision+"'"));
+assert(index.includes('js/sync/startup-access-gate.js?rev='+bootstrapRevision));
+assert(worker.includes("'./js/sync/startup-access-gate.js?rev="+bootstrapRevision+"'"));
 ['houses.js','houseTemplates.js'].forEach(asset=>{
   const versionedAsset=asset+'?rev='+houseTemplateRevision;
   assert(index.includes(versionedAsset),'index missing '+versionedAsset);
@@ -51,7 +52,8 @@ const readAsset='js/sync/user-management-read-service.js?rev='+
   userManagementReadRevision;
 assert(index.includes(readAsset));
 assert(worker.includes("'./"+readAsset+"'"));
-assert(index.includes('script.js?rev=user-management-scoped-v1'));
+assert(index.includes('script.js?rev='+next));
+['js/sync/organization-management-attempt-store.js','js/supabase/organization-management-service.js','js/sync/organization-management-ui.js'].forEach(asset=>{const versioned=asset+'?rev='+next;assert(index.includes(versioned));assert(worker.includes("'./"+versioned+"'"));});
 assert(index.includes('conference-edit-lock-manager.js?rev='+appAssetRevision));
 assert(!index.includes('conference-edit-lock-manager.js?rev='+previous));
 assert(manager.includes('beginAccommodationEdit'));

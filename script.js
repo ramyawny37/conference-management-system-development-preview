@@ -6040,6 +6040,10 @@ Application Navigation - Central Entry Points
 function openStartupScreen(options){
   if(window.StartupAccessGate&&!window.StartupAccessGate.isAllowed())return false;
   options=options||{};
+  var organizationScreen=ge('organizationManagementScreen');
+  if(organizationScreen)organizationScreen.style.display='none';
+  var organizationButton=ge('organizationManagementTabButton');
+  if(organizationButton)organizationButton.classList.remove('active','main-tab-active');
   var clearCurrentConference=options.clearCurrentConference===true;
   var persistView=options.persistView!==false;
   var previousCurrentConferenceId=appData.currentConferenceId;
@@ -7822,6 +7826,12 @@ function saveTemplateFloor() {
     selectedHouseTemplateId = previousSelectedHouseTemplateId;
     return false;
   }
+  var organizationScreen=ge('organizationManagementScreen');
+  if(organizationScreen)organizationScreen.style.display='none';
+  var organizationButton=ge('organizationManagementTabButton');
+  if(organizationButton)organizationButton.classList.remove('active','main-tab-active');
+  var conferenceHeader=ge('globalConferenceHeader');
+  if(conferenceHeader)conferenceHeader.style.display='';
   if (editHouseTemplateId === house.id && ge('houseTemplateModal').style.display !== 'none') {
     ht_renderTemplate(house);
   }
