@@ -1,0 +1,13 @@
+'use strict';
+var assert=require('assert'),fs=require('fs'),path=require('path');
+var sql=fs.readFileSync(path.resolve(__dirname,'../supabase/migrations/20260808_6_2_0_user_management_read_layer.sql'),'utf8');
+['search_user_management_users','get_user_management_overview','get_user_management_devices'].forEach(function(name){assert.match(sql,new RegExp('function\\s+public\\.'+name,'i'));});
+assert.strictEqual((sql.match(/security definer/gi)||[]).length,3);
+assert.strictEqual((sql.match(/set search_path = pg_catalog, public/gi)||[]).length,3);
+assert.strictEqual((sql.match(/require_current_approved_device/gi)||[]).length,3);
+assert.strictEqual((sql.match(/public\.is_system_owner\s*\(/gi)||[]).length,3);
+assert.match(sql,/revoke all[\s\S]+from public,anon/i);
+assert.match(sql,/grant execute[\s\S]+to authenticated/i);
+assert.doesNotMatch(sql,/\b(insert|update|delete|merge|truncate)\b/i);
+['accountStatus','canCreateConferences','systemRoles','organizations','conferences','deviceOrganizationId','capabilities'].forEach(function(field){assert.ok(sql.includes("'"+field+"'"),'missing '+field);});
+console.log('user management read contract tests: passed');

@@ -1,0 +1,17 @@
+(function(global){
+  'use strict';
+  var namespace=global.BrowserStorageNamespace||{databaseName:function(name){return name;}};
+  var DB_NAME=namespace.databaseName('system_access_administration_attempts');
+  var STORE='attempts_v1',database=null,opening=null;
+  function uuid(v){return typeof v==='string'&&/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(v);}
+  function validAction(v){return ['approve','block','unblock','set_conference_creation_permission'].indexOf(v)>=0;}
+  function valuePart(input){return input.action==='approve'||input.action==='set_conference_creation_permission'?String(input.requestedValue):'-';}
+  function key(input){return [input.actorUserId,input.targetUserId,input.action,valuePart(input)].join('|');}
+  function valid(input){return input&&uuid(input.actorUserId)&&uuid(input.targetUserId)&&uuid(input.operationId)&&validAction(input.action)&&((['approve','set_conference_creation_permission'].indexOf(input.action)>=0&&typeof input.requestedValue==='boolean')||(['block','unblock'].indexOf(input.action)>=0&&input.requestedValue==null));}
+  function open(options){if(options&&options.repository)return Promise.resolve(null);if(database)return Promise.resolve(database);if(opening)return opening;var factory=options&&options.indexedDB||global.indexedDB;if(!factory)return Promise.reject(new Error('INDEXEDDB_UNAVAILABLE'));opening=new Promise(function(resolve,reject){var request=factory.open(DB_NAME,1);request.onupgradeneeded=function(){if(!request.result.objectStoreNames.contains(STORE))request.result.createObjectStore(STORE,{keyPath:'attemptKey'});};request.onsuccess=function(){database=request.result;opening=null;resolve(database);};request.onerror=function(){opening=null;reject(request.error);};});return opening;}
+  function call(method,attemptKey,value,options){if(options&&options.repository)return Promise.resolve(options.repository[method](attemptKey,value));return open(options).then(function(db){return new Promise(function(resolve,reject){var request=db.transaction(STORE,method==='get'?'readonly':'readwrite').objectStore(STORE)[method](method==='put'?value:attemptKey);request.onsuccess=function(){resolve(request.result);};request.onerror=function(){reject(request.error);};});});}
+  function prepare(input,operationId,options){var candidate=Object.assign({},input,{operationId:operationId}),attemptKey=key(candidate);if(!valid(candidate))return Promise.resolve({ok:false,status:'invalid'});return call('get',attemptKey,null,options).then(function(existing){if(existing){if(!valid(existing)||existing.attemptKey!==attemptKey)return {ok:false,status:'corrupt'};return {ok:true,status:'preserved',data:existing};}var now=new Date().toISOString(),record=Object.assign({},candidate,{attemptKey:attemptKey,createdAt:now,updatedAt:now});return call('put',attemptKey,record,options).then(function(){return {ok:true,status:'saved',data:record};});}).catch(function(){return {ok:false,status:'storage_error'};});}
+  function remove(input,options){return call('delete',key(input),null,options).then(function(){return {ok:true,status:'removed'};}).catch(function(){return {ok:false,status:'storage_error'};});}
+  function resetForTests(){if(database)database.close();database=null;opening=null;}
+  global.SystemAccessAdministrationAttemptStore=Object.freeze({prepare:prepare,remove:remove,buildAttemptKey:key,resetForTests:resetForTests});
+})(window);

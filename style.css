@@ -423,3 +423,42 @@ tr:nth-child(even) td{background:#F7FBFF}
 .conference-edit-lock-banner{display:none;position:fixed;z-index:10020;top:10px;left:50%;transform:translateX(-50%);padding:9px 16px;border-radius:9px;background:#E67E22;color:#fff;font-weight:700;box-shadow:0 3px 12px #0003}
 .accommodation-edit-mode-toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 12px;padding:10px;border:1px solid #dce7f0;border-radius:10px;background:#f8fbfd}
 .accommodation-edit-state{font-size:11px;color:#5a6f82;font-weight:700}
+/* User Management Phase 1 prototype */
+.user-management-layout{display:grid;grid-template-columns:minmax(260px,32%) minmax(0,1fr);gap:18px;align-items:start}
+.user-management-master{border:1px solid #dbe5ee;border-radius:14px;background:#f8fafc;overflow:hidden}
+.user-management-master-tools{display:grid;gap:9px;padding:14px;border-bottom:1px solid #dbe5ee}
+.user-management-master-tools input,.user-management-master-tools select{width:100%}
+.user-management-user-list{display:grid;gap:8px;padding:10px;max-height:68vh;overflow:auto}
+.user-management-user{display:grid;gap:7px;width:100%;padding:12px;border:1px solid transparent;border-radius:11px;background:#fff;color:inherit;text-align:right;cursor:pointer}
+.user-management-user:hover,.user-management-user-selected{border-color:#7c3aed;background:#f5f3ff}
+.user-management-user-heading,.user-management-counts{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.user-management-counts{font-size:.82rem;color:#64748b}
+.user-management-details{display:grid;gap:14px;min-width:0}
+.user-management-summary{display:flex;align-items:center;gap:12px;padding:16px;border:1px solid #dbe5ee;border-radius:14px;background:#fff}
+.user-management-summary h2{margin:0 0 4px;font-size:1.1rem}
+.user-management-summary .user-management-status{margin-inline-start:auto}
+.user-management-avatar{display:grid;place-items:center;width:48px;height:48px;border-radius:50%;background:#ede9fe;font-size:1.45rem}
+.user-management-status{display:inline-flex;align-items:center;width:max-content;padding:3px 9px;border-radius:999px;font-size:.76rem;font-weight:700}
+.user-management-status-approved{background:#dcfce7;color:#166534}
+.user-management-status-pending{background:#fef3c7;color:#92400e}
+.user-management-status-blocked{background:#fee2e2;color:#991b1b}
+.user-management-sections{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.user-management-section{border:1px solid #dbe5ee;border-radius:14px;background:#fff;overflow:hidden}
+.user-management-section-toggle{display:flex;align-items:center;justify-content:space-between;width:100%;padding:13px 15px;border:0;background:#f8fafc;color:inherit;font:inherit;font-weight:700;text-align:right;cursor:pointer}
+.user-management-section-body{display:none;padding:14px}
+.user-management-section-open .user-management-section-body{display:block}
+.user-management-section dl{display:grid;gap:8px;margin:0}
+.user-management-section dl div{display:flex;justify-content:space-between;gap:12px}
+.user-management-section dt{color:#64748b}.user-management-section dd{margin:0}
+.user-management-placeholder{display:grid;grid-template-columns:1fr auto;gap:5px 12px;align-items:center}
+.user-management-placeholder small{grid-column:1/-1;color:#64748b}
+.user-management-action-bar{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px;padding-top:12px;border-top:1px solid #e5e7eb}
+.user-management-action-bar button[disabled]{opacity:.55;cursor:not-allowed}
+@media(max-width:760px){
+  .user-management-layout{grid-template-columns:1fr}
+  .user-management-user-list{max-height:38vh}
+  .user-management-sections{grid-template-columns:1fr}
+  .user-management-section-body{display:none}
+  .user-management-section-open .user-management-section-body{display:block}
+  .user-management-summary{align-items:flex-start;flex-wrap:wrap}
+}

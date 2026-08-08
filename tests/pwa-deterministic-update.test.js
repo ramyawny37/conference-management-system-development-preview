@@ -9,25 +9,33 @@ const index=fs.readFileSync(path.join(root,'index.html'),'utf8');
 const manager=fs.readFileSync(path.join(root,'js/sync/conference-edit-lock-manager.js'),'utf8');
 
 const previous='exclusive-edit-lock-v1';
-const next='conference-role-management-v1';
+const next='user-management-scoped-v1';
+const conferenceRoleRevision='conference-role-management-v1';
 const houseTemplateRevision='house-template-propagation-v1';
 const pwaAssetRevision='startup-queue-recovery-v1';
 const appAssetRevision='section-accommodation-edit-lock-v1';
 assert(worker.includes("CACHE_REVISION = '"+next+"'"));
 assert(index.includes("window.APP_SHELL_REVISION='"+next+"'"));
 assert(index.includes('pwa.js?rev='+pwaAssetRevision));
-['script.js','houses.js','houseTemplates.js'].forEach(asset=>{
+['houses.js','houseTemplates.js'].forEach(asset=>{
   const versionedAsset=asset+'?rev='+houseTemplateRevision;
   assert(index.includes(versionedAsset),'index missing '+versionedAsset);
   assert(worker.includes("'./"+versionedAsset+"'"),'app shell missing '+versionedAsset);
 });
-const conferenceMembersUi='js/sync/conference-members-ui.js?rev='+next;
+const conferenceMembersUi='js/sync/conference-members-ui.js?rev='+conferenceRoleRevision;
 assert(index.includes(conferenceMembersUi),
   'index missing deterministic Conference Members UI revision');
 assert(worker.includes("'./"+conferenceMembersUi+"'"),
   'app shell missing deterministic Conference Members UI revision');
 assert(!index.includes('src="js/sync/conference-members-ui.js"'),
   'Conference Members UI must not use an unversioned script URL');
+['js/sync/user-management-read-service.js','js/sync/user-management-ui.js',
+  'script.js'].forEach(asset=>{
+  const versionedAsset=asset+'?rev='+next;
+  assert(index.includes(versionedAsset),'index missing '+versionedAsset);
+  assert(worker.includes("'./"+versionedAsset+"'"),
+    'app shell missing '+versionedAsset);
+});
 assert(index.includes('conference-edit-lock-manager.js?rev='+appAssetRevision));
 assert(!index.includes('conference-edit-lock-manager.js?rev='+previous));
 assert(manager.includes('beginAccommodationEdit'));

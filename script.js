@@ -2150,6 +2150,23 @@ function getAccommodationPersonDisplayName(person){
   return resolved&&resolved.fullName?resolved.fullName:(person.name||'');
 }
 
+var userManagementAccessState={status:'idle',capabilities:null};
+function ensureUserManagementAccess(){
+  if(userManagementAccessState.status!=='idle'||
+    !window.UserManagementReadService||
+    typeof window.UserManagementReadService.getActorCapabilities!=='function')return;
+  userManagementAccessState.status='loading';
+  window.UserManagementReadService.getActorCapabilities().then(function(response){
+    userManagementAccessState.status=response&&response.ok?'loaded':'error';
+    userManagementAccessState.capabilities=response&&response.ok
+      ?response.data.capabilities:null;
+    renderSettings();
+  }).catch(function(){
+    userManagementAccessState={status:'error',capabilities:null};
+    renderSettings();
+  });
+}
+
 function canEditCurrentConferenceData(){
   return currentConferenceRuntimeAccessRole===null||
     currentConferenceRuntimeAccessRole==='owner'||
@@ -7203,14 +7220,38 @@ function renderMigrationAuditSection(){
 function renderSettings(){
   var current = getCurrentConference();
   var activeSettingsTab = settingsTab || 'general';
+  ensureUserManagementAccess();
+  var canOpenUserManagement=userManagementAccessState.status==='loaded'&&
+    userManagementAccessState.capabilities&&
+    userManagementAccessState.capabilities.canOpenUserManagement===true;
+  if(activeSettingsTab==='users'&&!canOpenUserManagement){
+    activeSettingsTab='general';
+    settingsTab='general';
+  }
   var h='<div class="settings-dashboard" dir="rtl">';
   h+='<div class="settings-nav">';
   h+='<button class="btn '+(activeSettingsTab==='general'?'btn-purple':'btn-gray')+' btn-sm" onclick="switchSettingsTab(\'general\')">⚙️ إعدادات الحدث</button>';
   h+='<button class="btn '+(activeSettingsTab==='houses'?'btn-purple':'btn-gray')+' btn-sm" onclick="switchSettingsTab(\'houses\')">🏠 بيوت المؤتمرات</button>';
+  if(canOpenUserManagement)h+='<button class="btn '+(activeSettingsTab==='users'?'btn-purple':'btn-gray')+' btn-sm" onclick="switchSettingsTab(\'users\')">👥 إدارة المستخدمين</button>';
   h+='</div>';
   if (activeSettingsTab === 'houses') {
     h += '<section class="settings-section settings-library-section">' + renderHouseTemplatesSettings() + '</section></div>';
     ge('tab6').innerHTML = h;
+    return;
+  }
+  if (activeSettingsTab === 'users') {
+    if(window.UserManagementUI&&
+      typeof window.UserManagementUI.renderSection==='function'){
+      h+=window.UserManagementUI.renderSection();
+    }else{
+      h+='<div class="settings-empty-state">تعذر تحميل نموذج إدارة المستخدمين.</div>';
+    }
+    h+='</div>';
+    ge('tab6').innerHTML=h;
+    if(window.UserManagementUI&&
+      typeof window.UserManagementUI.initialize==='function'){
+      window.UserManagementUI.initialize();
+    }
     return;
   }
   if(window.ConferenceSyncUI&&

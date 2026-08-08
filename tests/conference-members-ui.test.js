@@ -102,6 +102,9 @@ function environment(overrides){
         ok:true,status:'added',data:{replayed:false}
       });
     },
+    addManager:function(input){
+      return this.addMember(input,'manager');
+    },
     changeRole:function(input,role){
       calls.push({method:'changeRole',input:input,role:role});
       return Promise.resolve({
@@ -113,6 +116,9 @@ function environment(overrides){
       return Promise.resolve({
         ok:true,status:'removed',data:{replayed:false}
       });
+    },
+    removeManager:function(input){
+      return this.removeMember(input);
     }
   };
   var sandbox={
@@ -205,7 +211,7 @@ async function run(){
   );
   assert.ok(
     env.elements.conference_members_content.innerHTML
-      .indexOf('تمت إضافة العضو')>=0
+      .indexOf('تمت إضافة المدير')>=0
   );
 
   await env.ui.removeManager(ids.manager);
@@ -335,6 +341,9 @@ async function run(){
       addMember:function(){
         doubleCalls++;
         return addDeferred.promise;
+      },
+      addManager:function(){
+        return this.addMember();
       }
     }
   });
@@ -451,6 +460,9 @@ async function run(){
         return Promise.resolve({
           ok:true,status:'added',data:{replayed:false}
         });
+      },
+      addManager:function(){
+        return this.addMember();
       }
     }
   });
@@ -464,7 +476,7 @@ async function run(){
   var mutationFailureHtml=
     mutationRefreshFailure.elements
       .conference_members_content.innerHTML;
-  assert.ok(mutationFailureHtml.indexOf('تمت إضافة العضو')>=0);
+  assert.ok(mutationFailureHtml.indexOf('تمت إضافة المدير')>=0);
   assert.ok(
     mutationFailureHtml.indexOf(
       'قد تكون البيانات المعروضة قديمة'
@@ -474,13 +486,13 @@ async function run(){
 
   var publicApi=Object.keys(env.ui).sort();
   assert.deepStrictEqual(Array.from(publicApi),[
-    'addMember',
     'addManager',
+    'addMember',
     'changeRole',
     'lookup',
     'refresh',
-    'removeMember',
     'removeManager',
+    'removeMember',
     'renderSection',
     'resetForTests'
   ]);

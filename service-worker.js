@@ -6,7 +6,7 @@ const CACHE_NAMESPACE = IS_DEVELOPMENT
   ? 'cms:development:' + DEVELOPMENT_PROJECT_REF + ':'
   : '';
 const CACHE_PREFIX = CACHE_NAMESPACE + 'conference-manager-core-';
-const CACHE_REVISION = 'conference-role-management-v1';
+const CACHE_REVISION = 'user-management-scoped-v1';
 const CACHE_NAME = CACHE_PREFIX + 'v' + APP_VERSION + '-' + CACHE_REVISION;
 const CORE_ASSETS = [
   './',
@@ -59,6 +59,10 @@ const CORE_ASSETS = [
   './js/sync/conference-membership-attempt-store.js',
   './js/sync/conference-members-service.js',
   './js/sync/conference-members-ui.js?rev=conference-role-management-v1',
+  './js/sync/system-access-administration-attempt-store.js?rev=user-account-administration-v1',
+  './js/supabase/account-administration-service.js?rev=user-account-administration-v1',
+  './js/sync/user-management-read-service.js?rev=user-management-scoped-v1',
+  './js/sync/user-management-ui.js?rev=user-management-scoped-v1',
   './js/sync/conference-linking-attempt-store.js',
   './js/sync/conference-linking-service.js',
   './js/sync/conference-sync-ui.js',
@@ -94,7 +98,7 @@ const CORE_ASSETS = [
   './js/conference/accounts.js',
   './js/conference-template-houses-editor.js',
   './cards.js',
-  './script.js?rev=house-template-propagation-v1',
+  './script.js?rev=user-management-scoped-v1',
   './version.js',
   './pwa.js?rev=realtime-drop-instrumentation-v1',
   './libs/html2canvas.min.js',
