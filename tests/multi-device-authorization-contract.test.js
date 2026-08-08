@@ -27,5 +27,5 @@ assert.match(gate,/status==='approved'/);
 assert.doesNotMatch(gate,/isSoleApprovedDevice|approvedDeviceCount|count/);
 assert.doesNotMatch(migration+ui,/SyncQueue|revision|ConferenceLinkStore|AutomaticSync/);
 assert.match(state,/DeviceReauthorizationFlow\.waitUntilApproved/);
-['js/sync/device-authorization-administration-ui.js?rev=multi-device-authorization-v1'].forEach(function(asset){assert.ok(index.includes(asset),asset);assert.ok(worker.includes('./'+asset),asset);});
+['js/sync/device-authorization-administration-ui.js?rev=startup-device-admin-lifecycle-v1'].forEach(function(asset){assert.ok(index.includes(asset),asset);assert.ok(worker.includes('./'+asset),asset);});
 console.log('multi-device authorization contract tests: passed');

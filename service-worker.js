@@ -6,7 +6,7 @@ const CACHE_NAMESPACE = IS_DEVELOPMENT
   ? 'cms:development:' + DEVELOPMENT_PROJECT_REF + ':'
   : '';
 const CACHE_PREFIX = CACHE_NAMESPACE + 'conference-manager-core-';
-const CACHE_REVISION = 'startup-device-realtime-v1';
+const CACHE_REVISION = 'startup-device-admin-lifecycle-v1';
 const CACHE_NAME = CACHE_PREFIX + 'v' + APP_VERSION + '-' + CACHE_REVISION;
 const CORE_ASSETS = [
   './',
@@ -36,14 +36,14 @@ const CORE_ASSETS = [
   './js/sync/organization-members-ui.js',
   './js/sync/organization-management-attempt-store.js?rev=organization-management-v1',
   './js/supabase/organization-management-service.js?rev=organization-archive-restore-v1',
-  './js/sync/organization-management-ui.js?rev=organization-archive-restore-v1',
+  './js/sync/organization-management-ui.js?rev=startup-device-admin-lifecycle-v1',
   './js/supabase/device-identity.js',
   './js/sync/device-authorization-operation-repository.js',
   './js/supabase/current-device-authorization-service.js?rev=device-reauthorization-flow-v2',
   './js/supabase/device-authorization-administration-service.js?rev=device-single-replacement-v1',
   './js/sync/current-device-authorization-ui.js?rev=device-onboarding-v1',
   './js/sync/device-reauthorization-flow.js?rev=device-reauthorization-flow-v1',
-  './js/sync/device-authorization-administration-ui.js?rev=multi-device-authorization-v1',
+  './js/sync/device-authorization-administration-ui.js?rev=startup-device-admin-lifecycle-v1',
   './js/supabase/snapshot-sync.js?rev=startup-queue-recovery-v1',
   './js/sync/startup-conference-discovery.js?rev=organization-template-sync-v1',
   './js/sync/organization-template-sync.js?rev=organization-template-sync-v1',
@@ -59,7 +59,7 @@ const CORE_ASSETS = [
   './js/sync/experimental-conference-reset.js?rev=experimental-reset-v1',
   './js/sync/sync-settings-ui.js?rev=first-use-auth-v1',
   './js/supabase/first-system-bootstrap-service.js?rev=first-owner-bootstrap-hardening-v1',
-  './js/sync/startup-access-gate.js?rev=startup-device-realtime-v1',
+  './js/sync/startup-access-gate.js?rev=startup-device-admin-lifecycle-v1',
   './js/sync/link-status-diagnostic-store.js',
   './js/sync/conference-link-store.js',
   './js/sync/conference-membership-attempt-store.js',
@@ -68,7 +68,7 @@ const CORE_ASSETS = [
   './js/sync/system-access-administration-attempt-store.js?rev=user-account-administration-v1',
   './js/supabase/account-administration-service.js?rev=user-account-administration-v1',
   './js/sync/user-management-read-service.js?rev=organization-archive-restore-v1',
-  './js/sync/user-management-ui.js?rev=organization-archive-restore-v1',
+  './js/sync/user-management-ui.js?rev=startup-device-admin-lifecycle-v1',
   './js/sync/conference-linking-attempt-store.js',
   './js/sync/conference-linking-service.js',
   './js/sync/conference-sync-ui.js',
@@ -104,7 +104,7 @@ const CORE_ASSETS = [
   './js/conference/accounts.js',
   './js/conference-template-houses-editor.js',
   './cards.js',
-  './script.js?rev=startup-device-realtime-v1',
+  './script.js?rev=startup-device-admin-lifecycle-v1',
   './version.js',
   './pwa.js?rev=realtime-drop-instrumentation-v1',
   './libs/html2canvas.min.js',

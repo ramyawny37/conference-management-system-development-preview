@@ -1145,6 +1145,7 @@ function switchSettingsTab(tab) {
   }
   settingsTab = tab || 'general';
   renderSettings();
+  resetAdministrativeViewScroll();
 }
 
 function mountSyncSettingsSection(){
@@ -1353,7 +1354,14 @@ function saveApplicationView(view){
 
 function restoreLastApplicationTab(){
   var storedTab = getStoredLastTab();
-  if (!switchTab(storedTab === null ? 0 : storedTab)) switchTab(0);
+  var restoredTab=storedTab===null?0:storedTab;
+  if (!switchTab(restoredTab)) switchTab(0);
+  if(restoredTab===getApplicationTabIdByName('settings'))resetAdministrativeViewScroll();
+}
+
+function resetAdministrativeViewScroll(){
+  if(typeof window.scrollTo!=='function')return;
+  try{window.scrollTo({top:0,left:0,behavior:'auto'});}catch(error){window.scrollTo(0,0);}
 }
 
 function switchTab(n){
@@ -1399,7 +1407,9 @@ function openSettingsFromHome(){
   var settingsTabId=getApplicationTabIdByName('settings');
   if(settingsTabId===null)return false;
   setApplicationMode('application');
-  return switchTab(settingsTabId);
+  var opened=switchTab(settingsTabId);
+  if(opened)resetAdministrativeViewScroll();
+  return opened;
 }
 
 function showHomePage(){

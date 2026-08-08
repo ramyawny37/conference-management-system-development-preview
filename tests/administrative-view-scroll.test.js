@@ -1,0 +1,16 @@
+'use strict';
+const assert=require('assert'),fs=require('fs'),path=require('path');
+const root=path.resolve(__dirname,'..');
+const app=fs.readFileSync(path.join(root,'script.js'),'utf8');
+const organizations=fs.readFileSync(path.join(root,'js/sync/organization-management-ui.js'),'utf8');
+const reset=app.match(/function resetAdministrativeViewScroll\(\)[\s\S]*?\n\}/);
+assert(reset,'directed administrative scroll reset must exist');
+assert.match(reset[0],/window\.scrollTo/);
+assert.match(app,/function switchSettingsTab\([\s\S]*?renderSettings\(\);\s*resetAdministrativeViewScroll\(\);/);
+assert.match(app,/function openSettingsFromHome\([\s\S]*?if\(opened\)resetAdministrativeViewScroll\(\)/);
+assert.match(app,/function restoreLastApplicationTab\([\s\S]*?getApplicationTabIdByName\('settings'\)\)resetAdministrativeViewScroll\(\)/);
+assert.match(organizations,/function open\([\s\S]*?resetAdministrativeViewScroll/);
+const render=app.match(/function renderSettings\(\)[\s\S]*?\n\}/);
+assert(render);
+assert.doesNotMatch(render[0],/resetAdministrativeViewScroll/,'same-view rerender must preserve scroll');
+console.log('administrative view scroll tests: passed');
