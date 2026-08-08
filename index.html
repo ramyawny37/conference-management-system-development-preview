@@ -21,11 +21,12 @@
 </div>
 
 
-<div class="topbar" id="applicationTopbar">
+<div id="startupAccessGate" class="startup-access-gate"><div class="startup-access-card">جارٍ التحقق من جلسة الدخول...</div></div>
+<div class="topbar" id="applicationTopbar" style="display:none">
   <div class="logo" id="logo-text">🏨 إدارة المؤتمر</div>
   <div class="main-tabs">
     <div class="main-tab" id="homeTabButton" onclick="showHomePage()"><span class="main-tab-icon">🏠</span><span class="main-tab-label">الرئيسية</span></div>
-    <div class="tab main-tab active" onclick="switchTab(0)"><span class="main-tab-icon">🏨</span><span class="main-tab-label">التسكين</span></div>
+    <div class="tab main-tab" onclick="switchTab(0)"><span class="main-tab-icon">🏨</span><span class="main-tab-label">التسكين</span></div>
     <div class="tab main-tab" onclick="switchTab(1)"><span class="main-tab-icon">🚌</span><span class="main-tab-label">المواصلات</span></div>
     <div class="tab main-tab" onclick="switchTab(2)"><span class="main-tab-icon">💰</span><span class="main-tab-label">الحسابات</span></div>
     <div class="tab main-tab" onclick="switchTab(3)"><span class="main-tab-icon">📊</span><span class="main-tab-label">التقارير</span></div>
@@ -42,7 +43,7 @@
   </div>
 </div>
 
-<div class="body" id="applicationBody">
+<div class="body" id="applicationBody" style="display:none">
   <div id="globalConferenceHeader"></div>
   <div id="current_device_authorization_root"></div>
   <div id="device_authorization_administration_root" style="display:none"></div>
@@ -499,6 +500,7 @@
 <script src="js/sync/device-rescue-export.js?rev=device-rescue-export-v1"></script>
 <script src="js/sync/experimental-conference-reset.js?rev=experimental-reset-v1"></script>
 <script src="js/sync/sync-settings-ui.js?rev=first-use-auth-v1"></script>
+<script src="js/sync/startup-access-gate.js?rev=startup-auth-gate-v1"></script>
 <script src="js/sync/link-status-diagnostic-store.js"></script>
 <script src="js/sync/conference-link-store.js"></script>
 <script src="js/sync/conference-membership-attempt-store.js"></script>
@@ -568,7 +570,7 @@
     });
   });
 </script>
-<script>window.APP_SHELL_REVISION='first-use-auth-v1';</script>
+<script>window.APP_SHELL_REVISION='startup-auth-gate-v1';</script>
 <script src="pwa.js?rev=startup-queue-recovery-v1"></script>
 </body>
 </html>

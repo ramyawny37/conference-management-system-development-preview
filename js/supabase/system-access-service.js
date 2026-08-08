@@ -144,7 +144,7 @@
   function applyUi(){
     var document=global.document;
     if(!document||typeof document.querySelectorAll!=='function')return;
-    var restricted=state.authenticated&&
+    var restricted=!state.authenticated||
       (!state.profileLoaded||!state.fresh||
        state.accountStatus==='pending'||state.accountStatus==='blocked'||
         state.accountStatus==='approved'&&

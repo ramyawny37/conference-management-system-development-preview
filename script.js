@@ -206,6 +206,7 @@ function restoreArchive(id){
   return true;
 }
 function setCurrentConferenceById(id, options){
+  if(window.StartupAccessGate&&!window.StartupAccessGate.isAllowed())return false;
   options = options || {};
   if(window.ConferenceEditLockManager&&
     window.ConferenceEditLockManager.getState&&
@@ -393,6 +394,7 @@ function purgeTrashItem(type, trashId){
 // PERSIST
 // ═══════════════════════════════════════════════════════
 function exportJsonFile(){
+  if(window.StartupAccessGate&&!window.StartupAccessGate.isAllowed())return false;
   updateCurrentConferenceData();
   var data=JSON.stringify(appData,null,2);
   var a=document.createElement('a');
@@ -964,6 +966,7 @@ function selectImportedConference(candidates){
 }
 
 function importSingleConferenceData(importedData){
+  if(window.StartupAccessGate&&!window.StartupAccessGate.isAllowed())return false;
   var importedConference=createConferenceFromObject(importedData);
   var previousConferences=deepClone(appData.conferences||[]);
   var previousCurrentConferenceId=appData.currentConferenceId;
@@ -1014,6 +1017,7 @@ function importSingleConferenceData(importedData){
 }
 
 function loadFromFile(e){
+  if(window.StartupAccessGate&&!window.StartupAccessGate.isAllowed())return false;
   var f=e.target.files[0];if(!f)return;
   var r=new FileReader();
   r.onload=function(ev){
@@ -1106,6 +1110,7 @@ function renderGlobalConferenceHeader(){
 }
 
 function saveToFile(){
+  if(window.StartupAccessGate&&!window.StartupAccessGate.isAllowed())return false;
   updateCurrentConferenceData();
   var data = JSON.stringify({appData: appData}, null, 2);
   var orig = document.documentElement.outerHTML;
@@ -1348,6 +1353,7 @@ function restoreLastApplicationTab(){
 }
 
 function switchTab(n){
+  if(window.StartupAccessGate&&!window.StartupAccessGate.isAllowed())return false;
   var tabId = typeof n === 'number' ? n : parseInt(n, 10);
   if (!isValidApplicationTab(tabId)) return false;
   var settingsTabId=getApplicationTabIdByName('settings');
@@ -1384,6 +1390,7 @@ function getApplicationTabIdByName(tabName){
 من خلال setApplicationMode() ثم يفتح التبويب عبر switchTab().
 */
 function openSettingsFromHome(){
+  if(window.StartupAccessGate&&!window.StartupAccessGate.isAllowed())return false;
   var settingsTabId=getApplicationTabIdByName('settings');
   if(settingsTabId===null)return false;
   setApplicationMode('application');
@@ -6031,6 +6038,7 @@ Application Navigation - Central Entry Points
 الدوال المركزية الحالية بدل إنشاء مسار مستقل.
 */
 function openStartupScreen(options){
+  if(window.StartupAccessGate&&!window.StartupAccessGate.isAllowed())return false;
   options=options||{};
   var clearCurrentConference=options.clearCurrentConference===true;
   var persistView=options.persistView!==false;
@@ -6194,6 +6202,7 @@ function getStartupConferenceViewModel(){
 }
 
 function showStartupConferenceList(){
+  if(window.StartupAccessGate&&!window.StartupAccessGate.isAllowed())return false;
   var conferences = getStartupConferenceViewModel();
   var activeConferences = [];
   var completedConferences = [];
@@ -6232,6 +6241,7 @@ function returnToStartupScreen(){
 }
 
 function showSelectConferenceModal(){
+  if(window.StartupAccessGate&&!window.StartupAccessGate.isAllowed())return false;
   openStartupScreen({clearCurrentConference:false,persistView:true});
   var startupList = ge('startupConferenceList');
   if(startupList){
@@ -8439,6 +8449,7 @@ function systemAccessAllowsConferenceCreation(){
 }
 
 function openNewConferenceModal(mode){
+  if(window.StartupAccessGate&&!window.StartupAccessGate.isAllowed())return false;
   conferenceDraft = null;
   conferenceDialogMode = (mode === 'edit') ? 'edit' : 'create';
   var current = getCurrentConference();
@@ -8822,7 +8833,7 @@ function doBulkAssign(){
 // ═══════════════════════════════════════════════════════
 //__S__
 //__E__
-window.applicationStorageReadyPromise=initializeApplicationStorage().then(function(){
+function completeApplicationStartup(){
   syncCurrentConferenceRefs();
   if(!getCurrentConference()){
     showSelectConferenceModal();
@@ -8833,11 +8844,21 @@ window.applicationStorageReadyPromise=initializeApplicationStorage().then(functi
     restoreLastApplicationTab();
   }
   return true;
+}
+window.applicationStorageReadyPromise=initializeApplicationStorage().then(function(){
+  syncCurrentConferenceRefs();
+  return true;
 }).catch(function(e){
   alert('خطأ: '+e.message);
   return false;
 });
 window.applicationStorageReadyPromise.then(function(){
+  if(window.StartupAccessGate&&typeof window.StartupAccessGate.run==='function'){
+    return window.StartupAccessGate.run({completeApplicationStartup:completeApplicationStartup});
+  }
+  return Promise.reject(new Error('STARTUP_ACCESS_GATE_REQUIRED'));
+}).then(function(gateResult){
+  if(!gateResult||gateResult.status!=='allowed')return;
   try{
     if(window.FullBackupService&&
       typeof window.FullBackupService.isFullRestoreCloudReviewPending==='function'&&

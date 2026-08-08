@@ -9,7 +9,7 @@ const index=fs.readFileSync(path.join(root,'index.html'),'utf8');
 const manager=fs.readFileSync(path.join(root,'js/sync/conference-edit-lock-manager.js'),'utf8');
 
 const previous='exclusive-edit-lock-v1';
-const next='first-use-auth-v1';
+const next='startup-auth-gate-v1';
 const userManagementUiRevision='user-onboarding-flow-v1';
 const userManagementStyleRevision='user-management-ui-polish-v1';
 const userManagementReadRevision='user-management-scoped-v1';
@@ -22,6 +22,8 @@ assert(index.includes("window.APP_SHELL_REVISION='"+next+"'"));
 assert(index.includes('pwa.js?rev='+pwaAssetRevision));
 assert(index.includes('js/sync/sync-settings-ui.js?rev=first-use-auth-v1'));
 assert(worker.includes("'./js/sync/sync-settings-ui.js?rev=first-use-auth-v1'"));
+assert(index.includes('js/sync/startup-access-gate.js?rev=startup-auth-gate-v1'));
+assert(worker.includes("'./js/sync/startup-access-gate.js?rev=startup-auth-gate-v1'"));
 ['houses.js','houseTemplates.js'].forEach(asset=>{
   const versionedAsset=asset+'?rev='+houseTemplateRevision;
   assert(index.includes(versionedAsset),'index missing '+versionedAsset);
