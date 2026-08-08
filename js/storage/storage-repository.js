@@ -43,6 +43,12 @@
           });
       })
       .then(function(saveResult){
+        var templateSync=options.skipTemplateSync
+          ?null:global.OrganizationTemplateSync;
+        if(templateSync&&typeof templateSync.captureLocalSave==='function'){
+          Promise.resolve(templateSync.captureLocalSave(queuedSnapshot))
+            .catch(function(){return null;});
+        }
         var queued=localSaveResult&&localSaveResult.ok===true&&
           localSaveResult.status==='queued'&&
           localSaveResult.data&&

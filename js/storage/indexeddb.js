@@ -7,7 +7,7 @@
   var DATABASE_NAME = namespace.databaseName(
     'conference_manager_v3'
   );
-  var DATABASE_VERSION = 4;
+  var DATABASE_VERSION = 5;
   var STORE_NAMES = Object.freeze({
     conferences: 'conferences',
     rooms: 'rooms',
@@ -21,7 +21,9 @@
     conflictResolutionDrafts: 'conflict_resolution_drafts',
     conflictResolutionBackups: 'conflict_resolution_backups',
     organizationMembershipPendingOperations:
-      'organization_membership_pending_operations'
+      'organization_membership_pending_operations',
+    organizationTemplateOperations:
+      'organization_template_operations'
   });
   var database = null;
   var openingPromise = null;
@@ -110,6 +112,15 @@
         ]},
         {name:'by_user_created_at',keyPath:[
           'authenticatedUserId','createdAt'
+        ]},
+        {name:'by_created_at',keyPath:'createdAt'}
+      ]);
+    ensureStore(db,upgradeTransaction,
+      STORE_NAMES.organizationTemplateOperations,
+      {keyPath:'operationId'},[
+        {name:'by_organization_status',keyPath:['organizationId','status']},
+        {name:'by_template',keyPath:[
+          'organizationId','templateType','templateId'
         ]},
         {name:'by_created_at',keyPath:'createdAt'}
       ]);

@@ -9,11 +9,11 @@ const index=fs.readFileSync(path.join(root,'index.html'),'utf8');
 const manager=fs.readFileSync(path.join(root,'js/sync/conference-edit-lock-manager.js'),'utf8');
 
 const previous='exclusive-edit-lock-v1';
-const next='organization-archive-restore-v1';
+const next='organization-template-sync-v1';
 const bootstrapRevision='first-owner-bootstrap-hardening-v1';
-const userManagementUiRevision=next;
+const userManagementUiRevision='organization-archive-restore-v1';
 const userManagementStyleRevision='organization-management-v1';
-const userManagementReadRevision=next;
+const userManagementReadRevision='organization-archive-restore-v1';
 const conferenceRoleRevision='conference-role-management-v1';
 const houseTemplateRevision='house-template-propagation-v1';
 const pwaAssetRevision='startup-queue-recovery-v1';
@@ -54,9 +54,18 @@ assert(index.includes(readAsset));
 assert(worker.includes("'./"+readAsset+"'"));
 assert(index.includes('script.js?rev='+next));
 [
+  'js/storage/indexeddb.js','js/storage/storage-repository.js',
+  'js/sync/startup-conference-discovery.js',
+  'js/sync/organization-template-sync.js'
+].forEach(asset=>{
+  const versioned=asset+'?rev='+next;
+  assert(index.includes(versioned),'index missing '+versioned);
+  assert(worker.includes("'./"+versioned+"'"),'app shell missing '+versioned);
+});
+[
   ['js/sync/organization-management-attempt-store.js','organization-management-v1'],
-  ['js/supabase/organization-management-service.js',next],
-  ['js/sync/organization-management-ui.js',next]
+  ['js/supabase/organization-management-service.js','organization-archive-restore-v1'],
+  ['js/sync/organization-management-ui.js','organization-archive-restore-v1']
 ].forEach(([asset,revision])=>{const versioned=asset+'?rev='+revision;assert(index.includes(versioned));assert(worker.includes("'./"+versioned+"'"));});
 assert(index.includes('conference-edit-lock-manager.js?rev='+appAssetRevision));
 assert(!index.includes('conference-edit-lock-manager.js?rev='+previous));

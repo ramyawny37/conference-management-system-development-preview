@@ -152,7 +152,11 @@ function saveTemplate(){
   var name = prompt('أدخل اسم القالب:','قالب '+new Date().toISOString().slice(0,10));
   if(!name) return;
   updateCurrentConferenceData();
-  appData.templates.push({id:uid(),name:name,createdAt:new Date().toISOString(),data:deepClone(getCurrentConference())});
+  var conferenceTemplate={id:uid(),name:name,createdAt:new Date().toISOString(),data:deepClone(getCurrentConference())};
+  if(window.OrganizationTemplateSync&&typeof window.OrganizationTemplateSync.scopeTemplate==='function'){
+    window.OrganizationTemplateSync.scopeTemplate(conferenceTemplate);
+  }
+  appData.templates.push(conferenceTemplate);
   if(!save())return false;
   renderSettings();
   showToast('✅ تم حفظ القالب');
@@ -8181,7 +8185,10 @@ function saveHouseTemplate() {
   } else {
     appData.houseTemplates.push(template);
   }
-  selectedHouseTemplateId = template.id;
+    if(window.OrganizationTemplateSync&&typeof window.OrganizationTemplateSync.scopeTemplate==='function'){
+      window.OrganizationTemplateSync.scopeTemplate(template);
+    }
+    selectedHouseTemplateId = template.id;
   var conferenceRefresh = refreshConferenceHouseAfterTemplateMutation(template);
 
   if(!save()){

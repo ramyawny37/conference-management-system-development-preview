@@ -120,11 +120,15 @@
           }
           records=discovered;
           render();
-          return {
+          var templateSync=global.OrganizationTemplateSync;
+          var templateRefresh=templateSync&&
+            typeof templateSync.refresh==='function'
+            ?templateSync.refresh(options):Promise.resolve(null);
+          return Promise.resolve(templateRefresh).then(function(){return {
             ok:true,
             status:'discovered',
             data:{conferences:copy(records)}
-          };
+          };});
         });
       }).then(function(result){
         if(result&&result.status==='list_failed')render();
