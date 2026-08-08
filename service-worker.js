@@ -6,12 +6,12 @@ const CACHE_NAMESPACE = IS_DEVELOPMENT
   ? 'cms:development:' + DEVELOPMENT_PROJECT_REF + ':'
   : '';
 const CACHE_PREFIX = CACHE_NAMESPACE + 'conference-manager-core-';
-const CACHE_REVISION = 'user-management-scoped-v1';
+const CACHE_REVISION = 'user-management-ui-polish-v1';
 const CACHE_NAME = CACHE_PREFIX + 'v' + APP_VERSION + '-' + CACHE_REVISION;
 const CORE_ASSETS = [
   './',
   './index.html',
-  './style.css',
+  './style.css?rev=user-management-ui-polish-v1',
   './js/storage/environment-namespace.js',
   './js/storage/indexeddb.js',
   './js/storage/storage-repository.js?rev=local-save-queue-wake-v1',
@@ -62,7 +62,7 @@ const CORE_ASSETS = [
   './js/sync/system-access-administration-attempt-store.js?rev=user-account-administration-v1',
   './js/supabase/account-administration-service.js?rev=user-account-administration-v1',
   './js/sync/user-management-read-service.js?rev=user-management-scoped-v1',
-  './js/sync/user-management-ui.js?rev=user-management-scoped-v1',
+  './js/sync/user-management-ui.js?rev=user-management-ui-polish-v1',
   './js/sync/conference-linking-attempt-store.js',
   './js/sync/conference-linking-service.js',
   './js/sync/conference-sync-ui.js',

@@ -13,7 +13,7 @@ assert.ok(source.includes('disabled'));assert.ok(source.includes('UserManagement
 assert.ok(source.includes('initialize'));
 assert.doesNotMatch(source,/prototype-user-|example\.test|var\s+USERS/);
 assert.doesNotMatch(source,/\.rpc\s*\(|\.from\s*\(|\.insert\s*\(|\.update\s*\(|\.delete\s*\(/);
-var asset='js/sync/user-management-ui.js?rev=user-management-scoped-v1';
+var asset='js/sync/user-management-ui.js?rev=user-management-ui-polish-v1';
 var serviceAsset='js/sync/user-management-read-service.js?rev=user-management-scoped-v1';
 assert.ok(index.includes('src="'+asset+'"'));assert.ok(worker.includes("'./"+asset+"'"));
 assert.ok(index.includes('src="'+serviceAsset+'"'));assert.ok(worker.includes("'./"+serviceAsset+"'"));
