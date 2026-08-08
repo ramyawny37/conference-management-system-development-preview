@@ -1365,6 +1365,7 @@ function switchTab(n){
     return false;
   }
   var previousTab=currentTab;
+  closeOrganizationManagementScreen();
   currentTab=tabId;
   if(tabId===2&&previousTab!==2)v3AccordionOpenSection='';
   saveApplicationView('application');
@@ -2159,6 +2160,10 @@ function getAccommodationPersonDisplayName(person){
 
 var userManagementAccessState={status:'idle',capabilities:null};
 var organizationManagementAccessState={status:'idle',canOpen:false};
+function closeOrganizationManagementScreen(){
+  var screen=ge('organizationManagementScreen');
+  if(screen)screen.style.display='none';
+}
 function applyOrganizationManagementEntryVisibility(){
   var visible=organizationManagementAccessState.status==='loaded'&&
     organizationManagementAccessState.canOpen===true;
@@ -2180,7 +2185,7 @@ function ensureOrganizationManagementAccess(){
       data.canCreate===true||Array.isArray(data.organizations)&&data.organizations.some(function(organization){
         var capabilities=organization&&organization.capabilities||{};
         return capabilities.canManageMembers===true||capabilities.canEdit===true||
-          capabilities.canArchive===true;
+          capabilities.canArchive===true||capabilities.canRestore===true;
       })
     ));
     applyOrganizationManagementEntryVisibility();
@@ -6073,10 +6078,7 @@ function openStartupScreen(options){
   if(window.StartupAccessGate&&!window.StartupAccessGate.isAllowed())return false;
   ensureOrganizationManagementAccess();
   options=options||{};
-  var organizationScreen=ge('organizationManagementScreen');
-  if(organizationScreen)organizationScreen.style.display='none';
-  var organizationButton=ge('organizationManagementTabButton');
-  if(organizationButton)organizationButton.classList.remove('active','main-tab-active');
+  closeOrganizationManagementScreen();
   var clearCurrentConference=options.clearCurrentConference===true;
   var persistView=options.persistView!==false;
   var previousCurrentConferenceId=appData.currentConferenceId;
@@ -7281,7 +7283,7 @@ function renderSettings(){
   h+='<button class="btn '+(activeSettingsTab==='general'?'btn-purple':'btn-gray')+' btn-sm" onclick="switchSettingsTab(\'general\')">⚙️ إعدادات الحدث</button>';
   h+='<button class="btn '+(activeSettingsTab==='houses'?'btn-purple':'btn-gray')+' btn-sm" onclick="switchSettingsTab(\'houses\')">🏠 بيوت المؤتمرات</button>';
   if(canOpenUserManagement)h+='<button class="btn '+(activeSettingsTab==='users'?'btn-purple':'btn-gray')+' btn-sm" onclick="switchSettingsTab(\'users\')">👥 إدارة المستخدمين</button>';
-  if(organizationManagementAccessState.status==='loaded'&&organizationManagementAccessState.canOpen)h+='<button class="btn btn-gray btn-sm" data-organization-management-entry onclick="OrganizationManagementUI.open()">🏢 إدارة المؤسسات</button>';
+  if(organizationManagementAccessState.status==='loaded'&&organizationManagementAccessState.canOpen)h+='<button class="btn btn-gray btn-sm" data-organization-management-entry onclick="OrganizationManagementUI.open({returnView:\'settings\'})">🏢 إدارة المؤسسات</button>';
   h+='</div>';
   if (activeSettingsTab === 'houses') {
     h += '<section class="settings-section settings-library-section">' + renderHouseTemplatesSettings() + '</section></div>';
@@ -7861,10 +7863,7 @@ function saveTemplateFloor() {
     selectedHouseTemplateId = previousSelectedHouseTemplateId;
     return false;
   }
-  var organizationScreen=ge('organizationManagementScreen');
-  if(organizationScreen)organizationScreen.style.display='none';
-  var organizationButton=ge('organizationManagementTabButton');
-  if(organizationButton)organizationButton.classList.remove('active','main-tab-active');
+  closeOrganizationManagementScreen();
   var conferenceHeader=ge('globalConferenceHeader');
   if(conferenceHeader)conferenceHeader.style.display='';
   if (editHouseTemplateId === house.id && ge('houseTemplateModal').style.display !== 'none') {

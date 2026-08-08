@@ -2,6 +2,7 @@
 const assert=require('assert'),fs=require('fs'),path=require('path');
 const sql=fs.readFileSync(path.resolve(__dirname,'../supabase/migrations/20260810_6_6_0_organization_management.sql'),'utf8');
 const resolution=fs.readFileSync(path.resolve(__dirname,'../supabase/migrations/20260810_6_6_1_security_definer_extension_resolution.sql'),'utf8');
+const lifecycle=fs.readFileSync(path.resolve(__dirname,'../supabase/migrations/20260811_6_7_0_organization_archive_restore.sql'),'utf8');
 ['organization_management_operations','organization_management_audit_log','get_organization_management_overview','manage_organization','require_current_approved_device','SYSTEM_OWNER_REQUIRED','ORGANIZATION_OWNER_REQUIRED','ORGANIZATION_OPERATION_MISMATCH','pg_advisory_xact_lock'].forEach(value=>assert(sql.includes(value),'missing '+value));
 assert.match(sql,/status text not null default 'active'[\s\S]*status in \('active','archived'\)/i);
 assert.match(sql,/p_action='create'[\s\S]*insert into public\.organizations[\s\S]*insert into public\.organization_members/i);
@@ -11,4 +12,10 @@ assert.match(sql,/grant execute on function public\.manage_organization[\s\S]*to
 assert.match(resolution,/has_schema_privilege\('authenticated','extensions','create'\)/i);
 assert.match(resolution,/alter function public\.manage_organization[\s\S]*set search_path=pg_catalog,public,extensions/i);
 assert.match(resolution,/alter function public\.complete_first_system_bootstrap[\s\S]*set search_path=pg_catalog,public,extensions/i);
+assert.match(lifecycle,/action in \('create','update','archive','restore'\)/i);
+assert.match(lifecycle,/result_status in \('created','updated','archived','restored','unchanged'\)/i);
+assert.match(lifecycle,/p_action not in \('create','update','archive','restore'\)/i);
+assert.match(lifecycle,/p_action='archive'[\s\S]*status='archived'[\s\S]*status='active'[\s\S]*result_status:='restored'/i);
+assert.match(lifecycle,/organization_members_reject_archived_mutation/i);
+assert.match(lifecycle,/ARCHIVED_ORGANIZATION_READ_ONLY/i);
 console.log('organization management SQL contract tests: passed');

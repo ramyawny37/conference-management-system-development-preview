@@ -19,6 +19,7 @@
       auth:options.auth||global.SupabaseAuth,
       deviceIdentity:options.deviceIdentity||global.SupabaseDeviceIdentity,
       organizations:options.organizations||global.OrganizationAdministrationService,
+      organizationManagement:options.organizationManagement||global.OrganizationManagementService,
       devices:options.devices||global.DeviceAuthorizationAdministrationService};
   }
   function context(options){
@@ -35,7 +36,7 @@
     }
     return {client:client,actorUserId:String(session.user.id),
       actorDeviceId:String(identity.id),organizations:d.organizations,
-      devices:d.devices};
+      organizationManagement:d.organizationManagement,devices:d.devices};
   }
   function rpc(ctx,name,args){
     return Promise.resolve(ctx.client.rpc(name,args)).then(function(response){
@@ -177,7 +178,9 @@
             if(account.ok)view.account=account.data.account;
             else view.account={status:'error',data:null};
           }
-          return enrichOrganizations(view,targetUserId,ctx,options).then(function(){
+          return enrichOrganizationStatuses(view,ctx,options).then(function(){
+            return enrichOrganizations(view,targetUserId,ctx,options);
+          }).then(function(){
             return enrichDevices(view,targetUserId,ctx,options);
           }).then(function(){return result(true,'loaded',{overview:view});
           });
@@ -188,6 +191,22 @@
         return result(true,'loaded',{overview:view});
       });
     });
+  }
+  function enrichOrganizationStatuses(view,ctx,options){
+    var items=view.organization&&view.organization.data&&view.organization.data.memberships;
+    if(!Array.isArray(items)||!ctx.organizationManagement||
+      typeof ctx.organizationManagement.list!=='function')return Promise.resolve(view);
+    return ctx.organizationManagement.list(options&&options.organizationManagementOptions)
+      .then(function(response){
+        if(!response.ok||!response.data||!Array.isArray(response.data.organizations)){
+          items.forEach(function(item){item.organizationStatus='unknown';});
+          return view;
+        }
+        var statuses=Object.create(null);
+        response.data.organizations.forEach(function(item){statuses[item.organizationId]=item.status;});
+        items.forEach(function(item){item.organizationStatus=statuses[item.organizationId]||'unknown';});
+        return view;
+      }).catch(function(){items.forEach(function(item){item.organizationStatus='unknown';});return view;});
   }
   function enrichOrganizations(view,targetUserId,ctx,options){
     var items=view.organization&&view.organization.data&&
@@ -203,8 +222,9 @@
           var member=members.find(function(row){return row.userId===targetUserId;});
           var ownerCount=members.filter(function(row){return row.role==='organization_owner';}).length;
           item.isMember=!!member;item.role=member?member.role:null;item.readStatus='loaded';
-          item.capabilities={canAdd:!member&&access.canManageMembers===true,
-            canChangeRole:!!member&&!member.isCurrentUser&&access.canManageOwners===true&&
+          var active=item.organizationStatus!=='archived'&&item.organizationStatus!=='unknown';
+          item.capabilities={canAdd:active&&!member&&access.canManageMembers===true,
+            canChangeRole:active&&!!member&&!member.isCurrentUser&&access.canManageOwners===true&&
               !(member.role==='organization_owner'&&ownerCount<=1),
             canRemove:!!member&&!member.isCurrentUser&&
               (access.canManageOwners===true||member.role==='member')&&
