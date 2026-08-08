@@ -26,7 +26,7 @@
   <div class="logo" id="logo-text">🏨 إدارة المؤتمر</div>
   <div class="main-tabs">
     <div class="main-tab" id="homeTabButton" onclick="showHomePage()"><span class="main-tab-icon">🏠</span><span class="main-tab-label">الرئيسية</span></div>
-    <div class="main-tab" id="organizationManagementTabButton" onclick="OrganizationManagementUI.open()"><span class="main-tab-icon">🏢</span><span class="main-tab-label">المؤسسات</span></div>
+    <div class="main-tab" id="organizationManagementTabButton" data-organization-management-entry onclick="OrganizationManagementUI.open()" style="display:none"><span class="main-tab-icon">🏢</span><span class="main-tab-label">المؤسسات</span></div>
     <div class="tab main-tab" onclick="switchTab(0)"><span class="main-tab-icon">🏨</span><span class="main-tab-label">التسكين</span></div>
     <div class="tab main-tab" onclick="switchTab(1)"><span class="main-tab-icon">🚌</span><span class="main-tab-label">المواصلات</span></div>
     <div class="tab main-tab" onclick="switchTab(2)"><span class="main-tab-icon">💰</span><span class="main-tab-label">الحسابات</span></div>
@@ -85,7 +85,7 @@
       </header>
 
       <div class="startup-actions">
-        <button class="startup-action startup-action-blue" onclick="OrganizationManagementUI.open()"><span class="startup-action-icon">🏢</span><strong>إدارة المؤسسات</strong><small>اختيار مؤسسة أو إنشاء مؤسسة جديدة</small><b>‹</b></button>
+        <button class="startup-action startup-action-blue" data-organization-management-entry onclick="OrganizationManagementUI.open()" style="display:none"><span class="startup-action-icon">🏢</span><strong>إدارة المؤسسات</strong><small>اختيار مؤسسة أو إنشاء مؤسسة جديدة</small><b>‹</b></button>
         <button class="startup-action startup-action-green" data-system-conference-create onclick="openNewConferenceModal('create')">
           <span class="startup-action-icon">▣+</span>
           <strong>إنشاء مؤتمر جديد</strong>
@@ -486,7 +486,7 @@
 <script src="js/sync/organization-members-ui.js"></script>
 <script src="js/sync/organization-management-attempt-store.js?rev=organization-management-v1"></script>
 <script src="js/supabase/organization-management-service.js?rev=organization-management-v1"></script>
-<script src="js/sync/organization-management-ui.js?rev=organization-management-v1"></script>
+<script src="js/sync/organization-management-ui.js?rev=organization-entry-point-v1"></script>
 <script src="js/supabase/device-identity.js"></script>
 <script src="js/sync/device-authorization-operation-repository.js"></script>
 <script src="js/supabase/current-device-authorization-service.js?rev=device-reauthorization-flow-v2"></script>
@@ -553,7 +553,7 @@
 <script src="js/conference-template-houses-editor.js"></script>
 <script src="cards.js"></script>
 <script src="libs/html2canvas.min.js"></script>
-<script src="script.js?rev=organization-management-v1"></script>
+<script src="script.js?rev=organization-entry-point-v1"></script>
 <script src="version.js"></script>
 <script>
   document.addEventListener('DOMContentLoaded', function() {
@@ -577,7 +577,7 @@
     });
   });
 </script>
-<script>window.APP_SHELL_REVISION='organization-management-v1';</script>
+<script>window.APP_SHELL_REVISION='organization-entry-point-v1';</script>
 <script src="pwa.js?rev=startup-queue-recovery-v1"></script>
 </body>
 </html>

@@ -6,7 +6,7 @@ const CACHE_NAMESPACE = IS_DEVELOPMENT
   ? 'cms:development:' + DEVELOPMENT_PROJECT_REF + ':'
   : '';
 const CACHE_PREFIX = CACHE_NAMESPACE + 'conference-manager-core-';
-const CACHE_REVISION = 'organization-management-v1';
+const CACHE_REVISION = 'organization-entry-point-v1';
 const CACHE_NAME = CACHE_PREFIX + 'v' + APP_VERSION + '-' + CACHE_REVISION;
 const CORE_ASSETS = [
   './',
@@ -36,7 +36,7 @@ const CORE_ASSETS = [
   './js/sync/organization-members-ui.js',
   './js/sync/organization-management-attempt-store.js?rev=organization-management-v1',
   './js/supabase/organization-management-service.js?rev=organization-management-v1',
-  './js/sync/organization-management-ui.js?rev=organization-management-v1',
+  './js/sync/organization-management-ui.js?rev=organization-entry-point-v1',
   './js/supabase/device-identity.js',
   './js/sync/device-authorization-operation-repository.js',
   './js/supabase/current-device-authorization-service.js?rev=device-reauthorization-flow-v2',
@@ -103,7 +103,7 @@ const CORE_ASSETS = [
   './js/conference/accounts.js',
   './js/conference-template-houses-editor.js',
   './cards.js',
-  './script.js?rev=organization-management-v1',
+  './script.js?rev=organization-entry-point-v1',
   './version.js',
   './pwa.js?rev=realtime-drop-instrumentation-v1',
   './libs/html2canvas.min.js',

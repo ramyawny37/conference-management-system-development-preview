@@ -2158,6 +2158,38 @@ function getAccommodationPersonDisplayName(person){
 }
 
 var userManagementAccessState={status:'idle',capabilities:null};
+var organizationManagementAccessState={status:'idle',canOpen:false};
+function applyOrganizationManagementEntryVisibility(){
+  var visible=organizationManagementAccessState.status==='loaded'&&
+    organizationManagementAccessState.canOpen===true;
+  if(!document.querySelectorAll)return;
+  document.querySelectorAll('[data-organization-management-entry]').forEach(function(entry){
+    entry.style.display=visible?'':'none';
+  });
+}
+function ensureOrganizationManagementAccess(){
+  if(organizationManagementAccessState.status!=='idle'||
+    !window.OrganizationManagementService||
+    typeof window.OrganizationManagementService.list!=='function')return;
+  organizationManagementAccessState.status='loading';
+  applyOrganizationManagementEntryVisibility();
+  window.OrganizationManagementService.list().then(function(response){
+    var data=response&&response.ok&&response.data?response.data:null;
+    organizationManagementAccessState.status=response&&response.ok?'loaded':'error';
+    organizationManagementAccessState.canOpen=!!(data&&(
+      data.canCreate===true||Array.isArray(data.organizations)&&data.organizations.some(function(organization){
+        var capabilities=organization&&organization.capabilities||{};
+        return capabilities.canManageMembers===true||capabilities.canEdit===true||
+          capabilities.canArchive===true;
+      })
+    ));
+    applyOrganizationManagementEntryVisibility();
+    if(ge('tab6')&&ge('tab6').style.display!=='none')renderSettings();
+  }).catch(function(){
+    organizationManagementAccessState={status:'error',canOpen:false};
+    applyOrganizationManagementEntryVisibility();
+  });
+}
 function ensureUserManagementAccess(){
   if(userManagementAccessState.status!=='idle'||
     !window.UserManagementReadService||
@@ -6039,6 +6071,7 @@ Application Navigation - Central Entry Points
 */
 function openStartupScreen(options){
   if(window.StartupAccessGate&&!window.StartupAccessGate.isAllowed())return false;
+  ensureOrganizationManagementAccess();
   options=options||{};
   var organizationScreen=ge('organizationManagementScreen');
   if(organizationScreen)organizationScreen.style.display='none';
@@ -7235,6 +7268,7 @@ function renderSettings(){
   var current = getCurrentConference();
   var activeSettingsTab = settingsTab || 'general';
   ensureUserManagementAccess();
+  ensureOrganizationManagementAccess();
   var canOpenUserManagement=userManagementAccessState.status==='loaded'&&
     userManagementAccessState.capabilities&&
     userManagementAccessState.capabilities.canOpenUserManagement===true;
@@ -7247,6 +7281,7 @@ function renderSettings(){
   h+='<button class="btn '+(activeSettingsTab==='general'?'btn-purple':'btn-gray')+' btn-sm" onclick="switchSettingsTab(\'general\')">⚙️ إعدادات الحدث</button>';
   h+='<button class="btn '+(activeSettingsTab==='houses'?'btn-purple':'btn-gray')+' btn-sm" onclick="switchSettingsTab(\'houses\')">🏠 بيوت المؤتمرات</button>';
   if(canOpenUserManagement)h+='<button class="btn '+(activeSettingsTab==='users'?'btn-purple':'btn-gray')+' btn-sm" onclick="switchSettingsTab(\'users\')">👥 إدارة المستخدمين</button>';
+  if(organizationManagementAccessState.status==='loaded'&&organizationManagementAccessState.canOpen)h+='<button class="btn btn-gray btn-sm" data-organization-management-entry onclick="OrganizationManagementUI.open()">🏢 إدارة المؤسسات</button>';
   h+='</div>';
   if (activeSettingsTab === 'houses') {
     h += '<section class="settings-section settings-library-section">' + renderHouseTemplatesSettings() + '</section></div>';
