@@ -45,13 +45,17 @@ function refreshPwaUpdateDiagnostics() {
     requestWorkerDiagnostics(registration && registration.waiting),
     requestWorkerDiagnostics(registration && registration.installing)
   ]).then(values => {
-    const diagnostic = {
+      const diagnostic = {
       activeWorkerCacheRevision: values[0] && values[0].cacheRevision || null,
       waitingWorker: values[1] && values[1].cacheRevision || null,
       installingWorker: values[2] && values[2].cacheRevision || null,
       controllerScriptURL: controller && controller.scriptURL || null,
-      appShellRevision: appShellRevision
-    };
+        appShellRevision: appShellRevision,
+        startup: window.StartupAccessGate &&
+          typeof window.StartupAccessGate.getState === 'function'
+          ? window.StartupAccessGate.getState()
+          : null
+      };
     if (target) target.textContent = JSON.stringify(diagnostic, null, 2);
     return diagnostic;
   });

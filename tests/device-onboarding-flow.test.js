@@ -29,7 +29,7 @@ async function startupPolling(){
   const window={document:{visibilityState:'visible',getElementById:id=>nodes[id],addEventListener:(event,listener)=>{if(event==='visibilitychange')visibilityListener=listener;}},setTimeout:fn=>{poll=fn;return 1;},clearTimeout:()=>{poll=null;},
     SupabaseAuth:{initialize:()=>Promise.resolve(),getState:()=>({authenticated:true})},SupabaseClientLayer:{getClient:()=>({auth:{onAuthStateChange:()=>({data:{subscription:{}}})}})},FirstSystemBootstrapService:{getStatus:()=>Promise.resolve({ok:true,status:'completed'})},SystemAccessService:{initialize:()=>Promise.resolve(),refresh:()=>Promise.resolve(),getState:()=>({accountStatus:'approved',fresh:true})},SupabaseDeviceIdentity:{getOrCreate:()=>({id:'22222222-2222-4222-8222-222222222222',deviceName:'iPhone',platform:'iOS'})},CurrentDeviceAuthorizationUI:{initialize:()=>Promise.resolve(),refresh:()=>Promise.resolve(),getState:()=>({status}),ensurePendingAuthorization:()=>{ensures++;status='pending';return Promise.resolve({ok:true,status:'pending'});}},SyncSettingsUI:{}};
   vm.runInNewContext(source,{window,Promise});
-  let result=await window.StartupAccessGate.run({completeApplicationStartup:()=>{home++;}});assert.equal(result.status,'device');assert.equal(ensures,1);assert.equal(home,0);assert(nodes.startupAccessGate.innerHTML.includes('iPhone'));assert(nodes.startupAccessGate.innerHTML.includes('22222222…'));assert(poll);
+  let result=await window.StartupAccessGate.run({completeApplicationStartup:()=>{home++;nodes.startupScreen.style.display='flex';}});assert.equal(result.status,'device');assert.equal(ensures,1);assert.equal(home,0);assert(nodes.startupAccessGate.innerHTML.includes('iPhone'));assert(nodes.startupAccessGate.innerHTML.includes('22222222…'));assert(poll);
   assert(visibilityListener,'visible lifecycle retry must be attached for mobile browsers');
   status='approved';const callback=poll;callback();await new Promise(resolve=>setImmediate(resolve));assert.equal(home,1,'approval must continue startup without logout or reload');assert.equal(window.StartupAccessGate.isAllowed(),true);
 }
@@ -40,7 +40,7 @@ function startupPipelineContract(){
   const storageResetIndex=source.indexOf('window.applicationStorageReadyPromise=null;');
   assert(storageResetIndex>=0&&storageResetIndex<gateIndex,'auth/device gate must start before application storage');
   assert.match(source,/function completeApplicationStartup\(\)[\s\S]*initializeApplicationStorage\(\)/);
-  assert.match(source,/function completeAuthorizedApplicationStartup\(\)[\s\S]*StartupConferenceDiscovery[\s\S]*StartupQueueRecovery[\s\S]*AutomaticSyncOrchestrator\.start\(\)/);
+  assert.match(source,/function completeAuthorizedApplicationStartup\(\)[\s\S]*StartupConferenceDiscovery[\s\S]*StartupQueueRecovery[\s\S]*AutomaticSyncOrchestrator\.start[\s\S]*restoreAuthorizedApplicationView\(\)/);
   assert(source.includes('completeApplicationStartup:completeAuthorizedApplicationStartup'),'gate release must resume the entire authorized startup pipeline');
 }
 

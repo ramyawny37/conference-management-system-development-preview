@@ -8894,75 +8894,117 @@ function doBulkAssign(){
 // ═══════════════════════════════════════════════════════
 //__S__
 //__E__
+function recordStartupStage(stage,status,errorCode){
+  if(window.StartupAccessGate&&typeof window.StartupAccessGate.recordStage==='function'){
+    window.StartupAccessGate.recordStage(stage,status,errorCode);
+  }
+}
+function requireStartupResult(stage,result){
+  if(result&&result.ok===false){
+    recordStartupStage(stage,'failed',result.status||'STARTUP_STAGE_FAILED');
+    var error=new Error(String(stage||'STARTUP_STAGE').toUpperCase()+'_FAILED');
+    error.startupStage=stage;
+    throw error;
+  }
+  return result;
+}
 function completeApplicationStartup(){
   if(!window.applicationStorageReadyPromise){
-    window.applicationStorageReadyPromise=initializeApplicationStorage()
-      .then(function(){
-        syncCurrentConferenceRefs();
-        return true;
-      }).catch(function(e){
-        alert('خطأ: '+e.message);
-        return false;
-      });
+    recordStartupStage('storage','started');
+    window.applicationStorageReadyPromise=Promise.resolve(initializeApplicationStorage()).then(function(){
+      syncCurrentConferenceRefs();
+      recordStartupStage('storage','completed');
+      return true;
+    }).catch(function(error){
+      recordStartupStage('storage','failed',error&&error.message||'STORAGE_FAILED');
+      throw error;
+    });
   }
-  return Promise.resolve(window.applicationStorageReadyPromise).then(function(){
-    syncCurrentConferenceRefs();
-    if(!getCurrentConference()){
-      showSelectConferenceModal();
-    }else if(getStoredApplicationView()==='startup'){
-      openStartupScreen({clearCurrentConference:false,persistView:false});
-    }else{
-      setApplicationMode('application');
-      restoreLastApplicationTab();
+  return window.applicationStorageReadyPromise;
+}
+function restoreAuthorizedApplicationView(){
+  recordStartupStage('view_restore','started');
+  syncCurrentConferenceRefs();
+  if(!getCurrentConference()){
+    showSelectConferenceModal();
+  }else if(getStoredApplicationView()==='startup'){
+    openStartupScreen({clearCurrentConference:false,persistView:false});
+  }else{
+    setApplicationMode('application');
+    restoreLastApplicationTab();
+  }
+  var body=ge('applicationBody'),startup=ge('startupScreen');
+  if(!(body&&body.style.display!=='none'||startup&&startup.style.display!=='none')){
+    recordStartupStage('view_restore','failed','APPLICATION_VIEW_NOT_VISIBLE');
+    throw new Error('APPLICATION_VIEW_NOT_VISIBLE');
+  }
+  recordStartupStage('view_restore','completed');
+  return true;
+}
+function traceRealtimeStartup(){
+  recordStartupStage('realtime','started');
+  var manager=window.ConferenceRealtimeManager;
+  if(!manager||typeof manager.subscribe!=='function')return;
+  if(typeof window.startupRealtimeTraceUnsubscribe==='function'){
+    window.startupRealtimeTraceUnsubscribe();
+  }
+  window.startupRealtimeTraceUnsubscribe=manager.subscribe(function(state){
+    if(!state)return;
+    if(state.status==='subscribed'){
+      recordStartupStage('realtime','subscribed');
+    }else if(state.status==='error'){
+      recordStartupStage('realtime','failed',state.lastError&&state.lastError.code||'REALTIME_FAILED');
+    }else return;
+    if(typeof window.startupRealtimeTraceUnsubscribe==='function'){
+      window.startupRealtimeTraceUnsubscribe();
+      window.startupRealtimeTraceUnsubscribe=null;
     }
-    return true;
   });
 }
 function completeAuthorizedApplicationStartup(){
+  recordStartupStage('auth','passed');
+  recordStartupStage('account','passed');
+  recordStartupStage('device','passed');
+  var cloudReviewPending=false;
   return Promise.resolve(completeApplicationStartup()).then(function(){
-  try{
-    if(window.FullBackupService&&
-      typeof window.FullBackupService.isFullRestoreCloudReviewPending==='function'&&
-      window.FullBackupService.isFullRestoreCloudReviewPending()){
+    try{
+      cloudReviewPending=!!(window.FullBackupService&&typeof window.FullBackupService.isFullRestoreCloudReviewPending==='function'&&window.FullBackupService.isFullRestoreCloudReviewPending());
+    }catch(error){
+      cloudReviewPending=true;
+    }
+    if(cloudReviewPending){
       console.warn('تم إيقاف المزامنة مؤقتًا لحين مراجعة روابط النسخة المستعادة.');
       showPostRestoreCloudReviewBanner();
       setTimeout(showPostRestoreCloudReviewModal,0);
+      recordStartupStage('discovery','skipped','CLOUD_REVIEW_PENDING');
       return;
     }
-  }catch(error){
-    console.warn('تعذر قراءة حالة مراجعة الروابط بعد الاستعادة.',error);
-    return;
-  }
-  var accessBootstrap=window.SystemAccessService&&
-    typeof window.SystemAccessService.initialize==='function'
-    ?window.SystemAccessService.initialize()
-    :Promise.resolve();
-  return Promise.resolve(accessBootstrap).catch(function(){
-    return null;
+    recordStartupStage('discovery','started');
+    var discovery=window.StartupConferenceDiscovery&&typeof window.StartupConferenceDiscovery.refresh==='function'
+      ?window.StartupConferenceDiscovery.refresh():Promise.resolve({ok:true,status:'unavailable'});
+    return Promise.resolve(discovery).then(function(result){requireStartupResult('discovery',result);recordStartupStage('discovery','completed');}).catch(function(error){if(!(error&&error.startupStage))recordStartupStage('discovery','failed',error&&error.message||'DISCOVERY_FAILED');throw error;});
   }).then(function(){
-    if(window.StartupConferenceDiscovery&&
-      typeof window.StartupConferenceDiscovery.refresh==='function'){
-      window.StartupConferenceDiscovery.refresh();
-    }
-    var linking=window.AutomaticConferenceLinking&&
-      typeof window.AutomaticConferenceLinking.initialize==='function'
-      ?window.AutomaticConferenceLinking.initialize():null;
-    return linking&&linking.promise?linking.promise:null;
-  }).catch(function(){
-    return null;
+    if(cloudReviewPending){recordStartupStage('linking','skipped','CLOUD_REVIEW_PENDING');return;}
+    recordStartupStage('linking','started');
+    var linking=window.AutomaticConferenceLinking&&typeof window.AutomaticConferenceLinking.initialize==='function'
+      ?window.AutomaticConferenceLinking.initialize():{ok:true,status:'unavailable'};
+    requireStartupResult('linking',linking);
+    return Promise.resolve(linking&&linking.promise).then(function(result){requireStartupResult('linking',result);recordStartupStage('linking','completed');}).catch(function(error){if(!(error&&error.startupStage))recordStartupStage('linking','failed',error&&error.message||'LINKING_FAILED');throw error;});
   }).then(function(){
-    var recovery=window.StartupQueueRecovery&&
-      typeof window.StartupQueueRecovery.run==='function'
-      ?window.StartupQueueRecovery.run():Promise.resolve();
-    return Promise.resolve(recovery).catch(function(){return null;});
+    if(cloudReviewPending){recordStartupStage('queue_recovery','skipped','CLOUD_REVIEW_PENDING');return;}
+    recordStartupStage('queue_recovery','started');
+    var recovery=window.StartupQueueRecovery&&typeof window.StartupQueueRecovery.run==='function'
+      ?window.StartupQueueRecovery.run():Promise.resolve({ok:true,status:'unavailable'});
+    return Promise.resolve(recovery).then(function(result){requireStartupResult('queue_recovery',result);recordStartupStage('queue_recovery','completed');}).catch(function(error){if(!(error&&error.startupStage))recordStartupStage('queue_recovery','failed',error&&error.message||'QUEUE_RECOVERY_FAILED');throw error;});
   }).then(function(){
-    if(window.AutomaticSyncOrchestrator&&
-      typeof window.AutomaticSyncOrchestrator.start==='function'){
-      window.AutomaticSyncOrchestrator.start();
-    }
-    var currentConference=getCurrentConference();
-    return true;
-  });
+    if(cloudReviewPending){recordStartupStage('orchestrator','skipped','CLOUD_REVIEW_PENDING');return restoreAuthorizedApplicationView();}
+    recordStartupStage('orchestrator','started');
+    return Promise.resolve().then(function(){
+      var result=window.AutomaticSyncOrchestrator&&typeof window.AutomaticSyncOrchestrator.start==='function'
+        ?window.AutomaticSyncOrchestrator.start():{ok:true,status:'unavailable'};
+      requireStartupResult('orchestrator',result);
+      recordStartupStage('orchestrator','completed');
+    }).catch(function(error){if(!(error&&error.startupStage))recordStartupStage('orchestrator','failed',error&&error.message||'ORCHESTRATOR_FAILED');throw error;}).then(function(){traceRealtimeStartup();return restoreAuthorizedApplicationView();});
   });
 }
 window.applicationStorageReadyPromise=null;

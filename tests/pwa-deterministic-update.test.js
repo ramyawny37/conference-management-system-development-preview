@@ -9,16 +9,16 @@ const index=fs.readFileSync(path.join(root,'index.html'),'utf8');
 const manager=fs.readFileSync(path.join(root,'js/sync/conference-edit-lock-manager.js'),'utf8');
 
 const previous='exclusive-edit-lock-v1';
-const next='startup-device-admin-lifecycle-v1';
+const next='startup-authorized-view-v1';
 const deviceOnboardingRevision='device-onboarding-v1';
 const organizationTemplateRevision='organization-template-sync-v1';
 const bootstrapRevision='first-owner-bootstrap-hardening-v1';
-const userManagementUiRevision=next;
+const userManagementUiRevision='startup-device-admin-lifecycle-v1';
 const userManagementStyleRevision='organization-management-v1';
 const userManagementReadRevision='organization-archive-restore-v1';
 const conferenceRoleRevision='conference-role-management-v1';
 const houseTemplateRevision='house-template-propagation-v1';
-const pwaAssetRevision='startup-queue-recovery-v1';
+const pwaAssetRevision=next;
 const appAssetRevision='section-accommodation-edit-lock-v1';
 assert(worker.includes("CACHE_REVISION = '"+next+"'"));
 assert(index.includes("window.APP_SHELL_REVISION='"+next+"'"));
@@ -72,13 +72,13 @@ assert(worker.includes("'./script.js?rev="+next+"'"));
   assert(index.includes(versioned),'index missing '+versioned);
   assert(worker.includes("'./"+versioned+"'"),'app shell missing '+versioned);
 });
-const multiDeviceAsset='js/sync/device-authorization-administration-ui.js?rev='+next;
+const multiDeviceAsset='js/sync/device-authorization-administration-ui.js?rev=startup-device-admin-lifecycle-v1';
 assert(index.includes(multiDeviceAsset),'index missing '+multiDeviceAsset);
 assert(worker.includes("'./"+multiDeviceAsset+"'"),'app shell missing '+multiDeviceAsset);
 [
   ['js/sync/organization-management-attempt-store.js','organization-management-v1'],
   ['js/supabase/organization-management-service.js','organization-archive-restore-v1'],
-  ['js/sync/organization-management-ui.js',next]
+  ['js/sync/organization-management-ui.js','startup-device-admin-lifecycle-v1']
 ].forEach(([asset,revision])=>{const versioned=asset+'?rev='+revision;assert(index.includes(versioned));assert(worker.includes("'./"+versioned+"'"));});
 assert(index.includes('conference-edit-lock-manager.js?rev='+appAssetRevision));
 assert(!index.includes('conference-edit-lock-manager.js?rev='+previous));

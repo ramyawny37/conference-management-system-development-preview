@@ -6,7 +6,7 @@ const CACHE_NAMESPACE = IS_DEVELOPMENT
   ? 'cms:development:' + DEVELOPMENT_PROJECT_REF + ':'
   : '';
 const CACHE_PREFIX = CACHE_NAMESPACE + 'conference-manager-core-';
-const CACHE_REVISION = 'startup-device-admin-lifecycle-v1';
+const CACHE_REVISION = 'startup-authorized-view-v1';
 const CACHE_NAME = CACHE_PREFIX + 'v' + APP_VERSION + '-' + CACHE_REVISION;
 const CORE_ASSETS = [
   './',
@@ -59,7 +59,7 @@ const CORE_ASSETS = [
   './js/sync/experimental-conference-reset.js?rev=experimental-reset-v1',
   './js/sync/sync-settings-ui.js?rev=first-use-auth-v1',
   './js/supabase/first-system-bootstrap-service.js?rev=first-owner-bootstrap-hardening-v1',
-  './js/sync/startup-access-gate.js?rev=startup-device-admin-lifecycle-v1',
+  './js/sync/startup-access-gate.js?rev=startup-authorized-view-v1',
   './js/sync/link-status-diagnostic-store.js',
   './js/sync/conference-link-store.js',
   './js/sync/conference-membership-attempt-store.js',
@@ -104,9 +104,9 @@ const CORE_ASSETS = [
   './js/conference/accounts.js',
   './js/conference-template-houses-editor.js',
   './cards.js',
-  './script.js?rev=startup-device-admin-lifecycle-v1',
+  './script.js?rev=startup-authorized-view-v1',
   './version.js',
-  './pwa.js?rev=realtime-drop-instrumentation-v1',
+  './pwa.js?rev=startup-authorized-view-v1',
   './libs/html2canvas.min.js',
   './assets/logo.jpg',
   './assets/startup-bg.png',
