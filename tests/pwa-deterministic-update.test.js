@@ -9,9 +9,9 @@ const index=fs.readFileSync(path.join(root,'index.html'),'utf8');
 const manager=fs.readFileSync(path.join(root,'js/sync/conference-edit-lock-manager.js'),'utf8');
 
 const previous='exclusive-edit-lock-v1';
-const next='first-owner-bootstrap-v1';
+const next='first-owner-bootstrap-hardening-v1';
 const userManagementUiRevision='user-onboarding-flow-v1';
-const userManagementStyleRevision='first-owner-bootstrap-v1';
+const userManagementStyleRevision='first-owner-bootstrap-hardening-v1';
 const userManagementReadRevision='user-management-scoped-v1';
 const conferenceRoleRevision='conference-role-management-v1';
 const houseTemplateRevision='house-template-propagation-v1';

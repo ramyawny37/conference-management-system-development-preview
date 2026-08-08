@@ -1,0 +1,12 @@
+'use strict';
+const assert=require('assert'),fs=require('fs'),path=require('path');
+const sql=fs.readFileSync(path.resolve(__dirname,'../supabase/migrations/20260809_6_5_1_first_system_bootstrap_identity_binding.sql'),'utf8');
+assert.match(sql,/add column intended_user_id uuid null references auth\.users\(id\)/i);
+assert.match(sql,/alter column intended_user_id set not null/i);
+assert.match(sql,/intended_id<>actor_id[\s\S]*not_authorized/i);
+assert.match(sql,/secret_row\.intended_user_id<>actor_id[\s\S]*BOOTSTRAP_IDENTITY_INVALID/i);
+assert.match(sql,/pg_advisory_xact_lock\(hashtextextended\('first-system-bootstrap',0\)\)/i);
+assert.match(sql,/state_row\.completed_by=actor_id and state_row\.operation_id=p_operation_id and state_row\.intent_hash=intent/i);
+assert.match(sql,/delete from public\.system_bootstrap_secret where singleton_id=1/i);
+assert.doesNotMatch(sql,/insert into public\.conferences|insert into public\.conference_members|insert into public\.templates/i);
+console.log('first system bootstrap identity binding tests: passed');
