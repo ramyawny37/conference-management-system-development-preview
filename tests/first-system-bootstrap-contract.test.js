@@ -1,0 +1,16 @@
+'use strict';
+const assert=require('assert'),fs=require('fs'),path=require('path'),vm=require('vm');
+const root=path.resolve(__dirname,'..');
+const sql=fs.readFileSync(path.join(root,'supabase/migrations/20260809_6_5_0_first_system_bootstrap.sql'),'utf8');
+const serviceSource=fs.readFileSync(path.join(root,'js/supabase/first-system-bootstrap-service.js'),'utf8');
+['get_first_system_bootstrap_status','complete_first_system_bootstrap','pg_advisory_xact_lock','BOOTSTRAP_ALREADY_COMPLETED','SYSTEM_OWNER_ALREADY_EXISTS','BOOTSTRAP_CREDENTIAL_INVALID','PENDING_ACCOUNT_REQUIRED','security definer','set search_path=pg_catalog,public'].forEach(value=>assert(sql.toLowerCase().includes(value.toLowerCase()),'missing '+value));
+assert.match(sql,/revoke all on function public\.complete_first_system_bootstrap[\s\S]*from public,anon/i);
+assert.match(sql,/grant execute on function public\.complete_first_system_bootstrap[\s\S]*to authenticated/i);
+assert.match(sql,/insert into public\.organizations[\s\S]*insert into public\.system_user_roles[\s\S]*insert into public\.organization_members[\s\S]*insert into public\.devices[\s\S]*insert into public\.user_device_authorizations/i);
+assert(!/insert into public\.conferences|insert into public\.conference_members/i.test(sql));
+assert(!/service[_ ]role|supabase_url/i.test(serviceSource));
+assert.doesNotMatch(serviceSource,/\.from\s*\(|\.insert\s*\(|\.update\s*\(|\.delete\s*\(/);
+const calls=[],identity='33333333-3333-4333-8333-333333333333';
+const sandbox={window:{SupabaseClientLayer:{getClient:()=>({rpc:(name,args)=>{calls.push({name,args});return Promise.resolve({data:{status:name.indexOf('status')>=0?'setup_required':'completed'},error:null});}})},SupabaseDeviceIdentity:{getOrCreate:()=>({id:identity,deviceName:'Fresh',platform:'Browser'})},crypto:{randomUUID:()=> '44444444-4444-4444-8444-444444444444'}},Promise};
+vm.runInNewContext(serviceSource,sandbox);
+(async()=>{assert.strictEqual((await sandbox.window.FirstSystemBootstrapService.getStatus()).status,'setup_required');assert.strictEqual((await sandbox.window.FirstSystemBootstrapService.complete({setupToken:'not-logged',organizationName:'New Organization'})).status,'completed');assert.strictEqual(calls[1].args.p_device_id,identity);assert.strictEqual(calls[1].args.p_organization_name,'New Organization');console.log('first system bootstrap contract tests: passed');})().catch(error=>{console.error(error);process.exitCode=1;});

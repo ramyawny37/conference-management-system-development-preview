@@ -6,12 +6,12 @@ const CACHE_NAMESPACE = IS_DEVELOPMENT
   ? 'cms:development:' + DEVELOPMENT_PROJECT_REF + ':'
   : '';
 const CACHE_PREFIX = CACHE_NAMESPACE + 'conference-manager-core-';
-const CACHE_REVISION = 'startup-auth-gate-v1';
+const CACHE_REVISION = 'first-owner-bootstrap-v1';
 const CACHE_NAME = CACHE_PREFIX + 'v' + APP_VERSION + '-' + CACHE_REVISION;
 const CORE_ASSETS = [
   './',
   './index.html',
-  './style.css?rev=user-management-ui-polish-v1',
+  './style.css?rev=first-owner-bootstrap-v1',
   './js/storage/environment-namespace.js',
   './js/storage/indexeddb.js',
   './js/storage/storage-repository.js?rev=local-save-queue-wake-v1',
@@ -54,7 +54,8 @@ const CORE_ASSETS = [
   './js/sync/device-rescue-export.js?rev=device-rescue-export-v1',
   './js/sync/experimental-conference-reset.js?rev=experimental-reset-v1',
   './js/sync/sync-settings-ui.js?rev=first-use-auth-v1',
-  './js/sync/startup-access-gate.js?rev=startup-auth-gate-v1',
+  './js/supabase/first-system-bootstrap-service.js?rev=first-owner-bootstrap-v1',
+  './js/sync/startup-access-gate.js?rev=first-owner-bootstrap-v1',
   './js/sync/link-status-diagnostic-store.js',
   './js/sync/conference-link-store.js',
   './js/sync/conference-membership-attempt-store.js',
