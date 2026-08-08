@@ -9,7 +9,8 @@ const index=fs.readFileSync(path.join(root,'index.html'),'utf8');
 const manager=fs.readFileSync(path.join(root,'js/sync/conference-edit-lock-manager.js'),'utf8');
 
 const previous='exclusive-edit-lock-v1';
-const next='organization-template-sync-v1';
+const next='device-onboarding-v1';
+const organizationTemplateRevision='organization-template-sync-v1';
 const bootstrapRevision='first-owner-bootstrap-hardening-v1';
 const userManagementUiRevision='organization-archive-restore-v1';
 const userManagementStyleRevision='organization-management-v1';
@@ -25,8 +26,8 @@ assert(index.includes('js/sync/sync-settings-ui.js?rev=first-use-auth-v1'));
 assert(worker.includes("'./js/sync/sync-settings-ui.js?rev=first-use-auth-v1'"));
 assert(index.includes('js/supabase/first-system-bootstrap-service.js?rev='+bootstrapRevision));
 assert(worker.includes("'./js/supabase/first-system-bootstrap-service.js?rev="+bootstrapRevision+"'"));
-assert(index.includes('js/sync/startup-access-gate.js?rev='+bootstrapRevision));
-assert(worker.includes("'./js/sync/startup-access-gate.js?rev="+bootstrapRevision+"'"));
+assert(index.includes('js/sync/startup-access-gate.js?rev='+next));
+assert(worker.includes("'./js/sync/startup-access-gate.js?rev="+next+"'"));
 ['houses.js','houseTemplates.js'].forEach(asset=>{
   const versionedAsset=asset+'?rev='+houseTemplateRevision;
   assert(index.includes(versionedAsset),'index missing '+versionedAsset);
@@ -52,11 +53,20 @@ const readAsset='js/sync/user-management-read-service.js?rev='+
   userManagementReadRevision;
 assert(index.includes(readAsset));
 assert(worker.includes("'./"+readAsset+"'"));
-assert(index.includes('script.js?rev='+next));
+assert(index.includes('script.js?rev='+organizationTemplateRevision));
 [
   'js/storage/indexeddb.js','js/storage/storage-repository.js',
   'js/sync/startup-conference-discovery.js',
   'js/sync/organization-template-sync.js'
+].forEach(asset=>{
+  const versioned=asset+'?rev='+organizationTemplateRevision;
+  assert(index.includes(versioned),'index missing '+versioned);
+  assert(worker.includes("'./"+versioned+"'"),'app shell missing '+versioned);
+});
+[
+  'js/sync/current-device-authorization-ui.js',
+  'js/sync/device-authorization-administration-ui.js',
+  'js/sync/startup-access-gate.js'
 ].forEach(asset=>{
   const versioned=asset+'?rev='+next;
   assert(index.includes(versioned),'index missing '+versioned);

@@ -11,8 +11,24 @@
   function registerDevice(){return service().registerCurrentDevice().then(function(result){if(!result.ok){state.message=failureMessage(result,'تعذر تسجيل الجهاز.');paint();return result;}return refresh().then(function(){return result;});});}
   function requestAuthorization(){if(global.confirm&&!global.confirm('هل تريد إرسال طلب اعتماد لهذا الجهاز؟'))return Promise.resolve({ok:false,status:'cancelled'});return service().requestAuthorization().then(function(result){if(!result.ok){state.message=failureMessage(result,result.status==='ambiguous'?'نتيجة الطلب غير مؤكدة. حدّث الحالة قبل إنشاء طلب جديد.':'تعذر إرسال طلب الاعتماد.');paint();return result;}return refresh().then(function(){return result;});});}
   function requestApproval(){if(state.status==='not_registered')return registerDevice().then(function(result){return result&&result.ok?requestAuthorization():result;});return requestAuthorization();}
+  function ensurePendingAuthorization(){
+    return service().registerCurrentDevice().then(function(registered){
+      if(!registered||!registered.ok)return registered;
+      return refresh().then(function(){
+        if(state.status==='approved'||state.status==='pending'){
+          return {ok:true,status:state.status};
+        }
+        if(['registered','revoked'].indexOf(state.status)<0){
+          return {ok:false,status:state.status||'unavailable'};
+        }
+        return service().requestAuthorization().then(function(requested){
+          return refresh().then(function(){return requested;});
+        });
+      });
+    });
+  }
   function bindAuth(){var session=global.SupabaseAuth&&global.SupabaseAuth.getSession&&global.SupabaseAuth.getSession(),client=global.SupabaseClientLayer&&global.SupabaseClientLayer.getClient&&global.SupabaseClientLayer.getClient();sessionUserId=session&&session.user&&String(session.user.id||'')||'';if(authSubscription||!client||!client.auth||typeof client.auth.onAuthStateChange!=='function')return;var listener=client.auth.onAuthStateChange(function(event,nextSession){var next=nextSession&&nextSession.user&&String(nextSession.user.id||'')||'';if(next===sessionUserId)return;sessionUserId=next;generation++;state={status:'unavailable',accountStatus:null,enforcement:null,message:'لن يتم اعتماد الجهاز تلقائيًا.'};paint();if(next)refresh();});authSubscription=listener&&listener.data&&listener.data.subscription||null;}
   function initialize(){if(initializationPromise)return initializationPromise;paint();var auth=global.SupabaseAuth&&global.SupabaseAuth.initialize?global.SupabaseAuth.initialize():Promise.resolve();initializationPromise=Promise.resolve(auth).then(function(){bindAuth();return refresh();});return initializationPromise;}
   function getState(){return JSON.parse(JSON.stringify(state));}
-  global.CurrentDeviceAuthorizationUI=Object.freeze({initialize:initialize,refresh:refresh,registerDevice:registerDevice,requestAuthorization:requestAuthorization,requestApproval:requestApproval,getState:getState});
+  global.CurrentDeviceAuthorizationUI=Object.freeze({initialize:initialize,refresh:refresh,registerDevice:registerDevice,requestAuthorization:requestAuthorization,requestApproval:requestApproval,ensurePendingAuthorization:ensurePendingAuthorization,getState:getState});
 })(window);
