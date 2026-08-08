@@ -9,7 +9,9 @@ const index=fs.readFileSync(path.join(root,'index.html'),'utf8');
 const manager=fs.readFileSync(path.join(root,'js/sync/conference-edit-lock-manager.js'),'utf8');
 
 const previous='exclusive-edit-lock-v1';
-const next='user-management-ui-polish-v1';
+const next='user-onboarding-flow-v1';
+const userManagementUiRevision='user-onboarding-flow-v1';
+const userManagementStyleRevision='user-management-ui-polish-v1';
 const userManagementReadRevision='user-management-scoped-v1';
 const conferenceRoleRevision='conference-role-management-v1';
 const houseTemplateRevision='house-template-propagation-v1';
@@ -30,8 +32,11 @@ assert(worker.includes("'./"+conferenceMembersUi+"'"),
   'app shell missing deterministic Conference Members UI revision');
 assert(!index.includes('src="js/sync/conference-members-ui.js"'),
   'Conference Members UI must not use an unversioned script URL');
-['js/sync/user-management-ui.js','style.css'].forEach(asset=>{
-  const versionedAsset=asset+'?rev='+next;
+[
+  ['js/sync/user-management-ui.js',userManagementUiRevision],
+  ['style.css',userManagementStyleRevision]
+].forEach(([asset,revision])=>{
+  const versionedAsset=asset+'?rev='+revision;
   assert(index.includes(versionedAsset),'index missing '+versionedAsset);
   assert(worker.includes("'./"+versionedAsset+"'"),
     'app shell missing '+versionedAsset);
