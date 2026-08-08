@@ -6,7 +6,7 @@ const CACHE_NAMESPACE = IS_DEVELOPMENT
   ? 'cms:development:' + DEVELOPMENT_PROJECT_REF + ':'
   : '';
 const CACHE_PREFIX = CACHE_NAMESPACE + 'conference-manager-core-';
-const CACHE_REVISION = 'user-onboarding-flow-v1';
+const CACHE_REVISION = 'first-use-auth-v1';
 const CACHE_NAME = CACHE_PREFIX + 'v' + APP_VERSION + '-' + CACHE_REVISION;
 const CORE_ASSETS = [
   './',
@@ -53,7 +53,7 @@ const CORE_ASSETS = [
   './js/sync/debug-binding-report-ui.js?rev=debug-binding-report-ui-v2',
   './js/sync/device-rescue-export.js?rev=device-rescue-export-v1',
   './js/sync/experimental-conference-reset.js?rev=experimental-reset-v1',
-  './js/sync/sync-settings-ui.js?rev=targeted-stuck-operation-recovery-v1',
+  './js/sync/sync-settings-ui.js?rev=first-use-auth-v1',
   './js/sync/link-status-diagnostic-store.js',
   './js/sync/conference-link-store.js',
   './js/sync/conference-membership-attempt-store.js',

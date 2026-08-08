@@ -314,12 +314,19 @@
         escapeHtml(email)+'</strong></div>';
       html+='<button class="btn btn-red btn-sm" onclick="SyncSettingsUI.signOut()">تسجيل الخروج</button>';
     }else{
-      html+='<label class="lbl" for="sync_auth_email">Email</label>';
+      html+='<div class="sync-auth-landing"><div class="sync-auth-card"><h4>تسجيل الدخول</h4>';
+      html+='<label class="lbl" for="sync_auth_email">البريد الإلكتروني</label>';
       html+='<input id="sync_auth_email" type="email" dir="ltr" autocomplete="username">';
-      html+='<label class="lbl" for="sync_auth_password">Password</label>';
+      html+='<label class="lbl" for="sync_auth_password">كلمة المرور</label>';
       html+='<input id="sync_auth_password" type="password" dir="ltr" autocomplete="current-password">';
-      html+='<div class="sync-settings-actions"><button class="btn btn-blue btn-sm" onclick="SyncSettingsUI.signIn()">تسجيل الدخول</button>';
-      html+='<button class="btn btn-purple btn-sm" onclick="SyncSettingsUI.signUp()">إنشاء حساب</button>';
+      html+='<button class="btn btn-blue btn-sm" onclick="SyncSettingsUI.signIn()">تسجيل الدخول</button></div>';
+      html+='<div class="sync-auth-card"><h4>إنشاء حساب جديد</h4>';
+      html+='<label class="lbl" for="sync_signup_display_name">الاسم الظاهر</label><input id="sync_signup_display_name" type="text" maxlength="120" autocomplete="name">';
+      html+='<label class="lbl" for="sync_signup_email">البريد الإلكتروني</label><input id="sync_signup_email" type="email" dir="ltr" autocomplete="email">';
+      html+='<label class="lbl" for="sync_signup_password">كلمة المرور</label><input id="sync_signup_password" type="password" dir="ltr" autocomplete="new-password">';
+      html+='<label class="lbl" for="sync_signup_password_confirm">تأكيد كلمة المرور</label><input id="sync_signup_password_confirm" type="password" dir="ltr" autocomplete="new-password">';
+      html+='<button class="btn btn-purple btn-sm" onclick="SyncSettingsUI.signUp()">إنشاء الحساب</button></div></div>';
+      html+='<div class="sync-settings-actions">';
       html+='<button class="btn btn-gray btn-sm" onclick="SyncSettingsUI.refreshAuthState()">قراءة حالة الحساب</button></div>';
     }
     html+='<div id="sync_auth_message" class="sync-settings-message"></div></div>';
@@ -423,12 +430,20 @@
     };
   }
 
+  function signUpFields(){return {displayName:String(element('sync_signup_display_name')&&element('sync_signup_display_name').value||'').trim(),email:String(element('sync_signup_email')&&element('sync_signup_email').value||'').trim().toLowerCase(),password:String(element('sync_signup_password')&&element('sync_signup_password').value||''),confirmation:String(element('sync_signup_password_confirm')&&element('sync_signup_password_confirm').value||'')};}
+  function validEmail(value){return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);}
+  function validateSignUp(fields){if(fields.displayName.length<2)return 'أدخل الاسم الظاهر بشكل صحيح.';if(!validEmail(fields.email))return 'أدخل بريدًا إلكترونيًا صحيحًا.';if(fields.password.length<8)return 'يجب ألا تقل كلمة المرور عن 8 أحرف.';if(fields.password!==fields.confirmation)return 'كلمتا المرور غير متطابقتين.';return '';}
+
   function safeAuthMessage(result,successText){
     if(result&&result.success)return successText;
     var code=result&&result.error&&result.error.code;
     if(code==='SUPABASE_AUTH_UNAVAILABLE'){
       return 'خدمة تسجيل الدخول غير مهيأة.';
     }
+    if(code==='invalid_credentials'||code==='invalid_grant')return 'البريد الإلكتروني أو كلمة المرور غير صحيحة.';
+    if(code==='email_not_confirmed')return 'يجب تأكيد البريد الإلكتروني أولًا.';
+    if(code==='user_already_exists'||code==='email_exists')return 'يوجد حساب مسجل بهذا البريد الإلكتروني.';
+    if(code==='weak_password')return 'كلمة المرور غير قوية بما يكفي.';
     return 'تعذر إكمال الطلب. تحقق من البيانات والاتصال.';
   }
 
@@ -470,13 +485,16 @@
   function signUp(){
     if(busy)return;
     setBusy(true);
-    var fields=authFields();
-    var passwordElement=element('sync_auth_password');
+    var fields=signUpFields(),validation=validateSignUp(fields);
+    if(validation){message('sync_auth_message',validation,true);setBusy(false);return;}
+    var passwordElement=element('sync_signup_password');
+    var confirmationElement=element('sync_signup_password_confirm');
     prepareAuth().then(function(ready){
       if(!ready)return {success:false,error:{code:'SUPABASE_AUTH_UNAVAILABLE'}};
-      return global.SupabaseAuth.signUp(fields.email,fields.password);
+      return global.SupabaseAuth.signUp(fields.email,fields.password,{display_name:fields.displayName});
     }).then(function(result){
       if(passwordElement)passwordElement.value='';
+      if(confirmationElement)confirmationElement.value='';
       if(!result||!result.success){
         message('sync_auth_message',safeAuthMessage(result,''),true);
         return;
@@ -485,11 +503,12 @@
       if(session){
         scheduleAuthChanged();
         rerender();
+        message('sync_auth_message','تم إنشاء الحساب. الحساب الآن بانتظار اعتماد مسؤول النظام.',false);
         return;
       }
       message(
         'sync_auth_message',
-        'تم إنشاء الحساب، راجع بريدك لتأكيده ثم سجل الدخول.',
+        'تم إنشاء الحساب بنجاح. راجع بريدك لتأكيده، ثم سجل الدخول وانتظر اعتماد مسؤول النظام.',
         false
       );
     }).catch(function(){

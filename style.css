@@ -480,3 +480,4 @@ tr:nth-child(even) td{background:#F7FBFF}
   .user-management-summary-stats{grid-template-columns:1fr}.user-management-action-bar{align-items:stretch}.user-management-action-bar button,.user-management-action-bar select{max-width:100%}
   .user-management-item-heading{flex-wrap:wrap}.user-management-device-meta div{display:grid;gap:2px}
 }
+.sync-auth-landing{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-bottom:12px}.sync-auth-card{min-width:0;padding:14px;border:1px solid var(--border,#d8dee8);border-radius:12px;background:var(--card,#fff)}.sync-auth-card h4{margin:0 0 12px}.sync-auth-card input{width:100%;box-sizing:border-box;margin-bottom:10px}.sync-auth-card .btn{width:100%;margin-top:4px}@media(max-width:720px){.sync-auth-landing{grid-template-columns:1fr}.sync-auth-card{overflow-wrap:anywhere}}

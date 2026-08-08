@@ -1,0 +1,14 @@
+'use strict';
+const assert=require('assert'),fs=require('fs'),path=require('path'),vm=require('vm');
+const source=fs.readFileSync(path.resolve(__dirname,'../js/sync/sync-settings-ui.js'),'utf8');
+['sync_signup_display_name','sync_signup_email','sync_signup_password','sync_signup_password_confirm'].forEach(id=>assert(source.includes(id)));
+assert(source.includes("{display_name:fields.displayName}"));
+assert(source.includes('كلمتا المرور غير متطابقتين'));
+assert(source.includes('بانتظار اعتماد مسؤول النظام'));
+assert(source.includes('راجع بريدك لتأكيده'));
+assert.doesNotMatch(source,/synthetic email|signInWithUsername/i);
+assert.doesNotMatch(source,/\.from\s*\(|\.insert\s*\(|\.update\s*\(|\.delete\s*\(/);
+const elements={sync_signup_display_name:{value:'مستخدم جديد'},sync_signup_email:{value:'new@example.test'},sync_signup_password:{value:'StrongPass1!'},sync_signup_password_confirm:{value:'Different1!'},sync_auth_message:{textContent:'',className:''}};
+const sandbox={window:{document:{getElementById:id=>elements[id]||null,querySelectorAll:()=>[]},SupabaseRuntimeConfig:{configureClient:()=>({available:true})},SupabaseAuth:{initialize:()=>Promise.resolve(),signUp:()=>{throw new Error('must not call');}},renderSettings:()=>{}},Promise};
+vm.runInNewContext(source,sandbox);sandbox.window.SyncSettingsUI.signUp();
+setTimeout(()=>{assert(elements.sync_auth_message.textContent.includes('غير متطابقتين'));console.log('first-use auth landing tests: passed');},0);
