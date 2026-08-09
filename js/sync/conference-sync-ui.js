@@ -363,6 +363,13 @@
       });
       html+='</div>';
     }
+    if(global.LegacyConferenceOrganizationAssignmentUI&&
+      typeof global.LegacyConferenceOrganizationAssignmentUI.renderSection==='function'){
+      html+=global.LegacyConferenceOrganizationAssignmentUI.renderSection({
+        localConference:local,
+        remoteConferenceId:link&&link.remoteConferenceId||null
+      });
+    }
     return html+'</section>';
   }
   function current(){

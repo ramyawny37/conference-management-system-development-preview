@@ -6,7 +6,7 @@ const CACHE_NAMESPACE = IS_DEVELOPMENT
   ? 'cms:development:' + DEVELOPMENT_PROJECT_REF + ':'
   : '';
 const CACHE_PREFIX = CACHE_NAMESPACE + 'conference-manager-core-';
-const CACHE_REVISION = 'diagnostics-privacy-hardening-v1';
+const CACHE_REVISION = 'legacy-conference-preflight-v2';
 const CACHE_NAME = CACHE_PREFIX + 'v' + APP_VERSION + '-' + CACHE_REVISION;
 const CORE_ASSETS = [
   './',
@@ -64,13 +64,16 @@ const CORE_ASSETS = [
   './js/sync/conference-membership-attempt-store.js',
   './js/sync/conference-members-service.js?rev=organization-membership-operation-key-v1',
   './js/sync/conference-members-ui.js?rev=diagnostics-privacy-hardening-v1',
+  './js/sync/legacy-conference-organization-assignment-attempt-store.js?rev=legacy-conference-preflight-v2',
+  './js/supabase/legacy-conference-organization-assignment-service.js?rev=legacy-conference-preflight-v2',
+  './js/sync/legacy-conference-organization-assignment-ui.js?rev=legacy-conference-preflight-v2',
   './js/sync/system-access-administration-attempt-store.js?rev=user-account-administration-v1',
   './js/supabase/account-administration-service.js?rev=user-account-administration-v1',
   './js/sync/user-management-read-service.js?rev=organization-archive-restore-v1',
   './js/sync/user-management-ui.js?rev=organization-membership-operation-key-v1',
   './js/sync/conference-linking-attempt-store.js',
   './js/sync/conference-linking-service.js?rev=organization-membership-operation-key-v1',
-  './js/sync/conference-sync-ui.js',
+  './js/sync/conference-sync-ui.js?rev=legacy-conference-preflight-v2',
   './js/sync/conflict-backup-store.js?rev=phase-4',
   './js/sync/pending-remote-application-store.js?rev=phase-4',
   './js/sync/conflict-resolution-draft-store.js',
@@ -88,7 +91,7 @@ const CORE_ASSETS = [
   './js/sync/automatic-queue-runner.js?rev=template-sync-isolation-v1',
   './js/sync/automatic-conference-linking.js?rev=realtime-refresh-completion-v1',
   './js/sync/discovered-conference-open-service.js?rev=realtime-reconnect-catchup-v1',
-  './js/sync/member-runtime-diagnostics.js?rev=diagnostics-privacy-hardening-v1',
+  './js/sync/member-runtime-diagnostics.js?rev=legacy-conference-preflight-v2',
   './js/sync/automatic-sync-orchestrator.js?rev=realtime-reconnect-catchup-v1',
   './js/sync/wrong-remote-binding-repair-store.js?rev=wrong-remote-binding-repair-v1',
   './js/sync/wrong-remote-binding-repair-service.js?rev=wrong-remote-binding-repair-v1',

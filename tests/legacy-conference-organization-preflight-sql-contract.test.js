@@ -1,0 +1,18 @@
+'use strict';
+const assert=require('assert'),fs=require('fs'),path=require('path');
+const root=path.resolve(__dirname,'..');
+const sql=fs.readFileSync(path.join(root,'supabase/migrations/20260818_6_14_0_legacy_conference_organization_preflight.sql'),'utf8');
+const historical=fs.readFileSync(path.join(root,'supabase/migrations/20260801_5_3_4_organization_member_list_role_variable_fix.sql'),'utf8');
+const verification=fs.readFileSync(path.join(root,'supabase/legacy-conference-organization-preflight-runtime-verification.sql'),'utf8');
+assert.match(sql,/device_guarded_list_eligible_legacy_conference_organizations\s*\(\s*p_actor_device_id uuid,\s*p_conference_id uuid/i);
+assert.match(sql,/returns jsonb[\s\S]*language plpgsql[\s\S]*stable[\s\S]*security definer[\s\S]*set search_path = pg_catalog, public/i);
+assert.match(sql,/actor_id := public\.require_current_approved_device\(p_actor_device_id\)/i);
+assert.match(sql,/conference_row\.organization_id is not null[\s\S]*LEGACY_CONFERENCE_PREFLIGHT_UNAVAILABLE/i);
+assert.match(sql,/public\.is_system_owner\(actor_id\)/i);assert.match(sql,/actor_memberships\.role = 'organization_owner'/i);assert.doesNotMatch(sql,/organization_admin/);
+assert.match(sql,/organizations\.status = 'active'/i);assert.match(sql,/owner_memberships\.user_id = conference_row\.owner_id/i);assert.match(sql,/conference_members\.conference_id = p_conference_id[\s\S]*member_memberships\.user_id = conference_members\.user_id/i);
+assert.doesNotMatch(sql,/\b(count|email|membercount)\b/i);assert.doesNotMatch(sql,/\b(insert|update|delete|merge|truncate)\b/i);
+assert.match(sql,/jsonb_build_object\([\s\S]*'organizationId'[\s\S]*'displayName'[\s\S]*'organizationStatus'[\s\S]*'eligibility'/i);assert.doesNotMatch(sql,/jsonb_build_object\([\s\S]*'(userId|ownerId|members|reason)'/i);
+assert.match(sql,/revoke all on function[\s\S]*from public, anon/i);assert.match(sql,/grant execute on function[\s\S]*to authenticated/i);assert.doesNotMatch(sql,/grant execute[\s\S]*to (public|anon)/i);
+assert.match(verification,/^--[^\n]*\nbegin;[\s\S]*rollback;\s*$/i);assert.match(verification,/PREFLIGHT_MUST_BE_READ_ONLY/);
+assert.match(historical,/caller_organization_role not in \('organization_owner', 'organization_admin'\)/i);assert.doesNotMatch(historical,/is_system_owner/);
+console.log('legacy conference organization preflight SQL contract tests: passed');

@@ -5,7 +5,8 @@ const vm=require('vm');
 
 const root=path.join(__dirname,'..');
 const marker='canonical-conference-schema-v1';
-const cacheMarker='diagnostics-privacy-hardening-v1';
+const cacheMarker='legacy-conference-preflight-v2';
+const privacyMarker='diagnostics-privacy-hardening-v1';
 const realtimeMarker='template-sync-isolation-v1';
 const source=fs.readFileSync(path.join(
   root,'js/sync/member-runtime-diagnostics.js'),'utf8');
@@ -101,7 +102,7 @@ assert.ok(worker.includes("const CACHE_REVISION = '"+cacheMarker+"';"));
   'core.js?rev='+marker,
   'people.js?rev='+marker,
   'houses.js?rev=available-template-room-discovery-v1',
-  'script.js?rev='+cacheMarker
+  'script.js?rev='+privacyMarker
 ].forEach(asset=>{
   assert.ok(index.includes('src="'+asset+'"'),'index missing '+asset);
   assert.ok(worker.includes("'./"+asset+"'"),'CORE_ASSETS missing '+asset);
@@ -111,6 +112,6 @@ const settingsSource=fs.readFileSync(path.join(
 assert.ok(settingsSource.includes('تشخيص مزامنة هذا الجهاز'));
 assert.ok(source.includes(marker));
 assert.ok(index.includes(
-  'js/sync/sync-settings-ui.js?rev='+cacheMarker));
+  'js/sync/sync-settings-ui.js?rev='+privacyMarker));
 
 console.log('member runtime trace tests passed');

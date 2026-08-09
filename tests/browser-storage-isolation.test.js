@@ -151,6 +151,7 @@ const activeSources=[
   'js/sync/conference-linking-attempt-store.js',
   'js/sync/device-authorization-operation-repository.js',
   'js/sync/link-status-diagnostic-store.js',
+  'js/sync/legacy-conference-organization-assignment-attempt-store.js',
   'js/sync/remote-update-store.js',
   'js/sync/wrong-remote-binding-repair-service.js',
   'js/sync/wrong-remote-binding-repair-store.js'

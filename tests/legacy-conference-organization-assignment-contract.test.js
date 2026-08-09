@@ -1,0 +1,15 @@
+'use strict';
+const assert=require('assert'),fs=require('fs'),path=require('path'),vm=require('vm');
+const root=path.resolve(__dirname,'..'),read=file=>fs.readFileSync(path.join(root,file),'utf8');
+const service=read('js/supabase/legacy-conference-organization-assignment-service.js'),ui=read('js/sync/legacy-conference-organization-assignment-ui.js'),store=read('js/sync/legacy-conference-organization-assignment-attempt-store.js'),sync=read('js/sync/conference-sync-ui.js'),index=read('index.html'),worker=read('service-worker.js');
+assert.strictEqual((service.match(/device_guarded_assign_legacy_conference_organization/g)||[]).length,1);
+assert.strictEqual((service.match(/device_guarded_list_eligible_legacy_conference_organizations/g)||[]).length,1);
+assert.doesNotMatch(service,/\.from\s*\([^)]*\)\s*\.\s*(insert|update|delete|upsert)/);
+assert.doesNotMatch(service,/organizations\.list|organizationMembers|conferenceMembers|listMembers/);
+assert.doesNotMatch(service,/72d1c27d|9306c61a|Default Organization/);assert.doesNotMatch(ui,/72d1c27d|9306c61a|Default Organization/);
+assert(service.includes('listAvailableConferences'),'unknown-result read-back missing');assert(ui.includes('confirm(warning)'));assert(store.includes('BrowserStorageNamespace'));assert(sync.includes('LegacyConferenceOrganizationAssignmentUI.renderSection'));
+const revision='legacy-conference-preflight-v2';
+['js/sync/legacy-conference-organization-assignment-attempt-store.js','js/supabase/legacy-conference-organization-assignment-service.js','js/sync/legacy-conference-organization-assignment-ui.js','js/sync/conference-sync-ui.js'].forEach(asset=>{assert(index.includes(asset+'?rev='+revision));assert(worker.includes("'./"+asset+'?rev='+revision+"'"));});
+assert(index.indexOf('legacy-conference-organization-assignment-attempt-store.js')<index.indexOf('legacy-conference-organization-assignment-service.js'));assert(index.indexOf('legacy-conference-organization-assignment-service.js')<index.indexOf('legacy-conference-organization-assignment-ui.js'));assert(index.indexOf('legacy-conference-organization-assignment-ui.js')<index.indexOf('conference-sync-ui.js'));
+const namespaceSource=read('js/storage/environment-namespace.js'),memory={},storage={getItem:key=>memory[key]||null,setItem:(key,value)=>{memory[key]=value;},removeItem:key=>{delete memory[key];}},sandbox={window:null,location:{pathname:'/conference-management-system-development-preview/'},localStorage:storage,JSON,String,Object,Date};sandbox.window=sandbox;vm.runInNewContext(namespaceSource,sandbox);vm.runInNewContext(store,sandbox);const key=sandbox.LegacyConferenceOrganizationAssignmentAttemptStore.key({actorUserId:'11111111-1111-4111-8111-111111111111',conferenceId:'22222222-2222-4222-8222-222222222222',organizationId:'33333333-3333-4333-8333-333333333333'});assert(key.startsWith('cms:development:gppwltrifgfxrkzvvxoe:'));
+console.log('legacy conference organization assignment contract tests: passed');
