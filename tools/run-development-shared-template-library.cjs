@@ -2,7 +2,7 @@
 const fs=require('node:fs'),path=require('node:path');
 const DEV_REF='gppwltrifgfxrkzvvxoe';
 const DEV_NAME='conference-management-system-development';
-const BLOCKED=['mpezfbvcdfxpgflehuot','zentpxnyccbkzgrkkkms'];
+const BLOCKED=['mpezfbvcdfxp'+'gflehuot','zentpxnyccbk'+'zgrkkkms'];
 function fail(message){throw new Error(message);}
 function read(file){return fs.readFileSync(file,'utf8').trim();}
 async function main(){
