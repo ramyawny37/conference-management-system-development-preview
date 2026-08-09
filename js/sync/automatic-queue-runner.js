@@ -23,6 +23,7 @@
     lastEligibilityStatus:'runner_not_invoked',
     lastOperationValidationStatus:null,
     lastSelectedOperationStatus:'runner_not_invoked',
+    lastExternalSuspensionReason:null,
     lastProcessorInvocationAt:null,
     lastProcessorResultStatus:null
   };
@@ -406,6 +407,10 @@
             ?'unsafe_link'
             :retryTimers[operation.conferenceId]
               ?'retry_wait':'externally_suspended';
+          if(externallySuspendedConferences[operation.conferenceId]){
+            state.lastExternalSuspensionReason=
+              externallySuspendedConferences[operation.conferenceId];
+          }
           return;
         }
         checks.push(resolvedConferenceAllows(link,options).then(function(allowed){
@@ -424,7 +429,10 @@
         var selected=selectFair(items.filter(Boolean),
           options.limit||MAX_OPERATIONS);
         state.lastEligibleCount=selected.length;
-        state.lastEligibilityStatus=selected.length?'selected':'empty';
+        if(selected.length)state.lastEligibilityStatus='selected';
+        else if(state.lastEligibilityStatus==='checking'){
+          state.lastEligibilityStatus='empty';
+        }
         state.lastSelectedOperationStatus=selected.length
           ?'selected':'empty';
         return selected;
@@ -596,6 +604,7 @@
       lastEligibilityStatus:'runner_not_invoked',
       lastOperationValidationStatus:null,
       lastSelectedOperationStatus:'runner_not_invoked',
+      lastExternalSuspensionReason:null,
       lastProcessorInvocationAt:null,lastProcessorResultStatus:null
     };
   }

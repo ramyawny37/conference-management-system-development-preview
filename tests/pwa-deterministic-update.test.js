@@ -9,7 +9,8 @@ const index=fs.readFileSync(path.join(root,'index.html'),'utf8');
 const manager=fs.readFileSync(path.join(root,'js/sync/conference-edit-lock-manager.js'),'utf8');
 
 const previous='exclusive-edit-lock-v1';
-const next='startup-authorized-view-v1';
+const next='template-sync-isolation-v1';
+const startupRevision='startup-authorized-view-v1';
 const deviceOnboardingRevision='device-onboarding-v1';
 const organizationTemplateRevision='organization-template-sync-v1';
 const bootstrapRevision='first-owner-bootstrap-hardening-v1';
@@ -27,13 +28,17 @@ assert(index.includes('js/sync/sync-settings-ui.js?rev=first-use-auth-v1'));
 assert(worker.includes("'./js/sync/sync-settings-ui.js?rev=first-use-auth-v1'"));
 assert(index.includes('js/supabase/first-system-bootstrap-service.js?rev='+bootstrapRevision));
 assert(worker.includes("'./js/supabase/first-system-bootstrap-service.js?rev="+bootstrapRevision+"'"));
-assert(index.includes('js/sync/startup-access-gate.js?rev='+next));
-assert(worker.includes("'./js/sync/startup-access-gate.js?rev="+next+"'"));
-['houses.js','houseTemplates.js'].forEach(asset=>{
+assert(index.includes('js/sync/startup-access-gate.js?rev='+startupRevision));
+assert(worker.includes("'./js/sync/startup-access-gate.js?rev="+
+  startupRevision+"'"));
+['houses.js'].forEach(asset=>{
   const versionedAsset=asset+'?rev='+houseTemplateRevision;
   assert(index.includes(versionedAsset),'index missing '+versionedAsset);
   assert(worker.includes("'./"+versionedAsset+"'"),'app shell missing '+versionedAsset);
 });
+const isolatedHouseTemplates='houseTemplates.js?rev='+next;
+assert(index.includes(isolatedHouseTemplates));
+assert(worker.includes("'./"+isolatedHouseTemplates+"'"));
 const conferenceMembersUi='js/sync/conference-members-ui.js?rev='+conferenceRoleRevision;
 assert(index.includes(conferenceMembersUi),
   'index missing deterministic Conference Members UI revision');
@@ -57,14 +62,24 @@ assert(worker.includes("'./"+readAsset+"'"));
 assert(index.includes('script.js?rev='+next));
 assert(worker.includes("'./script.js?rev="+next+"'"));
 [
+  'state.js','js/sync/automatic-queue-runner.js',
+  'js/sync/conference-realtime-manager.js'
+].forEach(asset=>{
+  const versioned=asset+'?rev='+next;
+  assert(index.includes(versioned),'index missing '+versioned);
+  assert(worker.includes("'./"+versioned+"'"),'app shell missing '+versioned);
+});
+[
   'js/storage/indexeddb.js','js/storage/storage-repository.js',
-  'js/sync/startup-conference-discovery.js',
-  'js/sync/organization-template-sync.js'
+  'js/sync/startup-conference-discovery.js'
 ].forEach(asset=>{
   const versioned=asset+'?rev='+organizationTemplateRevision;
   assert(index.includes(versioned),'index missing '+versioned);
   assert(worker.includes("'./"+versioned+"'"),'app shell missing '+versioned);
 });
+const isolatedTemplateSync='js/sync/organization-template-sync.js?rev='+next;
+assert(index.includes(isolatedTemplateSync));
+assert(worker.includes("'./"+isolatedTemplateSync+"'"));
 [
   'js/sync/current-device-authorization-ui.js'
 ].forEach(asset=>{

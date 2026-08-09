@@ -408,7 +408,8 @@ function accessResult(){
   assert.strictEqual(conflictQueueTrace.data.conflictCount,0);
   assert.strictEqual(conflict.readinessReads()-conflictReadinessBefore,1,
     'potential conflict performs no additional queue inspection');
-  assert.strictEqual(conflict.suspendedQueue.length,1);
+  assert.strictEqual(conflict.suspendedQueue.length,0,
+    'potential conflict must not suspend local queue processing');
   assert.strictEqual(conflict.manager.getState(LOCAL).status,'suspended');
   assert.strictEqual(
     conflict.sandbox.ConferenceLinkStore.get().knownRevision,3

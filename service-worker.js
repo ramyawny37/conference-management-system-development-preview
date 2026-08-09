@@ -6,7 +6,7 @@ const CACHE_NAMESPACE = IS_DEVELOPMENT
   ? 'cms:development:' + DEVELOPMENT_PROJECT_REF + ':'
   : '';
 const CACHE_PREFIX = CACHE_NAMESPACE + 'conference-manager-core-';
-const CACHE_REVISION = 'startup-authorized-view-v1';
+const CACHE_REVISION = 'template-sync-isolation-v1';
 const CACHE_NAME = CACHE_PREFIX + 'v' + APP_VERSION + '-' + CACHE_REVISION;
 const CORE_ASSETS = [
   './',
@@ -46,7 +46,7 @@ const CORE_ASSETS = [
   './js/sync/device-authorization-administration-ui.js?rev=startup-device-admin-lifecycle-v1',
   './js/supabase/snapshot-sync.js?rev=startup-queue-recovery-v1',
   './js/sync/startup-conference-discovery.js?rev=organization-template-sync-v1',
-  './js/sync/organization-template-sync.js?rev=organization-template-sync-v1',
+  './js/sync/organization-template-sync.js?rev=template-sync-isolation-v1',
   './js/sync/sync-processor.js?rev=startup-queue-recovery-v1',
   './js/sync/realtime.js',
   './js/sync/conflict-resolution.js',
@@ -84,9 +84,9 @@ const CORE_ASSETS = [
   './js/sync/sync-scheduler-state.js',
   './js/sync/conference-sync-state-resolver.js?rev=phase-5',
   './js/sync/conference-queue-integration.js?rev=queue-legacy-compat-v1',
-  './js/sync/conference-realtime-manager.js?rev=realtime-reconnect-catchup-v1',
+  './js/sync/conference-realtime-manager.js?rev=template-sync-isolation-v1',
   './js/sync/conference-operational-ui.js',
-  './js/sync/automatic-queue-runner.js?rev=startup-queue-recovery-v1',
+  './js/sync/automatic-queue-runner.js?rev=template-sync-isolation-v1',
   './js/sync/automatic-conference-linking.js?rev=realtime-refresh-completion-v1',
   './js/sync/discovered-conference-open-service.js?rev=realtime-reconnect-catchup-v1',
   './js/sync/member-runtime-diagnostics.js?rev=startup-queue-recovery-v1',
@@ -99,14 +99,14 @@ const CORE_ASSETS = [
   './people.js?rev=canonical-conference-schema-v1',
   './houses.js?rev=house-template-propagation-v1',
   './transport.js',
-  './houseTemplates.js?rev=house-template-propagation-v1',
-  './state.js?rev=device-reauthorization-flow-v1',
+  './houseTemplates.js?rev=template-sync-isolation-v1',
+  './state.js?rev=template-sync-isolation-v1',
   './js/conference/accounts.js',
   './js/conference-template-houses-editor.js',
   './cards.js',
-  './script.js?rev=startup-authorized-view-v1',
+  './script.js?rev=template-sync-isolation-v1',
   './version.js',
-  './pwa.js?rev=startup-authorized-view-v1',
+  './pwa.js?rev=template-sync-isolation-v1',
   './libs/html2canvas.min.js',
   './assets/logo.jpg',
   './assets/startup-bg.png',

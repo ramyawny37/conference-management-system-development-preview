@@ -152,15 +152,15 @@ function functionBody(source,name,nextName){
   return extract(source,name,nextName);
 }
 assert.ok(functionBody(scriptSource,'saveTemplateFloor','renderTemplateRoomModal')
-  .indexOf('refreshConferenceHouseAfterTemplateMutation(house)')>=0);
+  .indexOf('refreshConferenceHouseAfterTemplateMutation(house)')<0);
 assert.ok(functionBody(scriptSource,'saveTemplateRoom','saveSettings')
-  .indexOf('refreshConferenceHouseAfterTemplateMutation(house)')>=0);
+  .indexOf('refreshConferenceHouseAfterTemplateMutation(house)')<0);
 assert.ok(functionBody(houseTemplatesSource,'ht_deleteRoomFromTemplate','ht_roomHtml')
-  .indexOf('refreshConferenceHouseAfterTemplateMutation(house)')>=0);
+  .indexOf('refreshConferenceHouseAfterTemplateMutation(house)')<0);
 assert.ok(houseTemplatesSource.slice(
   houseTemplatesSource.indexOf('function ht_deleteFloorFromTemplate(')
 )
-  .indexOf('refreshConferenceHouseAfterTemplateMutation(house)')>=0);
+  .indexOf('refreshConferenceHouseAfterTemplateMutation(house)')<0);
 assert.ok(scriptSource.indexOf(
   'current.houses = deepClone(editRoomData.draftHouses);\n  linkRoomPeopleToDatabase(current);'
 )>=0);

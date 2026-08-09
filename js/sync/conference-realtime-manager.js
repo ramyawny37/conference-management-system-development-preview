@@ -632,13 +632,6 @@
           event.classification='potential_conflict';
           reclassificationReason=queue.status||'queue_not_stable';
           value.potentialConflict=true;
-          var runner=options&&options.queueRunner||
-            global.AutomaticQueueRunner;
-          if(runner&&typeof runner.suspendConference==='function'){
-            runner.suspendConference(
-              event.cloudConferenceId,'potential_conflict'
-            );
-          }
         }
       }
       eventDiagnostics.lastPostQueueClassification=event.classification;

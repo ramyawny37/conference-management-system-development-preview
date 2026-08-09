@@ -218,6 +218,15 @@ async function run(){
   assert.strictEqual(runner.getState().lastSelectedOperationStatus,'empty');
 
   runner.resetForTests();
+  var suspended=options();
+  runner.suspendConference(ids.first,'maintenance_window');
+  assert.strictEqual((await runner.run(suspended)).status,'empty');
+  assert.strictEqual(runner.getState().lastEligibilityStatus,
+    'externally_suspended');
+  assert.strictEqual(runner.getState().lastExternalSuspensionReason,
+    'maintenance_window');
+
+  runner.resetForTests();
   var validationBlocked=options({
     queueIntegration:{validateOperation:function(){return Promise.resolve({
       ok:false,status:'base_revision_mismatch'

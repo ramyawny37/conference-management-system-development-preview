@@ -154,6 +154,14 @@ function restoreSafeSingleCurrentConferenceSelection(target){
   return true;
 }
 
+function saveTemplateOnly(){
+  return save({
+    skipCurrentConferenceUpdate:true,
+    skipConferenceTracking:true,
+    skipSyncQueue:true
+  });
+}
+
 function initializeApplicationStorage(){
   if(storageInitializationPromise)return storageInitializationPromise;
 
