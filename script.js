@@ -7429,6 +7429,8 @@ function renderMigrationAuditCodeCounts(groups,title,issueType){
 }
 
 function renderMigrationAuditSection(){
+  if(!window.DiagnosticsPrivacyPolicy||
+    !window.DiagnosticsPrivacyPolicy.canViewConferenceDiagnostics())return '';
   var h='<section class="settings-section"><div class="settings-section-title">فحص جاهزية المزامنة</div>';
   h+='<div class="settings-branding-actions"><button class="btn btn-blue" onclick="runMigrationAudit()">تشغيل الفحص</button></div>';
   if(!migrationAuditReport){

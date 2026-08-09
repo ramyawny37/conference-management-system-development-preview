@@ -1,7 +1,7 @@
 (function(global){
   'use strict';
   var RUNTIME_BUILD_REVISION='canonical-conference-schema-v1';
-  var SERVICE_WORKER_CACHE_REVISION='startup-queue-recovery-v1';
+  var SERVICE_WORKER_CACHE_REVISION='diagnostics-privacy-hardening-v1';
   var FIELDS=Object.freeze([
     'runtimeBuildRevision','serviceWorkerCacheRevision',
     'orchestratorStarted','lastScheduledReason',
@@ -28,7 +28,7 @@
     'linkedRefreshTrace','activationCurrentStage','activationExceptionStage',
     'activationTrace',
     'lock.section','lock.lockOwnerDeviceId','lock.lockOwnerUserId',
-    'lock.lockOwnerEmail','lock.acquiredAt','lock.expiresAt',
+    'lock.acquiredAt','lock.expiresAt',
     'lock.serverNow','lock.heartbeatAt','lock.isExpired',
     'lock.localManagerState','lock.lastAcquireResult',
     'lock.lastRenewResult','lock.lastReleaseResult',
@@ -50,6 +50,28 @@
     return JSON.parse(JSON.stringify(value));
   }
   function shortId(value){var text=String(value||'');return text?text.slice(0,8)+'…'+text.slice(-4):null;}
+  var SAFE_NESTED_FIELDS=Object.freeze([
+    'accepted','activeRooms','after','allowed','appDataUpdated','at','backupStored',
+    'before','classification','code','completed','conferenceChanged','count','data',
+    'executed','generation','houses','isExpired','lastConnectedAt','lastError',
+    'lastEventAt','nextLinkStatus','outcome','reason','reasons',
+    'renderRefreshInvoked','revision','revisionPublished','skipReason','stage',
+    'status','type','writerName'
+  ]);
+  var SAFE_NESTED_LOOKUP=SAFE_NESTED_FIELDS.reduce(function(output,key){output[key]=true;return output;},Object.create(null));
+  function safeNested(value,key){
+    if(value==null||typeof value==='boolean'||typeof value==='number')return value;
+    if(typeof value==='string'){
+      if(/(?:password|secret|token|session|jwt|bearer|supabase|@)/i.test(key||''))return '[REDACTED]';
+      if(/^[0-9a-f]{8}-[0-9a-f-]{27,}$/i.test(value))return shortId(value);
+      return value.slice(0,160);
+    }
+    if(Array.isArray(value))return value.slice(-30).map(function(item){return safeNested(item,key);});
+    if(typeof value==='object'){
+      var output={};Object.keys(value).forEach(function(childKey){if(SAFE_NESTED_LOOKUP[childKey])output[childKey]=safeNested(value[childKey],childKey);});return output;
+    }
+    return null;
+  }
   function realtimeStates(manager){
     var values=manager&&typeof manager.getState==='function'
       ?manager.getState():{};
@@ -176,7 +198,7 @@
       activationReached:openState.activationReached===true,
       settingsConferenceResolved:openState.settingsConferenceResolved===true,
       realtimeManagerState:copy(realtimeStates(realtimeManager)),
-      realtimeTrace:copy(realtimeManager&&
+      realtimeTrace:safeNested(realtimeManager&&
         typeof realtimeManager.getDiagnostics==='function'
           ?realtimeManager.getDiagnostics():[]),
       'realtime.lastAcceptedRevision':Number.isInteger(
@@ -188,68 +210,67 @@
         realtimeEventDiagnostics.lastDropStage||null,
       'realtime.lastDropReason':
         realtimeEventDiagnostics.lastDropReason||null,
-      'realtime.lastNotifyResult':copy(
+      'realtime.lastNotifyResult':safeNested(
         realtimeEventDiagnostics.lastNotifyResult||null
       ),
-      'orchestrator.lastRealtimeListenerResult':copy(
+      'orchestrator.lastRealtimeListenerResult':safeNested(
         orchestratorState.lastRealtimeListenerResult||null
       ),
-      'orchestrator.lastScheduledReasons':copy(
+      'orchestrator.lastScheduledReasons':safeNested(
         orchestratorState.lastScheduledReasons||null
       ),
-      'orchestrator.lastEvaluationReasons':copy(
+      'orchestrator.lastEvaluationReasons':safeNested(
         orchestratorState.lastEvaluationReasons||[]
       ),
-      'orchestrator.lastRefreshDecision':copy(
+      'orchestrator.lastRefreshDecision':safeNested(
         orchestratorState.lastRefreshDecision||null
       ),
-      linkStatusWriteTrace:copy(global.ConferenceLinkStore&&
+      linkStatusWriteTrace:safeNested(global.ConferenceLinkStore&&
         typeof global.ConferenceLinkStore.getWriteDiagnostics==='function'
           ?global.ConferenceLinkStore.getWriteDiagnostics():[]),
-      persistentLinkStatusWriteTrace:copy(persistentState.records||[]),
+      persistentLinkStatusWriteTrace:safeNested(persistentState.records||[]),
       persistentRegressionCount:Number.isInteger(
         persistentState.regressionCount
       )?persistentState.regressionCount:0,
-      latestPersistentRegression:copy(
+      latestPersistentRegression:safeNested(
         persistentState.latestRegression||null
       ),
       traceStorageReadError:persistentState.readError||null,
       lastPreMetadataExitReason:
         orchestratorState.lastPreMetadataExitReason||null,
-      preMetadataTrace:copy(orchestratorState.preMetadataTrace||[]),
+      preMetadataTrace:safeNested(orchestratorState.preMetadataTrace||[]),
       linkedRefreshCurrentStage:openState.linkedRefreshCurrentStage||null,
       linkedRefreshExceptionStage:openState.linkedRefreshExceptionStage||null,
-      linkedRefreshTrace:copy(openState.linkedRefreshTrace||[]),
+      linkedRefreshTrace:safeNested(openState.linkedRefreshTrace||[]),
       activationCurrentStage:activationState.currentStage||null,
       activationExceptionStage:activationState.exceptionStage||null,
-      activationTrace:copy(activationState.trace||[]),
+      activationTrace:safeNested(activationState.trace||[]),
       'lock.section':editLock.section||'accommodation',
       'lock.lockOwnerDeviceId':shortId(lockData.deviceId),
-      'lock.lockOwnerUserId':lockData.userId||null,
-      'lock.lockOwnerEmail':null,
+      'lock.lockOwnerUserId':shortId(lockData.userId),
       'lock.acquiredAt':lockData.acquiredAt||null,
       'lock.expiresAt':lockData.expiresAt||null,
       'lock.serverNow':lockData.serverNow||null,
       'lock.heartbeatAt':lockData.lastRenewedAt||null,
       'lock.isExpired':typeof lockData.isExpired==='boolean'?lockData.isExpired:null,
       'lock.localManagerState':editLock.status||'viewing',
-      'lock.lastAcquireResult':copy(editLock.lastAcquireResult),
-      'lock.lastRenewResult':copy(editLock.lastRenewResult),
-      'lock.lastReleaseResult':copy(editLock.lastReleaseResult),
-      'lock.lastReleaseDiagnostic':copy(
+      'lock.lastAcquireResult':safeNested(editLock.lastAcquireResult),
+      'lock.lastRenewResult':safeNested(editLock.lastRenewResult),
+      'lock.lastReleaseResult':safeNested(editLock.lastReleaseResult),
+      'lock.lastReleaseDiagnostic':safeNested(
         lockClientState.lastReleaseDiagnostic||null
       ),
       'lock.heartbeatTimerCount':Number.isInteger(editLock.heartbeatTimerCount)?editLock.heartbeatTimerCount:0,
       'draft.exists':conflict.loaded===true?!!draft:null,
       'draft.status':draft&&draft.status||null,
       'draft.executionStatus':draft&&draft.executionStatus||null,
-      'draft.executionResult':copy(draft&&draft.executionResult),
-      'draft.finalizationState':copy(draft&&draft.finalization),
+      'draft.executionResult':safeNested(draft&&draft.executionResult),
+      'draft.finalizationState':safeNested(draft&&draft.finalization),
       'pending.exists':conflict.loaded===true?!!pending:null,
       'pending.status':pending&&pending.status||null,
       'pending.revision':pending&&Number.isInteger(pending.resolvedRevision)
         ?pending.resolvedRevision:null,
-      'pending.applicationState':copy(pending&&pending.applicationState),
+      'pending.applicationState':safeNested(pending&&pending.applicationState),
       'link.linkStatus':link&&link.linkStatus||null,
       'link.pendingLocalApplication':link&&
         typeof link.pendingLocalApplication==='boolean'

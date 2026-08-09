@@ -9,6 +9,7 @@ global.confirm=()=>true;
 global.getCurrentConference=()=>({id:'local-a',name:'Local'});
 global.ConferenceLinkStore={get:()=>({remoteConferenceId:'old-remote'})};
 global.renderSettings=()=>calls.push('render');
+global.DiagnosticsPrivacyPolicy={canExportRescue:()=>true};
 global.WrongRemoteBindingRepairService={
   listOwnerConferences(){calls.push('listOwnerConferences');return Promise.resolve({
     ok:true,data:{conferences:[{token:'conference-token',name:'Correct',

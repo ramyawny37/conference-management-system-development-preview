@@ -331,7 +331,8 @@
       ' onclick="RealtimeLocksUI.renewCurrentLock()">تجديد القفل</button>'+
       '<button class="btn btn-red btn-sm" '+(!owned?'disabled':'')+
       ' onclick="RealtimeLocksUI.releaseCurrentLock()">تحرير القفل</button></div>';
-    if(cloudLinked){
+    if(cloudLinked&&global.DiagnosticsPrivacyPolicy&&
+      global.DiagnosticsPrivacyPolicy.canViewConferenceDiagnostics()){
       var trace=automaticTrace();
       html+='<div class="sync-settings-message"><strong>realtimeTrace</strong><pre dir="ltr">'+
         esc(trace.map(function(item){

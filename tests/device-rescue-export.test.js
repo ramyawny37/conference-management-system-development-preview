@@ -90,7 +90,8 @@ function environment(options){
     SupabaseDeviceIdentity:{getCurrent:function(){return {
       id:'11111111-1111-4111-8111-111111111111',deviceName:'My iPhone',
       platform:'iPhone'
-    };}}
+    };}},
+    DiagnosticsPrivacyPolicy:{canExportRescue:function(){return true;}}
   };
   sandbox.window=sandbox;
   vm.runInNewContext(source,sandbox,{filename:'device-rescue-export.js'});
@@ -119,6 +120,8 @@ function environment(options){
   assert.strictEqual(JSON.stringify(bundle).includes('must-not-export'),false);
   assert.strictEqual(bundle.conferenceLink.sessionToken,'[REDACTED]');
   assert.strictEqual(bundle.syncContext.accessToken,'[REDACTED]');
+  assert.strictEqual(bundle.device.id,'11111111…1111');
+  assert.strictEqual(Object.prototype.hasOwnProperty.call(bundle.device,'userAgent'),false);
   assert.strictEqual(full.writes(),0,'export must perform zero storage writes');
   assert.deepStrictEqual(full.records,full.before,
     'all synchronization stores must remain byte-equivalent after export');
@@ -134,6 +137,11 @@ function environment(options){
   assert.strictEqual(partialBundle.readErrors.length,1);
   assert.strictEqual(partial.writes(),0);
   assert.deepStrictEqual(partial.records,partial.before);
+
+  var denied=environment();
+  denied.sandbox.DiagnosticsPrivacyPolicy={canExportRescue:function(){return false;}};
+  await assert.rejects(function(){return denied.sandbox.DeviceRescueExport.createBundle();},/RESCUE_EXPORT_FORBIDDEN/);
+  assert.strictEqual(denied.writes(),0);
 
   console.log('device rescue export tests: passed');
 })().catch(function(error){

@@ -329,6 +329,8 @@
   }
   function renderSection(input){
     input=input||{};
+    if(!global.DiagnosticsPrivacyPolicy||
+      !global.DiagnosticsPrivacyPolicy.canViewConferenceDiagnostics())return '';
     var link=input.localConference&&global.ConferenceLinkStore.get(
       input.localConference.id
     );

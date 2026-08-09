@@ -89,7 +89,8 @@ function load(settings){
     LocalSnapshotApplication:{apply:function(){
       sideEffects.push('application');
     }},
-    renderSettings:function(){}
+    renderSettings:function(){},
+    DiagnosticsPrivacyPolicy:{canViewConferenceDiagnostics:function(){return true;}}
   };
   sandbox.window=sandbox;
   vm.runInNewContext(source,sandbox,{

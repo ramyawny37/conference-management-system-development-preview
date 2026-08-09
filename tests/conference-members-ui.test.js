@@ -489,6 +489,7 @@ async function run(){
     'addManager',
     'addMember',
     'changeRole',
+    'getAccessState',
     'lookup',
     'refresh',
     'removeManager',

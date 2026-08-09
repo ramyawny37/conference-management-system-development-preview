@@ -156,6 +156,9 @@
       escapeHtml(text)+'</span>';
   }
   function renderMemberRuntimeDiagnostics(){
+    var privacy=global.DiagnosticsPrivacyPolicy;
+    if(!privacy||typeof privacy.canViewConferenceDiagnostics!=='function'||
+      !privacy.canViewConferenceDiagnostics())return '';
     var service=global.MemberRuntimeDiagnostics;
     var state=service&&typeof service.read==='function'?service.read():{};
     var fields=service&&Array.isArray(service.fields)?service.fields:[];
@@ -170,10 +173,12 @@
       html+='<tr><td dir="ltr">'+escapeHtml(field)+'</td><td dir="ltr">'+
         escapeHtml(String(value))+'</td></tr>';
     });
-    html+='</tbody></table><div class="sync-settings-actions">'+
-      '<button type="button" class="btn btn-blue btn-sm" '+
-      'onclick="SyncSettingsUI.exportDeviceRescueBundle()">'+
-      'تصدير حزمة إنقاذ هذا الجهاز</button>'+
+    var rescueButton=typeof privacy.canExportRescue==='function'&&
+      privacy.canExportRescue()
+      ?'<button type="button" class="btn btn-blue btn-sm" '+
+        'onclick="SyncSettingsUI.exportDeviceRescueBundle()">'+
+        'تصدير حزمة إنقاذ هذا الجهاز</button>':'';
+    html+='</tbody></table><div class="sync-settings-actions">'+rescueButton+
       '<button type="button" class="btn btn-gray btn-sm" '+
       'onclick="SyncSettingsUI.refreshAccommodationLockDiagnostics()">تحديث تشخيص قفل التسكين</button>'+
       '<button type="button" class="btn btn-red btn-sm" '+
@@ -181,28 +186,6 @@
       '<button type="button" class="btn btn-gray btn-sm" '+
       'onclick="MemberRuntimeDiagnostics.clearPersistentLinkStatusTrace()">'+
       'مسح سجل تشخيص Link</button></div></div></section>';
-    var current=typeof global.getCurrentConference==='function'
-      ?global.getCurrentConference():null;
-    var targeted=global.TargetedStuckOperationRecovery;
-    if(current&&current.id==='e711a3ba-fea3-416a-ba1d-7caf4c3e931e'&&targeted){
-      var recoveryState=typeof targeted.getState==='function'?targeted.getState():{};
-      var recoveryResult=recoveryState.lastResult;
-      html+='<section class="settings-section sync-settings-section">'+
-        '<div class="settings-section-title">استعادة عملية مزامنة تجريبية محددة</div>'+
-        '<div class="sync-settings-message">أداة مؤقتة للعملية d41902b7…0d23 فقط. لا تعيد رفع أو تنزيل Snapshot.</div>'+
-        '<button type="button" class="btn btn-red btn-sm" '+
-        'onclick="SyncSettingsUI.recoverTargetedStuckOperation()">إصلاح العملية المرفوعة العالقة</button>'+
-        (recoveryResult?'<pre dir="ltr" class="sync-settings-diagnostic-output">'+
-          escapeHtml(JSON.stringify(recoveryResult,null,2))+'</pre>':'')+'</section>';
-    }
-    var link=current&&global.ConferenceLinkStore&&
-      global.ConferenceLinkStore.get(current.id);
-    if(link&&link.linkStatus==='needs_resolution'){
-      html+='<section class="settings-section sync-settings-section">'+
-        '<div class="settings-section-title">تنظيف مؤتمر تجريبي متعارض</div>'+
-        '<div class="sync-settings-message">أداة مؤقتة لعزل المؤتمر التجريبي وإنهاء عملياته قبل إنشاء مؤتمر جديد.</div>'+
-        '<button type="button" class="btn btn-red btn-sm" onclick="ExperimentalConferenceReset.resetCurrent()">تنظيف المؤتمر التجريبي الحالي</button></section>';
-    }
     return html;
   }
 
@@ -227,29 +210,6 @@
         global.showToast('تعذر تصدير حزمة إنقاذ هذا الجهاز.','#E74C3C');
       }
       return false;
-    });
-  }
-
-  function recoverTargetedStuckOperation(){
-    var service=global.TargetedStuckOperationRecovery;
-    if(!service||typeof service.recover!=='function'){
-      message('sync_settings_message','تعذر تشغيل أداة إصلاح العملية العالقة.',true);
-      return Promise.resolve(false);
-    }
-    if(typeof global.confirm==='function'&&!global.confirm(
-      'سيتم استكمال الحالة المحلية للعملية المرفوعة d41902b7…0d23 دون إعادة رفع أو تنزيل البيانات. هل تريد المتابعة؟'
-    ))return Promise.resolve({ok:false,status:'cancelled'});
-    return service.recover().then(function(outcome){
-      var ok=outcome&&outcome.ok===true;
-      var detail=ok?'تم إصلاح العملية المرفوعة العالقة بأمان.':
-        outcome&&outcome.status==='already_recovered'
-          ?'تم إصلاح هذه العملية سابقًا.':
-          'توقف الإصلاح بأمان عند '+String(outcome&&outcome.failedStage||'unknown')+
-            ': '+String(outcome&&outcome.reason||outcome&&outcome.status||'error');
-      message('sync_settings_message',detail,!ok&&
-        !(outcome&&outcome.status==='already_recovered'));
-      rerender();
-      return outcome;
     });
   }
 
@@ -352,9 +312,6 @@
       'onchange="SyncSettingsUI.saveAutomaticSyncPreferences()"> تفعيل المزامنة التلقائية</label>';
     html+='<div id="sync_preferences_message" class="sync-settings-message"></div></div>';
     html+='</div>';
-    if(global.DebugBindingReportUI&&typeof global.DebugBindingReportUI.render==='function'){
-      html+=global.DebugBindingReportUI.render();
-    }
     html+='</section>';
     return html;
   }
@@ -663,7 +620,6 @@
     refreshAuthState:refreshAuthState,
     saveDeviceName:saveDeviceName,
     exportDeviceRescueBundle:exportDeviceRescueBundle,
-    recoverTargetedStuckOperation:recoverTargetedStuckOperation,
     refreshAccommodationLockDiagnostics:refreshAccommodationLockDiagnostics,
     releaseOwnedAccommodationLock:releaseOwnedAccommodationLock,
     saveAutomaticSyncPreferences:saveAutomaticSyncPreferences,

@@ -34,6 +34,7 @@ var sandbox={
     legacyConnectCalls++;return Promise.resolve({ok:true});
   }},
   RealtimeSync:{},
+  DiagnosticsPrivacyPolicy:{canViewConferenceDiagnostics:function(){return true;}},
   ConferenceRealtimeManager:{
     getState:function(){return {
       status:managerStatus,lastConnectedAt:'2026-08-05T10:00:00.000Z',

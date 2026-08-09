@@ -205,6 +205,8 @@
   }
 
   function render(){
+    if(!global.DiagnosticsPrivacyPolicy||
+      !global.DiagnosticsPrivacyPolicy.canExportRescue())return '';
     var conference=currentConference();
     var link=currentLink();
     if(!conference||!link)return '';

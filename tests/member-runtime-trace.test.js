@@ -5,8 +5,8 @@ const vm=require('vm');
 
 const root=path.join(__dirname,'..');
 const marker='canonical-conference-schema-v1';
-const cacheMarker='startup-queue-recovery-v1';
-const realtimeMarker='startup-queue-recovery-v1';
+const cacheMarker='diagnostics-privacy-hardening-v1';
+const realtimeMarker='template-sync-isolation-v1';
 const source=fs.readFileSync(path.join(
   root,'js/sync/member-runtime-diagnostics.js'),'utf8');
 const sandbox={window:null,structuredClone:value=>JSON.parse(JSON.stringify(value)),
@@ -80,11 +80,12 @@ assert.strictEqual(first['orchestrator.lastScheduledReasons'].reason,
   'conference_changed');
 assert.strictEqual(first['orchestrator.lastRefreshDecision'].allowed,true);
 assert.strictEqual(first['lock.lastReleaseDiagnostic'].outcome,'response_error');
-assert.strictEqual(first['lock.lastReleaseDiagnostic'].lockToken,'333333...3333');
+assert.strictEqual(first['lock.lastReleaseDiagnostic'].lockToken,undefined);
 assert.deepStrictEqual(Object.keys(first),Array.from(service.fields));
 const serialized=JSON.stringify(first);
 ['sensitive-local-id','sensitive-remote-id','sensitive-name','sensitive-token',
-  'remoteConferenceId','conferenceName','accessToken','token'].forEach(value=>{
+  'remoteConferenceId','conferenceName','accessToken','token',
+  '333333...3333','22222222...2222'].forEach(value=>{
   assert.strictEqual(serialized.includes(value),false,
     'sanitized diagnostics leaked '+value);
 });
@@ -95,11 +96,11 @@ assert.ok(worker.includes("const CACHE_REVISION = '"+cacheMarker+"';"));
 [
   'js/sync/member-runtime-diagnostics.js?rev='+cacheMarker,
   'js/sync/conference-realtime-manager.js?rev='+realtimeMarker,
-  'js/sync/automatic-sync-orchestrator.js?rev='+realtimeMarker,
+  'js/sync/automatic-sync-orchestrator.js?rev=realtime-reconnect-catchup-v1',
   'js/sync/conference-locks.js?rev=conference-lock-release-diagnostics-v1',
   'core.js?rev='+marker,
   'people.js?rev='+marker,
-  'houses.js?rev='+marker,
+  'houses.js?rev=available-template-room-discovery-v1',
   'script.js?rev='+cacheMarker
 ].forEach(asset=>{
   assert.ok(index.includes('src="'+asset+'"'),'index missing '+asset);
@@ -110,6 +111,6 @@ const settingsSource=fs.readFileSync(path.join(
 assert.ok(settingsSource.includes('تشخيص مزامنة هذا الجهاز'));
 assert.ok(source.includes(marker));
 assert.ok(index.includes(
-  'js/sync/sync-settings-ui.js?rev=targeted-stuck-operation-recovery-v1'));
+  'js/sync/sync-settings-ui.js?rev='+cacheMarker));
 
 console.log('member runtime trace tests passed');

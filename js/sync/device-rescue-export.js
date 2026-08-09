@@ -154,8 +154,19 @@
     catch(error){return {readError:String(error&&error.message||error)};}
   }
 
+  function allowed(options){
+    var policy=options&&options.privacyPolicy||global.DiagnosticsPrivacyPolicy;
+    return !!(policy&&typeof policy.canExportRescue==='function'&&policy.canExportRescue());
+  }
+
+  function shortIdentifier(value){
+    var text=String(value||'');
+    return text?text.slice(0,8)+'…'+text.slice(-4):null;
+  }
+
   function createBundle(options){
     options=options||{};
+    if(!allowed(options))return Promise.reject(new Error('RESCUE_EXPORT_FORBIDDEN'));
     var repository=options.indexedDb||global.AppIndexedDB;
     var conference=options.conference||currentConference();
     if(!conference||!conference.id){
@@ -204,10 +215,9 @@
         exportedAt:new Date().toISOString(),
         applicationVersion:global.APP_RELEASE&&global.APP_RELEASE.version||null,
         device:sanitize({
-          id:identity&&identity.id||null,
+          id:shortIdentifier(identity&&identity.id),
           deviceName:identity&&identity.deviceName||null,
-          platform:identity&&identity.platform||global.navigator&&global.navigator.platform||null,
-          userAgent:global.navigator&&global.navigator.userAgent||null
+          platform:identity&&identity.platform||global.navigator&&global.navigator.platform||null
         }),
         conferenceReference:{localConferenceId:localId,remoteConferenceId:remoteId||null},
         localConferenceSnapshot:sanitize(copy(conference)),

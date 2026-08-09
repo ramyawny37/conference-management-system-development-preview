@@ -46,10 +46,11 @@ async function run(){
   var indexSource=fs.readFileSync(path.join(root,'index.html'),'utf8');
   var workerSource=fs.readFileSync(path.join(root,'service-worker.js'),'utf8');
   assert.match(queueSource,/operation\.result\.recoveryReason=applyResult\.recoveryReason\.trim\(\)/);
-  assert.match(uiSource,/إصلاح العملية المرفوعة العالقة/);
-  assert.ok(indexSource.includes('js/sync/targeted-stuck-operation-recovery.js'));
-  assert.ok(workerSource.includes("'./js/sync/targeted-stuck-operation-recovery.js'"));
-  assert.match(workerSource,/CACHE_REVISION = 'startup-queue-recovery-v1'/);
+  assert.ok(!uiSource.includes('TargetedStuckOperationRecovery'));
+  assert.ok(!uiSource.includes('recoverTargetedStuckOperation:recoverTargetedStuckOperation'));
+  assert.ok(!indexSource.includes('js/sync/targeted-stuck-operation-recovery.js'));
+  assert.ok(!workerSource.includes("'./js/sync/targeted-stuck-operation-recovery.js'"));
+  assert.match(workerSource,/CACHE_REVISION = 'diagnostics-privacy-hardening-v1'/);
   var ok=environment();var recovered=await ok.api.recover(ok.options);
   assert.strictEqual(recovered.ok,true);assert.strictEqual(recovered.status,'recovered');
   assert.strictEqual(ok.operation().status,'applied');assert.strictEqual(ok.operation().result.revision,18);

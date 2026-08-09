@@ -1,6 +1,10 @@
 'use strict';
 var assert=require('assert'),fs=require('fs'),path=require('path'),vm=require('vm');
 var source=fs.readFileSync(path.join(__dirname,'../js/sync/experimental-conference-reset.js'),'utf8');
+var indexSource=fs.readFileSync(path.join(__dirname,'../index.html'),'utf8');
+var workerSource=fs.readFileSync(path.join(__dirname,'../service-worker.js'),'utf8');
+assert.strictEqual(indexSource.includes('js/sync/experimental-conference-reset.js'),false);
+assert.strictEqual(workerSource.includes('js/sync/experimental-conference-reset.js'),false);
 var events=[],linkPresent=true,appData={currentConferenceId:'local-a',conferences:[{id:'local-a'},{id:'keep'}],conferenceLifecycle:{records:{'local-a':{},keep:{}}}};
 var sandbox={window:null,Promise:Promise,String:String,Date:Date,Error:Error,appData:appData,
   AutomaticSyncOrchestrator:{stop:function(){events.push('stop');return {promise:Promise.resolve()};},start:function(){events.push('restart');}},

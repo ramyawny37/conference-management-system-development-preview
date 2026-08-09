@@ -660,6 +660,10 @@
     removeMember:removeMember,
     addManager:addManager,
     removeManager:removeManager,
+    getAccessState:function(){
+      return {accessStatus:state.accessStatus,role:state.role,
+        canManageMembers:state.canManageMembers===true};
+    },
     resetForTests:resetForTests
   });
 })(window);
