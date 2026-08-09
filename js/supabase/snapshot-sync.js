@@ -463,10 +463,10 @@
 
     return registerDevice(context.client,context.user,identity)
       .then(function(){
-        return context.client.rpc('apply_conference_snapshot',{
+        return context.client.rpc('device_guarded_apply_conference_snapshot',{
+          p_actor_device_id:identity.id,
           p_conference_id:conferenceId,
           p_operation_id:operationId,
-          p_device_id:identity.id,
           p_base_revision:input.baseRevision,
           p_snapshot:snapshotCopy,
           p_schema_version:schemaVersion,

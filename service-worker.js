@@ -6,7 +6,7 @@ const CACHE_NAMESPACE = IS_DEVELOPMENT
   ? 'cms:development:' + DEVELOPMENT_PROJECT_REF + ':'
   : '';
 const CACHE_PREFIX = CACHE_NAMESPACE + 'conference-manager-core-';
-const CACHE_REVISION = 'admin-xlsx-template-room-fixes-v1';
+const CACHE_REVISION = 'conference-snapshot-device-guard-v1';
 const CACHE_NAME = CACHE_PREFIX + 'v' + APP_VERSION + '-' + CACHE_REVISION;
 const CORE_ASSETS = [
   './',
@@ -44,14 +44,14 @@ const CORE_ASSETS = [
   './js/sync/current-device-authorization-ui.js?rev=device-onboarding-v1',
   './js/sync/device-reauthorization-flow.js?rev=device-reauthorization-flow-v1',
   './js/sync/device-authorization-administration-ui.js?rev=startup-device-admin-lifecycle-v1',
-  './js/supabase/snapshot-sync.js?rev=startup-queue-recovery-v1',
+  './js/supabase/snapshot-sync.js?rev=conference-snapshot-device-guard-v1',
   './js/sync/startup-conference-discovery.js?rev=shared-template-library-v1',
   './js/sync/organization-template-sync.js?rev=shared-template-library-v1',
   './js/sync/legacy-template-adoption-ui.js?rev=shared-template-library-v1',
   './js/sync/sync-processor.js?rev=startup-queue-recovery-v1',
   './js/sync/realtime.js',
   './js/sync/conflict-resolution.js',
-  './js/sync/conflict-executor.js',
+  './js/sync/conflict-executor.js?rev=conference-snapshot-device-guard-v1',
   './js/sync/conference-locks.js?rev=conference-lock-release-diagnostics-v1',
   './js/sync/conference-edit-lock-manager.js?rev=section-accommodation-edit-lock-v1',
   './js/sync/offline-first-integration.js?rev=revision-publish-1',
@@ -108,7 +108,7 @@ const CORE_ASSETS = [
   './libs/xlsx.full.min.js',
   './script.js?rev=admin-xlsx-template-room-fixes-v1',
   './version.js',
-  './pwa.js?rev=admin-xlsx-template-room-fixes-v1',
+  './pwa.js?rev=conference-snapshot-device-guard-v1',
   './libs/html2canvas.min.js',
   './assets/logo.jpg',
   './assets/startup-bg.png',

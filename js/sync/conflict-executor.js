@@ -371,11 +371,11 @@
       options.appVersion||planCopy.appVersion
     ).trim();
     return Promise.resolve().then(function(){
-      return dependencies.client.rpc('resolve_sync_conflict',{
+      return dependencies.client.rpc('device_guarded_resolve_sync_conflict',{
+        p_actor_device_id:dependencies.deviceId,
         p_conflict_id:planCopy.conflictId,
         p_conference_id:planCopy.conferenceId,
         p_resolution_operation_id:operationId,
-        p_device_id:dependencies.deviceId,
         p_expected_revision:planCopy.baseRevision,
         p_strategy:planCopy.strategy,
         p_resolved_snapshot:planCopy.strategy==='keep_server'

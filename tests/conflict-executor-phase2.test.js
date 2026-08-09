@@ -130,7 +130,15 @@ async function run(){
   assert.strictEqual(local.result.ok,true);
   assert.strictEqual(local.result.status,'resolved');
   assert.strictEqual(local.result.data.resolvedRevision,6);
-  assert.strictEqual(local.environment.calls[0].name,'resolve_sync_conflict');
+  assert.strictEqual(local.environment.calls[0].name,
+    'device_guarded_resolve_sync_conflict');
+  assert.strictEqual(local.environment.calls[0].input.p_actor_device_id,
+    ids.device);
+  assert.strictEqual(
+    Object.prototype.hasOwnProperty.call(
+      local.environment.calls[0].input,'p_device_id'
+    ),false
+  );
   assert.strictEqual(
     local.environment.calls[0].input.p_expected_revision,
     5

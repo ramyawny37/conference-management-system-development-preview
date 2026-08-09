@@ -1,0 +1,41 @@
+'use strict';
+const assert=require('assert'),fs=require('fs'),path=require('path'),vm=require('vm');
+const root=path.resolve(__dirname,'..');
+const snapshotSource=fs.readFileSync(path.join(root,'js/supabase/snapshot-sync.js'),'utf8');
+const conflictSource=fs.readFileSync(path.join(root,'js/sync/conflict-executor.js'),'utf8');
+const migration=fs.readFileSync(path.join(root,'supabase/migrations/20260814_6_10_0_conference_snapshot_device_guard.sql'),'utf8');
+const guardedFoundation=fs.readFileSync(path.join(root,'supabase/migrations/20260801_5_4_1_device_guarded_rpc_foundation.sql'),'utf8');
+assert(snapshotSource.includes("rpc('device_guarded_apply_conference_snapshot'"));
+assert(!snapshotSource.includes("rpc('apply_conference_snapshot'"));
+assert(conflictSource.includes("rpc('device_guarded_resolve_sync_conflict'"));
+assert(!conflictSource.includes("rpc('resolve_sync_conflict'"));
+assert.match(migration,/revoke all on function public\.apply_conference_snapshot\([\s\S]*?from public, anon, authenticated;/i);
+assert.match(migration,/revoke all on function public\.resolve_sync_conflict\([\s\S]*?from public, anon, authenticated;/i);
+assert.match(migration,/grant execute on function public\.device_guarded_apply_conference_snapshot\([\s\S]*?to authenticated;/i);
+assert.match(migration,/UNSAFE_SNAPSHOT_RPC_EXECUTE_REMAINS/);
+assert.match(migration,/SNAPSHOT_APPROVED_DEVICE_GUARD_MISSING/);
+assert.match(migration,/create table if not exists public\.conference_snapshot_guard_intents/);
+assert.match(migration,/SNAPSHOT_OPERATION_INTENT_MISMATCH/);
+assert.match(migration,/CONFLICT_RESOLUTION_INTENT_MISMATCH/);
+assert.match(migration,/revoke all on table public\.conference_snapshot_guard_intents[\s\S]*?from public, anon, authenticated;/i);
+function wrapper(name){const escaped=name.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');const match=guardedFoundation.match(new RegExp('create or replace function public\\.'+escaped+'\\s*\\([\\s\\S]*?as \\$\\$([\\s\\S]*?)\\$\\$;','i'));assert(match,'missing wrapper '+name);return match[1];}
+['device_guarded_apply_conference_snapshot','device_guarded_resolve_sync_conflict'].forEach(name=>{
+  const sql=wrapper(name);
+  assert(sql.indexOf('require_current_approved_device')>=0,name+' missing approved device guard');
+  assert(sql.indexOf('require_current_approved_device')<sql.indexOf(name.includes('resolve')?'public.resolve_sync_conflict':'public.apply_conference_snapshot'),name+' must guard before mutation');
+});
+assert.match(guardedFoundation,/create or replace function public\.device_guarded_apply_conference_snapshot\(p_actor_device_id uuid/);
+const ids={user:'11111111-1111-4111-8111-111111111111',device:'22222222-2222-4222-8222-222222222222',conference:'33333333-3333-4333-8333-333333333333',operation:'44444444-4444-4444-8444-444444444444'};
+const calls=[];
+const client={from:()=>({upsert:()=>Promise.resolve({data:null,error:null})}),rpc:(name,input)=>{calls.push({name,input});return Promise.resolve({data:{success:true,status:'applied',revision:2},error:null});}};
+const sandbox={window:null,Promise,JSON,Object,String,Number,Array,Date,Uint8Array,structuredClone:global.structuredClone,SupabaseClientLayer:{getClient:()=>client},SupabaseAuth:{getSession:()=>({user:{id:ids.user}})},SupabaseDeviceIdentity:{getOrCreate:()=>({id:ids.device,deviceName:'Test',platform:'Node'})}};
+sandbox.window=sandbox;vm.runInNewContext(snapshotSource,sandbox,{filename:'snapshot-sync.js'});
+(async function(){
+  const result=await sandbox.SupabaseSnapshotSync.uploadSnapshot({conferenceId:ids.conference,operationId:ids.operation,baseRevision:1,snapshot:{id:ids.conference},schemaVersion:'1',appVersion:'1'});
+  assert.strictEqual(result.ok,true);
+  assert.strictEqual(calls.length,1);
+  assert.strictEqual(calls[0].name,'device_guarded_apply_conference_snapshot');
+  assert.strictEqual(calls[0].input.p_actor_device_id,ids.device);
+  assert.strictEqual(Object.prototype.hasOwnProperty.call(calls[0].input,'p_device_id'),false);
+  console.log('conference snapshot device guard contract tests: passed');
+})().catch(error=>{console.error(error);process.exitCode=1;});
