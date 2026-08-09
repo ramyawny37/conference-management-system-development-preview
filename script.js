@@ -3088,6 +3088,35 @@ function bindGuestPersonRow(rowId){
   refreshPeopleDatalist({ assignedMap: assignedInEditor, excludeAssigned: false });
 }
 
+function openGuestPersonPicker(rowId){
+  var row = ge(rowId);
+  var modal = ge('searchableSelectModal');
+  if(!row || (modal && modal.style.display === 'flex')) return;
+  var nameInput = row.querySelector('.person-name');
+  var idInput = row.querySelector('.person-id');
+  if(!nameInput || !idInput) return;
+  var assigned = getEditorAssignedMap(editRoomData.roomId);
+  var assignedInEditor = getAssignedPeopleInEditor();
+  Object.keys(assignedInEditor).forEach(function(personId){ assigned[personId] = true; });
+  if(idInput.value) delete assigned[idInput.value];
+  var items = getPeopleList().filter(function(person){
+    return person && person.id && !assigned[person.id];
+  }).map(function(person){
+    var meta = personMetaText(person);
+    return {
+      label: person.fullName + (meta ? ' — ' + meta : ''),
+      searchText: person.fullName + ' ' + meta,
+      data: person
+    };
+  });
+  openSearchableSelectDialog('اختيار شخص', items, function(person){
+    if(!person) return;
+    nameInput.value = person.fullName;
+    idInput.value = person.id;
+    bindGuestPersonRow(rowId);
+  });
+}
+
 function accommodationArrivalDayOptions(days,selected){
   days=parseInt(days,10)||1;
   selected=normalizeAccommodationArrivalDay(selected,days);
@@ -3124,7 +3153,7 @@ function createGuestSlotRow(slot, index, days, isExtra, capacity){
     : '';
   div.innerHTML = slotLabel
     + '<div style="flex:1;min-width:180px">'
-    + '<input class="person-name" list="people_datalist" style="width:100%;border-color:' + (name ? '#27AE60' : '#BDD7EE') + '" placeholder="ابحث أو اكتب اسمًا" value="' + esc(name) + '" oninput="bindGuestPersonRow(\''+id+'\')">'
+    + '<input class="person-name" list="people_datalist" style="width:100%;border-color:' + (name ? '#27AE60' : '#BDD7EE') + '" placeholder="ابحث أو اكتب اسمًا" value="' + esc(name) + '" onfocus="openGuestPersonPicker(\''+id+'\')" onclick="openGuestPersonPicker(\''+id+'\')" oninput="bindGuestPersonRow(\''+id+'\')">'
     + '<input type="hidden" class="person-id" value="' + esc(personId) + '">'
     + '<input type="hidden" class="guest-entry-id" value="' + esc(guestId) + '">'
     + '<div class="person-meta" style="font-size:9px;color:#5a7a9a;margin-top:2px"></div>'

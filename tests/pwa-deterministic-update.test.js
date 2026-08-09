@@ -10,22 +10,24 @@ const manager=fs.readFileSync(path.join(root,'js/sync/conference-edit-lock-manag
 
 const previous='exclusive-edit-lock-v1';
 const next='organization-membership-operation-key-v1';
+const mobileRoomInputRevision='mobile-room-input-ux-v1';
 const templateIsolationRevision='template-sync-isolation-v1';
 const startupRevision=next;
 const deviceOnboardingRevision=next;
 const organizationTemplateRevision='shared-template-library-v1';
 const bootstrapRevision='first-owner-bootstrap-hardening-v1';
 const userManagementUiRevision=next;
-const userManagementStyleRevision='organization-management-v1';
+const userManagementStyleRevision=mobileRoomInputRevision;
 const userManagementReadRevision='organization-archive-restore-v1';
 const conferenceRoleRevision='conference-role-management-v1';
 const houseTemplateRevision='available-template-room-discovery-v1';
 const pwaAssetRevision=next;
 const appAssetRevision='section-accommodation-edit-lock-v1';
 const snapshotGuardRevision='conference-snapshot-device-guard-v1';
-const priorFrontendRevision='admin-xlsx-template-room-fixes-v1';
-assert(worker.includes("CACHE_REVISION = '"+next+"'"));
-assert(index.includes("window.APP_SHELL_REVISION='"+next+"'"));
+const priorFrontendRevision=mobileRoomInputRevision;
+const organizationMembersRevision='admin-xlsx-template-room-fixes-v1';
+assert(worker.includes("CACHE_REVISION = '"+mobileRoomInputRevision+"'"));
+assert(index.includes("window.APP_SHELL_REVISION='"+mobileRoomInputRevision+"'"));
 assert(index.includes('pwa.js?rev='+pwaAssetRevision));
 ['js/supabase/auth.js','js/sync/sync-settings-ui.js'].forEach(asset=>{
   const versioned=asset+'?rev='+next;
@@ -76,7 +78,7 @@ assert(index.includes('<script src="'+xlsxAsset+'"></script>'),'index missing lo
 assert(index.indexOf(xlsxAsset)<index.indexOf('script.js?rev='+priorFrontendRevision),'XLSX runtime must load before import logic');
 assert(worker.includes("'./"+xlsxAsset+"'"),'app shell missing local XLSX runtime');
 assert(!/https?:[^"']*(sheetjs|xlsx)/i.test(index),'XLSX must not depend on a CDN');
-const organizationMembersAsset='js/sync/organization-members-ui.js?rev='+priorFrontendRevision;
+const organizationMembersAsset='js/sync/organization-members-ui.js?rev='+organizationMembersRevision;
 assert(index.includes(organizationMembersAsset),'index missing deterministic Organization Members UI revision');
 assert(worker.includes("'./"+organizationMembersAsset+"'"),'app shell missing deterministic Organization Members UI revision');
 [['js/supabase/snapshot-sync.js',next],['js/sync/conflict-executor.js',snapshotGuardRevision]].forEach(([asset,revision])=>{
