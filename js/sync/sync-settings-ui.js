@@ -329,7 +329,9 @@
       html+='<div class="sync-settings-actions">';
       html+='<button class="btn btn-gray btn-sm" onclick="SyncSettingsUI.refreshAuthState()">قراءة حالة الحساب</button></div>';
     }
-    html+='<div id="sync_auth_message" class="sync-settings-message"></div></div>';
+    html+='<div id="sync_auth_message" class="sync-settings-message"></div>';
+    html+='<pre id="sync_signup_diagnostics" class="sync-settings-message" '+
+      'dir="ltr" style="display:none;white-space:pre-wrap"></pre></div>';
     html+='<div class="sync-settings-panel"><h3>هذا الجهاز</h3>';
     html+='<div class="sync-settings-device-id">Device ID: <strong dir="ltr">'+
       escapeHtml(shortDeviceId(device&&device.id))+'</strong></div>';
@@ -367,6 +369,33 @@
     target.textContent=text||'';
     target.className='sync-settings-message'+
       (isError?' sync-settings-error':' sync-settings-success');
+  }
+
+  function safeAuthErrorCode(value){
+    var code=String(value||'').trim();
+    return /^[A-Za-z0-9_.-]{1,80}$/.test(code)?code:'';
+  }
+
+  function showSignUpDiagnostics(diagnostic){
+    var target=element('sync_signup_diagnostics');
+    if(!target)return;
+    if(!diagnostic||diagnostic.authStage!=='AUTH_SIGNUP_FAILED'){
+      target.textContent='';
+      if(target.style)target.style.display='none';
+      return;
+    }
+    target.textContent=JSON.stringify({
+      authStage:String(diagnostic.authStage||''),
+      success:diagnostic.success===true,
+      errorCode:safeAuthErrorCode(diagnostic.errorCode)||null,
+      httpStatus:diagnostic.httpStatus==null
+        ?null:String(diagnostic.httpStatus),
+      sanitizedMessage:String(diagnostic.sanitizedMessage||''),
+      userPresent:diagnostic.userPresent===true,
+      sessionPresent:diagnostic.sessionPresent===true,
+      timestamp:String(diagnostic.timestamp||'')
+    },null,2);
+    if(target.style)target.style.display='block';
   }
 
   function rerender(){
@@ -434,7 +463,7 @@
   function validEmail(value){return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);}
   function validateSignUp(fields){if(fields.displayName.length<2)return 'أدخل الاسم الظاهر بشكل صحيح.';if(!validEmail(fields.email))return 'أدخل بريدًا إلكترونيًا صحيحًا.';if(fields.password.length<8)return 'يجب ألا تقل كلمة المرور عن 8 أحرف.';if(fields.password!==fields.confirmation)return 'كلمتا المرور غير متطابقتين.';return '';}
 
-  function safeAuthMessage(result,successText){
+  function safeAuthMessage(result,successText,action){
     if(result&&result.success)return successText;
     var code=result&&result.error&&result.error.code;
     if(code==='SUPABASE_AUTH_UNAVAILABLE'){
@@ -444,6 +473,10 @@
     if(code==='email_not_confirmed')return 'يجب تأكيد البريد الإلكتروني أولًا.';
     if(code==='user_already_exists'||code==='email_exists')return 'يوجد حساب مسجل بهذا البريد الإلكتروني.';
     if(code==='weak_password')return 'كلمة المرور غير قوية بما يكفي.';
+    code=safeAuthErrorCode(code);
+    if(action==='signup')return code?
+      'تعذر إنشاء الحساب. رمز الخطأ: '+code:
+      'تعذر إنشاء الحساب. يرجى مراجعة تشخيص التسجيل.';
     return 'تعذر إكمال الطلب. تحقق من البيانات والاتصال.';
   }
 
@@ -496,9 +529,11 @@
       if(passwordElement)passwordElement.value='';
       if(confirmationElement)confirmationElement.value='';
       if(!result||!result.success){
-        message('sync_auth_message',safeAuthMessage(result,''),true);
+        message('sync_auth_message',safeAuthMessage(result,'','signup'),true);
+        showSignUpDiagnostics(result&&result.diagnostics);
         return;
       }
+      showSignUpDiagnostics(null);
       var session=result.data&&result.data.session;
       if(session){
         scheduleAuthChanged();

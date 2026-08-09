@@ -6,7 +6,7 @@ const CACHE_NAMESPACE = IS_DEVELOPMENT
   ? 'cms:development:' + DEVELOPMENT_PROJECT_REF + ':'
   : '';
 const CACHE_PREFIX = CACHE_NAMESPACE + 'conference-manager-core-';
-const CACHE_REVISION = 'conference-snapshot-device-guard-v1';
+const CACHE_REVISION = 'signup-auth-diagnostics-v1';
 const CACHE_NAME = CACHE_PREFIX + 'v' + APP_VERSION + '-' + CACHE_REVISION;
 const CORE_ASSETS = [
   './',
@@ -28,7 +28,7 @@ const CORE_ASSETS = [
   './js/supabase/public-config.js',
   './js/supabase/runtime-config.js',
   './js/supabase/client.js',
-  './js/supabase/auth.js?rev=realtime-startup-e2e-v1',
+  './js/supabase/auth.js?rev=signup-auth-diagnostics-v1',
   './js/supabase/system-access-service.js',
   './js/sync/organization-administration-utils.js',
   './js/sync/organization-membership-operation-repository.js',
@@ -58,9 +58,9 @@ const CORE_ASSETS = [
   './js/sync/debug-binding-report-ui.js?rev=debug-binding-report-ui-v2',
   './js/sync/device-rescue-export.js?rev=device-rescue-export-v1',
   './js/sync/experimental-conference-reset.js?rev=experimental-reset-v1',
-  './js/sync/sync-settings-ui.js?rev=first-use-auth-v1',
+  './js/sync/sync-settings-ui.js?rev=signup-auth-diagnostics-v1',
   './js/supabase/first-system-bootstrap-service.js?rev=first-owner-bootstrap-hardening-v1',
-  './js/sync/startup-access-gate.js?rev=startup-authorized-view-v1',
+  './js/sync/startup-access-gate.js?rev=signup-auth-diagnostics-v1',
   './js/sync/link-status-diagnostic-store.js',
   './js/sync/conference-link-store.js',
   './js/sync/conference-membership-attempt-store.js',
@@ -108,7 +108,7 @@ const CORE_ASSETS = [
   './libs/xlsx.full.min.js',
   './script.js?rev=admin-xlsx-template-room-fixes-v1',
   './version.js',
-  './pwa.js?rev=conference-snapshot-device-guard-v1',
+  './pwa.js?rev=signup-auth-diagnostics-v1',
   './libs/html2canvas.min.js',
   './assets/logo.jpg',
   './assets/startup-bg.png',

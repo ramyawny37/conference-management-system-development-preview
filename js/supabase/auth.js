@@ -10,6 +10,89 @@
   };
   var initializationPromise = null;
   var clientGeneration = 0;
+  var lastSignUpDiagnostic = null;
+
+  function safeDiagnosticCode(value){
+    var code=String(value||'').trim();
+    if(!code)return null;
+    return /^[A-Za-z0-9_.-]{1,80}$/.test(code)?code:'AUTH_ERROR';
+  }
+
+  function safeDiagnosticStatus(value){
+    if(value===null||value===undefined||value==='')return null;
+    var status=String(value).trim();
+    return /^[A-Za-z0-9_.-]{1,40}$/.test(status)?status:null;
+  }
+
+  function sanitizeErrorMessage(value){
+    var message=String(value||'').slice(0,500);
+    if(!message)return '';
+    message=message
+      .replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi,'[REDACTED_EMAIL]')
+      .replace(/\beyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\b/g,
+        '[REDACTED_TOKEN]')
+      .replace(/\bsb_(?:publishable|secret)_[A-Za-z0-9_-]+\b/gi,
+        '[REDACTED_KEY]')
+      .replace(/\bBearer\s+[A-Za-z0-9._~+\/-]+=*/gi,'Bearer [REDACTED_TOKEN]')
+      .replace(/\b(password|access_token|refresh_token|anon_key|apikey|token)\b\s*[:=]\s*[^\s,;]+/gi,
+        '$1=[REDACTED]');
+    return message.slice(0,240);
+  }
+
+  function copySignUpDiagnostic(value){
+    if(!value)return null;
+    return {
+      stage:value.stage,
+      authStage:value.authStage,
+      success:value.success,
+      errorCode:value.errorCode,
+      httpStatus:value.httpStatus,
+      sanitizedMessage:value.sanitizedMessage,
+      userPresent:value.userPresent,
+      sessionPresent:value.sessionPresent,
+      timestamp:value.timestamp
+    };
+  }
+
+  function captureSignUpDiagnostic(result){
+    var data=result&&result.data||null;
+    var error=result&&result.error||null;
+    var success=!!(result&&result.success);
+    lastSignUpDiagnostic={
+      stage:'AUTH_SIGNUP',
+      authStage:success?'AUTH_SIGNUP_SUCCEEDED':'AUTH_SIGNUP_FAILED',
+      success:success,
+      errorCode:safeDiagnosticCode(error&&error.code)||
+        (!success&&result&&result.failureKind==='exception'
+          ?'AUTH_SIGNUP_EXCEPTION':null),
+      httpStatus:safeDiagnosticStatus(error&&(
+        error.status===undefined?error.statusCode:error.status
+      )),
+      sanitizedMessage:sanitizeErrorMessage(error&&error.message),
+      userPresent:!!(data&&data.user),
+      sessionPresent:!!(data&&data.session),
+      timestamp:new Date().toISOString()
+    };
+    var safe=copySignUpDiagnostic(lastSignUpDiagnostic);
+    return Object.assign({},result||{success:false},{diagnostics:safe});
+  }
+
+  function markSignUpStartupAccessFailed(error){
+    if(!lastSignUpDiagnostic||
+      lastSignUpDiagnostic.authStage!=='AUTH_SIGNUP_SUCCEEDED'||
+      !lastSignUpDiagnostic.sessionPresent)return null;
+    lastSignUpDiagnostic.authStage=
+      'AUTH_SIGNUP_SUCCEEDED_BUT_STARTUP_ACCESS_FAILED';
+    lastSignUpDiagnostic.success=false;
+    lastSignUpDiagnostic.errorCode=safeDiagnosticCode(error&&error.code)||
+      'STARTUP_ACCESS_FAILED';
+    lastSignUpDiagnostic.httpStatus=safeDiagnosticStatus(error&&error.status);
+    lastSignUpDiagnostic.sanitizedMessage=sanitizeErrorMessage(
+      error&&error.message
+    );
+    lastSignUpDiagnostic.timestamp=new Date().toISOString();
+    return copySignUpDiagnostic(lastSignUpDiagnostic);
+  }
 
   function getClient(){
     return global.SupabaseClientLayer&&
@@ -113,7 +196,7 @@
       .then(function(result){
         if(result.error){
           state.lastError=result.error;
-          return {success:false,error:result.error};
+          return {success:false,error:result.error,failureKind:'response'};
         }
         var session=result.data&&result.data.session;
         if(session)updateSession(session);
@@ -122,7 +205,7 @@
       })
       .catch(function(error){
         state.lastError=error;
-        return {success:false,error:error};
+        return {success:false,error:error,failureKind:'exception'};
       });
   }
 
@@ -158,7 +241,7 @@
         password:password,
         options:signUpOptions
       });
-    });
+    }).then(captureSignUpDiagnostic);
   }
 
   function signOut(){
@@ -183,7 +266,8 @@
       initialized:state.initialized,
       authenticated:!!state.user,
       user:state.user,
-      lastError:state.lastError
+      lastError:state.lastError,
+      signUpDiagnostic:copySignUpDiagnostic(lastSignUpDiagnostic)
     };
   }
 
@@ -198,6 +282,7 @@
     state.user=null;
     state.subscription=null;
     state.lastError=null;
+    lastSignUpDiagnostic=null;
     initializationPromise=null;
   }
 
@@ -209,6 +294,10 @@
     getSession:getSession,
     getUser:getUser,
     getState:getState,
+    getSignUpDiagnostic:function(){
+      return copySignUpDiagnostic(lastSignUpDiagnostic);
+    },
+    markSignUpStartupAccessFailed:markSignUpStartupAccessFailed,
     resetForClientChange:resetForClientChange
   });
 })(window);
