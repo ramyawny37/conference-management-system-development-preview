@@ -9,13 +9,13 @@ const index=fs.readFileSync(path.join(root,'index.html'),'utf8');
 const manager=fs.readFileSync(path.join(root,'js/sync/conference-edit-lock-manager.js'),'utf8');
 
 const previous='exclusive-edit-lock-v1';
-const next='signup-auth-diagnostics-v1';
+const next='launch-membership-integrity-v1';
 const templateIsolationRevision='template-sync-isolation-v1';
 const startupRevision=next;
-const deviceOnboardingRevision='device-onboarding-v1';
+const deviceOnboardingRevision=next;
 const organizationTemplateRevision='shared-template-library-v1';
 const bootstrapRevision='first-owner-bootstrap-hardening-v1';
-const userManagementUiRevision='startup-device-admin-lifecycle-v1';
+const userManagementUiRevision=next;
 const userManagementStyleRevision='organization-management-v1';
 const userManagementReadRevision='organization-archive-restore-v1';
 const conferenceRoleRevision='conference-role-management-v1';
@@ -76,8 +76,8 @@ assert(!/https?:[^"']*(sheetjs|xlsx)/i.test(index),'XLSX must not depend on a CD
 const organizationMembersAsset='js/sync/organization-members-ui.js?rev='+priorFrontendRevision;
 assert(index.includes(organizationMembersAsset),'index missing deterministic Organization Members UI revision');
 assert(worker.includes("'./"+organizationMembersAsset+"'"),'app shell missing deterministic Organization Members UI revision');
-['js/supabase/snapshot-sync.js','js/sync/conflict-executor.js'].forEach(asset=>{
-  const versioned=asset+'?rev='+snapshotGuardRevision;
+[['js/supabase/snapshot-sync.js',next],['js/sync/conflict-executor.js',snapshotGuardRevision]].forEach(([asset,revision])=>{
+  const versioned=asset+'?rev='+revision;
   assert(index.includes(versioned),'index missing '+versioned);
   assert(worker.includes("'./"+versioned+"'"),'app shell missing '+versioned);
 });

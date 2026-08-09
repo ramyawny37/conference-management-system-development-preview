@@ -634,7 +634,7 @@ function accessResult(){
     __dirname,'..','service-worker.js'
   ),'utf8');
   assert.match(worker,
-    /(?:realtime-startup-e2e-v1|linked-lifecycle-compat-v1|realtime-subscribe-trace-v1|realtime-cloud-lifecycle-binding-v1|realtime-runtime-listener-v1|phase-2-(?:6-realtime-integration|7-operational-ui)|member-remote-apply-safe-v1|member-(?:pre-metadata-trace|up-to-date-activation|linked-refresh-trace|activation-completion)-v1)/
+    /(?:launch-membership-integrity-v1|realtime-startup-e2e-v1|linked-lifecycle-compat-v1|realtime-subscribe-trace-v1|realtime-cloud-lifecycle-binding-v1|realtime-runtime-listener-v1|phase-2-(?:6-realtime-integration|7-operational-ui)|member-remote-apply-safe-v1|member-(?:pre-metadata-trace|up-to-date-activation|linked-refresh-trace|activation-completion)-v1)/
   );
   assert.match(worker,/conference-realtime-manager\.js/);
 

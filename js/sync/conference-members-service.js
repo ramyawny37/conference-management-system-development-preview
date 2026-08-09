@@ -317,8 +317,7 @@
     var targetUserId=String(input.targetUserId||'');
     var requestedRole=input.requestedRole==null
       ?null:String(input.requestedRole);
-    var allowedRoles=['manager','viewer','accommodation_viewer',
-      'transport_viewer'];
+    var allowedRoles=['manager','viewer'];
     if(!isUuid(remoteConferenceId)||!isUuid(targetUserId)){
       return Promise.resolve(outcome(false,'invalid_input',null,
         safeError('INVALID_MEMBERSHIP_INPUT',

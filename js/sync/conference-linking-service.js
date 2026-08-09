@@ -146,6 +146,7 @@
       operationId:attempt.operationId,
       requestedConferenceId:attempt.requestedConferenceId,
       name:input.name,
+      organizationId:String(snapshot&&snapshot.organizationId||''),
       metadata:{localConferenceId:String(input.localConferenceId)}
     }).then(function(created){
       if(!created||!created.ok||

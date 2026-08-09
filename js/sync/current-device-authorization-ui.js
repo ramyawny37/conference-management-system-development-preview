@@ -22,7 +22,13 @@
           return {ok:false,status:state.status||'unavailable'};
         }
         return service().requestAuthorization().then(function(requested){
-          return refresh().then(function(){return requested;});
+          return refresh().then(function(verified){
+            if(!requested||!requested.ok||!verified||!verified.ok||state.status!=='pending'){
+              state.status='unavailable';state.message='تعذر إنشاء طلب اعتماد الجهاز. أعد المحاولة.';paint();
+              return {ok:false,status:'pending_not_verified'};
+            }
+            return requested;
+          });
         });
       });
     });

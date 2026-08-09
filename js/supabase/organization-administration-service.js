@@ -7,6 +7,7 @@
   // still complete them, so reconciliation always reuses the stored operationId.
   var DEFAULT_MUTATION_TIMEOUT_MS=15000;
   var flights=Object.create(null);
+  var lastDiagnostic=null;
   var utils=global.OrganizationAdministrationUtils;
   var isUuid=utils&&utils.isUuid;
 
@@ -39,8 +40,10 @@
     if(code==='401'||code==='PGRST301'||/auth|jwt|session/i.test(message))return safeError('AUTH_REQUIRED','Authentication is required.');
     if(code==='42501'||/authorization|permission|role required/i.test(message))return safeError('ACCESS_DENIED','Organization access is not available.');
     if(/network|fetch|offline|timeout/i.test(message))return safeError('AMBIGUOUS_RESULT','The operation result is unknown.');
-    return safeError('ORGANIZATION_RPC_FAILED','The organization request failed.');
+    return {code:code||'ORGANIZATION_RPC_FAILED',sqlstate:code||null,
+      message:'The organization request failed.'};
   }
+  function diagnostic(stage,rpc,ctx,input,error){var device=global.CurrentDeviceAuthorizationService&&global.CurrentDeviceAuthorizationService.getState?global.CurrentDeviceAuthorizationService.getState():{};lastDiagnostic={stage:String(stage),rpc:String(rpc||''),errorCode:String(error&&error.code||''),sqlstate:error&&error.sqlstate||null,sanitizedMessage:String(error&&error.message||''),actorDevicePresent:!!(ctx&&ctx.actorDeviceId),actorDeviceApproved:device.currentDeviceAccessStatus==='approved',targetAccountApproved:input&&input.targetAccountApproved===true,organizationIdPresent:!!(input&&input.organizationId),timestamp:new Date().toISOString()};}
   function guardedRpc(ctx,name,args){if(!ctx.deviceGuarded)return {name:name,args:args};var guarded={list_my_organizations:'device_guarded_list_my_organizations',get_my_organization_access:'device_guarded_get_my_organization_access',list_organization_members:'device_guarded_list_organization_members',lookup_organization_candidate_by_email:'device_guarded_lookup_organization_candidate_by_email',add_organization_member:'device_guarded_add_organization_member',remove_organization_member:'device_guarded_remove_organization_member',change_organization_role:'device_guarded_change_organization_role'};return {name:guarded[name]||name,args:Object.assign({p_actor_device_id:ctx.actorDeviceId},args)};}
   function invoke(ctx,name,args){var request=guardedRpc(ctx,name,args);return Promise.resolve().then(function(){return ctx.client.rpc(request.name,request.args);}).then(function(response){
     if(response&&response.error)return outcome(false,'rpc_error',null,rpcError(response.error));
@@ -169,13 +172,13 @@
     });
   }
   function mutate(input,options){
-    var ctx=context(options);if(ctx.error)return Promise.resolve(outcome(false,'unavailable',null,ctx.error));
+    var ctx=context(options);if(ctx.error){diagnostic('CONTEXT','device_guarded_add_organization_member',ctx,input,ctx.error);return Promise.resolve(outcome(false,'unavailable',null,ctx.error));}
     var request=validateOperation(input,ctx);if(!request)return Promise.resolve(outcome(false,'invalid_input'));
     if(!ctx.repository||typeof ctx.repository.prepare!=='function')return Promise.resolve(outcome(false,'unavailable'));
     var flightKey=[request.authenticatedUserId,request.organizationId,request.targetUserId,request.action,request.requestedRole||''].join('|');if(flights[flightKey])return flights[flightKey];
     var flight=ctx.repository.prepare(request,createUuid(),options&&options.repositoryOptions).then(function(prepared){
-      if(!prepared.ok)return outcome(false,prepared.status,null,safeError('MANUAL_RETRY_REQUIRED','The pending operation is invalid.'));
-      return executeRecord(ctx,prepared.data,options);
+      if(!prepared.ok){var error=safeError('OPERATION_STORAGE_'+String(prepared.status||'FAILED').toUpperCase(),'The membership operation could not be prepared.');diagnostic('LOCAL_OPERATION_PREPARE','device_guarded_add_organization_member',ctx,input,error);return outcome(false,prepared.status,null,error);}
+      return executeRecord(ctx,prepared.data,options).then(function(response){diagnostic(response.ok?'COMPLETED':'RPC_OR_REFRESH','device_guarded_add_organization_member',ctx,input,response.error);return response;});
     }).finally(function(){delete flights[flightKey];});flights[flightKey]=flight;return flight;
   }
   function listPendingOperations(options){
@@ -219,5 +222,5 @@
     removeMember:function(input,options){return mutate(Object.assign({},input,{action:'remove_organization_member',requestedRole:null}),options);},
     changeRole:function(input,options){return mutate(Object.assign({},input,{action:'change_organization_role'}),options);},
     listPendingOperations:listPendingOperations,retryUnknownOperation:retryUnknownOperation,
-    abandonUnknownOperation:abandonUnknownOperation});
+    abandonUnknownOperation:abandonUnknownOperation,getLastDiagnostic:function(){return lastDiagnostic&&JSON.parse(JSON.stringify(lastDiagnostic));}});
 })(window);

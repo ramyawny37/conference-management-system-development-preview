@@ -527,6 +527,7 @@
         operationId:metadata.operationId,
         requestedConferenceId:metadata.requestedCloudId,
         name:context.localConference.name,
+        organizationId:String(context.localConference.organizationId||''),
         metadata:{localConferenceId:id}
       }).then(function(created){
         if(!created||!created.ok||

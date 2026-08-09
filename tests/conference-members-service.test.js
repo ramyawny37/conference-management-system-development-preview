@@ -462,8 +462,7 @@ async function run(){
     ids.actor
   );
 
-  var roles=['manager','viewer','accommodation_viewer',
-    'transport_viewer'];
+  var roles=['manager','viewer'];
   for(var roleIndex=0;roleIndex<roles.length;roleIndex++){
     var requestedRole=roles[roleIndex];
     var roleEnv=load({rpc:function(name,args){
@@ -481,6 +480,10 @@ async function run(){
     assert.strictEqual((await roleEnv.service.addMember(
       ids.conference,ids.target,requestedRole,roleEnv.options
     )).status,'added');
+  }
+  for(var blockedRole of ['accommodation_viewer','transport_viewer']){
+    var blocked=load({rpc:function(){throw new Error('blocked role must not reach RPC');}});
+    assert.strictEqual((await blocked.service.addMember(ids.conference,ids.target,blockedRole,blocked.options)).status,'invalid_input');
   }
 
   var changed=load({rpc:function(name,args){

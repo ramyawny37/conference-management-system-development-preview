@@ -302,6 +302,8 @@
       ));
     }
     var metadata=input.metadata===undefined?{}:input.metadata;
+    var organizationId=String(input.organizationId||'');
+    if(!isUuid(organizationId))return Promise.resolve(validationError('ORGANIZATION_REQUIRED','organizationId must be a valid UUID.'));
     if(!metadata||typeof metadata!=='object'||Array.isArray(metadata)){
       return Promise.resolve(validationError(
         'INVALID_METADATA',
@@ -323,10 +325,14 @@
         operationId:operationId
       },context.error));
     }
+    var identity=global.SupabaseDeviceIdentity&&global.SupabaseDeviceIdentity.getOrCreate&&global.SupabaseDeviceIdentity.getOrCreate();
+    if(!identity||!isUuid(String(identity.id||'')))return Promise.resolve(validationError('DEVICE_REQUIRED','An approved device is required.'));
     return Promise.resolve().then(function(){
-      return context.client.rpc('create_conference_idempotent',{
+      return context.client.rpc('device_guarded_create_organization_conference_idempotent',{
+        p_actor_device_id:String(identity.id),
         p_operation_id:operationId,
         p_requested_conference_id:requestedConferenceId,
+        p_organization_id:organizationId,
         p_name:name,
         p_initial_metadata:metadataCopy
       });
