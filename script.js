@@ -2438,7 +2438,7 @@ function renderAccommodation() {
 var editRoomData = {};
 var personDialogContext = { guestRowId: null, childRowId: null, targetField: '' };
 var activeRoomsManager = { houseId: null };
-var searchableSelectState = { title: '', items: [], onSelect: null };
+var searchableSelectState = { title: '', items: [], onSelect: null, variant: '' };
 var partialTransferState;
 
 function deactivateAccommodationRoom(roomId){
@@ -2461,8 +2461,8 @@ function deactivateAccommodationRoom(roomId){
 
 function closeSearchableSelectDialog(){
   var modal = ge('searchableSelectModal');
-  if(modal) modal.style.display = 'none';
-  searchableSelectState = { title: '', items: [], onSelect: null };
+  if(modal){ modal.style.display = 'none'; modal.classList.remove('person-picker-modal'); }
+  searchableSelectState = { title: '', items: [], onSelect: null, variant: '' };
 }
 
 function renderSearchableSelectList(){
@@ -2481,7 +2481,18 @@ function renderSearchableSelectList(){
     row.type = 'button';
     row.className = 'btn modal-list-item';
     row.style.cssText = 'width:100%;text-align:right;display:block;margin-bottom:6px;padding:8px 10px;border:1px solid #E3EEF9;background:#fff;color:#1F4E79';
-    row.textContent = item.label;
+    if(searchableSelectState.variant === 'person-picker'){
+      row.classList.add('person-picker-row');
+      var primary = document.createElement('strong');
+      primary.textContent = item.label;
+      row.appendChild(primary);
+      if(item.secondaryText){
+        var secondary = document.createElement('span');
+        secondary.className = 'person-picker-phone';
+        secondary.textContent = item.secondaryText;
+        row.appendChild(secondary);
+      }
+    } else row.textContent = item.label;
     row.onclick = function(){
       var fn = searchableSelectState.onSelect;
       closeSearchableSelectDialog();
@@ -2495,7 +2506,7 @@ function renderSearchableSelectList(){
   }
 }
 
-function openSearchableSelectDialog(title, items, onSelect){
+function openSearchableSelectDialog(title, items, onSelect, options){
   var modal = ge('searchableSelectModal');
   var titleEl = ge('searchableSelectTitle');
   var input = ge('searchableSelectSearch');
@@ -2507,6 +2518,8 @@ function openSearchableSelectDialog(title, items, onSelect){
     return !!(item && item.label);
   });
   searchableSelectState.onSelect = onSelect || null;
+  searchableSelectState.variant = options && options.variant || '';
+  modal.classList.toggle('person-picker-modal', searchableSelectState.variant === 'person-picker');
   titleEl.textContent = searchableSelectState.title;
   input.value = '';
   renderSearchableSelectList();
@@ -3031,7 +3044,7 @@ function getAssignedPeopleInEditor() {
   return assigned;
 }
 
-function bindGuestPersonRow(rowId){
+function bindGuestPersonRow(rowId,options){
   var row = ge(rowId);
   if(!row) return;
   var nameInput = row.querySelector('.person-name');
@@ -3061,6 +3074,10 @@ function bindGuestPersonRow(rowId){
       for (var i = currentIndex + 1; i < allInputs.length; i++) {
         if (allInputs[i].value.trim() === '') {
           allInputs[i].focus();
+          if(options && options.reason === 'POST_SELECTION_NEXT_ROW'){
+            var nextRow = allInputs[i].closest('.guest-person-row');
+            if(nextRow) openGuestPersonPicker(nextRow.id, null, 'POST_SELECTION_NEXT_ROW');
+          }
           break;
         }
       }
@@ -3079,8 +3096,9 @@ function bindGuestPersonRow(rowId){
   refreshPeopleDatalist({ assignedMap: assignedInEditor, excludeAssigned: false });
 }
 
-function openGuestPersonPicker(rowId,event){
-  if(!event || event.isTrusted !== true) return;
+function openGuestPersonPicker(rowId,event,reason){
+  var postSelection = reason === 'POST_SELECTION_NEXT_ROW';
+  if(!postSelection && (!event || event.isTrusted !== true)) return;
   var row = ge(rowId);
   var modal = ge('searchableSelectModal');
   if(!row || (modal && modal.style.display === 'flex')) return;
@@ -3094,10 +3112,10 @@ function openGuestPersonPicker(rowId,event){
   var items = getPeopleList().filter(function(person){
     return person && person.id && !assigned[person.id];
   }).map(function(person){
-    var meta = personMetaText(person);
     return {
-      label: person.fullName + (meta ? ' — ' + meta : ''),
-      searchText: person.fullName + ' ' + meta,
+      label: person.fullName,
+      secondaryText: person.phone || '',
+      searchText: person.fullName + ' ' + (person.phone || ''),
       data: person
     };
   });
@@ -3105,8 +3123,8 @@ function openGuestPersonPicker(rowId,event){
     if(!person) return;
     nameInput.value = person.fullName;
     idInput.value = person.id;
-    bindGuestPersonRow(rowId);
-  });
+    bindGuestPersonRow(rowId,{reason:'POST_SELECTION_NEXT_ROW'});
+  },{variant:'person-picker'});
 }
 
 function openGuestPersonPickerFromKeyboard(rowId,event){
