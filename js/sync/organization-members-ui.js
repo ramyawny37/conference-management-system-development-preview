@@ -2,6 +2,7 @@
   'use strict';
 
   var context=null;
+  var contextUserId='';
   var state=createState();
   var flights=Object.create(null);
 
@@ -10,6 +11,11 @@
     pending:Object.create(null),manualRetry:false};}
   function escapeHtml(value){return String(value==null?'':value).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
   function element(id){return global.document&&global.document.getElementById?global.document.getElementById(id):null;}
+  function authenticatedUserId(){var auth=global.SupabaseAuth,state=auth&&typeof auth.getState==='function'?auth.getState():null,session=auth&&typeof auth.getSession==='function'?auth.getSession():null;return String(state&&state.user&&state.user.id||session&&session.user&&session.user.id||'');}
+  function selectionStorageKey(){var namespace=global.BrowserStorageNamespace,userId=authenticatedUserId();return namespace&&typeof namespace.key==='function'&&userId?namespace.key('administered-organization-selection:'+userId):'';}
+  function readStoredSelection(){var key=selectionStorageKey();if(!key||!global.localStorage)return '';try{return String(global.localStorage.getItem(key)||'');}catch(error){return '';}}
+  function storeSelection(organizationId){var key=selectionStorageKey();if(!key||!global.localStorage)return;try{if(organizationId)global.localStorage.setItem(key,String(organizationId));else global.localStorage.removeItem(key);}catch(error){}}
+  function availableOrganizationId(organizationId){organizationId=String(organizationId||'');return state.organizations.some(function(item){return item.organizationId===organizationId;})?organizationId:'';}
   function key(input){return [input.organizationId,input.targetUserId,input.action,input.requestedRole||''].join('|');}
   function api(){return global.OrganizationAdministrationService||null;}
   function canManage(){return !!(state.access&&state.access.canManageMembers);}
@@ -32,7 +38,8 @@
     return html;
   }
   function organizationSelector(){
-    var html='<div class="sync-settings-panel"><h3>إدارة المؤسسة</h3><label class="lbl" for="organization_select">المؤسسة</label><select id="organization_select" onchange="OrganizationMembersUI.selectOrganization(this.value)"><option value="">اختر مؤسسة</option>';
+    var current=state.organizations.find(function(item){return context&&item.organizationId===context.organizationId;})||null;
+    var html='<div class="sync-settings-panel"><h3>إدارة أعضاء المؤسسة</h3>'+(current?'<div class="sync-settings-message">المؤسسة المُدارة حاليًا: <strong>'+escapeHtml(current.displayName)+'</strong></div>':'')+'<label class="lbl" for="organization_select">المؤسسة</label><select id="organization_select" onchange="OrganizationMembersUI.selectOrganization(this.value)"><option value="">اختر مؤسسة</option>';
     state.organizations.forEach(function(organization){html+='<option value="'+escapeHtml(organization.organizationId)+'"'+(context&&context.organizationId===organization.organizationId?' selected':'')+'>'+escapeHtml(organization.displayName)+'</option>';});
     return html+='</select></div>';
   }
@@ -64,19 +71,22 @@
     if(state.candidate){var add={organizationId:context.organizationId,targetUserId:state.candidate.targetUserId,action:'add_organization_member',requestedRole:null};var busy=state.pending[key(add)];html+='<button type="button" class="btn btn-green btn-sm" '+(state.candidate.membershipStatus==='member'||busy?'disabled ':'')+'onclick="OrganizationMembersUI.addMember()">'+(busy?'جارٍ التنفيذ…':state.candidate.membershipStatus==='member'?'عضو بالفعل':'إضافة عضو')+'</button>';}
     html+='</div></div>';return html;
   }
-  function renderSection(options){var next={organizationId:String(options&&options.organizationId||'')};if(!context||next.organizationId!==context.organizationId){context=next;state=createState();}return '<section class="settings-section sync-settings-section"><div class="settings-section-title">إدارة أعضاء المؤسسة</div><div id="organization_members_content">'+body()+'</div></section>';}
+  function renderSection(options){var next={organizationId:String(options&&options.organizationId||'')};if(!context||(next.organizationId&&next.organizationId!==context.organizationId)){context=next;state=createState();}return '<section class="settings-section sync-settings-section"><div class="settings-section-title">إدارة أعضاء المؤسسة</div><div id="organization_members_content">'+body()+'</div></section>';}
   function initialize(){
     var service=api();if(!service||typeof service.listMyOrganizations!=='function')return Promise.resolve({ok:false,status:'unavailable'});
     state.operations=[];state.access=null;state.members=[];state.organizationsStatus='loading';paint();return service.listMyOrganizations().then(function(result){
       state.organizationsStatus=result&&result.ok?'loaded':'error';state.organizations=result&&result.ok?result.data.organizations:[];
       if(state.organizations.length){
-        context={organizationId:state.organizations[0].organizationId};
+        var userId=authenticatedUserId(),currentId=contextUserId===userId?availableOrganizationId(context&&context.organizationId):'',storedSelection=readStoredSelection(),storedId=availableOrganizationId(storedSelection),organizationId=currentId||storedId||state.organizations[0].organizationId;
+        context={organizationId:organizationId};
+        contextUserId=userId;
+        if(storedSelection&&!storedId)storeSelection('');
         return loadOperations().then(function(){return refreshUi();});
       }
-      paint();return result;
+      contextUserId=authenticatedUserId();storeSelection('');paint();return result;
     });
   }
-  function selectOrganization(organizationId){context={organizationId:String(organizationId||'')};state.access=null;state.members=[];state.candidate=null;return refreshUi();}
+  function selectOrganization(organizationId){organizationId=availableOrganizationId(organizationId);context={organizationId:organizationId};contextUserId=authenticatedUserId();storeSelection(organizationId);state.access=null;state.members=[];state.candidate=null;return refreshUi();}
   function refreshUi(){
     if(!context||!context.organizationId)return Promise.resolve({ok:false,status:'invalid_input'});
     var service=api();if(!service)return Promise.resolve({ok:false,status:'unavailable'});

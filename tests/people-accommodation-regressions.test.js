@@ -178,6 +178,7 @@ var managerSandbox={
   getHouseById:function(){return conferenceHouse;},
   ge:function(id){return id==='active_rooms_container'?activeContainer:null;},
   ensureAccommodationDisplayState:houseSandbox.ensureAccommodationDisplayState,
+  getAvailableTemplateRoomsForConferenceHouse:function(){return [];},
   esc:function(value){return String(value);}
 };
 vm.createContext(managerSandbox);

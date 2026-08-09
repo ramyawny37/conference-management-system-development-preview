@@ -2763,7 +2763,56 @@ function renderActiveRoomsManager(){
     }
     h += '</div>';
   });
+  var availableTemplateRooms = getAvailableTemplateRoomsForConferenceHouse(house);
+  if (availableTemplateRooms.length) {
+    h += '<div style="margin-top:12px;border-top:1px solid #DDE8F2;padding-top:10px">';
+    h += '<div style="font-weight:700;color:#1F4E79;margin-bottom:8px">غرف جديدة متاحة من القالب</div>';
+    availableTemplateRooms.forEach(function(room) {
+      h += '<div class="modal-list-item" style="display:flex;align-items:center;gap:8px;padding:7px 9px;border:1px solid #E5EEF7;border-radius:8px;margin-bottom:6px;background:#fff">';
+      h += '<div style="flex:1;min-width:0"><div style="font-weight:700">غرفة ' + esc(room.number || '') + '</div>';
+      h += '<div style="font-size:10px;color:#7a8ea6">' + esc(room.templateFloorName || '') + ' • ' + room.beds + ' أسرة</div></div>';
+      if (room.conferenceFloorId) {
+        h += '<button class="btn btn-green btn-sm" onclick="addAvailableTemplateRoom(\'' + room.templateRoomId + '\')">إضافة</button>';
+      } else {
+        h += '<span style="font-size:10px;color:#C0392B">أضف الدور أولًا</span>';
+      }
+      h += '</div>';
+    });
+    h += '</div>';
+  }
   container.innerHTML = h;
+}
+
+function addAvailableTemplateRoom(templateRoomId){
+  if(!requireAccommodationMutation())return false;
+  var current = getCurrentConference();
+  var house = getHouseById(activeRoomsManager.houseId);
+  if(!current || !house)return false;
+  var previousHouses = deepClone(current.houses || []);
+  var previousDisplayedRoomIds = (current.accommodationDisplayedRoomIds || []).slice();
+  var previousDisplayInitialized = current.accommodationDisplayStateInitialized;
+  var room = addAvailableTemplateRoomToConferenceHouse(house, templateRoomId);
+  if(!room){
+    renderActiveRoomsManager();
+    return false;
+  }
+  var prepared = prepareAccommodationDisplayedRoomIds(current, [room.id], true);
+  if(!prepared.ok){
+    current.houses = previousHouses;
+    renderActiveRoomsManager();
+    return false;
+  }
+  commitAccommodationDisplayChange(current, prepared.ids, []);
+  if(!save()){
+    current.houses = previousHouses;
+    current.accommodationDisplayedRoomIds = previousDisplayedRoomIds;
+    current.accommodationDisplayStateInitialized = previousDisplayInitialized;
+    return false;
+  }
+  addActivityLog('room_created','تم إنشاء الغرفة '+room.number,{section:'accommodation',entityType:'room',entityId:room.id});
+  renderAccommodation();
+  renderActiveRoomsManager();
+  return true;
 }
 
 function toggleActiveRoom(roomId, checked){

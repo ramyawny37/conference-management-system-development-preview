@@ -1,0 +1,18 @@
+'use strict';
+const assert=require('assert'),fs=require('fs'),path=require('path'),vm=require('vm');
+const root=path.join(__dirname,'..');
+const asset=path.join(root,'libs/xlsx.full.min.js');
+const index=fs.readFileSync(path.join(root,'index.html'),'utf8');
+const script=fs.readFileSync(path.join(root,'script.js'),'utf8');
+assert(fs.existsSync(asset),'local XLSX runtime asset must exist');
+const sandbox={window:{},Uint8Array,ArrayBuffer,Date,Math,JSON,Object,String,Number,Boolean,RegExp,Error,parseInt,parseFloat,isNaN,Infinity,console};
+sandbox.window=sandbox;
+vm.createContext(sandbox);
+vm.runInContext(fs.readFileSync(asset,'utf8'),sandbox,{filename:'xlsx.full.min.js'});
+assert(sandbox.window.XLSX,'window.XLSX must be available');
+assert.strictEqual(typeof sandbox.window.XLSX.read,'function');
+assert(sandbox.window.XLSX.utils&&typeof sandbox.window.XLSX.utils.sheet_to_json==='function');
+assert(index.indexOf('libs/xlsx.full.min.js')<index.indexOf('script.js?rev='),'XLSX must load before import logic');
+assert(script.includes("if(typeof XLSX === 'undefined')"),'existing import guard must remain unchanged');
+assert(script.includes("XLSX.utils.sheet_to_json(sheet, { defval: '' })"),'existing import conversion must remain unchanged');
+console.log('XLSX runtime contract tests: passed');

@@ -9,7 +9,7 @@ const index=fs.readFileSync(path.join(root,'index.html'),'utf8');
 const manager=fs.readFileSync(path.join(root,'js/sync/conference-edit-lock-manager.js'),'utf8');
 
 const previous='exclusive-edit-lock-v1';
-const next='shared-template-library-v1';
+const next='admin-xlsx-template-room-fixes-v1';
 const templateIsolationRevision='template-sync-isolation-v1';
 const startupRevision='startup-authorized-view-v1';
 const deviceOnboardingRevision='device-onboarding-v1';
@@ -19,7 +19,7 @@ const userManagementUiRevision='startup-device-admin-lifecycle-v1';
 const userManagementStyleRevision='organization-management-v1';
 const userManagementReadRevision='organization-archive-restore-v1';
 const conferenceRoleRevision='conference-role-management-v1';
-const houseTemplateRevision='house-template-propagation-v1';
+const houseTemplateRevision='available-template-room-discovery-v1';
 const pwaAssetRevision=next;
 const appAssetRevision='section-accommodation-edit-lock-v1';
 assert(worker.includes("CACHE_REVISION = '"+next+"'"));
@@ -60,8 +60,17 @@ const readAsset='js/sync/user-management-read-service.js?rev='+
   userManagementReadRevision;
 assert(index.includes(readAsset));
 assert(worker.includes("'./"+readAsset+"'"));
-assert(index.includes('script.js?rev='+templateIsolationRevision));
-assert(worker.includes("'./script.js?rev="+templateIsolationRevision+"'"));
+assert(index.includes('script.js?rev='+next));
+assert(worker.includes("'./script.js?rev="+next+"'"));
+const xlsxAsset='libs/xlsx.full.min.js';
+assert(fs.existsSync(path.join(root,xlsxAsset)),'local XLSX runtime asset missing');
+assert(index.includes('<script src="'+xlsxAsset+'"></script>'),'index missing local XLSX runtime');
+assert(index.indexOf(xlsxAsset)<index.indexOf('script.js?rev='+next),'XLSX runtime must load before import logic');
+assert(worker.includes("'./"+xlsxAsset+"'"),'app shell missing local XLSX runtime');
+assert(!/https?:[^"']*(sheetjs|xlsx)/i.test(index),'XLSX must not depend on a CDN');
+const organizationMembersAsset='js/sync/organization-members-ui.js?rev='+next;
+assert(index.includes(organizationMembersAsset),'index missing deterministic Organization Members UI revision');
+assert(worker.includes("'./"+organizationMembersAsset+"'"),'app shell missing deterministic Organization Members UI revision');
 [
   'state.js','js/sync/automatic-queue-runner.js',
   'js/sync/conference-realtime-manager.js'
@@ -78,12 +87,12 @@ assert(worker.includes("'./script.js?rev="+templateIsolationRevision+"'"));
   assert(index.includes(versioned),'index missing '+versioned);
   assert(worker.includes("'./"+versioned+"'"),'app shell missing '+versioned);
 });
-const isolatedTemplateSync='js/sync/organization-template-sync.js?rev='+next;
+const isolatedTemplateSync='js/sync/organization-template-sync.js?rev='+organizationTemplateRevision;
 assert(index.includes(isolatedTemplateSync));
 assert(worker.includes("'./"+isolatedTemplateSync+"'"));
 ['js/sync/startup-conference-discovery.js',
   'js/sync/legacy-template-adoption-ui.js'].forEach(asset=>{
-  const versioned=asset+'?rev='+next;
+  const versioned=asset+'?rev='+organizationTemplateRevision;
   assert(index.includes(versioned),'index missing '+versioned);
   assert(worker.includes("'./"+versioned+"'"),'app shell missing '+versioned);
 });

@@ -6,7 +6,7 @@ const CACHE_NAMESPACE = IS_DEVELOPMENT
   ? 'cms:development:' + DEVELOPMENT_PROJECT_REF + ':'
   : '';
 const CACHE_PREFIX = CACHE_NAMESPACE + 'conference-manager-core-';
-const CACHE_REVISION = 'shared-template-library-v1';
+const CACHE_REVISION = 'admin-xlsx-template-room-fixes-v1';
 const CACHE_NAME = CACHE_PREFIX + 'v' + APP_VERSION + '-' + CACHE_REVISION;
 const CORE_ASSETS = [
   './',
@@ -33,7 +33,7 @@ const CORE_ASSETS = [
   './js/sync/organization-administration-utils.js',
   './js/sync/organization-membership-operation-repository.js',
   './js/supabase/organization-administration-service.js',
-  './js/sync/organization-members-ui.js',
+  './js/sync/organization-members-ui.js?rev=admin-xlsx-template-room-fixes-v1',
   './js/sync/organization-management-attempt-store.js?rev=organization-management-v1',
   './js/supabase/organization-management-service.js?rev=organization-archive-restore-v1',
   './js/sync/organization-management-ui.js?rev=startup-device-admin-lifecycle-v1',
@@ -98,16 +98,17 @@ const CORE_ASSETS = [
   './utils.js',
   './core.js?rev=canonical-conference-schema-v1',
   './people.js?rev=canonical-conference-schema-v1',
-  './houses.js?rev=house-template-propagation-v1',
+  './houses.js?rev=available-template-room-discovery-v1',
   './transport.js',
   './houseTemplates.js?rev=template-sync-isolation-v1',
   './state.js?rev=template-sync-isolation-v1',
   './js/conference/accounts.js',
   './js/conference-template-houses-editor.js',
   './cards.js',
-  './script.js?rev=template-sync-isolation-v1',
+  './libs/xlsx.full.min.js',
+  './script.js?rev=admin-xlsx-template-room-fixes-v1',
   './version.js',
-  './pwa.js?rev=shared-template-library-v1',
+  './pwa.js?rev=admin-xlsx-template-room-fixes-v1',
   './libs/html2canvas.min.js',
   './assets/logo.jpg',
   './assets/startup-bg.png',

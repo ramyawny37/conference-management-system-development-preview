@@ -246,6 +246,92 @@ function getHouseTemplateById(id) {
   return null;
 }
 
+function getAvailableTemplateRoomsForConferenceHouse(house) {
+  if (!house || !house.sourceTemplateId) return [];
+  var template = getHouseTemplateById(house.sourceTemplateId);
+  if (!template) return [];
+  var linkedRoomIds = {};
+  var legacyRoomNumbers = {};
+  (house.floors || []).forEach(function(floor) {
+    (floor.rooms || []).forEach(function(room) {
+      if (room.sourceTemplateRoomId) linkedRoomIds[String(room.sourceTemplateRoomId)] = true;
+      else if (room.number !== undefined && room.number !== null && String(room.number)) legacyRoomNumbers[String(room.number)] = true;
+    });
+  });
+  var available = [];
+  var seenTemplateRoomIds = {};
+  (template.floors || []).forEach(function(templateFloor) {
+    var conferenceFloor = null;
+    (house.floors || []).forEach(function(floor) {
+      if (!conferenceFloor && templateFloor.id &&
+          String(floor.sourceTemplateFloorId || '') === String(templateFloor.id)) {
+        conferenceFloor = floor;
+      }
+    });
+    if (!conferenceFloor) {
+      (house.floors || []).forEach(function(floor) {
+        if (!conferenceFloor && !floor.sourceTemplateFloorId &&
+            String(floor.name || '') === String(templateFloor.name || '')) {
+          conferenceFloor = floor;
+        }
+      });
+    }
+    (templateFloor.rooms || []).forEach(function(room) {
+      var templateRoomId = String(room.id || '');
+      var roomNumber = String(room.number || '');
+      if (!templateRoomId || seenTemplateRoomIds[templateRoomId] ||
+          linkedRoomIds[templateRoomId] || (roomNumber && legacyRoomNumbers[roomNumber])) return;
+      seenTemplateRoomIds[templateRoomId] = true;
+      available.push({
+        templateId: String(template.id),
+        templateFloorId: String(templateFloor.id || ''),
+        templateFloorName: String(templateFloor.name || ''),
+        templateRoomId: templateRoomId,
+        conferenceFloorId: conferenceFloor ? String(conferenceFloor.id || '') : '',
+        number: roomNumber,
+        beds: parseInt(room.beds, 10) || 1,
+        extraBeds: parseInt(room.extraBeds, 10) || 0,
+        notes: String(room.notes || ''),
+        closed: !!room.closed,
+        closedDay: room.closedDay === undefined ? null : room.closedDay
+      });
+    });
+  });
+  return available;
+}
+
+function addAvailableTemplateRoomToConferenceHouse(house, templateRoomId) {
+  var available = getAvailableTemplateRoomsForConferenceHouse(house);
+  var selected = null;
+  for (var i = 0; i < available.length; i++) {
+    if (available[i].templateRoomId === String(templateRoomId || '')) {
+      selected = available[i];
+      break;
+    }
+  }
+  if (!selected || !selected.conferenceFloorId) return null;
+  var floor = null;
+  (house.floors || []).forEach(function(item) {
+    if (!floor && String(item.id || '') === selected.conferenceFloorId) floor = item;
+  });
+  if (!floor) return null;
+  var room = {
+    id: uid(),
+    sourceTemplateRoomId: selected.templateRoomId,
+    number: selected.number,
+    beds: selected.beds,
+    extraBeds: selected.extraBeds,
+    notes: selected.notes,
+    guests: [],
+    children: [],
+    closed: selected.closed,
+    closedDay: selected.closedDay
+  };
+  floor.rooms = floor.rooms || [];
+  floor.rooms.push(room);
+  return room;
+}
+
 function ensureSelectedHouseTemplate() {
   var templates = appData.houseTemplates || [];
   if (!templates.length) {
