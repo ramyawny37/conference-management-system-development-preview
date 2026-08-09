@@ -2978,15 +2978,6 @@ function renderRoomEditorFromDraft(){
     currentGuests.forEach(function(slot) { bindGuestPersonRow(slot.id); });
   };
 
-  setTimeout(function() {
-    var allInputs = document.querySelectorAll('#roomModal .person-name');
-    for (var i = 0; i < allInputs.length; i++) {
-      if (allInputs[i].value.trim() === '') {
-        allInputs[i].focus();
-        break;
-      }
-    }
-  }, 100);
 }
 
 function openRoomEditor(houseId, floorId, roomId) {
@@ -3088,7 +3079,8 @@ function bindGuestPersonRow(rowId){
   refreshPeopleDatalist({ assignedMap: assignedInEditor, excludeAssigned: false });
 }
 
-function openGuestPersonPicker(rowId){
+function openGuestPersonPicker(rowId,event){
+  if(!event || event.isTrusted !== true) return;
   var row = ge(rowId);
   var modal = ge('searchableSelectModal');
   if(!row || (modal && modal.style.display === 'flex')) return;
@@ -3153,7 +3145,7 @@ function createGuestSlotRow(slot, index, days, isExtra, capacity){
     : '';
   div.innerHTML = slotLabel
     + '<div style="flex:1;min-width:180px">'
-    + '<input class="person-name" list="people_datalist" style="width:100%;border-color:' + (name ? '#27AE60' : '#BDD7EE') + '" placeholder="ابحث أو اكتب اسمًا" value="' + esc(name) + '" onfocus="openGuestPersonPicker(\''+id+'\')" onclick="openGuestPersonPicker(\''+id+'\')" oninput="bindGuestPersonRow(\''+id+'\')">'
+    + '<input class="person-name" list="people_datalist" style="width:100%;border-color:' + (name ? '#27AE60' : '#BDD7EE') + '" placeholder="ابحث أو اكتب اسمًا" value="' + esc(name) + '" onfocus="openGuestPersonPicker(\''+id+'\',event)" onclick="openGuestPersonPicker(\''+id+'\',event)" oninput="bindGuestPersonRow(\''+id+'\')">'
     + '<input type="hidden" class="person-id" value="' + esc(personId) + '">'
     + '<input type="hidden" class="guest-entry-id" value="' + esc(guestId) + '">'
     + '<div class="person-meta" style="font-size:9px;color:#5a7a9a;margin-top:2px"></div>'

@@ -6,12 +6,12 @@ const CACHE_NAMESPACE = IS_DEVELOPMENT
   ? 'cms:development:' + DEVELOPMENT_PROJECT_REF + ':'
   : '';
 const CACHE_PREFIX = CACHE_NAMESPACE + 'conference-manager-core-';
-const CACHE_REVISION = 'mobile-room-input-ux-v1';
+const CACHE_REVISION = 'mobile-form-focus-ux-v2';
 const CACHE_NAME = CACHE_PREFIX + 'v' + APP_VERSION + '-' + CACHE_REVISION;
 const CORE_ASSETS = [
   './',
   './index.html',
-  './style.css?rev=mobile-room-input-ux-v1',
+  './style.css?rev=mobile-form-focus-ux-v2',
   './js/storage/environment-namespace.js',
   './js/storage/indexeddb.js?rev=shared-template-library-v1',
   './js/storage/storage-repository.js?rev=organization-template-sync-v1',
@@ -107,7 +107,7 @@ const CORE_ASSETS = [
   './js/conference-template-houses-editor.js',
   './cards.js',
   './libs/xlsx.full.min.js',
-  './script.js?rev=mobile-room-input-ux-v1',
+  './script.js?rev=mobile-form-focus-ux-v2',
   './version.js',
   './pwa.js?rev=organization-membership-operation-key-v1',
   './libs/html2canvas.min.js',
