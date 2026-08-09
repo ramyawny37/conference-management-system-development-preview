@@ -14,7 +14,7 @@
   function result(ok,status,data){return {ok:ok,status:status,data:data||null};}
   function date(value){var parsed=new Date(value);return Number.isNaN(parsed.getTime())?null:parsed;}
   function intentKey(input){return [input.authenticatedUserId,input.organizationId,
-    input.targetUserId,input.action,input.requestedRole||null];}
+    input.targetUserId,input.action,input.requestedRole||''];}
   function validRequest(input){
     return input&&isUuid(String(input.authenticatedUserId||''))&&
       isUuid(String(input.organizationId||''))&&isUuid(String(input.targetUserId||''))&&

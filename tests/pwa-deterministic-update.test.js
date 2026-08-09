@@ -9,7 +9,7 @@ const index=fs.readFileSync(path.join(root,'index.html'),'utf8');
 const manager=fs.readFileSync(path.join(root,'js/sync/conference-edit-lock-manager.js'),'utf8');
 
 const previous='exclusive-edit-lock-v1';
-const next='account-scoped-device-identity-v1';
+const next='organization-membership-operation-key-v1';
 const templateIsolationRevision='template-sync-isolation-v1';
 const startupRevision=next;
 const deviceOnboardingRevision=next;
@@ -37,6 +37,9 @@ assert(worker.includes("'./js/supabase/first-system-bootstrap-service.js?rev="+b
 assert(index.includes('js/sync/startup-access-gate.js?rev='+startupRevision));
 assert(worker.includes("'./js/sync/startup-access-gate.js?rev="+
   startupRevision+"'"));
+const organizationMembershipRepository='js/sync/organization-membership-operation-repository.js?rev='+next;
+assert(index.includes(organizationMembershipRepository));
+assert(worker.includes("'./"+organizationMembershipRepository+"'"));
 ['houses.js'].forEach(asset=>{
   const versionedAsset=asset+'?rev='+houseTemplateRevision;
   assert(index.includes(versionedAsset),'index missing '+versionedAsset);
