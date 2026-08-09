@@ -10,8 +10,12 @@ const index=fs.readFileSync(path.join(root,'index.html'),'utf8');
 
 assert(script.includes('function openGuestPersonPicker(rowId,event)'));
 assert(script.includes('if(!event || event.isTrusted !== true) return'));
-assert(script.includes('onfocus="openGuestPersonPicker'));
 assert(script.includes('onclick="openGuestPersonPicker'));
+assert(script.includes('onkeydown="openGuestPersonPickerFromKeyboard'));
+assert(!script.includes('onfocus="openGuestPersonPicker'),
+  'programmatic post-selection focus must not open the picker');
+assert(script.includes("['Enter','ArrowDown'].indexOf(event.key) < 0"),
+  'keyboard opening must require an explicit selection key');
 assert(script.includes("openGuestPersonPicker(\\'" )&&script.includes("\\',event)"));
 assert(!script.slice(script.indexOf('function renderRoomEditorFromDraft()'),
   script.indexOf('function openRoomEditor(')).includes('.focus()'),
