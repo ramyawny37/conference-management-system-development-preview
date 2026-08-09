@@ -9,10 +9,11 @@ const index=fs.readFileSync(path.join(root,'index.html'),'utf8');
 const manager=fs.readFileSync(path.join(root,'js/sync/conference-edit-lock-manager.js'),'utf8');
 
 const previous='exclusive-edit-lock-v1';
-const next='template-sync-isolation-v1';
+const next='shared-template-library-v1';
+const templateIsolationRevision='template-sync-isolation-v1';
 const startupRevision='startup-authorized-view-v1';
 const deviceOnboardingRevision='device-onboarding-v1';
-const organizationTemplateRevision='organization-template-sync-v1';
+const organizationTemplateRevision='shared-template-library-v1';
 const bootstrapRevision='first-owner-bootstrap-hardening-v1';
 const userManagementUiRevision='startup-device-admin-lifecycle-v1';
 const userManagementStyleRevision='organization-management-v1';
@@ -36,7 +37,7 @@ assert(worker.includes("'./js/sync/startup-access-gate.js?rev="+
   assert(index.includes(versionedAsset),'index missing '+versionedAsset);
   assert(worker.includes("'./"+versionedAsset+"'"),'app shell missing '+versionedAsset);
 });
-const isolatedHouseTemplates='houseTemplates.js?rev='+next;
+const isolatedHouseTemplates='houseTemplates.js?rev='+templateIsolationRevision;
 assert(index.includes(isolatedHouseTemplates));
 assert(worker.includes("'./"+isolatedHouseTemplates+"'"));
 const conferenceMembersUi='js/sync/conference-members-ui.js?rev='+conferenceRoleRevision;
@@ -59,27 +60,33 @@ const readAsset='js/sync/user-management-read-service.js?rev='+
   userManagementReadRevision;
 assert(index.includes(readAsset));
 assert(worker.includes("'./"+readAsset+"'"));
-assert(index.includes('script.js?rev='+next));
-assert(worker.includes("'./script.js?rev="+next+"'"));
+assert(index.includes('script.js?rev='+templateIsolationRevision));
+assert(worker.includes("'./script.js?rev="+templateIsolationRevision+"'"));
 [
   'state.js','js/sync/automatic-queue-runner.js',
   'js/sync/conference-realtime-manager.js'
 ].forEach(asset=>{
-  const versioned=asset+'?rev='+next;
+  const versioned=asset+'?rev='+templateIsolationRevision;
   assert(index.includes(versioned),'index missing '+versioned);
   assert(worker.includes("'./"+versioned+"'"),'app shell missing '+versioned);
 });
 [
-  'js/storage/indexeddb.js','js/storage/storage-repository.js',
-  'js/sync/startup-conference-discovery.js'
-].forEach(asset=>{
-  const versioned=asset+'?rev='+organizationTemplateRevision;
+  ['js/storage/indexeddb.js',organizationTemplateRevision],
+  ['js/storage/storage-repository.js','organization-template-sync-v1']
+].forEach(([asset,revision])=>{
+  const versioned=asset+'?rev='+revision;
   assert(index.includes(versioned),'index missing '+versioned);
   assert(worker.includes("'./"+versioned+"'"),'app shell missing '+versioned);
 });
 const isolatedTemplateSync='js/sync/organization-template-sync.js?rev='+next;
 assert(index.includes(isolatedTemplateSync));
 assert(worker.includes("'./"+isolatedTemplateSync+"'"));
+['js/sync/startup-conference-discovery.js',
+  'js/sync/legacy-template-adoption-ui.js'].forEach(asset=>{
+  const versioned=asset+'?rev='+next;
+  assert(index.includes(versioned),'index missing '+versioned);
+  assert(worker.includes("'./"+versioned+"'"),'app shell missing '+versioned);
+});
 [
   'js/sync/current-device-authorization-ui.js'
 ].forEach(asset=>{

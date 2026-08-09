@@ -1,22 +1,95 @@
+'use strict';
 const fs=require('fs'),vm=require('vm'),assert=require('assert');
 const source=fs.readFileSync('js/sync/organization-template-sync.js','utf8');
-function runtime(remoteRows,organizations){
-  const records=[],rpcCalls=[],data={houseTemplates:[],templates:[],conferences:[],currentConferenceId:null};
-  const window={JSON,Promise,Date,crypto:{randomUUID:(()=>{let n=0;return()=>`00000000-0000-4000-8000-${String(++n).padStart(12,'0')}`;})()},appData:data,localStorage:{setItem(){}},SK:'x'};
+const ORG_A='30000000-0000-4000-8000-000000000001';
+const ORG_B='30000000-0000-4000-8000-000000000002';
+
+function runtime(remoteRows,settings){
+  settings=settings||{};
+  const stores={content:[],access:[]},rpcCalls=[],saveCalls=[];
+  const data={houseTemplates:[],templates:[],conferences:[],currentConferenceId:null};
+  let sequence=0;
+  const client={
+    rpc(name,args){
+      rpcCalls.push({name,args});
+      if(name==='list_shared_organization_templates')return Promise.resolve({data:{status:'success',templates:remoteRows||[]}});
+      if(name==='apply_library_template_content_operation'){
+        if(settings.failContent>0){settings.failContent--;return Promise.reject({code:'NETWORK_ERROR'});}
+        return Promise.resolve({data:{status:args.p_base_revision?'updated':'created',revision:args.p_base_revision+1}});
+      }
+      if(name==='apply_organization_template_access_operation'){
+        if(settings.failAccess>0){settings.failAccess--;return Promise.reject({code:'NETWORK_ERROR'});}
+        return Promise.resolve({data:{status:args.p_action==='grant'?'granted':'revoked'}});
+      }
+      throw new Error('unexpected RPC '+name);
+    },
+    channel(){return {on(){return this;},subscribe(callback){callback('SUBSCRIBED');return this;},unsubscribe(){}};}
+  };
+  const window={JSON,Promise,Date,crypto:{randomUUID:()=>`00000000-0000-4000-8000-${String(++sequence).padStart(12,'0')}`},appData:data,localStorage:{setItem(){}},SK:'x',addEventListener(){}};
   window.SupabaseAuth={getState:()=>({authenticated:true,user:{id:'10000000-0000-4000-8000-000000000001'}})};
   window.SupabaseDeviceIdentity={getOrCreate:()=>({id:'20000000-0000-4000-8000-000000000001'})};
-  window.SupabaseClientLayer={getClient:()=>({rpc:(name,args)=>{rpcCalls.push({name,args});if(name==='list_organization_templates')return Promise.resolve({data:{status:'success',templates:remoteRows||[]}});return Promise.resolve({data:{status:args.p_action==='delete'?'deleted':args.p_base_revision?'updated':'created',revision:args.p_base_revision+1}});}})};
-  window.OrganizationManagementService={list:()=>Promise.resolve({ok:true,data:{organizations:organizations||[{organizationId:'30000000-0000-4000-8000-000000000001',status:'active'}]}})};
-  window.AppIndexedDB={stores:{organizationTemplateOperations:'ops'},getAllRecords:()=>Promise.resolve(records.slice()),putRecord:(s,v)=>{let i=records.findIndex(x=>x.operationId===v.operationId);if(i<0)records.push(v);else records[i]=v;return Promise.resolve();},deleteRecord:(s,id)=>{let i=records.findIndex(x=>x.operationId===id);if(i>=0)records.splice(i,1);return Promise.resolve();}};
-  window.StorageRepository={getAppSnapshot:()=>Promise.resolve({data:window.appData}),saveAppSnapshot:value=>{window.appData=value;return Promise.resolve({ok:true});}};
-  vm.runInNewContext(source,{window,console});return {window,records,rpcCalls};
+  window.SupabaseClientLayer={getClient:()=>client};
+  window.OrganizationManagementService={list:()=>Promise.resolve({ok:true,data:{organizations:settings.organizations||[{organizationId:ORG_A,status:'active',displayName:'A'},{organizationId:ORG_B,status:'active',displayName:'B'}]}})};
+  window.AppIndexedDB={stores:{libraryTemplateContentOperations:'content',organizationTemplateAccessOperations:'access'},getAllRecords:name=>Promise.resolve(stores[name].slice()),putRecord:(name,row)=>{const i=stores[name].findIndex(x=>x.operationId===row.operationId);if(i<0)stores[name].push(row);else stores[name][i]=row;return Promise.resolve();},deleteRecord:(name,id)=>{const i=stores[name].findIndex(x=>x.operationId===id);if(i>=0)stores[name].splice(i,1);return Promise.resolve();}};
+  window.StorageRepository={getAppSnapshot:()=>Promise.resolve({data:window.appData}),saveAppSnapshot:(value,options)=>{saveCalls.push(options);window.appData=value;return Promise.resolve({ok:true});}};
+  vm.runInNewContext(source,{window,console});
+  return {window,stores,rpcCalls,saveCalls};
 }
+
 (async()=>{
-  let r=runtime([]);r.window.appData.houseTemplates=[{id:'h1',name:'House',floors:[]}];let first=await r.window.OrganizationTemplateSync.refresh();assert.equal(first.ok,true);assert.equal(r.window.appData.houseTemplates.length,1,'legacy adoption must not duplicate');assert.equal(r.rpcCalls.filter(x=>x.name==='apply_organization_template_operation').length,1);assert.equal(r.records.length,0);
-  r=runtime([{organizationId:'30000000-0000-4000-8000-000000000001',templateType:'house',templateId:'h2',payload:{id:'h2',name:'Cloud',floors:[]},revision:4,deletedAt:null}]);await r.window.OrganizationTemplateSync.refresh();assert.equal(r.window.appData.houseTemplates[0].name,'Cloud');assert.equal(r.window.appData.houseTemplates[0].cloudRevision,4);
-  r.window.appData.houseTemplates[0].name='Edited';await r.window.OrganizationTemplateSync.captureLocalSave(r.window.appData);await new Promise(resolve=>setTimeout(resolve,0));assert.equal(r.rpcCalls.some(x=>x.name==='apply_organization_template_operation'&&x.args.p_base_revision===4),true);
-  r=runtime([]);await r.window.OrganizationTemplateSync.refresh();let release;r.window.SupabaseClientLayer.getClient=()=>({rpc:()=>new Promise(resolve=>{release=resolve;})});r.window.appData.houseTemplates=[{id:'offline-new',name:'Draft',floors:[],organizationId:'30000000-0000-4000-8000-000000000001'}];await r.window.OrganizationTemplateSync.captureLocalSave(r.window.appData);assert.equal(r.records.length,1);r.window.appData.houseTemplates=[];await r.window.OrganizationTemplateSync.captureLocalSave(r.window.appData);assert.equal(r.records.length,0,'offline create then delete must cancel a not-sent create');release({data:{status:'created',revision:1}});await new Promise(resolve=>setTimeout(resolve,0));assert.equal(r.records.length,1,'an in-flight create requires a compensating delete');assert.equal(r.records[0].action,'delete');assert.equal(r.records[0].baseRevision,1);
-  r=runtime([{organizationId:'30000000-0000-4000-8000-000000000001',templateType:'house',templateId:'gone',payload:null,revision:3,deletedAt:'2026-08-12T00:00:00Z'}]);r.window.appData.houseTemplates=[{id:'gone',name:'Stale',floors:[],organizationId:'30000000-0000-4000-8000-000000000001'}];await r.window.OrganizationTemplateSync.refresh();assert.equal(r.window.appData.houseTemplates.length,0,'a tombstone must remove stale local materialization');
-  r=runtime([],[{organizationId:'30000000-0000-4000-8000-000000000001',status:'active'},{organizationId:'30000000-0000-4000-8000-000000000002',status:'active'}]);r.window.appData.houseTemplates=[{id:'legacy',name:'Unscoped',floors:[]}];await r.window.OrganizationTemplateSync.refresh();assert.equal(r.window.appData.houseTemplates.length,1);assert.equal(r.window.appData.houseTemplates[0].organizationId,undefined,'multi-organization legacy data must remain unscoped');assert.equal(r.rpcCalls.filter(x=>x.name==='apply_organization_template_operation').length,0);
+  let r=runtime([{templateType:'house',templateId:'shared',payload:{id:'shared',name:'Cloud',floors:[]},revision:4,deletedAt:null,ownerUserId:'owner',accessibleOrganizationIds:[ORG_A,ORG_B]}]);
+  await r.window.OrganizationTemplateSync.refresh();
+  assert.equal(r.window.appData.houseTemplates.length,1,'shared identity must materialize once');
+  assert.deepEqual(Array.from(r.window.appData.houseTemplates[0].accessibleOrganizationIds),[ORG_A,ORG_B]);
+  r.window.appData.houseTemplates[0].name='Edited';
+  await r.window.OrganizationTemplateSync.captureLocalSave(r.window.appData);
+  await new Promise(resolve=>setTimeout(resolve,0));
+  assert(r.rpcCalls.some(call=>call.name==='apply_library_template_content_operation'&&call.args.p_base_revision===4));
+
+  r=runtime([]);r.window.appData.houseTemplates=[{id:'legacy',name:'Legacy',floors:[]}];
+  const refreshed=await r.window.OrganizationTemplateSync.refresh();
+  assert.equal(refreshed.status,'adoption_required');
+  assert.equal(r.rpcCalls.filter(call=>call.name.includes('apply_')).length,0,'refresh must not adopt implicitly');
+  const adopted=await r.window.OrganizationTemplateSync.adoptLegacyTemplates([ORG_A,ORG_B]);
+  assert.equal(adopted.ok,true);
+  assert.equal(r.rpcCalls.filter(call=>call.name==='apply_library_template_content_operation').length,1,'content is created once');
+  assert.equal(r.rpcCalls.filter(call=>call.name==='apply_organization_template_access_operation').length,2,'one association per selected organization');
+  assert.deepEqual(Array.from(r.window.appData.houseTemplates[0].accessibleOrganizationIds),[ORG_A,ORG_B]);
+  assert(r.saveCalls.every(options=>options&&options.skipSyncQueue===true&&options.skipTemplateSync===true));
+  await r.window.OrganizationTemplateSync.adoptLegacyTemplates([ORG_A,ORG_B]);
+  assert.equal(r.rpcCalls.filter(call=>call.name==='apply_library_template_content_operation').length,1,'replay is idempotent');
+
+  r=runtime([],{organizations:[]});r.window.appData.houseTemplates=[{id:'no-org',name:'No organization'}];
+  assert.equal((await r.window.OrganizationTemplateSync.refresh()).status,'organization_scope_missing');
+  assert.equal((await r.window.OrganizationTemplateSync.adoptLegacyTemplates([ORG_A])).status,'organization_selection_required');
+
+  r=runtime([]);r.window.appData.houseTemplates=[{name:'No ID',floors:[]}];r.window.appData.templates=[{id:'conference',name:'Conference'}];
+  await r.window.OrganizationTemplateSync.refresh();
+  await r.window.OrganizationTemplateSync.adoptLegacyTemplates([ORG_A]);
+  assert(r.window.appData.houseTemplates[0].id,'legacy identity must be stable before queueing');
+  assert.equal(r.rpcCalls.filter(call=>call.name==='apply_library_template_content_operation'&&call.args.p_template_type==='conference').length,1);
+  assert.equal(r.window.appData.conferences.length,0,'template adoption must not mutate conferences');
+
+  r=runtime([],{failAccess:1});r.window.appData.houseTemplates=[{id:'retry',name:'Retry'}];
+  await r.window.OrganizationTemplateSync.refresh();
+  const partial=await r.window.OrganizationTemplateSync.adoptLegacyTemplates([ORG_A,ORG_B]);
+  assert.equal(partial.status,'adoption_partial');
+  assert.equal(r.stores.content.length,0);
+  assert.equal(r.stores.access.length,1);
+  const replay=await r.window.OrganizationTemplateSync.adoptLegacyTemplates([ORG_A,ORG_B]);
+  assert.equal(replay.ok,true);
+  assert.equal(r.stores.access.length,0);
+  assert.deepEqual(Array.from(r.window.appData.houseTemplates[0].accessibleOrganizationIds).sort(),[ORG_A,ORG_B]);
+
+  r=runtime([],{failContent:1});r.window.appData.houseTemplates=[{id:'blocked',name:'Blocked'}];
+  await r.window.OrganizationTemplateSync.refresh();
+  const blocked=await r.window.OrganizationTemplateSync.adoptLegacyTemplates([ORG_A]);
+  assert.equal(blocked.status,'adoption_partial');
+  assert.equal(r.rpcCalls.filter(call=>call.name==='apply_organization_template_access_operation').length,0,'failed content must never receive access associations');
+
+  r=runtime([]);r.window.appData.houseTemplates=[{id:'previously-cloud',name:'Old',accessibleOrganizationIds:[ORG_A],cloudRevision:2}];
+  await r.window.OrganizationTemplateSync.refresh();
+  assert.equal(r.window.appData.houseTemplates.length,0,'loss of all visible associations removes cloud materialization');
+  assert(r.window.OrganizationTemplateSync.getDiagnostics().some(row=>row.stage==='REALTIME_STATUS'&&row.data.status==='SUBSCRIBED'));
   console.log('organization-template-sync: PASS');
 })().catch(error=>{console.error(error);process.exit(1);});

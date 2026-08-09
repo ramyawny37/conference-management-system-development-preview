@@ -1,25 +1,11 @@
 'use strict';
 const assert=require('assert'),fs=require('fs');
-const sql=fs.readFileSync('supabase/migrations/20260812_6_8_0_organization_template_sync.sql','utf8');
+const sql=fs.readFileSync('supabase/migrations/20260813_6_9_0_shared_template_library.sql','utf8');
 const service=fs.readFileSync('js/sync/organization-template-sync.js','utf8');
-[
-  'create table public.organization_templates',
-  'create table public.organization_template_operations',
-  'create table public.organization_template_audit_log',
-  'public.list_organization_templates',
-  'public.apply_organization_template_operation',
-  "p_template_type not in ('house','conference')",
-  "p_action not in ('upsert','delete')",
-  'TEMPLATE_OPERATION_INTENT_MISMATCH',
-  "return jsonb_build_object('status','conflict'",
-  'perform public.require_current_approved_device',
-  "actor_role not in ('organization_owner','organization_admin')",
-  'ARCHIVED_ORGANIZATION_READ_ONLY',
-  'enable row level security',
-  'revoke all on public.organization_templates',
-  'grant execute on function public.list_organization_templates(uuid,uuid) to authenticated'
-].forEach(value=>assert(sql.includes(value),'missing contract: '+value));
-assert(!/grant\s+(select|insert|update|delete).*organization_templates.*authenticated/i.test(sql));
-['captureLocalSave','organizationTemplateOperations','baseRevision','status===\'conflict\'','postgres_changes','visibilitychange','scopeTemplate'].forEach(value=>assert(service.includes(value),'missing client contract '+value));
-assert(!/\.from\(['"]organization_templates['"]\)\.(insert|update|delete|upsert)/.test(service),'client must use RPC only');
+['create table public.library_templates','primary key(template_type,template_id)','create table public.organization_template_access','primary key(template_type,template_id,organization_id)','public.list_shared_organization_templates','public.apply_library_template_content_operation','public.apply_organization_template_access_operation','TEMPLATE_OWNER_REQUIRED',"actor_role not in ('organization_owner','organization_admin')",'ARCHIVED_ORGANIZATION_READ_ONLY','SHARED_TEMPLATE_MIGRATION_IDENTITY_CONFLICT','perform public.require_current_approved_device','create table public.organization_template_events','access_revoked','enable row level security','revoke all on public.library_templates'].forEach(value=>assert(sql.includes(value),'missing contract: '+value));
+assert(/jsonb_agg\(a\.organization_id/.test(sql),'read RPC must deduplicate access into one template');
+assert(!/create table public\.organization_template_events[\s\S]*?payload/.test(sql.slice(sql.indexOf('create table public.organization_template_events'),sql.indexOf('create index library_templates_changed'))),'events must not carry payload');
+assert(!/grant\s+(select|insert|update|delete).*library_templates.*authenticated/i.test(sql),'content tables must not be directly exposed');
+['libraryTemplateContentOperations','organizationTemplateAccessOperations','list_shared_organization_templates','apply_library_template_content_operation','apply_organization_template_access_operation','accessibleOrganizationIds','skipTemplateSync:true','postgres_changes'].forEach(value=>assert(service.includes(value),'missing client contract '+value));
+assert(!/\.from\(['"](?:library_templates|organization_template_access)['"]\)/.test(service),'client must use RPCs only');
 console.log('organization template sync contract: PASS');

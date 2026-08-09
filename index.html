@@ -438,6 +438,23 @@
 </div>
 
 <div class="toast" id="toast"></div>
+<div class="overlay app-modal" id="legacyTemplateAdoptionModal" style="display:none">
+  <div class="modal" style="max-width:560px" role="dialog" aria-modal="true">
+    <div class="mhead"><span>توجد قوالب قديمة غير مرتبطة بمؤسسة</span><span style="cursor:pointer" onclick="LegacyTemplateAdoptionUI.close()">✕</span></div>
+    <div class="mbody">
+      <p>قوالب بيوت المؤتمرات: <b id="legacy_template_house_count">0</b></p>
+      <p>قوالب المؤتمرات: <b id="legacy_template_conference_count">0</b></p>
+      <p>اختر المؤسسات التي تريد إتاحة القوالب لها. سيتم رفع كل قالب مرة واحدة دون تغيير محتواه.</p>
+      <label class="lbl">المؤسسات</label>
+      <div id="legacy_template_organizations" style="max-height:220px;overflow:auto;border:1px solid #dfe8f0;border-radius:8px"></div>
+      <div id="legacy_template_adoption_message" class="sync-settings-message" style="margin-top:8px"></div>
+      <div class="row" style="margin-top:10px">
+        <button id="legacy_template_adopt_action" class="btn btn-blue" onclick="LegacyTemplateAdoptionUI.adopt()" disabled>إتاحة القوالب للمؤسسات المحددة</button>
+        <button class="btn btn-gray" onclick="LegacyTemplateAdoptionUI.close()">إلغاء</button>
+      </div>
+    </div>
+  </div>
+</div>
 <!-- Partial Transfer Modal -->
 <div class="overlay app-modal" id="partialTransferModal" style="display:none" onclick="if(event.target===this)closePartialTransferModal()">
   <div class="modal" style="max-width:640px">
@@ -459,7 +476,7 @@
   <pre id="pwa-update-diagnostics" dir="ltr" style="white-space:pre-wrap"></pre>
 </details>
 <script src="js/storage/environment-namespace.js"></script>
-<script src="js/storage/indexeddb.js?rev=organization-template-sync-v1"></script>
+<script src="js/storage/indexeddb.js?rev=shared-template-library-v1"></script>
 <script src="js/storage/storage-repository.js?rev=organization-template-sync-v1"></script>
 <script src="js/storage/conference-repository.js"></script>
 <script src="js/storage/conference-publishing-engine.js"></script>
@@ -493,8 +510,9 @@
 <script src="js/sync/device-reauthorization-flow.js?rev=device-reauthorization-flow-v1"></script>
 <script src="js/sync/device-authorization-administration-ui.js?rev=startup-device-admin-lifecycle-v1"></script>
 <script src="js/supabase/snapshot-sync.js?rev=startup-queue-recovery-v1"></script>
-<script src="js/sync/startup-conference-discovery.js?rev=organization-template-sync-v1"></script>
-<script src="js/sync/organization-template-sync.js?rev=template-sync-isolation-v1"></script>
+<script src="js/sync/startup-conference-discovery.js?rev=shared-template-library-v1"></script>
+<script src="js/sync/organization-template-sync.js?rev=shared-template-library-v1"></script>
+<script src="js/sync/legacy-template-adoption-ui.js?rev=shared-template-library-v1"></script>
 <script src="js/sync/sync-processor.js?rev=startup-queue-recovery-v1"></script>
 <script src="js/sync/realtime.js"></script>
 <script src="js/sync/conflict-resolution.js"></script>
@@ -576,7 +594,7 @@
     });
   });
 </script>
-<script>window.APP_SHELL_REVISION='template-sync-isolation-v1';</script>
-<script src="pwa.js?rev=template-sync-isolation-v1"></script>
+<script>window.APP_SHELL_REVISION='shared-template-library-v1';</script>
+<script src="pwa.js?rev=shared-template-library-v1"></script>
 </body>
 </html>

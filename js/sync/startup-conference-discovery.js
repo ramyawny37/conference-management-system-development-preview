@@ -124,11 +124,13 @@
           var templateRefresh=templateSync&&
             typeof templateSync.refresh==='function'
             ?templateSync.refresh(options):Promise.resolve(null);
-          return Promise.resolve(templateRefresh).then(function(){return {
-            ok:true,
-            status:'discovered',
-            data:{conferences:copy(records)}
-          };});
+          return Promise.resolve(templateRefresh).then(function(templateResult){
+            return {
+              ok:true,
+              status:'discovered',
+              data:{conferences:copy(records),templateSync:templateResult}
+            };
+          });
         });
       }).then(function(result){
         if(result&&result.status==='list_failed')render();

@@ -6,14 +6,14 @@ const CACHE_NAMESPACE = IS_DEVELOPMENT
   ? 'cms:development:' + DEVELOPMENT_PROJECT_REF + ':'
   : '';
 const CACHE_PREFIX = CACHE_NAMESPACE + 'conference-manager-core-';
-const CACHE_REVISION = 'template-sync-isolation-v1';
+const CACHE_REVISION = 'shared-template-library-v1';
 const CACHE_NAME = CACHE_PREFIX + 'v' + APP_VERSION + '-' + CACHE_REVISION;
 const CORE_ASSETS = [
   './',
   './index.html',
   './style.css?rev=organization-management-v1',
   './js/storage/environment-namespace.js',
-  './js/storage/indexeddb.js?rev=organization-template-sync-v1',
+  './js/storage/indexeddb.js?rev=shared-template-library-v1',
   './js/storage/storage-repository.js?rev=organization-template-sync-v1',
   './js/storage/conference-repository.js',
   './js/storage/conference-publishing-engine.js',
@@ -45,8 +45,9 @@ const CORE_ASSETS = [
   './js/sync/device-reauthorization-flow.js?rev=device-reauthorization-flow-v1',
   './js/sync/device-authorization-administration-ui.js?rev=startup-device-admin-lifecycle-v1',
   './js/supabase/snapshot-sync.js?rev=startup-queue-recovery-v1',
-  './js/sync/startup-conference-discovery.js?rev=organization-template-sync-v1',
-  './js/sync/organization-template-sync.js?rev=template-sync-isolation-v1',
+  './js/sync/startup-conference-discovery.js?rev=shared-template-library-v1',
+  './js/sync/organization-template-sync.js?rev=shared-template-library-v1',
+  './js/sync/legacy-template-adoption-ui.js?rev=shared-template-library-v1',
   './js/sync/sync-processor.js?rev=startup-queue-recovery-v1',
   './js/sync/realtime.js',
   './js/sync/conflict-resolution.js',
@@ -106,7 +107,7 @@ const CORE_ASSETS = [
   './cards.js',
   './script.js?rev=template-sync-isolation-v1',
   './version.js',
-  './pwa.js?rev=template-sync-isolation-v1',
+  './pwa.js?rev=shared-template-library-v1',
   './libs/html2canvas.min.js',
   './assets/logo.jpg',
   './assets/startup-bg.png',
