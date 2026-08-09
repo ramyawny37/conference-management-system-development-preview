@@ -16,7 +16,8 @@ var conference={id:'c1',houses:[{id:'h1',floors:[{id:'f1',rooms:[
   {id:'r2',closed:false,guests:[],children:[]}
 ]}]}],accommodationDisplayedRoomIds:[]};
 var sandbox={window:null,appData:{currentConferenceId:'c1',conferences:[conference]},
-  isConferenceImportRecoveryPending:function(){return false;}};
+  isConferenceImportRecoveryPending:function(){return false;},
+  ConferenceEditLockManager:{canMutateAccommodation:function(){return true;}}};
 sandbox.window=sandbox;
 vm.runInNewContext([
   extract(core,'getCurrentConference','getConferenceHouseRooms'),
@@ -78,6 +79,6 @@ var renderBody=script.slice(renderStart,renderEnd);
 assert.ok(renderBody.indexOf('ensureAccommodationDisplayState(current)')<
   renderBody.indexOf('getAllRooms()'),
   'display state must be rebuilt before room selectors run');
-assert.ok(/if\(canEditAccommodation\)h \+= '<div class="accommodation-room-actions">'/.test(renderBody),
+assert.ok(/if\s*\(canEditAccommodation\)\s*\{\s*h\s*\+=\s*'<div class="accommodation-room-actions">'/.test(renderBody),
   'read-only rendering must omit administrative room buttons');
 console.log('accommodation display state tests: passed');

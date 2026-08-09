@@ -71,8 +71,9 @@ function load(){
   };
   sandbox.window=sandbox;
   vm.runInNewContext(source,sandbox,{filename:'sync-settings-ui.js'});
-  sandbox.SyncSettingsUI.renderSection();
+  var html=sandbox.SyncSettingsUI.renderSection();
   return {
+    html:html,
     listener:function(value){listener(value);},
     renders:function(){return renders;},
     links:links,
@@ -82,12 +83,11 @@ function load(){
 
 function run(){
   var environment=load();
-  assert.ok(
-    environment.listener &&
-    fs.readFileSync(path.resolve(__dirname,'../js/sync/sync-settings-ui.js'),'utf8')
-      .includes('DebugBindingReportUI.render'),
-    'sync settings should render debug binding report section when available'
-  );
+  assert.ok(environment.listener,'sync settings should subscribe to orchestrator state');
+  assert.ok(!source.includes('DebugBindingReportUI.render'),
+    'production sync settings must not invoke the removed debug binding report');
+  assert.ok(!environment.html.includes('debug_binding_section'),
+    'production sync settings must not render the debug binding report even when a global is present');
   var states=[
     'linked',
     'needs_resolution',

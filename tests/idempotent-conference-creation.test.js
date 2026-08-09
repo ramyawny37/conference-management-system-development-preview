@@ -11,6 +11,8 @@ var source=fs.readFileSync(path.resolve(
 var operationId='11111111-1111-4111-8111-111111111111';
 var conferenceId='22222222-2222-4222-8222-222222222222';
 var userId='33333333-3333-4333-8333-333333333333';
+var deviceId='44444444-4444-4444-8444-444444444444';
+var organizationId='55555555-5555-4555-8555-555555555555';
 
 function load(handler,authenticated){
   var calls=[];
@@ -34,7 +36,8 @@ function load(handler,authenticated){
     SupabaseClientLayer:{getClient:function(){return client;}},
     SupabaseAuth:{getSession:function(){
       return authenticated===false?null:{user:{id:userId}};
-    }}
+    }},
+    SupabaseDeviceIdentity:{getOrCreate:function(){return {id:deviceId};}}
   };
   sandbox.window=sandbox;
   vm.runInNewContext(source,sandbox,{filename:'snapshot-sync.js'});
@@ -46,6 +49,7 @@ function request(overrides){
     operationId:operationId,
     requestedConferenceId:conferenceId,
     name:'Conference',
+    organizationId:organizationId,
     metadata:{source:'automatic-link'}
   },overrides||{});
 }
@@ -78,7 +82,9 @@ async function run(){
   assert.strictEqual(createdResult.ok,true);
   assert.strictEqual(createdResult.status,'created');
   assert.strictEqual(createdResult.data.conferenceId,conferenceId);
-  assert.strictEqual(created.calls[0].name,'create_conference_idempotent');
+  assert.strictEqual(created.calls[0].name,'device_guarded_create_organization_conference_idempotent');
+  assert.strictEqual(created.calls[0].input.p_actor_device_id,deviceId);
+  assert.strictEqual(created.calls[0].input.p_organization_id,organizationId);
 
   var duplicate=load(function(name,input){
     return Promise.resolve({data:{

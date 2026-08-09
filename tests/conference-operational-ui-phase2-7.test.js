@@ -314,11 +314,14 @@ function lifecycle(cloudLifecycle,metadata=null){
   const startupSource=fs.readFileSync(path.join(
     __dirname,'..','script.js'
   ),'utf8');
-  const storagePosition=startupSource.indexOf(
-    'initializeApplicationStorage().then'
+  const gatePosition=startupSource.indexOf(
+    'window.StartupAccessGate.run'
   );
-  const accessPosition=startupSource.indexOf(
-    'window.SystemAccessService.initialize'
+  const storagePosition=startupSource.indexOf(
+    'Promise.resolve(completeApplicationStartup())'
+  );
+  const discoveryPosition=startupSource.indexOf(
+    'window.StartupConferenceDiscovery.refresh'
   );
   const linkingPosition=startupSource.indexOf(
     'window.AutomaticConferenceLinking.initialize'
@@ -326,8 +329,9 @@ function lifecycle(cloudLifecycle,metadata=null){
   const orchestratorPosition=startupSource.lastIndexOf(
     'window.AutomaticSyncOrchestrator.start'
   );
-  assert.ok(storagePosition>=0&&storagePosition<accessPosition);
-  assert.ok(accessPosition<linkingPosition);
+  assert.ok(gatePosition>=0,'startup must remain guarded by StartupAccessGate');
+  assert.ok(storagePosition>=0&&storagePosition<discoveryPosition);
+  assert.ok(discoveryPosition<linkingPosition);
   assert.ok(linkingPosition<orchestratorPosition);
   assert.doesNotMatch(startupSource,
     /openNewConferenceModal\(mode\)\s*\{[\s\S]{0,120}systemAccessAllowsConferenceCreation/);

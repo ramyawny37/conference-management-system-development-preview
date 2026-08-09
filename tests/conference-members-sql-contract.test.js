@@ -52,7 +52,7 @@ has(/function public\.list_conference_members\(\s*p_conference_id uuid/i,
 has(/if not public\.is_conference_member\(p_conference_id\)/i,
   'member listing must require conference membership');
 var listBody=sql.match(
-  /function public\.list_conference_members[\s\S]*?\nend;\n\$\$;/i
+  /function public\.list_conference_members[\s\S]*?\r?\nend;\r?\n\$\$;/i
 )[0];
 assert.strictEqual(
   /\bemail\b/i.test(listBody),
@@ -73,10 +73,10 @@ has(/function public\.remove_conference_manager\(\s*p_conference_id uuid,\s*p_ta
   'remove manager RPC must use target user id');
 
 var addBody=sql.match(
-  /function public\.add_conference_manager[\s\S]*?\nend;\n\$\$;/i
+  /function public\.add_conference_manager[\s\S]*?\r?\nend;\r?\n\$\$;/i
 )[0];
 var removeBody=sql.match(
-  /function public\.remove_conference_manager[\s\S]*?\nend;\n\$\$;/i
+  /function public\.remove_conference_manager[\s\S]*?\r?\nend;\r?\n\$\$;/i
 )[0];
 
 assert.strictEqual(/\bemail\b/i.test(addBody),false,

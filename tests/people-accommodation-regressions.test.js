@@ -161,9 +161,8 @@ assert.ok(houseTemplatesSource.slice(
   houseTemplatesSource.indexOf('function ht_deleteFloorFromTemplate(')
 )
   .indexOf('refreshConferenceHouseAfterTemplateMutation(house)')<0);
-assert.ok(scriptSource.indexOf(
-  'current.houses = deepClone(editRoomData.draftHouses);\n  linkRoomPeopleToDatabase(current);'
-)>=0);
+assert.match(scriptSource,
+  /current\.houses\s*=\s*deepClone\(editRoomData\.draftHouses\);\r?\n\s*linkRoomPeopleToDatabase\(current\);/);
 assert.ok(scriptSource.indexOf(
   'updateConferenceHousesFromTemplate(currentConference, template)'
 )>=0);

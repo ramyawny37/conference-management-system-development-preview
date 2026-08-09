@@ -277,6 +277,7 @@ function createEnvironment(){
     ConferenceMembersService:{getCurrentAccess:function(){return Promise.resolve({ok:true,status:'available',data:{role:'manager',userId:userId,canSync:true}});}},
     CurrentDeviceAuthorizationService:{getStatus:function(){return Promise.resolve({ok:true,data:{deviceAuthorizationStatus:'approved'}});}},
     SystemAccessService:{refresh:function(){return Promise.resolve({source:'server',fresh:true,authenticated:true,accountStatus:'approved'});}},
+    StartupAccessGate:{run:function(){return Promise.resolve({status:'started'});}},
     SupabaseSnapshotSync:{
       inspectInitialSnapshot:function(){return Promise.resolve({ok:true,status:'found',data:{revision:4,schemaVersion:'1',appVersion:'test'}});},
       listAvailableConferences:function(){return Promise.resolve({ok:true,data:{conferences:[{id:remoteId,deletedAt:null}]}});},
