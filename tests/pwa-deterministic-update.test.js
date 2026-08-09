@@ -10,7 +10,7 @@ const manager=fs.readFileSync(path.join(root,'js/sync/conference-edit-lock-manag
 
 const previous='exclusive-edit-lock-v1';
 const next='organization-membership-operation-key-v1';
-const mobileRoomInputRevision='mobile-person-picker-flow-v4';
+const mobileRoomInputRevision='anchored-glass-person-picker-v5';
 const templateIsolationRevision='template-sync-isolation-v1';
 const startupRevision=next;
 const deviceOnboardingRevision=next;

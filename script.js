@@ -2438,7 +2438,10 @@ function renderAccommodation() {
 var editRoomData = {};
 var personDialogContext = { guestRowId: null, childRowId: null, targetField: '' };
 var activeRoomsManager = { houseId: null };
-var searchableSelectState = { title: '', items: [], onSelect: null, variant: '' };
+var searchableSelectState = { title: '', items: [], onSelect: null };
+var guestPersonPickerState = { rowId: '', items: [], onSelect: null };
+var guestPersonPickerOutsideHandler = null;
+var guestPersonPickerPositionHandler = null;
 var partialTransferState;
 
 function deactivateAccommodationRoom(roomId){
@@ -2461,8 +2464,8 @@ function deactivateAccommodationRoom(roomId){
 
 function closeSearchableSelectDialog(){
   var modal = ge('searchableSelectModal');
-  if(modal){ modal.style.display = 'none'; modal.classList.remove('person-picker-modal'); }
-  searchableSelectState = { title: '', items: [], onSelect: null, variant: '' };
+  if(modal) modal.style.display = 'none';
+  searchableSelectState = { title: '', items: [], onSelect: null };
 }
 
 function renderSearchableSelectList(){
@@ -2481,18 +2484,7 @@ function renderSearchableSelectList(){
     row.type = 'button';
     row.className = 'btn modal-list-item';
     row.style.cssText = 'width:100%;text-align:right;display:block;margin-bottom:6px;padding:8px 10px;border:1px solid #E3EEF9;background:#fff;color:#1F4E79';
-    if(searchableSelectState.variant === 'person-picker'){
-      row.classList.add('person-picker-row');
-      var primary = document.createElement('strong');
-      primary.textContent = item.label;
-      row.appendChild(primary);
-      if(item.secondaryText){
-        var secondary = document.createElement('span');
-        secondary.className = 'person-picker-phone';
-        secondary.textContent = item.secondaryText;
-        row.appendChild(secondary);
-      }
-    } else row.textContent = item.label;
+    row.textContent = item.label;
     row.onclick = function(){
       var fn = searchableSelectState.onSelect;
       closeSearchableSelectDialog();
@@ -2506,7 +2498,7 @@ function renderSearchableSelectList(){
   }
 }
 
-function openSearchableSelectDialog(title, items, onSelect, options){
+function openSearchableSelectDialog(title, items, onSelect){
   var modal = ge('searchableSelectModal');
   var titleEl = ge('searchableSelectTitle');
   var input = ge('searchableSelectSearch');
@@ -2518,8 +2510,6 @@ function openSearchableSelectDialog(title, items, onSelect, options){
     return !!(item && item.label);
   });
   searchableSelectState.onSelect = onSelect || null;
-  searchableSelectState.variant = options && options.variant || '';
-  modal.classList.toggle('person-picker-modal', searchableSelectState.variant === 'person-picker');
   titleEl.textContent = searchableSelectState.title;
   input.value = '';
   renderSearchableSelectList();
@@ -2929,6 +2919,7 @@ function validateExtraBedsReduction(oldValue, newValue, capacity){
 }
 
 function renderRoomEditorFromDraft(){
+  closeGuestPersonPicker();
   var draftResult = findRoomInHouses(editRoomData.draftHouses, editRoomData.houseId, editRoomData.floorId, editRoomData.roomId)
     || findRoomByIdInHouses(editRoomData.draftHouses, editRoomData.roomId);
   if(!draftResult || !draftResult.room){
@@ -3026,6 +3017,7 @@ function openRoomEditor(houseId, floorId, roomId) {
 }
 
 function closeRM(){
+  closeGuestPersonPicker();
   ge('roomModal').style.display='none';
   editRoomData = {};
 }
@@ -3096,12 +3088,137 @@ function bindGuestPersonRow(rowId,options){
   refreshPeopleDatalist({ assignedMap: assignedInEditor, excludeAssigned: false });
 }
 
+function ensureGuestPersonPickerPopover(){
+  var popover = ge('guestPersonPickerPopover');
+  if(popover) return popover;
+  popover = document.createElement('section');
+  popover.id = 'guestPersonPickerPopover';
+  popover.className = 'guest-person-picker-popover';
+  popover.setAttribute('role','dialog');
+  popover.setAttribute('aria-modal','false');
+  popover.setAttribute('aria-label','اختيار شخص');
+  popover.innerHTML = '<div class="guest-person-picker-head"><div><strong>اختيار شخص</strong><span id="guestPersonPickerTarget"></span></div><button type="button" class="guest-person-picker-close" aria-label="إغلاق" onclick="closeGuestPersonPicker()">✕</button></div><div class="guest-person-picker-search-wrap"><span aria-hidden="true">⌕</span><input id="guestPersonPickerSearch" type="search" placeholder="بحث عن اسم أو رقم..." autocomplete="off" oninput="renderGuestPersonPickerList()"></div><div id="guestPersonPickerList" class="guest-person-picker-list"></div><div class="guest-person-picker-hint">اضغط لاختيار شخص — البحث يعمل تلقائيًا</div>';
+  document.body.appendChild(popover);
+  return popover;
+}
+
+function removeGuestPersonPickerListeners(){
+  if(guestPersonPickerOutsideHandler){
+    document.removeEventListener('pointerdown',guestPersonPickerOutsideHandler,true);
+    guestPersonPickerOutsideHandler = null;
+  }
+  if(guestPersonPickerPositionHandler){
+    window.removeEventListener('resize',guestPersonPickerPositionHandler);
+    window.removeEventListener('scroll',guestPersonPickerPositionHandler,true);
+    if(window.visualViewport){
+      window.visualViewport.removeEventListener('resize',guestPersonPickerPositionHandler);
+      window.visualViewport.removeEventListener('scroll',guestPersonPickerPositionHandler);
+    }
+    guestPersonPickerPositionHandler = null;
+  }
+}
+
+function closeGuestPersonPicker(){
+  var popover = ge('guestPersonPickerPopover');
+  var targetRow = ge(guestPersonPickerState.rowId);
+  if(targetRow) targetRow.classList.remove('guest-person-picker-target');
+  if(popover){ popover.classList.remove('is-open','place-above'); popover.style.display = 'none'; }
+  removeGuestPersonPickerListeners();
+  guestPersonPickerState = { rowId: '', items: [], onSelect: null };
+}
+
+function renderGuestPersonPickerList(){
+  var list = ge('guestPersonPickerList');
+  var search = ge('guestPersonPickerSearch');
+  if(!list) return;
+  var query = normalizePersonKey(search ? search.value : '');
+  list.innerHTML = '';
+  var shown = 0;
+  guestPersonPickerState.items.forEach(function(item){
+    var haystack = normalizePersonKey(item.searchText || item.label || '');
+    if(query && haystack.indexOf(query) === -1) return;
+    var button = document.createElement('button');
+    button.type = 'button';button.className = 'guest-person-picker-option';
+    var icon = document.createElement('span');
+    icon.className = 'guest-person-picker-icon';icon.setAttribute('aria-hidden','true');icon.textContent = '●';
+    var text = document.createElement('span');text.className = 'guest-person-picker-text';
+    var name = document.createElement('strong');name.textContent = item.label;text.appendChild(name);
+    if(item.secondaryText){
+      var phone = document.createElement('small');phone.className = 'guest-person-picker-phone';phone.textContent = item.secondaryText;text.appendChild(phone);
+    }
+    var arrow = document.createElement('span');arrow.className = 'guest-person-picker-arrow';arrow.setAttribute('aria-hidden','true');arrow.textContent = '‹';
+    button.appendChild(icon);button.appendChild(text);button.appendChild(arrow);
+    button.onclick = function(){
+      var select = guestPersonPickerState.onSelect;
+      closeGuestPersonPicker();
+      if(typeof select === 'function') select(item.data);
+    };
+    list.appendChild(button);shown++;
+  });
+  if(!shown) list.innerHTML = '<div class="guest-person-picker-empty">لا توجد نتائج</div>';
+}
+
+function positionGuestPersonPicker(){
+  var popover = ge('guestPersonPickerPopover');
+  var row = ge(guestPersonPickerState.rowId);
+  var input = row && row.querySelector('.person-name');
+  if(!popover || !input || !popover.classList.contains('is-open')) return;
+  var rect = input.getBoundingClientRect();
+  var viewport = window.visualViewport;
+  var viewportTop = viewport ? viewport.offsetTop : 0;
+  var viewportLeft = viewport ? viewport.offsetLeft : 0;
+  var viewportWidth = viewport ? viewport.width : window.innerWidth;
+  var viewportHeight = viewport ? viewport.height : window.innerHeight;
+  var gap = 8;
+  var availableBelow = viewportTop + viewportHeight - rect.bottom - gap;
+  var availableAbove = rect.top - viewportTop - gap;
+  var placeAbove = availableBelow < 230 && availableAbove > availableBelow;
+  var available = Math.max(180,(placeAbove ? availableAbove : availableBelow) - gap);
+  var width = Math.min(560,Math.max(286,Math.min(rect.width + 110,viewportWidth - 16)));
+  popover.style.width = width + 'px';
+  popover.style.setProperty('--guest-person-picker-max-height',Math.min(470,available) + 'px');
+  popover.classList.toggle('place-above',placeAbove);
+  var measuredHeight = Math.min(popover.offsetHeight,Math.min(470,available));
+  var left = Math.max(viewportLeft + 8,Math.min(rect.right - width,viewportLeft + viewportWidth - width - 8));
+  var top = placeAbove ? rect.top - measuredHeight - gap : rect.bottom + gap;
+  top = Math.max(viewportTop + 8,Math.min(top,viewportTop + viewportHeight - measuredHeight - 8));
+  popover.style.left = left + 'px';popover.style.top = top + 'px';
+}
+
+function openGuestPersonPickerPopover(rowId,items,onSelect){
+  closeGuestPersonPicker();
+  var row = ge(rowId);
+  var input = row && row.querySelector('.person-name');
+  if(!row || !input) return;
+  var popover = ensureGuestPersonPickerPopover();
+  guestPersonPickerState = { rowId: rowId, items: items || [], onSelect: onSelect || null };
+  row.classList.add('guest-person-picker-target');
+  var target = ge('guestPersonPickerTarget');
+  if(target) target.textContent = row.getAttribute('data-slot-label') || 'الخانة الحالية';
+  var search = ge('guestPersonPickerSearch');if(search) search.value = '';
+  popover.style.display = 'flex';popover.classList.add('is-open');
+  renderGuestPersonPickerList();positionGuestPersonPicker();
+  guestPersonPickerPositionHandler = positionGuestPersonPicker;
+  window.addEventListener('resize',guestPersonPickerPositionHandler);
+  window.addEventListener('scroll',guestPersonPickerPositionHandler,true);
+  if(window.visualViewport){
+    window.visualViewport.addEventListener('resize',guestPersonPickerPositionHandler);
+    window.visualViewport.addEventListener('scroll',guestPersonPickerPositionHandler);
+  }
+  guestPersonPickerOutsideHandler = function(outsideEvent){
+    if(popover.contains(outsideEvent.target) || input === outsideEvent.target) return;
+    closeGuestPersonPicker();
+  };
+  document.addEventListener('pointerdown',guestPersonPickerOutsideHandler,true);
+  var focusSearch = function(){ if(search){ search.focus();positionGuestPersonPicker(); } };
+  if(window.requestAnimationFrame) window.requestAnimationFrame(focusSearch); else setTimeout(focusSearch,0);
+}
+
 function openGuestPersonPicker(rowId,event,reason){
   var postSelection = reason === 'POST_SELECTION_NEXT_ROW';
   if(!postSelection && (!event || event.isTrusted !== true)) return;
   var row = ge(rowId);
-  var modal = ge('searchableSelectModal');
-  if(!row || (modal && modal.style.display === 'flex')) return;
+  if(!row) return;
   var nameInput = row.querySelector('.person-name');
   var idInput = row.querySelector('.person-id');
   if(!nameInput || !idInput) return;
@@ -3119,12 +3236,12 @@ function openGuestPersonPicker(rowId,event,reason){
       data: person
     };
   });
-  openSearchableSelectDialog('اختيار شخص', items, function(person){
+  openGuestPersonPickerPopover(rowId,items,function(person){
     if(!person) return;
     nameInput.value = person.fullName;
     idInput.value = person.id;
     bindGuestPersonRow(rowId,{reason:'POST_SELECTION_NEXT_ROW'});
-  },{variant:'person-picker'});
+  });
 }
 
 function openGuestPersonPickerFromKeyboard(rowId,event){
@@ -3160,8 +3277,10 @@ function createGuestSlotRow(slot, index, days, isExtra, capacity){
   var slotLabel = '';
   if(isExtra){
     var extraIndex = index - (capacity || 0) + 1;
+    div.setAttribute('data-slot-label','سرير إضافي ' + extraIndex);
     slotLabel = '<div style="min-width:90px;font-size:10px;color:#E67E22;font-weight:700">سرير إضافي ' + extraIndex + '</div>';
   } else {
+    div.setAttribute('data-slot-label','سرير ' + (index + 1));
     slotLabel = '<div style="min-width:70px;font-size:10px;color:#5a7a9a">سرير ' + (index + 1) + '</div>';
   }
   var extraTypeControls = isExtra
@@ -3169,7 +3288,7 @@ function createGuestSlotRow(slot, index, days, isExtra, capacity){
     : '';
   div.innerHTML = slotLabel
     + '<div style="flex:1;min-width:180px">'
-    + '<input class="person-name" list="people_datalist" style="width:100%;border-color:' + (name ? '#27AE60' : '#BDD7EE') + '" placeholder="ابحث أو اكتب اسمًا" value="' + esc(name) + '" onclick="openGuestPersonPicker(\''+id+'\',event)" onkeydown="openGuestPersonPickerFromKeyboard(\''+id+'\',event)" oninput="bindGuestPersonRow(\''+id+'\')">'
+    + '<input class="person-name" style="width:100%;border-color:' + (name ? '#27AE60' : '#BDD7EE') + '" placeholder="ابحث أو اكتب اسمًا" value="' + esc(name) + '" onclick="openGuestPersonPicker(\''+id+'\',event)" onkeydown="openGuestPersonPickerFromKeyboard(\''+id+'\',event)" oninput="bindGuestPersonRow(\''+id+'\')">'
     + '<input type="hidden" class="person-id" value="' + esc(personId) + '">'
     + '<input type="hidden" class="guest-entry-id" value="' + esc(guestId) + '">'
     + '<div class="person-meta" style="font-size:9px;color:#5a7a9a;margin-top:2px"></div>'
