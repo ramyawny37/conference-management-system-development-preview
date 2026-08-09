@@ -1,0 +1,20 @@
+'use strict';
+const assert=require('assert'),fs=require('fs'),path=require('path'),vm=require('vm');
+const root=path.resolve(__dirname,'..');
+const identitySource=fs.readFileSync(path.join(root,'js/supabase/device-identity.js'),'utf8');
+const serviceSource=fs.readFileSync(path.join(root,'js/supabase/current-device-authorization-service.js'),'utf8');
+const ids={owner:'11111111-1111-4111-8111-111111111111',member:'22222222-2222-4222-8222-222222222222',legacy:'33333333-3333-4333-8333-333333333333',memberDevice:'44444444-4444-4444-8444-444444444444',operation:'55555555-5555-4555-8555-555555555555'};
+let currentUser=ids.owner,uuidIndex=0;const generated=[ids.memberDevice,ids.operation],values={'dev:conference_manager_device_identity':JSON.stringify({id:ids.legacy,deviceName:'Owner phone',platform:'iOS',createdAt:'old'})},calls=[];
+const storage={getItem:key=>Object.prototype.hasOwnProperty.call(values,key)?values[key]:null,setItem:(key,value)=>{values[key]=String(value);}};
+const sandbox={window:null,Promise,JSON,Object,String,Number,Array,Date,Uint8Array,Error,console,localStorage:storage,navigator:{platform:'iOS'},BrowserStorageNamespace:{key:name=>'dev:'+name},OrganizationAdministrationUtils:{isUuid:value=>/^[0-9a-f-]{36}$/i.test(String(value||''))},SupabaseAuth:{getSession:()=>({user:{id:currentUser}})},SystemAccessService:{getState:()=>({accountStatus:'approved'})},crypto:{randomUUID:()=>generated[uuidIndex++]},DeviceAuthorizationOperationRepository:{prepare:()=>Promise.resolve({ok:true,data:{operationId:ids.operation}}),remove:()=>Promise.resolve({ok:true}),markUnknown:()=>Promise.resolve({ok:true})}};
+sandbox.SupabaseClientLayer={getClient:()=>({rpc:(name,args)=>{calls.push({name,args,userId:currentUser});if(name==='get_my_device_authorization')return Promise.resolve({data:{deviceAuthorizationStatus:currentUser===ids.owner&&args.p_device_id===ids.legacy?'approved':'not_registered'},error:null});if(name==='register_or_refresh_current_device')return Promise.resolve({data:{status:'registered'},error:null});if(name==='request_current_device_authorization')return Promise.resolve({data:{status:'pending'},error:null});return Promise.resolve({data:{},error:null});}})};sandbox.window=sandbox;
+vm.runInNewContext(identitySource,sandbox);vm.runInNewContext(serviceSource,sandbox);
+(async()=>{
+  let initialized=await sandbox.CurrentDeviceAuthorizationService.initializeIdentity();assert.strictEqual(initialized.status,'adopted');assert.strictEqual(sandbox.SupabaseDeviceIdentity.getOrCreate().id,ids.legacy);
+  currentUser=ids.member;initialized=await sandbox.CurrentDeviceAuthorizationService.initializeIdentity();assert.strictEqual(initialized.status,'created');assert.strictEqual(sandbox.SupabaseDeviceIdentity.getOrCreate().id,ids.memberDevice);assert.notStrictEqual(ids.memberDevice,ids.legacy);
+  const registered=await sandbox.CurrentDeviceAuthorizationService.registerCurrentDevice();assert.strictEqual(registered.ok,true);assert.strictEqual(calls.filter(call=>call.name==='register_or_refresh_current_device').pop().args.p_device_id,ids.memberDevice);
+  currentUser=ids.owner;await sandbox.CurrentDeviceAuthorizationService.initializeIdentity();assert.strictEqual(sandbox.SupabaseDeviceIdentity.getOrCreate().id,ids.legacy);
+  assert.ok(values['dev:device-identity:'+ids.owner]);assert.ok(values['dev:device-identity:'+ids.member]);assert.ok(values['dev:conference_manager_device_identity'],'legacy identity must not be deleted');
+  assert.strictEqual(calls.filter(call=>call.name==='get_my_device_authorization'&&call.userId===ids.member)[0].args.p_device_id,ids.legacy);
+  console.log('account-scoped device identity tests: passed');
+})().catch(error=>{console.error(error);process.exitCode=1;});

@@ -479,8 +479,8 @@
 <script src="js/storage/indexeddb.js?rev=shared-template-library-v1"></script>
 <script src="js/storage/storage-repository.js?rev=organization-template-sync-v1"></script>
 <script src="js/storage/conference-repository.js"></script>
-<script src="js/storage/conference-publishing-engine.js?rev=launch-membership-integrity-v1"></script>
-<script src="js/storage/conference-publish-recovery.js?rev=launch-membership-integrity-v1"></script>
+<script src="js/storage/conference-publishing-engine.js?rev=account-scoped-device-identity-v1"></script>
+<script src="js/storage/conference-publish-recovery.js?rev=account-scoped-device-identity-v1"></script>
 <script src="js/storage/conference-publish-manager.js"></script>
 <script src="js/storage/full-backup.js"></script>
 <script src="js/sync/sync-queue.js?rev=startup-queue-recovery-v1"></script>
@@ -492,24 +492,25 @@
 <script src="js/supabase/public-config.js"></script>
 <script src="js/supabase/runtime-config.js"></script>
 <script src="js/supabase/client.js"></script>
-<script src="js/supabase/auth.js?rev=launch-membership-integrity-v1"></script>
+<script src="js/supabase/auth.js?rev=account-scoped-device-identity-v1"></script>
 <script src="js/supabase/system-access-service.js"></script>
 <script src="js/supabase/first-system-bootstrap-service.js?rev=first-owner-bootstrap-hardening-v1"></script>
 <script src="js/sync/organization-administration-utils.js"></script>
+<script src="js/sync/access-diagnostics-ui.js?rev=account-scoped-device-identity-v1"></script>
 <script src="js/sync/organization-membership-operation-repository.js"></script>
-<script src="js/supabase/organization-administration-service.js?rev=launch-membership-integrity-v1"></script>
+<script src="js/supabase/organization-administration-service.js?rev=account-scoped-device-identity-v1"></script>
 <script src="js/sync/organization-members-ui.js?rev=admin-xlsx-template-room-fixes-v1"></script>
 <script src="js/sync/organization-management-attempt-store.js?rev=organization-management-v1"></script>
 <script src="js/supabase/organization-management-service.js?rev=organization-archive-restore-v1"></script>
 <script src="js/sync/organization-management-ui.js?rev=startup-device-admin-lifecycle-v1"></script>
-<script src="js/supabase/device-identity.js"></script>
+<script src="js/supabase/device-identity.js?rev=account-scoped-device-identity-v1"></script>
 <script src="js/sync/device-authorization-operation-repository.js"></script>
-<script src="js/supabase/current-device-authorization-service.js?rev=device-reauthorization-flow-v2"></script>
+<script src="js/supabase/current-device-authorization-service.js?rev=account-scoped-device-identity-v1"></script>
 <script src="js/supabase/device-authorization-administration-service.js?rev=device-single-replacement-v1"></script>
-<script src="js/sync/current-device-authorization-ui.js?rev=launch-membership-integrity-v1"></script>
+<script src="js/sync/current-device-authorization-ui.js?rev=account-scoped-device-identity-v1"></script>
 <script src="js/sync/device-reauthorization-flow.js?rev=device-reauthorization-flow-v1"></script>
 <script src="js/sync/device-authorization-administration-ui.js?rev=startup-device-admin-lifecycle-v1"></script>
-<script src="js/supabase/snapshot-sync.js?rev=launch-membership-integrity-v1"></script>
+<script src="js/supabase/snapshot-sync.js?rev=account-scoped-device-identity-v1"></script>
 <script src="js/sync/startup-conference-discovery.js?rev=shared-template-library-v1"></script>
 <script src="js/sync/organization-template-sync.js?rev=shared-template-library-v1"></script>
 <script src="js/sync/legacy-template-adoption-ui.js?rev=shared-template-library-v1"></script>
@@ -523,19 +524,19 @@
 <script src="js/sync/debug-binding-report-ui.js?rev=debug-binding-report-ui-v2"></script>
 <script src="js/sync/device-rescue-export.js?rev=device-rescue-export-v1"></script>
 <script src="js/sync/experimental-conference-reset.js?rev=experimental-reset-v1"></script>
-<script src="js/sync/sync-settings-ui.js?rev=launch-membership-integrity-v1"></script>
-<script src="js/sync/startup-access-gate.js?rev=launch-membership-integrity-v1"></script>
+<script src="js/sync/sync-settings-ui.js?rev=account-scoped-device-identity-v1"></script>
+<script src="js/sync/startup-access-gate.js?rev=account-scoped-device-identity-v1"></script>
 <script src="js/sync/link-status-diagnostic-store.js"></script>
 <script src="js/sync/conference-link-store.js"></script>
 <script src="js/sync/conference-membership-attempt-store.js"></script>
-<script src="js/sync/conference-members-service.js?rev=launch-membership-integrity-v1"></script>
+<script src="js/sync/conference-members-service.js?rev=account-scoped-device-identity-v1"></script>
 <script src="js/sync/conference-members-ui.js?rev=conference-role-management-v1"></script>
 <script src="js/sync/system-access-administration-attempt-store.js?rev=user-account-administration-v1"></script>
 <script src="js/supabase/account-administration-service.js?rev=user-account-administration-v1"></script>
 <script src="js/sync/user-management-read-service.js?rev=organization-archive-restore-v1"></script>
-<script src="js/sync/user-management-ui.js?rev=launch-membership-integrity-v1"></script>
+<script src="js/sync/user-management-ui.js?rev=account-scoped-device-identity-v1"></script>
 <script src="js/sync/conference-linking-attempt-store.js"></script>
-<script src="js/sync/conference-linking-service.js?rev=launch-membership-integrity-v1"></script>
+<script src="js/sync/conference-linking-service.js?rev=account-scoped-device-identity-v1"></script>
 <script src="js/sync/conference-sync-ui.js"></script>
 <script src="js/sync/conflict-backup-store.js?rev=phase-4"></script>
 <script src="js/sync/pending-remote-application-store.js?rev=phase-4"></script>
@@ -595,7 +596,7 @@
     });
   });
 </script>
-<script>window.APP_SHELL_REVISION='launch-membership-integrity-v1';</script>
-<script src="pwa.js?rev=launch-membership-integrity-v1"></script>
+<script>window.APP_SHELL_REVISION='account-scoped-device-identity-v1';</script>
+<script src="pwa.js?rev=account-scoped-device-identity-v1"></script>
 </body>
 </html>

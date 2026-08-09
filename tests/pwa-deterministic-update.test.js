@@ -9,7 +9,7 @@ const index=fs.readFileSync(path.join(root,'index.html'),'utf8');
 const manager=fs.readFileSync(path.join(root,'js/sync/conference-edit-lock-manager.js'),'utf8');
 
 const previous='exclusive-edit-lock-v1';
-const next='launch-membership-integrity-v1';
+const next='account-scoped-device-identity-v1';
 const templateIsolationRevision='template-sync-isolation-v1';
 const startupRevision=next;
 const deviceOnboardingRevision=next;
