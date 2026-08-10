@@ -7,7 +7,7 @@ const scriptSource=fs.readFileSync(path.join(
   __dirname,'..','script.js'
 ),'utf8');
 const start=scriptSource.indexOf(
-  'function createConferenceFromSelection()'
+  'var conferenceOrganizationOptions='
 );
 const end=scriptSource.indexOf(
   'function collectConferenceSelection()',start
@@ -33,7 +33,8 @@ function formEnvironment(overrides={}){
     cfg_start:{value:'2026-08-10'},
     cfg_end:{value:'2026-08-12'},
     cfg_days:{value:'3'},
-    cfg_place:{value:'القاهرة'}
+    cfg_place:{value:'القاهرة'},
+    cfg_organization:{value:'11111111-1111-4111-8111-111111111111'}
   };
   const legacy={
     id:'legacy-local-conference',
@@ -60,6 +61,10 @@ function formEnvironment(overrides={}){
       peopleDb:{version:'1.0.0',people:[]}
     },
     conferenceDialogMode:'create',
+    conferenceOrganizationOptions:[{
+      organizationId:'11111111-1111-4111-8111-111111111111',
+      displayName:'المؤسسة'
+    }],
     window:null,
     ge(id){return fields[id]||null;},
     calculateConferencePeriod(startDate,endDate){
@@ -93,6 +98,7 @@ function formEnvironment(overrides={}){
     },
     addActivityLog(){},
     closeNewConferenceModal(){},
+    alert(){},
     showToast(message){toasts.push(message);}
   };
   sandbox.window=sandbox;
@@ -102,6 +108,10 @@ function formEnvironment(overrides={}){
   vm.runInNewContext(creationSource,sandbox,{
     filename:'createConferenceFromSelection.js'
   });
+  sandbox.conferenceOrganizationOptions=[{
+    organizationId:'11111111-1111-4111-8111-111111111111',
+    displayName:'المؤسسة'
+  }];
   return {sandbox,fields,logs,toasts,saved};
 }
 
@@ -134,6 +144,8 @@ function formEnvironment(overrides={}){
   assert.ok(created);
   assert.strictEqual(created.name,'مؤتمر الاختبار الكامل');
   assert.strictEqual(created.conf.place,'القاهرة');
+  assert.strictEqual(created.organizationId,
+    '11111111-1111-4111-8111-111111111111');
   assert.strictEqual(created.startDate,'2026-08-10');
   assert.strictEqual(created.endDate,'2026-08-12');
   assert.strictEqual(created.days,3);
@@ -187,6 +199,14 @@ function formEnvironment(overrides={}){
   assert.ok(failure.toasts.includes(
     'تعذر إنشاء المؤتمر المحلي بأمان.'
   ));
+
+  const missingOrganization=formEnvironment();
+  missingOrganization.fields.cfg_organization.value='';
+  const alerts=[];
+  missingOrganization.sandbox.alert=message=>alerts.push(message);
+  missingOrganization.sandbox.createConferenceFromSelection();
+  assert.strictEqual(missingOrganization.saved.length,0);
+  assert.deepStrictEqual(alerts,['يجب اختيار مؤسسة قبل إنشاء المؤتمر.']);
 
   console.log('local conference creation regression tests: passed');
 })();

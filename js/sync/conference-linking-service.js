@@ -138,6 +138,14 @@
     catch(error){
       return Promise.resolve(outcome(false,'snapshot_invalid'));
     }
+    var organizationId=String(input.organizationId||'');
+    if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(organizationId)||
+      String(snapshot&&snapshot.organizationId||'')!==organizationId){
+      return Promise.resolve(outcome(false,'create_failed',null,{
+        code:'ORGANIZATION_REQUIRED',
+        message:'A valid conference organization is required.'
+      }));
+    }
     var attempt=resolveAttempt(d,input,existing,options);
     if(!attempt.ok){
       return Promise.resolve(outcome(false,attempt.status));
@@ -146,7 +154,7 @@
       operationId:attempt.operationId,
       requestedConferenceId:attempt.requestedConferenceId,
       name:input.name,
-      organizationId:String(snapshot&&snapshot.organizationId||''),
+      organizationId:organizationId,
       metadata:{localConferenceId:String(input.localConferenceId)}
     }).then(function(created){
       if(!created||!created.ok||
@@ -237,6 +245,7 @@
     var flight=run({
       localConferenceId:localConferenceId,
       name:String(input.name).trim(),
+      organizationId:String(input.organizationId||''),
       snapshot:input.snapshot,
       mode:String(input.mode||'manual'),
       reason:String(input.reason||'unspecified')

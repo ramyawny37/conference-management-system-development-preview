@@ -8550,6 +8550,64 @@ function updateConferencePeriodPreview(){
     }).join(' | ')+'</div>';
 }
 
+var conferenceOrganizationOptions=[];
+function isConferenceOrganizationUuid(value){
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+    .test(String(value||''));
+}
+
+function renderConferenceOrganizationOptions(selectedId){
+  var field=ge('conferenceOrganizationField');
+  var select=ge('cfg_organization');
+  var message=ge('conferenceOrganizationMessage');
+  if(!field||!select)return;
+  field.style.display=conferenceDialogMode==='create'?'':'none';
+  if(conferenceDialogMode!=='create')return;
+  var selected=String(selectedId||'');
+  select.innerHTML='<option value="">اختر المؤسسة</option>'+conferenceOrganizationOptions.map(function(item){
+    return '<option value="'+esc(item.organizationId)+'"'+
+      (item.organizationId===selected?' selected':'')+'>'+esc(item.displayName||item.organizationId)+'</option>';
+  }).join('');
+  select.disabled=!conferenceOrganizationOptions.length;
+  if(message)message.textContent=!conferenceOrganizationOptions.length
+    ?'لا توجد مؤسسة نشطة متاحة لهذا الحساب.'
+    :conferenceOrganizationOptions.length>1&&!selected
+      ?'يجب اختيار مؤسسة قبل إنشاء المؤتمر.'
+      :'';
+}
+
+function loadConferenceOrganizationOptions(){
+  conferenceOrganizationOptions=[];
+  renderConferenceOrganizationOptions('');
+  if(conferenceDialogMode!=='create'||!window.OrganizationManagementService||
+    typeof window.OrganizationManagementService.list!=='function')return Promise.resolve([]);
+  return window.OrganizationManagementService.list().then(function(response){
+    var organizations=response&&response.ok&&response.data&&
+      Array.isArray(response.data.organizations)?response.data.organizations:[];
+    conferenceOrganizationOptions=organizations.filter(function(item){
+      return item&&item.status==='active'&&isConferenceOrganizationUuid(item.organizationId);
+    }).map(function(item){
+      return {organizationId:String(item.organizationId),displayName:String(item.displayName||'')};
+    });
+    var selectedId='';
+    var organizationState=window.OrganizationManagementUI&&
+      typeof window.OrganizationManagementUI.getState==='function'
+      ?window.OrganizationManagementUI.getState():null;
+    if(organizationState&&conferenceOrganizationOptions.some(function(item){
+      return item.organizationId===organizationState.selectedId;
+    }))selectedId=organizationState.selectedId;
+    else if(conferenceOrganizationOptions.length===1){
+      selectedId=conferenceOrganizationOptions[0].organizationId;
+    }
+    renderConferenceOrganizationOptions(selectedId);
+    return conferenceOrganizationOptions.slice();
+  }).catch(function(){
+    conferenceOrganizationOptions=[];
+    renderConferenceOrganizationOptions('');
+    return [];
+  });
+}
+
 function createConferenceFromSelection(){
   var name = (ge('cfg_name') ? ge('cfg_name').value.trim() : '') || 'المؤتمر';
   var startDate = ge('cfg_start') ? ge('cfg_start').value : '';
@@ -8600,9 +8658,17 @@ function createConferenceFromSelection(){
     return;
   }
 
+  var organizationId=String(ge('cfg_organization')&&ge('cfg_organization').value||'');
+  if(!isConferenceOrganizationUuid(organizationId)||
+    !conferenceOrganizationOptions.some(function(item){return item.organizationId===organizationId;})){
+    alert('يجب اختيار مؤسسة قبل إنشاء المؤتمر.');
+    return false;
+  }
+
   var now = new Date().toISOString();
   var newConf = {
     id: uid(),
+    organizationId: organizationId,
     name: name,
     startDate: startDate,
     endDate: endDate,
@@ -8734,12 +8800,15 @@ function openNewConferenceModal(mode){
 
   ge('newConferenceModal').style.display = 'flex';
   updateConferencePeriodPreview();
+  if(conferenceDialogMode==='create')loadConferenceOrganizationOptions();
+  else renderConferenceOrganizationOptions('');
 }
 
 function closeNewConferenceModal(){
   ge('newConferenceModal').style.display = 'none';
   conferenceDraft = null;
   conferenceDialogMode = 'create';
+  conferenceOrganizationOptions=[];
 }
 
 function editCurrentConference(){

@@ -6,7 +6,7 @@ const CACHE_NAMESPACE = IS_DEVELOPMENT
   ? 'cms:development:' + DEVELOPMENT_PROJECT_REF + ':'
   : '';
 const CACHE_PREFIX = CACHE_NAMESPACE + 'conference-manager-core-';
-const CACHE_REVISION = 'legacy-conference-preflight-v2';
+const CACHE_REVISION = 'conference-organization-context-v1';
 const CACHE_NAME = CACHE_PREFIX + 'v' + APP_VERSION + '-' + CACHE_REVISION;
 const CORE_ASSETS = [
   './',
@@ -72,8 +72,8 @@ const CORE_ASSETS = [
   './js/sync/user-management-read-service.js?rev=organization-archive-restore-v1',
   './js/sync/user-management-ui.js?rev=organization-membership-operation-key-v1',
   './js/sync/conference-linking-attempt-store.js',
-  './js/sync/conference-linking-service.js?rev=organization-membership-operation-key-v1',
-  './js/sync/conference-sync-ui.js?rev=legacy-conference-preflight-v2',
+  './js/sync/conference-linking-service.js?rev=conference-organization-context-v1',
+  './js/sync/conference-sync-ui.js?rev=conference-organization-context-v1',
   './js/sync/conflict-backup-store.js?rev=phase-4',
   './js/sync/pending-remote-application-store.js?rev=phase-4',
   './js/sync/conflict-resolution-draft-store.js',
@@ -107,7 +107,7 @@ const CORE_ASSETS = [
   './js/conference-template-houses-editor.js',
   './cards.js',
   './libs/xlsx.full.min.js',
-  './script.js?rev=diagnostics-privacy-hardening-v1',
+  './script.js?rev=conference-organization-context-v1',
   './version.js',
   './pwa.js?rev=organization-membership-operation-key-v1',
   './libs/html2canvas.min.js',

@@ -358,6 +358,11 @@
         <div style="flex:1"><label class="lbl">عدد أيام الإقامة</label><input id="cfg_days" type="number" min="1" max="30" value="1" readonly></div>
       </div>
       <div style="margin-bottom:10px"><label class="lbl">المكان</label><input id="cfg_place" placeholder="مكان المؤتمر"></div>
+      <div id="conferenceOrganizationField" style="margin-bottom:10px;display:none">
+        <label class="lbl" for="cfg_organization">المؤسسة</label>
+        <select id="cfg_organization"></select>
+        <div id="conferenceOrganizationMessage" class="sync-settings-message"></div>
+      </div>
       <div class="row" style="margin-bottom:10px;gap:8px">
         <div style="flex:1"><label class="lbl">تاريخ البداية</label><input id="cfg_start" type="date" onclick="openNativeDatePicker(this)" onchange="updateConferencePeriodPreview()" oninput="updateConferencePeriodPreview()"></div>
         <div style="flex:1"><label class="lbl">تاريخ النهاية</label><input id="cfg_end" type="date" onclick="openNativeDatePicker(this)" onchange="updateConferencePeriodPreview()" oninput="updateConferencePeriodPreview()"></div>
@@ -536,8 +541,8 @@
 <script src="js/sync/user-management-read-service.js?rev=organization-archive-restore-v1"></script>
 <script src="js/sync/user-management-ui.js?rev=organization-membership-operation-key-v1"></script>
 <script src="js/sync/conference-linking-attempt-store.js"></script>
-<script src="js/sync/conference-linking-service.js?rev=organization-membership-operation-key-v1"></script>
-<script src="js/sync/conference-sync-ui.js?rev=legacy-conference-preflight-v2"></script>
+<script src="js/sync/conference-linking-service.js?rev=conference-organization-context-v1"></script>
+<script src="js/sync/conference-sync-ui.js?rev=conference-organization-context-v1"></script>
 <script src="js/sync/conflict-backup-store.js?rev=phase-4"></script>
 <script src="js/sync/pending-remote-application-store.js?rev=phase-4"></script>
 <script src="js/sync/conflict-resolution-draft-store.js"></script>
@@ -572,7 +577,7 @@
 <script src="cards.js"></script>
 <script src="libs/html2canvas.min.js"></script>
 <script src="libs/xlsx.full.min.js"></script>
-<script src="script.js?rev=diagnostics-privacy-hardening-v1"></script>
+<script src="script.js?rev=conference-organization-context-v1"></script>
 <script src="version.js"></script>
 <script>
   document.addEventListener('DOMContentLoaded', function() {

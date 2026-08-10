@@ -101,6 +101,7 @@
     return service.ensureConferenceLinked({
       localConferenceId:input.localConferenceId,
       name:input.name,
+      organizationId:input.organizationId,
       snapshot:input.snapshot,
       mode:'manual',
       reason:'manual_button'
@@ -377,6 +378,7 @@
     return {
       localConferenceId:conference&&conference.id,
       name:conference&&conference.name,
+      organizationId:conference&&conference.organizationId,
       snapshot:conference?copy(conference):null,
       appSnapshot:global.appData?copy(global.appData):null
     };
@@ -387,9 +389,12 @@
   }
   function createCurrentOnline(){
     createOnlineConference(current()).then(function(result){
+      var organizationRequired=result&&result.error&&
+        result.error.code==='ORGANIZATION_REQUIRED';
       refresh(result.status==='linked'?'تم إنشاء الربط بنجاح.':
         result.status==='upload_pending'
-          ?'تم إنشاء المؤتمر الأونلاين والرفع ما زال معلقًا.':'تعذر إنشاء الربط.');
+          ?'تم إنشاء المؤتمر الأونلاين والرفع ما زال معلقًا.':organizationRequired
+            ?'يجب اختيار مؤسسة قبل إنشاء النسخة السحابية.':'تعذر إنشاء الربط.');
     });
   }
   function loadAvailableForCurrent(){
