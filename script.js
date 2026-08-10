@@ -8038,9 +8038,14 @@ function closeTemplateFloorModal() {
   templateFloorDialog.floorId = null;
 }
 
-function refreshConferenceHouseAfterTemplateMutation(template){
+function refreshConferenceHouseAfterTemplateMutation(template,options){
+  options=options||{};
   var currentConference = getCurrentConference();
-  var updatedConferenceHouseCount = updateConferenceHousesFromTemplate(currentConference, template);
+  var updatedConferenceHouseCount = options.templateFloorId
+    ?syncConferenceFloorFromTemplate(
+      currentConference,template,options.templateFloorId
+    )
+    :updateConferenceHousesFromTemplate(currentConference, template);
   return {
     count: updatedConferenceHouseCount,
     render: function(){
@@ -8083,8 +8088,12 @@ function saveTemplateFloor() {
     floor.name = floorName;
   } else {
     house.floors = house.floors || [];
-    house.floors.push(createDefaultFloor(floorName));
+    floor=createDefaultFloor(floorName);
+    house.floors.push(floor);
   }
+  var conferenceRefresh=refreshConferenceHouseAfterTemplateMutation(house,{
+    templateFloorId:floor.id
+  });
   selectedHouseTemplateId = house.id;
   if(!saveTemplateOnly()){
     appData = previousAppData;
@@ -8098,6 +8107,7 @@ function saveTemplateFloor() {
     ht_renderTemplate(house);
   }
   closeTemplateFloorModal();
+  conferenceRefresh.render();
   renderSettings();
 }
 

@@ -11,7 +11,9 @@ const manager=fs.readFileSync(path.join(root,'js/sync/conference-edit-lock-manag
 const previous='exclusive-edit-lock-v1';
 const next='organization-membership-operation-key-v1';
 const mobileRoomInputRevision='anchored-glass-person-picker-v5';
-const shellRevision='legacy-conference-preflight-v2';
+const shellRevision='template-floor-conference-sync-v1';
+const memberDiagnosticsRevision='legacy-conference-preflight-v2';
+const legacyConferenceRevision='legacy-conference-preflight-v2';
 const privacyRevision='diagnostics-privacy-hardening-v1';
 const templateIsolationRevision='template-sync-isolation-v1';
 const startupRevision=next;
@@ -22,11 +24,12 @@ const userManagementUiRevision=next;
 const userManagementStyleRevision=mobileRoomInputRevision;
 const userManagementReadRevision='organization-archive-restore-v1';
 const conferenceRoleRevision=privacyRevision;
-const houseTemplateRevision='available-template-room-discovery-v1';
+const houseTemplateRevision=shellRevision;
 const pwaAssetRevision=next;
 const appAssetRevision='section-accommodation-edit-lock-v1';
 const snapshotGuardRevision='conference-snapshot-device-guard-v1';
-const priorFrontendRevision=privacyRevision;
+const priorFrontendRevision=shellRevision;
+const conferenceSyncRevision='conference-organization-context-v1';
 const organizationMembersRevision='admin-xlsx-template-room-fixes-v1';
 assert(worker.includes("CACHE_REVISION = '"+shellRevision+"'"));
 assert(index.includes("window.APP_SHELL_REVISION='"+shellRevision+"'"));
@@ -43,7 +46,7 @@ assert(index.includes('pwa.js?rev='+pwaAssetRevision));
   assert(index.includes(versioned),'index missing '+versioned);
   assert(worker.includes("'./"+versioned+"'"),'app shell missing '+versioned);
 });
-const memberDiagnostics='js/sync/member-runtime-diagnostics.js?rev='+shellRevision;
+const memberDiagnostics='js/sync/member-runtime-diagnostics.js?rev='+memberDiagnosticsRevision;
 assert(index.includes(memberDiagnostics));
 assert(worker.includes("'./"+memberDiagnostics+"'"));
 ['targeted-stuck-operation-recovery.js','experimental-conference-reset.js',
@@ -77,13 +80,15 @@ assert(!index.includes('src="js/sync/conference-members-ui.js"'),
 [
   'js/sync/legacy-conference-organization-assignment-attempt-store.js',
   'js/supabase/legacy-conference-organization-assignment-service.js',
-  'js/sync/legacy-conference-organization-assignment-ui.js',
-  'js/sync/conference-sync-ui.js'
+  'js/sync/legacy-conference-organization-assignment-ui.js'
 ].forEach(asset=>{
-  const versioned=asset+'?rev='+shellRevision;
+  const versioned=asset+'?rev='+legacyConferenceRevision;
   assert(index.includes(versioned),'index missing '+versioned);
   assert(worker.includes("'./"+versioned+"'"),'app shell missing '+versioned);
 });
+assert(index.includes('js/sync/conference-sync-ui.js?rev='+conferenceSyncRevision));
+assert(worker.includes("'./js/sync/conference-sync-ui.js?rev="+
+  conferenceSyncRevision+"'"));
 [
   ['js/sync/user-management-ui.js',userManagementUiRevision],
   ['style.css',userManagementStyleRevision]

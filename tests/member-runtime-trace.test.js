@@ -6,6 +6,9 @@ const vm=require('vm');
 const root=path.join(__dirname,'..');
 const marker='canonical-conference-schema-v1';
 const cacheMarker='legacy-conference-preflight-v2';
+const shellMarker='template-floor-conference-sync-v1';
+const houseMarker='template-floor-conference-sync-v1';
+const scriptMarker='template-floor-conference-sync-v1';
 const privacyMarker='diagnostics-privacy-hardening-v1';
 const realtimeMarker='template-sync-isolation-v1';
 const source=fs.readFileSync(path.join(
@@ -93,7 +96,7 @@ const serialized=JSON.stringify(first);
 
 const index=fs.readFileSync(path.join(root,'index.html'),'utf8');
 const worker=fs.readFileSync(path.join(root,'service-worker.js'),'utf8');
-assert.ok(worker.includes("const CACHE_REVISION = '"+cacheMarker+"';"));
+assert.ok(worker.includes("const CACHE_REVISION = '"+shellMarker+"';"));
 [
   'js/sync/member-runtime-diagnostics.js?rev='+cacheMarker,
   'js/sync/conference-realtime-manager.js?rev='+realtimeMarker,
@@ -101,8 +104,8 @@ assert.ok(worker.includes("const CACHE_REVISION = '"+cacheMarker+"';"));
   'js/sync/conference-locks.js?rev=conference-lock-release-diagnostics-v1',
   'core.js?rev='+marker,
   'people.js?rev='+marker,
-  'houses.js?rev=available-template-room-discovery-v1',
-  'script.js?rev='+privacyMarker
+  'houses.js?rev='+houseMarker,
+  'script.js?rev='+scriptMarker
 ].forEach(asset=>{
   assert.ok(index.includes('src="'+asset+'"'),'index missing '+asset);
   assert.ok(worker.includes("'./"+asset+"'"),'CORE_ASSETS missing '+asset);

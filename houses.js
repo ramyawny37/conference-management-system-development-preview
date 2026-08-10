@@ -588,6 +588,41 @@ function updateConferenceHousesFromTemplate(conference, template){
   return updated;
 }
 
+function syncConferenceFloorFromTemplate(conference, template, templateFloorId){
+  if(!conference || !template || !template.id || !templateFloorId) return 0;
+  var templateFloor = null;
+  (template.floors || []).forEach(function(floor){
+    if(!templateFloor && String(floor.id || '') === String(templateFloorId)){
+      templateFloor = floor;
+    }
+  });
+  if(!templateFloor) return 0;
+  var updated = 0;
+  (conference.houses || []).forEach(function(house){
+    if(!house || String(house.sourceTemplateId || '') !== String(template.id)) return;
+    house.floors = house.floors || [];
+    var conferenceFloor = null;
+    house.floors.forEach(function(floor){
+      if(!conferenceFloor && String(floor.sourceTemplateFloorId || '') ===
+        String(templateFloor.id || ''))conferenceFloor = floor;
+    });
+    if(!conferenceFloor){
+      conferenceFloor = {
+        id: uid(),
+        sourceTemplateFloorId: templateFloor.id,
+        name: templateFloor.name || '',
+        rooms: []
+      };
+      house.floors.push(conferenceFloor);
+    }else{
+      conferenceFloor.name = templateFloor.name || '';
+      conferenceFloor.rooms = conferenceFloor.rooms || [];
+    }
+    updated++;
+  });
+  return updated;
+}
+
 function reconcileConferenceFloors(currentFloors, templateFloors){
   var used = {};
   var reconciled = [];

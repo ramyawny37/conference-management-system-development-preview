@@ -151,8 +151,8 @@ var houseTemplatesSource=fs.readFileSync(path.join(root,'houseTemplates.js'),'ut
 function functionBody(source,name,nextName){
   return extract(source,name,nextName);
 }
-assert.ok(functionBody(scriptSource,'saveTemplateFloor','renderTemplateRoomModal')
-  .indexOf('refreshConferenceHouseAfterTemplateMutation(house)')<0);
+assert.match(functionBody(scriptSource,'saveTemplateFloor','renderTemplateRoomModal'),
+  /refreshConferenceHouseAfterTemplateMutation\(house,\s*\{\s*templateFloorId:floor\.id/);
 assert.ok(functionBody(scriptSource,'saveTemplateRoom','saveSettings')
   .indexOf('refreshConferenceHouseAfterTemplateMutation(house)')<0);
 assert.ok(functionBody(houseTemplatesSource,'ht_deleteRoomFromTemplate','ht_roomHtml')
@@ -165,6 +165,9 @@ assert.match(scriptSource,
   /current\.houses\s*=\s*deepClone\(editRoomData\.draftHouses\);\r?\n\s*linkRoomPeopleToDatabase\(current\);/);
 assert.ok(scriptSource.indexOf(
   'updateConferenceHousesFromTemplate(currentConference, template)'
+)>=0);
+assert.ok(scriptSource.indexOf(
+  'syncConferenceFloorFromTemplate('
 )>=0);
 assert.ok(scriptSource.indexOf(
   "activeRoomsModal.style.display !== 'none'"
