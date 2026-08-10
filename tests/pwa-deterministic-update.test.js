@@ -6,12 +6,13 @@ const root=path.join(__dirname,'..');
 const worker=fs.readFileSync(path.join(root,'service-worker.js'),'utf8');
 const pwa=fs.readFileSync(path.join(root,'pwa.js'),'utf8');
 const index=fs.readFileSync(path.join(root,'index.html'),'utf8');
+const manifest=JSON.parse(fs.readFileSync(path.join(root,'manifest.json'),'utf8'));
 const manager=fs.readFileSync(path.join(root,'js/sync/conference-edit-lock-manager.js'),'utf8');
 
 const previous='exclusive-edit-lock-v1';
 const next='organization-membership-operation-key-v1';
 const mobileRoomInputRevision='anchored-glass-person-picker-v5';
-const shellRevision='make-a-difference-branding-v2';
+const shellRevision='make-a-difference-branding-v4';
 const hardeningRevision='legacy-rpc-hardening-v1';
 const memberDiagnosticsRevision='legacy-conference-preflight-v2';
 const legacyConferenceRevision='legacy-conference-preflight-v2';
@@ -34,6 +35,24 @@ const conferenceSyncRevision='conference-organization-context-v1';
 const organizationMembersRevision='admin-xlsx-template-room-fixes-v1';
 assert(worker.includes("CACHE_REVISION = '"+shellRevision+"'"));
 assert(index.includes("window.APP_SHELL_REVISION='"+shellRevision+"'"));
+const brandingIcons=[
+  'icons/icon-96x96-v3.png',
+  'icons/icon-152x152-v3.png',
+  'icons/icon-192x192-v3.png',
+  'icons/icon-512x512-v3.png',
+  'icons/icon-maskable-512-v3.png'
+];
+brandingIcons.forEach(asset=>{
+  assert(manifest.icons.some(icon=>icon.src===asset),'manifest missing '+asset);
+  assert(worker.includes("'./"+asset+"'"),'app shell missing '+asset);
+});
+[
+  'icons/apple-touch-icon-180x180-v3.png',
+  'icons/favicon-32x32-v3.png'
+].forEach(asset=>{
+  assert(index.includes('./'+asset),'index missing '+asset);
+  assert(worker.includes("'./"+asset+"'"),'app shell missing '+asset);
+});
 assert(index.includes('pwa.js?rev='+pwaAssetRevision));
 ['js/supabase/auth.js'].forEach(asset=>{
   const versioned=asset+'?rev='+next;
