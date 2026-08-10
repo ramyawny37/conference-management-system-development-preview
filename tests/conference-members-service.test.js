@@ -60,8 +60,9 @@ function load(settings){
   var client={
     rpc:function(name,args){
       rpcCalls.push({name:name,args:args});
+      var logicalName=name.replace(/^device_guarded_/,'');
       return settings.rpc
-        ?settings.rpc(name,args,rpcCalls.length)
+        ?settings.rpc(logicalName,args,rpcCalls.length)
         :Promise.resolve({data:null,error:null});
     }
   };
@@ -91,6 +92,9 @@ function load(settings){
         return settings.noSession?null:{user:{id:ids.actor}};
       }
     },
+    SupabaseDeviceIdentity:{
+      getOrCreate:function(){return {id:ids.device};}
+    },
     ConferenceMembershipAttemptStore:attempts
   };
   sandbox.window=sandbox;
@@ -106,7 +110,8 @@ function load(settings){
     options:{
       attempts:attempts,
       clientLayer:sandbox.SupabaseClientLayer,
-      auth:sandbox.SupabaseAuth
+      auth:sandbox.SupabaseAuth,
+      deviceIdentity:sandbox.SupabaseDeviceIdentity
     }
   };
 }
@@ -501,7 +506,7 @@ async function run(){
 
   var guarded=load({rpc:function(name,args){
     assert.strictEqual(name,
-      'device_guarded_manage_conference_member');
+      'manage_conference_member');
     assert.strictEqual(args.p_actor_device_id,ids.device);
     return Promise.resolve({data:{
       success:true,status:'removed',
@@ -515,6 +520,8 @@ async function run(){
   assert.strictEqual((await guarded.service.removeMember(
     ids.conference,ids.target,guarded.options
   )).status,'removed');
+  assert.strictEqual(guarded.rpcCalls[0].name,
+    'device_guarded_manage_conference_member');
 
   var sourceText=source;
   [

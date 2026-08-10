@@ -202,7 +202,7 @@
     var d=deps(options), ready=readiness(localId,options);
     if(!ready.ready)return Promise.resolve({ok:false,status:'prerequisites_missing'});
     return d.integration.refreshLockState(ready.link.remoteConferenceId,{
-      locks:d.locks
+      locks:d.locks,lockOptions:{section:'conference'}
     }).then(function(result){
       lockResult=result&&result.data&&result.data.lockResult||null;
       lockRefreshedAt=new Date().toISOString();
@@ -221,7 +221,7 @@
     if(!d.locks||typeof d.locks[method]!=='function'){
       return Promise.resolve({ok:false,status:'lock_unavailable'});
     }
-    return d.locks[method](ready.link.remoteConferenceId).then(function(result){
+    return d.locks[method](ready.link.remoteConferenceId,{section:'conference'}).then(function(result){
       lockResult=result;
       lockRefreshedAt=new Date().toISOString();
       if(d.integration.applyLockResult){

@@ -79,16 +79,14 @@
         'An authenticated session is required.')};
     }
     var requiredIdentity=null;
-    if(options&&options.deviceGuarded){
-      try{requiredIdentity=d.deviceIdentity&&d.deviceIdentity.getOrCreate&&
-        d.deviceIdentity.getOrCreate();}catch(error){requiredIdentity=null;}
-      if(!requiredIdentity||!isUuid(String(requiredIdentity.id||''))){
-        return {error:safeError('DEVICE_REQUIRED','An approved device is required.')};
-      }
+    try{requiredIdentity=d.deviceIdentity&&d.deviceIdentity.getOrCreate&&
+      d.deviceIdentity.getOrCreate();}catch(error){requiredIdentity=null;}
+    if(!requiredIdentity||!isUuid(String(requiredIdentity.id||''))){
+      return {error:safeError('DEVICE_REQUIRED','An approved device is required.')};
     }
     return {
       client:client,userId:userId,attempts:d.attempts,
-      deviceIdentity:d.deviceIdentity,deviceGuarded:options&&options.deviceGuarded===true,
+      deviceIdentity:d.deviceIdentity,deviceGuarded:true,
       actorDeviceId:requiredIdentity&&String(requiredIdentity.id||'')
     };
   }
@@ -184,10 +182,8 @@
       method==='list'?'list_conference_members':
       'lookup_conference_user_by_email';
     var args={p_conference_id:remoteConferenceId};
-    if(ctx.deviceGuarded){
-      rpcName='device_guarded_'+rpcName;
-      args.p_actor_device_id=ctx.actorDeviceId;
-    }
+    rpcName='device_guarded_'+rpcName;
+    args.p_actor_device_id=ctx.actorDeviceId;
     if(method==='lookup'){
       var email=String(input.email||'').trim();
       if(!email||email.indexOf('@')<=0){

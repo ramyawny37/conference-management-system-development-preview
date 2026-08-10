@@ -6,7 +6,7 @@ const CACHE_NAMESPACE = IS_DEVELOPMENT
   ? 'cms:development:' + DEVELOPMENT_PROJECT_REF + ':'
   : '';
 const CACHE_PREFIX = CACHE_NAMESPACE + 'conference-manager-core-';
-const CACHE_REVISION = 'person-picker-free-text-v1';
+const CACHE_REVISION = 'legacy-rpc-hardening-v1';
 const CACHE_NAME = CACHE_PREFIX + 'v' + APP_VERSION + '-' + CACHE_REVISION;
 const CORE_ASSETS = [
   './',
@@ -32,7 +32,7 @@ const CORE_ASSETS = [
   './js/sync/organization-administration-utils.js',
   './js/sync/access-diagnostics-ui.js?rev=organization-membership-operation-key-v1',
   './js/sync/organization-membership-operation-repository.js?rev=organization-membership-operation-key-v1',
-  './js/supabase/organization-administration-service.js?rev=organization-membership-operation-key-v1',
+  './js/supabase/organization-administration-service.js?rev=legacy-rpc-hardening-v1',
   './js/sync/organization-members-ui.js?rev=admin-xlsx-template-room-fixes-v1',
   './js/sync/organization-management-attempt-store.js?rev=organization-management-v1',
   './js/supabase/organization-management-service.js?rev=organization-archive-restore-v1',
@@ -62,7 +62,7 @@ const CORE_ASSETS = [
   './js/sync/link-status-diagnostic-store.js',
   './js/sync/conference-link-store.js',
   './js/sync/conference-membership-attempt-store.js',
-  './js/sync/conference-members-service.js?rev=organization-membership-operation-key-v1',
+  './js/sync/conference-members-service.js?rev=legacy-rpc-hardening-v1',
   './js/sync/conference-members-ui.js?rev=diagnostics-privacy-hardening-v1',
   './js/sync/legacy-conference-organization-assignment-attempt-store.js?rev=legacy-conference-preflight-v2',
   './js/supabase/legacy-conference-organization-assignment-service.js?rev=legacy-conference-preflight-v2',
@@ -81,7 +81,7 @@ const CORE_ASSETS = [
   './js/sync/local-snapshot-application.js?rev=phase-5',
   './js/sync/conflict-resolution-ui.js?rev=diagnostics-privacy-hardening-v1',
   './js/sync/remote-update-store.js',
-  './js/sync/realtime-locks-ui.js?rev=diagnostics-privacy-hardening-v1',
+  './js/sync/realtime-locks-ui.js?rev=legacy-rpc-hardening-v1',
   './js/sync/automatic-sync-preferences.js?rev=automatic-sync-preferences-gap-v1',
   './js/sync/sync-scheduler-state.js',
   './js/sync/conference-sync-state-resolver.js?rev=phase-5',

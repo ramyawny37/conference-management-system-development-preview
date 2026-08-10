@@ -29,10 +29,10 @@
     var session=d.auth&&d.auth.getSession&&d.auth.getSession();var authenticatedUserId=session&&session.user&&String(session.user.id||'');
     if(!client||typeof client.rpc!=='function')return {error:safeError('SUPABASE_UNAVAILABLE','Organization administration is unavailable.')};
     if(!isUuid(authenticatedUserId))return {error:safeError('AUTH_REQUIRED','An authenticated session is required.')};
-    var identity=options&&options.deviceGuarded&&d.identity&&d.identity.getOrCreate&&d.identity.getOrCreate();
-    if(options&&options.deviceGuarded&&(!identity||!isUuid(String(identity.id||''))))return {error:safeError('DEVICE_REQUIRED','An approved device is required.')};
+    var identity=d.identity&&d.identity.getOrCreate&&d.identity.getOrCreate();
+    if(!identity||!isUuid(String(identity.id||'')))return {error:safeError('DEVICE_REQUIRED','An approved device is required.')};
     return {client:client,authenticatedUserId:authenticatedUserId,repository:d.repository,
-      deviceGuarded:options&&options.deviceGuarded===true,
+      deviceGuarded:true,
       actorDeviceId:identity&&String(identity.id||'')};
   }
   function rpcError(raw){
@@ -44,7 +44,7 @@
       message:'The organization request failed.'};
   }
   function diagnostic(stage,rpc,ctx,input,error){var device=global.CurrentDeviceAuthorizationService&&global.CurrentDeviceAuthorizationService.getState?global.CurrentDeviceAuthorizationService.getState():{};lastDiagnostic={stage:String(stage),rpc:String(rpc||''),errorCode:String(error&&error.code||''),sqlstate:error&&error.sqlstate||null,sanitizedMessage:String(error&&error.message||''),actorDevicePresent:!!(ctx&&ctx.actorDeviceId),actorDeviceApproved:device.currentDeviceAccessStatus==='approved',targetAccountApproved:input&&input.targetAccountApproved===true,organizationIdPresent:!!(input&&input.organizationId),timestamp:new Date().toISOString()};}
-  function guardedRpc(ctx,name,args){if(!ctx.deviceGuarded)return {name:name,args:args};var guarded={list_my_organizations:'device_guarded_list_my_organizations',get_my_organization_access:'device_guarded_get_my_organization_access',list_organization_members:'device_guarded_list_organization_members',lookup_organization_candidate_by_email:'device_guarded_lookup_organization_candidate_by_email',add_organization_member:'device_guarded_add_organization_member',remove_organization_member:'device_guarded_remove_organization_member',change_organization_role:'device_guarded_change_organization_role'};return {name:guarded[name]||name,args:Object.assign({p_actor_device_id:ctx.actorDeviceId},args)};}
+  function guardedRpc(ctx,name,args){var guarded={list_my_organizations:'device_guarded_list_my_organizations',get_my_organization_access:'device_guarded_get_my_organization_access',list_organization_members:'device_guarded_list_organization_members',lookup_organization_candidate_by_email:'device_guarded_lookup_organization_candidate_by_email',add_organization_member:'device_guarded_add_organization_member',remove_organization_member:'device_guarded_remove_organization_member',change_organization_role:'device_guarded_change_organization_role'};return {name:guarded[name]||name,args:Object.assign({p_actor_device_id:ctx.actorDeviceId},args)};}
   function invoke(ctx,name,args){var request=guardedRpc(ctx,name,args);return Promise.resolve().then(function(){return ctx.client.rpc(request.name,request.args);}).then(function(response){
     if(response&&response.error)return outcome(false,'rpc_error',null,rpcError(response.error));
     return outcome(true,'received',response&&response.data);
