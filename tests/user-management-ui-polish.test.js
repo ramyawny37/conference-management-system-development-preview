@@ -17,6 +17,8 @@ assert.match(ui,/onchange="UserManagementUI\.selectOrganizationRole/);
 assert.match(ui,/onclick="UserManagementUI\.manageOrganization[^\n]+حفظ الدور/);
 assert.match(ui,/onchange="UserManagementUI\.selectConferenceRole/);
 assert.match(ui,/<label for="user_management_filter">حالة الحساب<\/label>/);
+assert.match(ui,/function manageDevice[\s\S]*?refreshDeviceAdministration/);
+assert.match(ui,/refreshSelectedUserDevices:refreshSelectedUserDevices/);
 assert.match(ui,/onclick="UserManagementUI\.manageConference[^\n]+>حفظ</);
 assert.doesNotMatch(ui,/onchange="UserManagementUI\.manageOrganization/);
 assert.doesNotMatch(ui,/onchange="UserManagementUI\.manageConference/);
