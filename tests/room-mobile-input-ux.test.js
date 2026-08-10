@@ -40,6 +40,10 @@ assert(!script.slice(script.indexOf('function openGuestPersonPicker(rowId,event,
   script.indexOf('function openGuestPersonPickerFromKeyboard(')).includes('openSearchableSelectDialog'),
   'person picker must not use the centered searchable modal');
 assert(script.includes("secondaryText: person.phone || ''"));
+assert(script.includes('function selectGuestPersonPickerNewName(name)'));
+assert(script.includes('كاسم جديد'));
+assert(script.includes("idInput.value = ''"));
+assert(script.includes('selectGuestPersonPickerNewName(queryText)'));
 assert(script.includes("row.getAttribute('data-slot-label')"));
 assert(script.includes("div.setAttribute('data-slot-label','سرير "));
 assert(!script.includes('class="person-name" list="people_datalist"'),

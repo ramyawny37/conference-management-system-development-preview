@@ -3131,7 +3131,8 @@ function renderGuestPersonPickerList(){
   var list = ge('guestPersonPickerList');
   var search = ge('guestPersonPickerSearch');
   if(!list) return;
-  var query = normalizePersonKey(search ? search.value : '');
+  var queryText = search ? search.value.trim() : '';
+  var query = normalizePersonKey(queryText);
   list.innerHTML = '';
   var shown = 0;
   guestPersonPickerState.items.forEach(function(item){
@@ -3155,7 +3156,30 @@ function renderGuestPersonPickerList(){
     };
     list.appendChild(button);shown++;
   });
+  var existingPerson = queryText ? findPersonByName(queryText) : null;
+  if(query && !existingPerson){
+    var createButton = document.createElement('button');
+    createButton.type = 'button';
+    createButton.className = 'guest-person-picker-option guest-person-picker-new-name';
+    createButton.textContent = 'استخدام "' + queryText + '" كاسم جديد';
+    createButton.onclick = function(){ selectGuestPersonPickerNewName(queryText); };
+    list.appendChild(createButton);shown++;
+  }
   if(!shown) list.innerHTML = '<div class="guest-person-picker-empty">لا توجد نتائج</div>';
+}
+
+function selectGuestPersonPickerNewName(name){
+  name = String(name || '').trim();
+  if(!name) return;
+  var row = ge(guestPersonPickerState.rowId);
+  var nameInput = row && row.querySelector('.person-name');
+  var idInput = row && row.querySelector('.person-id');
+  if(!nameInput || !idInput) return;
+  nameInput.value = name;
+  idInput.value = '';
+  var rowId = row.id;
+  closeGuestPersonPicker();
+  bindGuestPersonRow(rowId);
 }
 
 function positionGuestPersonPicker(){
