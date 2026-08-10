@@ -6,7 +6,7 @@ const CACHE_NAMESPACE = IS_DEVELOPMENT
   ? 'cms:development:' + DEVELOPMENT_PROJECT_REF + ':'
   : '';
 const CACHE_PREFIX = CACHE_NAMESPACE + 'conference-manager-core-';
-const CACHE_REVISION = 'legacy-rpc-hardening-v1';
+const CACHE_REVISION = 'make-a-difference-branding-v1';
 const CACHE_NAME = CACHE_PREFIX + 'v' + APP_VERSION + '-' + CACHE_REVISION;
 const CORE_ASSETS = [
   './',
@@ -115,7 +115,11 @@ const CORE_ASSETS = [
   './assets/startup-bg.png',
   './icons/icon-192x192.png',
   './icons/icon-512x512.png',
-  './icons/icon-maskable-512.png'
+  './icons/icon-maskable-512.png',
+  './icons/apple-touch-icon-180x180.png',
+  './icons/icon-152x152.png',
+  './icons/icon-96x96.png',
+  './icons/favicon-32x32.png'
 ];
 
 self.addEventListener('install', event => {

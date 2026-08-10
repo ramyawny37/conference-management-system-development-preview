@@ -1,17 +1,29 @@
 {
   "id": "/",
-  "name": "إدارة المؤتمر",
-  "short_name": "المؤتمر",
+  "name": "إرسالية اصنع فرق",
+  "short_name": "اصنع فرق",
   "description": "نظام لإدارة تفاصيل المؤتمرات والنزلاء والمواصلات والحسابات.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#123E7A",
+  "background_color": "#F7FBFF",
   "theme_color": "#123E7A",
   "categories": ["business", "productivity", "utilities"],
   "lang": "ar",
   "dir": "rtl",
   "icons": [
+    {
+      "src": "icons/icon-96x96.png",
+      "type": "image/png",
+      "sizes": "96x96",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-152x152.png",
+      "type": "image/png",
+      "sizes": "152x152",
+      "purpose": "any"
+    },
     {
       "src": "icons/icon-192x192.png",
       "type": "image/png",
