@@ -12,10 +12,11 @@ const manager=fs.readFileSync(path.join(root,'js/sync/conference-edit-lock-manag
 const previous='exclusive-edit-lock-v1';
 const next='organization-membership-operation-key-v1';
 const mobileRoomInputRevision='anchored-glass-person-picker-v5';
-const shellRevision='shared-house-template-read-only-v1';
+const shellRevision='rejected-shared-template-cleanup-v1';
 const testTemplateCleanupRevision='test-house-template-cleanup-v1';
 const templateDiagnosticRevision='template-diagnostic-export-v1';
 const partialTemplateCleanupRevision='partial-template-state-cleanup-v1';
+const rejectedSharedTemplateCleanupRevision='rejected-shared-template-cleanup-v1';
 const hardeningRevision='legacy-rpc-hardening-v1';
 const memberDiagnosticsRevision='repository-rejection-diagnostics-v1';
 const legacyConferenceRevision='legacy-conference-preflight-v2';
@@ -81,10 +82,17 @@ assert(worker.includes("'./"+cleanupAsset+"'"));
   assert(worker.includes("'./"+versioned+"'"),'app shell missing '+versioned);
 });
 [
-  'js/sync/partial-template-state-cleanup.js',
-  'js/sync/sync-settings-ui.js'
+  'js/sync/partial-template-state-cleanup.js'
 ].forEach(asset=>{
   const versioned=asset+'?rev='+partialTemplateCleanupRevision;
+  assert(index.includes(versioned),'index missing '+versioned);
+  assert(worker.includes("'./"+versioned+"'"),'app shell missing '+versioned);
+});
+[
+  'js/sync/rejected-shared-template-cleanup.js',
+  'js/sync/sync-settings-ui.js'
+].forEach(asset=>{
+  const versioned=asset+'?rev='+rejectedSharedTemplateCleanupRevision;
   assert(index.includes(versioned),'index missing '+versioned);
   assert(worker.includes("'./"+versioned+"'"),'app shell missing '+versioned);
 });

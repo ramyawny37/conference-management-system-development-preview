@@ -5,12 +5,12 @@ const vm=require('vm');
 
 const root=path.join(__dirname,'..');
 const marker='canonical-conference-schema-v1';
-const cacheMarker='shared-house-template-read-only-v1';
+const cacheMarker='rejected-shared-template-cleanup-v1';
 const memberDiagnosticsAssetMarker='repository-rejection-diagnostics-v1';
-const shellMarker='shared-house-template-read-only-v1';
+const shellMarker='rejected-shared-template-cleanup-v1';
 const houseMarker='template-floor-conference-sync-v1';
 const scriptMarker='shared-house-template-read-only-v1';
-const privacyMarker='partial-template-state-cleanup-v1';
+const privacyMarker='rejected-shared-template-cleanup-v1';
 const realtimeMarker='template-sync-isolation-v1';
 const source=fs.readFileSync(path.join(
   root,'js/sync/member-runtime-diagnostics.js'),'utf8');
