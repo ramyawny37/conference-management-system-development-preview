@@ -122,5 +122,55 @@ function runtime(remoteRows,settings){
   await r.window.OrganizationTemplateSync.refresh();
   assert.equal(r.window.appData.houseTemplates.length,0,'loss of all visible associations removes cloud materialization');
   assert(r.window.OrganizationTemplateSync.getDiagnostics().some(row=>row.stage==='REALTIME_STATUS'&&row.data.status==='SUBSCRIBED'));
+
+  r=runtime([]);r.window.appData.houseTemplates=[{id:'official',name:'Official',floors:[],accessibleOrganizationIds:[]}];
+  await r.window.OrganizationTemplateSync.refresh();
+  const officialGrant=await r.window.OrganizationTemplateSync.changeHouseTemplateAccess('official',ORG_A,'grant');
+  assert.equal(officialGrant.ok,true,JSON.stringify(officialGrant));
+  assert.equal(r.rpcCalls.filter(call=>call.name==='apply_library_template_content_operation').length,1);
+  assert.equal(r.rpcCalls.filter(call=>call.name==='apply_organization_template_access_operation').length,1);
+  assert.deepEqual(Array.from(r.window.appData.houseTemplates[0].accessibleOrganizationIds),[ORG_A]);
+  assert.equal(r.window.appData.houseTemplates[0].accessibleOrganizationIds.indexOf(ORG_B),-1);
+  assert.equal(r.window.appData.houseTemplates[0].cloudOwnerUserId,'10000000-0000-4000-8000-000000000001');
+  assert.equal(r.window.appData.houseTemplates.length,1,'official grant must preserve identity without duplicates');
+  const officialRevoke=await r.window.OrganizationTemplateSync.changeHouseTemplateAccess('official',ORG_A,'revoke');
+  assert.equal(officialRevoke.ok,true);
+  assert.deepEqual(Array.from(r.window.appData.houseTemplates[0].accessibleOrganizationIds),[]);
+  assert.equal(r.window.appData.houseTemplates.length,1,'revoke must retain owner template');
+  assert.equal(r.window.appData.houseTemplates[0].cloudOwnerUserId,'10000000-0000-4000-8000-000000000001');
+
+  r=runtime([],{organizations:[{organizationId:ORG_A,status:'active',displayName:'Member',role:'member'}]});
+  r.window.appData.houseTemplates=[{id:'member-official',name:'Member',floors:[],accessibleOrganizationIds:[]}];
+  await r.window.OrganizationTemplateSync.refresh();
+  const memberWrites={saves:r.saveCalls.length,rpcs:r.rpcCalls.length,content:r.stores.content.length,access:r.stores.access.length};
+  assert.equal((await r.window.OrganizationTemplateSync.changeHouseTemplateAccess('member-official',ORG_A,'grant')).status,'not_authorized');
+  assert.equal((await r.window.OrganizationTemplateSync.changeHouseTemplateAccess('member-official',ORG_A,'revoke')).status,'not_authorized');
+  assert.deepEqual({saves:r.saveCalls.length,rpcs:r.rpcCalls.length,content:r.stores.content.length,access:r.stores.access.length},memberWrites);
+
+  r=runtime([]);r.window.appData.houseTemplates=[{id:'not-owned',name:'Other',floors:[],cloudRevision:1,cloudOwnerUserId:'another-user',cloudSyncStatus:'synced',accessibleOrganizationIds:[]}];
+  await r.window.OrganizationTemplateSync.refresh();
+  assert.equal((await r.window.OrganizationTemplateSync.changeHouseTemplateAccess('not-owned',ORG_A,'grant')).status,'not_authorized');
+  assert.equal(r.rpcCalls.filter(call=>call.name.includes('apply_')).length,0);
+
+  r=runtime([],{failAccess:1});r.window.appData.houseTemplates=[{id:'failed-official',name:'Failed',floors:[],accessibleOrganizationIds:[]}];
+  await r.window.OrganizationTemplateSync.refresh();
+  const failedOfficial=await r.window.OrganizationTemplateSync.changeHouseTemplateAccess('failed-official',ORG_A,'grant');
+  assert.equal(failedOfficial.status,'access_operation_failed');
+  assert.deepEqual(Array.from(r.window.appData.houseTemplates[0].accessibleOrganizationIds),[],'failed RPC must not claim access locally');
+  assert.equal(r.window.appData.houseTemplates[0].cloudSyncStatus,'synced','confirmed content remains stable after access failure');
+  assert.equal(r.stores.access.length,1);
+
+  r=runtime([{templateType:'house',templateId:'member-shared',payload:{id:'member-shared',name:'Shared for member',floors:[]},revision:3,deletedAt:null,ownerUserId:'owner-user',accessibleOrganizationIds:[ORG_A]}],{organizations:[{organizationId:ORG_A,status:'active',displayName:'Member Org',role:'member'}]});
+  await r.window.OrganizationTemplateSync.refresh();
+  assert.equal(r.window.appData.houseTemplates.length,1,'member must receive organization-shared template');
+  assert.equal(r.window.OrganizationTemplateSync.getManageableOrganizations('member-shared').length,0,'member must not manage shared access');
+
+  const productionIsolation=runtime([]),developmentIsolation=runtime([]);
+  developmentIsolation.window.appData.houseTemplates=[{id:'development-only',name:'Development',floors:[],accessibleOrganizationIds:[]}];
+  await developmentIsolation.window.OrganizationTemplateSync.refresh();
+  await developmentIsolation.window.OrganizationTemplateSync.changeHouseTemplateAccess('development-only',ORG_A,'grant');
+  assert.equal(productionIsolation.stores.content.length,0);
+  assert.equal(productionIsolation.stores.access.length,0);
+  assert.equal(productionIsolation.window.appData.houseTemplates.length,0,'separate namespaced runtime must remain untouched');
   console.log('organization-template-sync: PASS');
 })().catch(error=>{console.error(error);process.exit(1);});

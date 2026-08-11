@@ -1187,6 +1187,7 @@ function renderHouseTemplateDetails(house) {
   }
   h += '</div>';
   h += '<div class="house-template-actions">';
+        if (window.HouseTemplateSharingUI && typeof window.HouseTemplateSharingUI.renderAction === 'function') h += window.HouseTemplateSharingUI.renderAction(house);
         h += '<button class="btn btn-blue btn-sm" onclick="openHouseTemplateEditor(\'' + house.id + '\')">إدارة</button>';
         h += '<button class="btn btn-gray btn-sm" onclick="openHouseTemplateEditor(\'' + house.id + '\')">تعديل</button>';
         h += '<button class="btn btn-teal btn-sm" onclick="duplicateHouseTemplate(\'' + house.id + '\')">نسخ</button>';
