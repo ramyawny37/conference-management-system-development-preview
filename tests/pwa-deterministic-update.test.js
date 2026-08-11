@@ -12,7 +12,7 @@ const manager=fs.readFileSync(path.join(root,'js/sync/conference-edit-lock-manag
 const previous='exclusive-edit-lock-v1';
 const next='organization-membership-operation-key-v1';
 const mobileRoomInputRevision='anchored-glass-person-picker-v5';
-const shellRevision='template-diagnostic-export-v1';
+const shellRevision='legacy-template-adoption-authorization-v1';
 const testTemplateCleanupRevision='test-house-template-cleanup-v1';
 const templateDiagnosticRevision='template-diagnostic-export-v1';
 const hardeningRevision='legacy-rpc-hardening-v1';
@@ -23,6 +23,8 @@ const templateIsolationRevision='template-sync-isolation-v1';
 const startupRevision=next;
 const deviceOnboardingRevision=next;
 const organizationTemplateRevision='shared-template-library-v1';
+const legacyTemplateAuthorizationRevision=
+  'legacy-template-adoption-authorization-v1';
 const bootstrapRevision='first-owner-bootstrap-hardening-v1';
 const userManagementUiRevision=next;
 const userManagementStyleRevision=mobileRoomInputRevision;
@@ -178,15 +180,18 @@ assert(worker.includes("'./"+organizationMembersAsset+"'"),'app shell missing de
   assert(index.includes(versioned),'index missing '+versioned);
   assert(worker.includes("'./"+versioned+"'"),'app shell missing '+versioned);
 });
-const isolatedTemplateSync='js/sync/organization-template-sync.js?rev='+organizationTemplateRevision;
+const isolatedTemplateSync='js/sync/organization-template-sync.js?rev='+legacyTemplateAuthorizationRevision;
 assert(index.includes(isolatedTemplateSync));
 assert(worker.includes("'./"+isolatedTemplateSync+"'"));
-['js/sync/startup-conference-discovery.js',
-  'js/sync/legacy-template-adoption-ui.js'].forEach(asset=>{
+['js/sync/startup-conference-discovery.js'].forEach(asset=>{
   const versioned=asset+'?rev='+organizationTemplateRevision;
   assert(index.includes(versioned),'index missing '+versioned);
   assert(worker.includes("'./"+versioned+"'"),'app shell missing '+versioned);
 });
+const adoptionUi='js/sync/legacy-template-adoption-ui.js?rev='+
+  legacyTemplateAuthorizationRevision;
+assert(index.includes(adoptionUi));
+assert(worker.includes("'./"+adoptionUi+"'"));
 [
   'js/sync/current-device-authorization-ui.js'
 ].forEach(asset=>{

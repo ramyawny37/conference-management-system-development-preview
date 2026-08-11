@@ -29,7 +29,11 @@ function runtime(remoteRows,settings){
   window.SupabaseAuth={getState:()=>({authenticated:true,user:{id:'10000000-0000-4000-8000-000000000001'}})};
   window.SupabaseDeviceIdentity={getOrCreate:()=>({id:'20000000-0000-4000-8000-000000000001'})};
   window.SupabaseClientLayer={getClient:()=>client};
-  window.OrganizationManagementService={list:()=>Promise.resolve({ok:true,data:{organizations:settings.organizations||[{organizationId:ORG_A,status:'active',displayName:'A'},{organizationId:ORG_B,status:'active',displayName:'B'}]}})};
+  window.SystemAccessService={getState:()=>({
+    authenticated:true,profileLoaded:true,fresh:true,
+    accountStatus:'approved',isSystemOwner:settings.systemOwner===true
+  })};
+  window.OrganizationManagementService={list:()=>Promise.resolve({ok:true,data:{organizations:settings.organizations||[{organizationId:ORG_A,status:'active',displayName:'A',role:'organization_admin'},{organizationId:ORG_B,status:'active',displayName:'B',role:'organization_owner'}]}})};
   window.AppIndexedDB={stores:{libraryTemplateContentOperations:'content',organizationTemplateAccessOperations:'access'},getAllRecords:name=>Promise.resolve(stores[name].slice()),putRecord:(name,row)=>{const i=stores[name].findIndex(x=>x.operationId===row.operationId);if(i<0)stores[name].push(row);else stores[name][i]=row;return Promise.resolve();},deleteRecord:(name,id)=>{const i=stores[name].findIndex(x=>x.operationId===id);if(i>=0)stores[name].splice(i,1);return Promise.resolve();}};
   window.StorageRepository={getAppSnapshot:()=>Promise.resolve({data:window.appData}),saveAppSnapshot:(value,options)=>{saveCalls.push(options);window.appData=value;return Promise.resolve({ok:true});}};
   vm.runInNewContext(source,{window,console});
@@ -86,6 +90,33 @@ function runtime(remoteRows,settings){
   const blocked=await r.window.OrganizationTemplateSync.adoptLegacyTemplates([ORG_A]);
   assert.equal(blocked.status,'adoption_partial');
   assert.equal(r.rpcCalls.filter(call=>call.name==='apply_organization_template_access_operation').length,0,'failed content must never receive access associations');
+
+  r=runtime([],{organizations:[{
+    organizationId:ORG_A,status:'active',displayName:'Member',role:'member'
+  }]});
+  r.window.appData.houseTemplates=[{id:'member-blocked',name:'Must Stay',
+    cloudSyncStatus:'synced',accessibleOrganizationIds:[]}];
+  r.stores.access.push({operationId:'existing-unknown',
+    templateType:'house',templateId:'member-blocked',action:'grant',
+    organizationId:ORG_A,status:'unknown',lastErrorCode:'42501',
+    createdAt:'2026-08-11T00:00:00.000Z'});
+  await r.window.OrganizationTemplateSync.refresh();
+  assert.equal(r.rpcCalls.filter(call=>
+    call.name==='apply_organization_template_access_operation').length,0);
+  assert.equal(r.stores.access.length,1);
+  assert.equal(r.stores.access[0].status,'unknown');
+  const beforeMember=JSON.stringify(r.window.appData);
+  const beforeSaves=r.saveCalls.length;
+  const beforeRpc=r.rpcCalls.length;
+  const memberResult=await r.window.OrganizationTemplateSync
+    .adoptLegacyTemplates([ORG_A]);
+  assert.equal(memberResult.status,'not_authorized');
+  assert.equal(JSON.stringify(r.window.appData),beforeMember);
+  assert.equal(r.saveCalls.length,beforeSaves);
+  assert.equal(r.rpcCalls.length,beforeRpc);
+  assert.equal(r.stores.content.length,0);
+  assert.equal(r.stores.access.length,1);
+  assert.equal(r.stores.access[0].operationId,'existing-unknown');
 
   r=runtime([]);r.window.appData.houseTemplates=[{id:'previously-cloud',name:'Old',accessibleOrganizationIds:[ORG_A],cloudRevision:2}];
   await r.window.OrganizationTemplateSync.refresh();

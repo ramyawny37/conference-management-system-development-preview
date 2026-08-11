@@ -5,9 +5,9 @@ const vm=require('vm');
 
 const root=path.join(__dirname,'..');
 const marker='canonical-conference-schema-v1';
-const cacheMarker='template-diagnostic-export-v1';
+const cacheMarker='legacy-template-adoption-authorization-v1';
 const memberDiagnosticsAssetMarker='repository-rejection-diagnostics-v1';
-const shellMarker='template-diagnostic-export-v1';
+const shellMarker='legacy-template-adoption-authorization-v1';
 const houseMarker='template-floor-conference-sync-v1';
 const scriptMarker='conference-create-authorization-v1';
 const privacyMarker='template-diagnostic-export-v1';
