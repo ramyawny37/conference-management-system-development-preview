@@ -41,7 +41,7 @@ function runtime(remoteRows,settings){
 }
 
 (async()=>{
-  let r=runtime([{templateType:'house',templateId:'shared',payload:{id:'shared',name:'Cloud',floors:[]},revision:4,deletedAt:null,ownerUserId:'owner',accessibleOrganizationIds:[ORG_A,ORG_B]}]);
+  let r=runtime([{templateType:'house',templateId:'shared',payload:{id:'shared',name:'Cloud',floors:[]},revision:4,deletedAt:null,ownerUserId:'10000000-0000-4000-8000-000000000001',accessibleOrganizationIds:[ORG_A,ORG_B]}]);
   await r.window.OrganizationTemplateSync.refresh();
   assert.equal(r.window.appData.houseTemplates.length,1,'shared identity must materialize once');
   assert.deepEqual(Array.from(r.window.appData.houseTemplates[0].accessibleOrganizationIds),[ORG_A,ORG_B]);
@@ -164,6 +164,14 @@ function runtime(remoteRows,settings){
   await r.window.OrganizationTemplateSync.refresh();
   assert.equal(r.window.appData.houseTemplates.length,1,'member must receive organization-shared template');
   assert.equal(r.window.OrganizationTemplateSync.getManageableOrganizations('member-shared').length,0,'member must not manage shared access');
+  const memberOperationCount=r.stores.content.length;
+  const memberRpcCount=r.rpcCalls.filter(call=>call.name==='apply_library_template_content_operation').length;
+  r.window.appData.houseTemplates[0].floors.push({id:'unauthorized-floor',name:'Blocked',rooms:[]});
+  const memberCapture=await r.window.OrganizationTemplateSync.captureLocalSave(r.window.appData);
+  await new Promise(resolve=>setTimeout(resolve,0));
+  assert.equal(memberCapture.status,'unchanged');
+  assert.equal(r.stores.content.length,memberOperationCount,'member edit must not create content operation');
+  assert.equal(r.rpcCalls.filter(call=>call.name==='apply_library_template_content_operation').length,memberRpcCount,'member edit must not call content RPC');
 
   const productionIsolation=runtime([]),developmentIsolation=runtime([]);
   developmentIsolation.window.appData.houseTemplates=[{id:'development-only',name:'Development',floors:[],accessibleOrganizationIds:[]}];

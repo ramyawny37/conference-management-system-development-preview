@@ -20,6 +20,8 @@ function ht_renderTemplate(template) {
 }
 
 function ht_addFloor() {
+  if(editHouseTemplateId&&
+    !window.HouseTemplateContentAuthorization.requireEdit(editHouseTemplateId))return false;
   var floorId = uid();
   var container = ge('ht_floors_container');
   if(container.innerHTML.includes('ابدأ بإضافة دور')) container.innerHTML = '';
@@ -30,6 +32,8 @@ function ht_addFloor() {
 }
 
 function ht_deleteFloor(floorId) {
+  if(editHouseTemplateId&&
+    !window.HouseTemplateContentAuthorization.requireEdit(editHouseTemplateId))return false;
   if (editHouseTemplateId && getHouseTemplateById(editHouseTemplateId)) {
     ht_deleteFloorFromTemplate(editHouseTemplateId, floorId);
     return;
@@ -38,10 +42,12 @@ function ht_deleteFloor(floorId) {
 }
 
 function ht_addRoomToTemplate(houseId, floorId) {
+  if(!window.HouseTemplateContentAuthorization.requireEdit(houseId))return false;
   openTemplateRoomModal(houseId, floorId, null);
 }
 
 function ht_deleteRoomFromTemplate(houseId, floorId, roomId) {
+  if(!window.HouseTemplateContentAuthorization.requireEdit(houseId))return false;
   var house = getHouseTemplateById(houseId);
   if (!house || !house.floors) return;
   var floor = null;
@@ -70,7 +76,7 @@ function ht_deleteRoomFromTemplate(houseId, floorId, roomId) {
   });
   floor.rooms = rooms;
   selectedHouseTemplateId = house.id;
-  if (!saveTemplateOnly()) {
+  if (!saveTemplateOnly({houseTemplateId:house.id})) {
     appData = previousAppData;
     selectedHouseTemplateId = previousSelectedHouseTemplateId;
     var restoredHouse = getHouseTemplateById(houseId);
@@ -100,6 +106,8 @@ function ht_roomHtml(floorId, room) {
 }
 
 function ht_addRoom(floorId) {
+  if(editHouseTemplateId&&
+    !window.HouseTemplateContentAuthorization.requireEdit(editHouseTemplateId))return false;
   if (editHouseTemplateId && getHouseTemplateById(editHouseTemplateId)) {
     ht_addRoomToTemplate(editHouseTemplateId, floorId);
     return;
@@ -110,6 +118,8 @@ function ht_addRoom(floorId) {
 }
 
 function ht_deleteRoom(fullRoomId) {
+  if(editHouseTemplateId&&
+    !window.HouseTemplateContentAuthorization.requireEdit(editHouseTemplateId))return false;
   var roomEl = ge(fullRoomId);
   if (!roomEl) return;
   var floorEl = roomEl.closest('.ht-floor-box');
@@ -123,10 +133,12 @@ function ht_deleteRoom(fullRoomId) {
 }
 
 function ht_editFloorName(houseId, floorId) {
+  if(!window.HouseTemplateContentAuthorization.requireEdit(houseId))return false;
   openTemplateFloorModal(houseId, floorId);
 }
 
 function ht_deleteFloorFromTemplate(houseId, floorId) {
+  if(!window.HouseTemplateContentAuthorization.requireEdit(houseId))return false;
   var house = getHouseTemplateById(houseId);
   if (!house || !house.floors) return;
   var targetFloor = null;
@@ -147,7 +159,7 @@ function ht_deleteFloorFromTemplate(houseId, floorId) {
   });
   house.floors = floors;
   selectedHouseTemplateId = house.id;
-  if (!saveTemplateOnly()) {
+  if (!saveTemplateOnly({houseTemplateId:house.id})) {
     appData = previousAppData;
     selectedHouseTemplateId = previousSelectedHouseTemplateId;
     var restoredHouse = getHouseTemplateById(houseId);

@@ -5,11 +5,11 @@ const vm=require('vm');
 
 const root=path.join(__dirname,'..');
 const marker='canonical-conference-schema-v1';
-const cacheMarker='official-house-template-sharing-v1';
+const cacheMarker='shared-house-template-read-only-v1';
 const memberDiagnosticsAssetMarker='repository-rejection-diagnostics-v1';
-const shellMarker='official-house-template-sharing-v1';
+const shellMarker='shared-house-template-read-only-v1';
 const houseMarker='template-floor-conference-sync-v1';
-const scriptMarker='official-house-template-sharing-v1';
+const scriptMarker='shared-house-template-read-only-v1';
 const privacyMarker='partial-template-state-cleanup-v1';
 const realtimeMarker='template-sync-isolation-v1';
 const source=fs.readFileSync(path.join(

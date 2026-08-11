@@ -6,7 +6,7 @@ const CACHE_NAMESPACE = IS_DEVELOPMENT
   ? 'cms:development:' + DEVELOPMENT_PROJECT_REF + ':'
   : '';
 const CACHE_PREFIX = CACHE_NAMESPACE + 'conference-manager-core-';
-const CACHE_REVISION = 'official-house-template-sharing-v1';
+const CACHE_REVISION = 'shared-house-template-read-only-v1';
 const CACHE_NAME = CACHE_PREFIX + 'v' + APP_VERSION + '-' + CACHE_REVISION;
 const CORE_ASSETS = [
   './',
@@ -46,7 +46,8 @@ const CORE_ASSETS = [
   './js/sync/device-authorization-administration-ui.js?rev=startup-device-admin-lifecycle-v1',
   './js/supabase/snapshot-sync.js?rev=organization-membership-operation-key-v1',
   './js/sync/startup-conference-discovery.js?rev=shared-template-library-v1',
-  './js/sync/organization-template-sync.js?rev=official-house-template-sharing-v1',
+  './js/sync/organization-template-sync.js?rev=shared-house-template-read-only-v1',
+  './js/sync/house-template-content-authorization.js?rev=shared-house-template-read-only-v1',
   './js/sync/house-template-sharing-ui.js?rev=official-house-template-sharing-v1',
   './js/sync/test-house-template-cleanup.js?rev=test-house-template-cleanup-v1',
   './js/sync/partial-template-state-cleanup.js?rev=partial-template-state-cleanup-v1',
@@ -106,13 +107,13 @@ const CORE_ASSETS = [
   './people.js?rev=canonical-conference-schema-v1',
   './houses.js?rev=template-floor-conference-sync-v1',
   './transport.js',
-  './houseTemplates.js?rev=template-sync-isolation-v1',
-  './state.js?rev=template-sync-isolation-v1',
+  './houseTemplates.js?rev=shared-house-template-read-only-v1',
+  './state.js?rev=shared-house-template-read-only-v1',
   './js/conference/accounts.js',
   './js/conference-template-houses-editor.js',
   './cards.js',
   './libs/xlsx.full.min.js',
-  './script.js?rev=official-house-template-sharing-v1',
+  './script.js?rev=shared-house-template-read-only-v1',
   './version.js',
   './pwa.js?rev=organization-membership-operation-key-v1',
   './libs/html2canvas.min.js',

@@ -1179,6 +1179,10 @@ function renderHouseTemplateDetails(house) {
   }
 
   var h = '';
+  var contentAuthorization=window.HouseTemplateContentAuthorization;
+  var canEditContent=!!contentAuthorization&&
+    typeof contentAuthorization.canEdit==='function'&&
+    contentAuthorization.canEdit(house.id);
   h += '<div class="house-template-details-header">';
   h += '<div class="house-template-details-title">';
   h += '<div class="house-template-name">' + esc(house.name || 'بيت غير مسمى') + '</div>';
@@ -1188,17 +1192,25 @@ function renderHouseTemplateDetails(house) {
   h += '</div>';
   h += '<div class="house-template-actions">';
         if (window.HouseTemplateSharingUI && typeof window.HouseTemplateSharingUI.renderAction === 'function') h += window.HouseTemplateSharingUI.renderAction(house);
+        if (canEditContent) {
         h += '<button class="btn btn-blue btn-sm" onclick="openHouseTemplateEditor(\'' + house.id + '\')">إدارة</button>';
         h += '<button class="btn btn-gray btn-sm" onclick="openHouseTemplateEditor(\'' + house.id + '\')">تعديل</button>';
+        }
         h += '<button class="btn btn-teal btn-sm" onclick="duplicateHouseTemplate(\'' + house.id + '\')">نسخ</button>';
+        if (canEditContent) {
         h += '<button class="btn btn-red btn-sm" onclick="deleteHouseTemplate(\'' + house.id + '\')">حذف</button>';
+        }
   h += '</div>';
   h += '</div>';
 
-  h += '<div class="house-template-create-actions">';
-  h += '<button class="btn btn-purple btn-sm" onclick="openTemplateFloorModal(\'' + house.id + '\', null)">➕ إضافة دور</button>';
-  h += '<button class="btn btn-blue btn-sm" onclick="openTemplateRoomModal(\'' + house.id + '\', null, null)">➕ إضافة غرفة</button>';
-  h += '</div>';
+  if (canEditContent) {
+    h += '<div class="house-template-create-actions">';
+    h += '<button class="btn btn-purple btn-sm" onclick="openTemplateFloorModal(\'' + house.id + '\', null)">➕ إضافة دور</button>';
+    h += '<button class="btn btn-blue btn-sm" onclick="openTemplateRoomModal(\'' + house.id + '\', null, null)">➕ إضافة غرفة</button>';
+    h += '</div>';
+  } else {
+    h += '<div class="settings-summary-note">قالب مشترك — للعرض والاستخدام فقط</div>';
+  }
 
   if (!house.floors || !house.floors.length) {
     h += '<div style="color:#AAB5C0;padding:12px;font-size:11px">لا توجد أدوار داخل هذا البيت بعد</div>';
@@ -1211,9 +1223,11 @@ function renderHouseTemplateDetails(house) {
     h += '<div class="house-floor-header">';
     h += '<button type="button" class="settings-branding-toggle house-floor-toggle" aria-expanded="false" onclick="var content=this.parentNode.nextElementSibling;var isOpen=content.classList.toggle(\'settings-branding-content-open\');content.setAttribute(\'aria-hidden\',isOpen?\'false\':\'true\');this.setAttribute(\'aria-expanded\',isOpen?\'true\':\'false\');this.querySelector(\'.settings-branding-toggle-arrow\').textContent=isOpen?\'▲\':\'▼\'"><span>' + esc(floor.name || 'دور غير مسمى') + ' <b class="settings-count-badge">' + ((floor.rooms || []).length) + ' غرف</b></span><span class="settings-branding-toggle-arrow" aria-hidden="true">▼</span></button>';
     h += '<div class="house-floor-actions">';
+    if (canEditContent) {
     h += '<button class="btn btn-blue btn-sm" onclick="ht_addRoomToTemplate(\'' + house.id + '\', \'' + floor.id + '\')">➕ غرفة</button>';
     h += '<button class="btn btn-gray btn-sm" onclick="ht_editFloorName(\'' + house.id + '\', \'' + floor.id + '\')">تعديل</button>';
     h += '<button class="btn btn-red btn-sm" onclick="ht_deleteFloorFromTemplate(\'' + house.id + '\', \'' + floor.id + '\')">حذف</button>';
+    }
     h += '</div></div>';
     h += '<div class="settings-branding-content house-floor-content" aria-hidden="true">';
 
@@ -1232,8 +1246,10 @@ function renderHouseTemplateDetails(house) {
         }
         h += '</div>';
         h += '<div class="house-room-actions">';
+        if (canEditContent) {
         h += '<button class="btn btn-gray btn-sm" onclick="openTemplateRoomModal(\'' + house.id + '\', \'' + floor.id + '\', \'' + room.id + '\')">تعديل</button>';
         h += '<button class="btn btn-red btn-sm" onclick="ht_deleteRoomFromTemplate(\'' + house.id + '\', \'' + floor.id + '\', \'' + room.id + '\')">حذف</button>';
+        }
         h += '</div>';
         h += '</div>';
       });
@@ -8037,10 +8053,12 @@ function openFloorFromHouseEditor() {
     alert('احفظ البيت أولاً ثم أضف الأدوار.');
     return;
   }
+  if(!window.HouseTemplateContentAuthorization.requireEdit(editHouseTemplateId))return false;
   openTemplateFloorModal(editHouseTemplateId, null);
 }
 
 function openTemplateFloorModal(houseId, floorId) {
+  if(!window.HouseTemplateContentAuthorization.requireEdit(houseId))return false;
   var house = getHouseTemplateById(houseId);
   if (!house) return;
   templateFloorDialog.houseId = houseId;
@@ -8085,6 +8103,7 @@ function refreshConferenceHouseAfterTemplateMutation(template,options){
 }
 
 function saveTemplateFloor() {
+  if(!window.HouseTemplateContentAuthorization.requireEdit(templateFloorDialog.houseId))return false;
   var house = getHouseTemplateById(templateFloorDialog.houseId);
   if (!house) return;
   var floorName = ge('tf_floor_name').value.trim();
@@ -8120,7 +8139,7 @@ function saveTemplateFloor() {
     templateFloorId:floor.id
   });
   selectedHouseTemplateId = house.id;
-  if(!saveTemplateOnly()){
+  if(!saveTemplateOnly({houseTemplateId:house.id})){
     appData = previousAppData;
     selectedHouseTemplateId = previousSelectedHouseTemplateId;
     return false;
@@ -8170,6 +8189,7 @@ function renderTemplateRoomModal() {
 }
 
 function openTemplateRoomModal(houseId, floorId, roomId) {
+  if(!window.HouseTemplateContentAuthorization.requireEdit(houseId))return false;
   templateRoomDialog.houseId = houseId || null;
   templateRoomDialog.floorId = floorId || null;
   templateRoomDialog.roomId = roomId || null;
@@ -8208,7 +8228,10 @@ function closeTemplateRoomModal() {
 }
 
 function saveTemplateRoom() {
+  if(!window.HouseTemplateContentAuthorization.requireEdit(
+    templateRoomDialog.houseId))return false;
   var houseId = ge('tr_house').value;
+  if(!window.HouseTemplateContentAuthorization.requireEdit(houseId))return false;
   var floorId = ge('tr_floor').value;
   var number = ge('tr_room_number').value.trim();
   var beds = parseInt(ge('tr_room_beds').value, 10);
@@ -8277,7 +8300,7 @@ function saveTemplateRoom() {
     floor.rooms.push({ id: uid(), number: number, beds: beds, extraBeds: extraBeds, notes: notes, guests: [], children: [], closed: closed, closedDay: closedDay });
   }
   selectedHouseTemplateId = house.id;
-  if(!saveTemplateOnly()){
+  if(!saveTemplateOnly({houseTemplateId:house.id})){
     appData = previousAppData;
     selectedHouseTemplateId = previousSelectedHouseTemplateId;
     return false;
@@ -8371,6 +8394,8 @@ function applyConferenceHouseTemplate(){
 }
 
 function saveHouseTemplate() {
+  if(editHouseTemplateId&&
+    !window.HouseTemplateContentAuthorization.requireEdit(editHouseTemplateId))return false;
   if (!editHouseTemplateId && !confirm('سيتم إنشاء خريطة بيت جديدة. متابعة؟')) return;
   var name = ge('ht_name').value.trim();
   if (!name) { alert('الرجاء إدخال اسم للبيت.'); return; }
@@ -8445,7 +8470,7 @@ function saveHouseTemplate() {
       window.OrganizationTemplateSync.scopeTemplate(template);
     }
     selectedHouseTemplateId = template.id;
-  if(!saveTemplateOnly()){
+  if(!saveTemplateOnly({houseTemplateId:template.id})){
     appData = previousAppData;
     selectedHouseTemplateId = previousSelectedHouseTemplateId;
     editHouseTemplateId = previousEditHouseTemplateId;
@@ -8457,6 +8482,7 @@ function saveHouseTemplate() {
 }
 
 function deleteHouseTemplate(id) {
+  if(!window.HouseTemplateContentAuthorization.requireEdit(id))return false;
   var target = null;
   (appData.houseTemplates || []).forEach(function(ht){ if (!target && ht.id === id) target = ht; });
   if (!target) return;
@@ -8469,7 +8495,7 @@ function deleteHouseTemplate(id) {
   if (selectedHouseTemplateId === id) {
     selectedHouseTemplateId = appData.houseTemplates.length ? appData.houseTemplates[0].id : null;
   }
-  if(!saveTemplateOnly()){
+  if(!saveTemplateOnly({houseTemplateId:id})){
     appData = previousAppData;
     selectedHouseTemplateId = previousSelectedHouseTemplateId;
     editHouseTemplateId = previousEditHouseTemplateId;
@@ -8520,6 +8546,7 @@ function duplicateHouseTemplate(id) {
 
 var editHouseTemplateId = null;
 function openHouseTemplateEditor(id) {
+  if(id&&!window.HouseTemplateContentAuthorization.requireEdit(id))return false;
   editHouseTemplateId = id;
   selectedHouseTemplateId = id || selectedHouseTemplateId;
   var template = null;

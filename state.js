@@ -154,7 +154,13 @@ function restoreSafeSingleCurrentConferenceSelection(target){
   return true;
 }
 
-function saveTemplateOnly(){
+function saveTemplateOnly(options){
+  options=options||{};
+  var houseTemplateId=options.houseTemplateId||window.editHouseTemplateId||null;
+  var authorization=window.HouseTemplateContentAuthorization;
+  if(houseTemplateId&&authorization&&
+    typeof authorization.requireEdit==='function'&&
+    !authorization.requireEdit(houseTemplateId))return false;
   return save({
     skipCurrentConferenceUpdate:true,
     skipConferenceTracking:true,
