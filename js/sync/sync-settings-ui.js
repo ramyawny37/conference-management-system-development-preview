@@ -273,6 +273,7 @@
     var html=renderTemplateDiagnosticExport();
     html+=renderMemberRuntimeDiagnostics();
     html+=renderOrphanedCleanup();
+    html+=renderLocalTemplateCopyCleanup();
     html+=renderRejectedSharedTemplateCleanup();
     html+=renderPartialTemplateStateCleanup();
     html+=renderTestHouseTemplateCleanup();
@@ -434,6 +435,20 @@
       '<div class="settings-summary-note">سيتم أولًا قراءة النسخة السحابية الرسمية للقالب بيت ابونا سمعان والتحقق من المالك والإصدار وإتاحة المؤسسة، ثم استعادتها محليًا وحذف العملية المرفوضة المحددة فقط. لن يتم تعديل Cloud.</div>'+
       '<button class="btn btn-red" onclick="SyncSettingsUI.cleanupRejectedSharedTemplate()">استعادة النسخة السحابية وتنظيف العملية المحلية</button>'+
       '<div id="rejected_shared_template_cleanup_message" class="sync-settings-message"></div>'+
+      '</section>';
+  }
+
+  function renderLocalTemplateCopyCleanup(){
+    var service=global.LocalTemplateCopyCleanup;
+    if(!service||typeof service.inspectLocal!=='function')return '';
+    var inspected=service.inspectLocal();
+    if(!inspected||inspected.ok!==true||
+      inspected.status!=='local_copy_identity_confirmed')return '';
+    return '<section class="settings-section sync-settings-section">'+
+      '<div class="settings-section-title">تنظيف نسخة قالب محلية</div>'+
+      '<div class="settings-summary-note">سيتم حذف النسخة المحلية بيت ابونا سمعان (نسخة) فقط بعد التأكد من هويتها وعدم وجود أي عمليات مرتبطة بها. لن يتم حذف أو تعديل القالب الأصلي أو أي بيانات سحابية.</div>'+
+      '<button class="btn btn-red" onclick="SyncSettingsUI.cleanupLocalTemplateCopy()">حذف النسخة المحلية المحددة</button>'+
+      '<div id="local_template_copy_cleanup_message" class="sync-settings-message"></div>'+
       '</section>';
   }
 
@@ -653,6 +668,36 @@
       }
       if(typeof global.renderSettings==='function')global.renderSettings();
       if(typeof global.showToast==='function')global.showToast('تمت استعادة النسخة السحابية الصحيحة وتنظيف العملية المحلية المرفوضة فقط.');
+      return cleaned;
+    }).finally(function(){setBusy(false);});
+  }
+
+  function cleanupLocalTemplateCopy(){
+    if(busy)return Promise.resolve({ok:false,status:'busy'});
+    var service=global.LocalTemplateCopyCleanup;
+    if(!service||typeof service.preflight!=='function'||
+      typeof service.cleanup!=='function')return Promise.resolve({ok:false,status:'cleanup_unavailable'});
+    setBusy(true);
+    return service.preflight().then(function(checked){
+      if(!checked||checked.ok!==true){
+        message('local_template_copy_cleanup_message',
+          'توقف التنظيف لعدم تطابق هوية النسخة أو لوجود عمليات مرتبطة بها: '+
+          String(checked&&checked.status||'verification_failed'),true);
+        return checked;
+      }
+      if(checked.status==='already_clean')return checked;
+      var warning='سيتم حذف القالب المحلي بيت ابونا سمعان (نسخة) بالمعرّف 5c96c45f-ae22-4993-a3e7-d97e0b2598cf فقط. لن يتم تنفيذ مزامنة أو تعديل أي بيانات سحابية. هل تريد المتابعة؟';
+      if(!global.confirm||global.confirm(warning)!==true)return {ok:false,status:'cancelled'};
+      return service.cleanup();
+    }).then(function(cleaned){
+      if(!cleaned||cleaned.ok!==true){
+        if(cleaned&&cleaned.status==='cancelled')return cleaned;
+        message('local_template_copy_cleanup_message',
+          'تعذر حذف النسخة المحلية بأمان: '+String(cleaned&&cleaned.error&&cleaned.error.code||cleaned&&cleaned.status||'cleanup_failed'),true);
+        return cleaned;
+      }
+      if(typeof global.renderSettings==='function')global.renderSettings();
+      if(typeof global.showToast==='function')global.showToast('تم حذف نسخة القالب المحلية المحددة فقط.');
       return cleaned;
     }).finally(function(){setBusy(false);});
   }
@@ -904,6 +949,7 @@
     refreshAccommodationLockDiagnostics:refreshAccommodationLockDiagnostics,
     releaseOwnedAccommodationLock:releaseOwnedAccommodationLock,
     removeOrphanedConference:removeOrphanedConference,
+    cleanupLocalTemplateCopy:cleanupLocalTemplateCopy,
     cleanupRejectedSharedTemplate:cleanupRejectedSharedTemplate,
     cleanupPartialTemplateState:cleanupPartialTemplateState,
     cleanupTestHouseTemplates:cleanupTestHouseTemplates,

@@ -1196,7 +1196,9 @@ function renderHouseTemplateDetails(house) {
         h += '<button class="btn btn-blue btn-sm" onclick="openHouseTemplateEditor(\'' + house.id + '\')">إدارة</button>';
         h += '<button class="btn btn-gray btn-sm" onclick="openHouseTemplateEditor(\'' + house.id + '\')">تعديل</button>';
         }
+        if (canEditContent) {
         h += '<button class="btn btn-teal btn-sm" onclick="duplicateHouseTemplate(\'' + house.id + '\')">نسخ</button>';
+        }
         if (canEditContent) {
         h += '<button class="btn btn-red btn-sm" onclick="deleteHouseTemplate(\'' + house.id + '\')">حذف</button>';
         }
@@ -8506,6 +8508,9 @@ function deleteHouseTemplate(id) {
 }
 
 function duplicateHouseTemplate(id) {
+  if(!window.HouseTemplateContentAuthorization||
+    typeof window.HouseTemplateContentAuthorization.requireCopy!=='function'||
+    !window.HouseTemplateContentAuthorization.requireCopy(id))return false;
   var original = null;
   var templates = appData.houseTemplates || [];
   for (var i = 0; i < templates.length; i++) {

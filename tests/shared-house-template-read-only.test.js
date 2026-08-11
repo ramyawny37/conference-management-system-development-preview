@@ -11,6 +11,7 @@ function authorization(editable){let toasts=[];const template={id:'shared'};cons
 let env=authorization(false);
 assert.strictEqual(env.window.HouseTemplateContentAuthorization.canEdit('shared'),false);
 assert.strictEqual(env.window.HouseTemplateContentAuthorization.requireEdit('shared'),false);
+assert.strictEqual(env.window.HouseTemplateContentAuthorization.requireCopy('shared'),false);
 assert.strictEqual(env.toasts[0],'لا يمكنك تعديل هذا القالب لأنه مشترك معك للعرض والاستخدام فقط.');
 env=authorization(true);
 assert.strictEqual(env.window.HouseTemplateContentAuthorization.requireEdit('shared'),true);
@@ -23,6 +24,11 @@ blockedCall(scriptSource,'deleteHouseTemplate',{},['shared']);
 blockedCall(scriptSource,'openHouseTemplateEditor',{},['shared']);
 blockedCall(houseSource,'ht_deleteFloorFromTemplate',{},['shared','floor']);
 blockedCall(houseSource,'ht_deleteRoomFromTemplate',{},['shared','floor','room']);
+let duplicateTouched=false;
+const duplicateSandbox={window:{HouseTemplateContentAuthorization:{requireCopy:()=>false}},appData:{get houseTemplates(){duplicateTouched=true;throw new Error('READ_AFTER_DENIAL');}},uid(){duplicateTouched=true;},saveTemplateOnly(){duplicateTouched=true;},renderSettings(){duplicateTouched=true;},showToast(){duplicateTouched=true;}};
+vm.runInNewContext(extract(scriptSource,'duplicateHouseTemplate'),duplicateSandbox);
+assert.strictEqual(duplicateSandbox.duplicateHouseTemplate('shared'),false);
+assert.strictEqual(duplicateTouched,false,'shared duplicate must stop before local mutation');
 
 let writes=0;
 const saveTemplateSandbox={window:{editHouseTemplateId:null,HouseTemplateContentAuthorization:{requireEdit:()=>false}},save(){writes++;return true;}};
@@ -33,9 +39,18 @@ saveTemplateSandbox.window.HouseTemplateContentAuthorization.requireEdit=()=>tru
 assert.strictEqual(saveTemplateSandbox.saveTemplateOnly({houseTemplateId:'owned'}),true);
 assert.strictEqual(writes,1,'owner save path must remain available');
 
+const localOnly={id:'local-only',name:'Local only'};
+const deleteSandbox={window:{HouseTemplateContentAuthorization:{requireEdit:()=>true}},appData:{houseTemplates:[localOnly]},selectedHouseTemplateId:'local-only',editHouseTemplateId:null,confirm:()=>true,deepClone:value=>JSON.parse(JSON.stringify(value)),pushTrashItem(){},removeByIdFromArray:(rows,id)=>rows.filter(row=>row.id!==id),saveTemplateOnly:()=>true,renderSettings(){},showToast(){}};
+vm.runInNewContext(extract(scriptSource,'deleteHouseTemplate'),deleteSandbox);
+deleteSandbox.deleteHouseTemplate('local-only');
+assert.strictEqual(deleteSandbox.appData.houseTemplates.length,0,
+  'authorized local-only template remains normally deletable');
+
 const details=extract(scriptSource,'renderHouseTemplateDetails');
 assert(details.includes('قالب مشترك — للعرض والاستخدام فقط'));
 assert(details.indexOf('if (canEditContent)')<details.indexOf('openHouseTemplateEditor'));
 assert(details.indexOf('if (canEditContent)')<details.indexOf('deleteHouseTemplate'));
+assert(/if \(canEditContent\) \{\s*h \+= '<button class="btn btn-teal btn-sm" onclick="duplicateHouseTemplate/.test(details),
+  'shared template copy button must be owner-gated');
 assert(!/\.rpc\s*\(/.test(authSource));
 console.log('shared house template read-only tests passed');

@@ -12,11 +12,12 @@ const manager=fs.readFileSync(path.join(root,'js/sync/conference-edit-lock-manag
 const previous='exclusive-edit-lock-v1';
 const next='organization-membership-operation-key-v1';
 const mobileRoomInputRevision='anchored-glass-person-picker-v5';
-const shellRevision='rejected-shared-template-cleanup-v1';
+const shellRevision='shared-template-copy-guard-v1';
 const testTemplateCleanupRevision='test-house-template-cleanup-v1';
 const templateDiagnosticRevision='template-diagnostic-export-v1';
 const partialTemplateCleanupRevision='partial-template-state-cleanup-v1';
 const rejectedSharedTemplateCleanupRevision='rejected-shared-template-cleanup-v1';
+const sharedTemplateCopyGuardRevision='shared-template-copy-guard-v1';
 const hardeningRevision='legacy-rpc-hardening-v1';
 const memberDiagnosticsRevision='repository-rejection-diagnostics-v1';
 const legacyConferenceRevision='legacy-conference-preflight-v2';
@@ -37,7 +38,7 @@ const houseTemplateRevision='template-floor-conference-sync-v1';
 const pwaAssetRevision=next;
 const appAssetRevision='section-accommodation-edit-lock-v1';
 const snapshotGuardRevision='conference-snapshot-device-guard-v1';
-const priorFrontendRevision=sharedTemplateReadOnlyRevision;
+const priorFrontendRevision=sharedTemplateCopyGuardRevision;
 const conferenceSyncRevision='conference-organization-context-v1';
 const organizationMembersRevision='admin-xlsx-template-room-fixes-v1';
 assert(worker.includes("CACHE_REVISION = '"+shellRevision+"'"));
@@ -89,10 +90,17 @@ assert(worker.includes("'./"+cleanupAsset+"'"));
   assert(worker.includes("'./"+versioned+"'"),'app shell missing '+versioned);
 });
 [
-  'js/sync/rejected-shared-template-cleanup.js',
-  'js/sync/sync-settings-ui.js'
+  'js/sync/rejected-shared-template-cleanup.js'
 ].forEach(asset=>{
   const versioned=asset+'?rev='+rejectedSharedTemplateCleanupRevision;
+  assert(index.includes(versioned),'index missing '+versioned);
+  assert(worker.includes("'./"+versioned+"'"),'app shell missing '+versioned);
+});
+[
+  'js/sync/local-template-copy-cleanup.js',
+  'js/sync/sync-settings-ui.js'
+].forEach(asset=>{
+  const versioned=asset+'?rev='+sharedTemplateCopyGuardRevision;
   assert(index.includes(versioned),'index missing '+versioned);
   assert(worker.includes("'./"+versioned+"'"),'app shell missing '+versioned);
 });
@@ -198,10 +206,10 @@ assert(worker.includes("'./"+organizationMembersAsset+"'"),'app shell missing de
   assert(index.includes(versioned),'index missing '+versioned);
   assert(worker.includes("'./"+versioned+"'"),'app shell missing '+versioned);
 });
-const isolatedTemplateSync='js/sync/organization-template-sync.js?rev='+sharedTemplateReadOnlyRevision;
+const isolatedTemplateSync='js/sync/organization-template-sync.js?rev='+sharedTemplateCopyGuardRevision;
 assert(index.includes(isolatedTemplateSync));
 assert(worker.includes("'./"+isolatedTemplateSync+"'"));
-const contentAuthorization='js/sync/house-template-content-authorization.js?rev='+sharedTemplateReadOnlyRevision;
+const contentAuthorization='js/sync/house-template-content-authorization.js?rev='+sharedTemplateCopyGuardRevision;
 assert(index.includes(contentAuthorization));
 assert(worker.includes("'./"+contentAuthorization+"'"));
 const officialTemplateSharingUi='js/sync/house-template-sharing-ui.js?rev='+

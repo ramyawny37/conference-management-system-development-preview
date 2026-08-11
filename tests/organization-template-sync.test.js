@@ -51,6 +51,8 @@ function runtime(remoteRows,settings){
   assert(r.rpcCalls.some(call=>call.name==='apply_library_template_content_operation'&&call.args.p_base_revision===4));
 
   r=runtime([]);r.window.appData.houseTemplates=[{id:'legacy',name:'Legacy',floors:[]}];
+  assert.equal(r.window.OrganizationTemplateSync.canEditHouseTemplate('legacy'),true,
+    'ownerless local-only template remains editable');
   const refreshed=await r.window.OrganizationTemplateSync.refresh();
   assert.equal(refreshed.status,'adoption_required');
   assert.equal(r.rpcCalls.filter(call=>call.name.includes('apply_')).length,0,'refresh must not adopt implicitly');
@@ -151,6 +153,10 @@ function runtime(remoteRows,settings){
   await r.window.OrganizationTemplateSync.refresh();
   assert.equal((await r.window.OrganizationTemplateSync.changeHouseTemplateAccess('not-owned',ORG_A,'grant')).status,'not_authorized');
   assert.equal(r.rpcCalls.filter(call=>call.name.includes('apply_')).length,0);
+
+  r=runtime([]);r.window.appData.houseTemplates=[{id:'ambiguous-cloud',name:'Ambiguous',floors:[],cloudRevision:1,cloudSyncStatus:'synced',accessibleOrganizationIds:[]}];
+  assert.equal(r.window.OrganizationTemplateSync.canEditHouseTemplate('ambiguous-cloud'),false,
+    'ownerless template carrying cloud metadata must fail closed');
 
   r=runtime([],{failAccess:1});r.window.appData.houseTemplates=[{id:'failed-official',name:'Failed',floors:[],accessibleOrganizationIds:[]}];
   await r.window.OrganizationTemplateSync.refresh();
