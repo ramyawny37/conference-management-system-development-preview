@@ -215,6 +215,37 @@
     });
   }
 
+  function renderTemplateDiagnosticExport(){
+    return '<section class="settings-section sync-settings-section">'+
+      '<div class="settings-section-title">تشخيص القوالب المحلية</div>'+
+      '<div class="sync-settings-panel">'+
+      '<div class="sync-settings-message">يُصدّر بيانات القوالب وعملياتها فقط دون أي تعديل أو مزامنة.</div>'+
+      '<div class="sync-settings-actions"><button type="button" class="btn btn-blue btn-sm" '+
+      'onclick="SyncSettingsUI.exportTemplateDiagnostics()">'+
+      'تصدير تشخيص القوالب والعمليات</button></div></div></section>';
+  }
+
+  function exportTemplateDiagnostics(){
+    var service=global.TemplateDiagnosticExport;
+    if(!service||typeof service.exportBundle!=='function'){
+      if(typeof global.showToast==='function'){
+        global.showToast('تعذر تشغيل تصدير تشخيص القوالب.','#E74C3C');
+      }
+      return Promise.resolve(false);
+    }
+    return service.exportBundle().then(function(result){
+      if(typeof global.showToast==='function'){
+        global.showToast('تم تصدير تشخيص القوالب والعمليات: '+result.fileName);
+      }
+      return result;
+    }).catch(function(){
+      if(typeof global.showToast==='function'){
+        global.showToast('تعذر تصدير تشخيص القوالب.','#E74C3C');
+      }
+      return false;
+    });
+  }
+
   function refreshAccommodationLockDiagnostics(){
     var manager=global.ConferenceEditLockManager;
     if(!manager||typeof manager.refreshDiagnostics!=='function')return Promise.resolve(false);
@@ -239,7 +270,8 @@
     var device=getDevice();
     var preferences=getAutomaticSyncPreferences();
     var email=auth.user&&auth.user.email?auth.user.email:'';
-    var html=renderMemberRuntimeDiagnostics();
+    var html=renderTemplateDiagnosticExport();
+    html+=renderMemberRuntimeDiagnostics();
     html+=renderOrphanedCleanup();
     html+=renderTestHouseTemplateCleanup();
     html+='<section class="settings-section sync-settings-section">';
@@ -770,6 +802,7 @@
     refreshAuthState:refreshAuthState,
     saveDeviceName:saveDeviceName,
     exportDeviceRescueBundle:exportDeviceRescueBundle,
+    exportTemplateDiagnostics:exportTemplateDiagnostics,
     refreshAccommodationLockDiagnostics:refreshAccommodationLockDiagnostics,
     releaseOwnedAccommodationLock:releaseOwnedAccommodationLock,
     removeOrphanedConference:removeOrphanedConference,

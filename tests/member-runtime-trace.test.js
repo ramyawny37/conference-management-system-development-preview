@@ -5,11 +5,12 @@ const vm=require('vm');
 
 const root=path.join(__dirname,'..');
 const marker='canonical-conference-schema-v1';
-const cacheMarker='repository-rejection-diagnostics-v1';
-const shellMarker='repository-rejection-diagnostics-v1';
+const cacheMarker='template-diagnostic-export-v1';
+const memberDiagnosticsAssetMarker='repository-rejection-diagnostics-v1';
+const shellMarker='template-diagnostic-export-v1';
 const houseMarker='template-floor-conference-sync-v1';
 const scriptMarker='conference-create-authorization-v1';
-const privacyMarker='test-house-template-cleanup-v1';
+const privacyMarker='template-diagnostic-export-v1';
 const realtimeMarker='template-sync-isolation-v1';
 const source=fs.readFileSync(path.join(
   root,'js/sync/member-runtime-diagnostics.js'),'utf8');
@@ -105,7 +106,7 @@ const index=fs.readFileSync(path.join(root,'index.html'),'utf8');
 const worker=fs.readFileSync(path.join(root,'service-worker.js'),'utf8');
 assert.ok(worker.includes("const CACHE_REVISION = '"+shellMarker+"';"));
 [
-  'js/sync/member-runtime-diagnostics.js?rev='+cacheMarker,
+  'js/sync/member-runtime-diagnostics.js?rev='+memberDiagnosticsAssetMarker,
   'js/sync/conference-realtime-manager.js?rev='+realtimeMarker,
   'js/sync/automatic-sync-orchestrator.js?rev=realtime-reconnect-catchup-v1',
   'js/sync/conference-locks.js?rev=conference-lock-release-diagnostics-v1',
