@@ -4,6 +4,17 @@
   var STABLE_ORPHAN_REASONS=Object.freeze([
     'membership_read_denied','conference_unavailable','conference_not_found'
   ]);
+  var CONFIRMED_MISSING_CLOUD=Object.freeze({
+    'd257b1c5-cc20-4e1c-a188-5572d334e485':Object.freeze({
+      mode:'unpublished',remoteConferenceId:null,
+      verifiedAt:'2026-08-11'
+    }),
+    '0e854d69-8420-44ba-86e5-5b6a1616e708':Object.freeze({
+      mode:'linked',
+      remoteConferenceId:'fdbcde22-528a-44f3-9ee0-e5e912695585',
+      verifiedAt:'2026-08-11'
+    })
+  });
   var SCOPED_STORAGE_KEYS=Object.freeze([
     'conf_v5',
     'conference_manager_sync_links',
@@ -58,6 +69,25 @@
     var values=data&&Array.isArray(data.conferences)?data.conferences:[];
     return values.find(function(item){return String(item&&item.id||'')===id;})||null;
   }
+  function lifecycle(data,id){
+    return data&&data.conferenceLifecycle&&
+      data.conferenceLifecycle.records&&
+      data.conferenceLifecycle.records[id]||null;
+  }
+  function confirmedMissingCloud(id,link,d){
+    var proof=CONFIRMED_MISSING_CLOUD[id];
+    if(!proof)return null;
+    if(proof.mode==='unpublished'){
+      var record=lifecycle(d.appData,id);
+      if(link||!record||record.localLifecycle!=='active'||
+        record.cloudLifecycle!=='unpublished')return null;
+      return proof;
+    }
+    if(!link||String(link.localConferenceId||'')!==id||
+      String(link.remoteConferenceId||'')!==proof.remoteConferenceId||
+      link.linkStatus!=='linked')return null;
+    return proof;
+  }
   function inspect(localConferenceId,options){
     var id=String(localConferenceId||'');
     var d=dependencies(options);
@@ -67,6 +97,17 @@
     if(!id||!conference(d.appData,id))return outcome(false,'local_conference_missing');
     var link=d.links&&typeof d.links.get==='function'
       ?d.links.get(id,options&&options.linkOptions):null;
+    var proof=confirmedMissingCloud(id,link,d);
+    if(proof){
+      return outcome(true,proof.mode==='unpublished'
+        ?'confirmed_local_unpublished':'confirmed_linked_orphan',{
+        localConferenceId:id,
+        remoteConferenceId:proof.remoteConferenceId,
+        reason:'cloud_conference_missing_verified',
+        proofVerifiedAt:proof.verifiedAt,
+        proofMode:proof.mode
+      });
+    }
     if(!link||String(link.localConferenceId||'')!==id||
       !String(link.remoteConferenceId||'')){
       return outcome(false,'conference_link_missing');
@@ -88,6 +129,29 @@
       localConferenceId:id,
       remoteConferenceId:String(link.remoteConferenceId),
       reason:reason
+    });
+  }
+  function matchingRecordCount(records,ids){
+    return (Array.isArray(records)?records:[]).filter(function(record){
+      return identifiersMatch(record,ids);
+    }).length;
+  }
+  function inspectDetails(localConferenceId,options){
+    var inspected=inspect(localConferenceId,options);
+    if(!inspected.ok)return Promise.resolve(inspected);
+    var d=dependencies(options);
+    if(!d.db||typeof d.db.getAllRecords!=='function'){
+      return Promise.resolve(outcome(false,'queue_count_unavailable'));
+    }
+    var ids=[inspected.data.localConferenceId,
+      inspected.data.remoteConferenceId].filter(Boolean);
+    return d.db.getAllRecords('sync_operations_queue').then(function(records){
+      var data=Object.assign({},inspected.data,{
+        pendingQueueCount:matchingRecordCount(records,ids)
+      });
+      return outcome(true,inspected.status,data);
+    }).catch(function(){
+      return outcome(false,'queue_count_unavailable');
     });
   }
   function identifiersMatch(record,ids){
@@ -304,8 +368,9 @@
   }
 
   global.OrphanedConferenceCleanup=Object.freeze({
-    inspect:inspect,cleanup:cleanup,
+    inspect:inspect,inspectDetails:inspectDetails,cleanup:cleanup,
     stableReasons:STABLE_ORPHAN_REASONS.slice(),
+    confirmedMissingCloudIds:Object.keys(CONFIRMED_MISSING_CLOUD),
     stores:CLEANUP_STORES.slice(),
     scopedStorageKeys:SCOPED_STORAGE_KEYS.slice()
   });

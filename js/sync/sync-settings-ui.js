@@ -6,6 +6,8 @@
   var explicitConnectivity='unknown';
   var orchestratorSubscribed=false;
   var lastRenderedSyncFingerprint=null;
+  var orphanedCleanupDetails=Object.create(null);
+  var orphanedCleanupDetailsLoading=Object.create(null);
   var RENDERED_CONFERENCE_STATES=Object.freeze([
     'needs_resolution',
     'finalizing_conflict',
@@ -323,10 +325,30 @@
     if(!conference||!service||typeof service.inspect!=='function')return '';
     var inspected=service.inspect(conference.id);
     if(!inspected||inspected.ok!==true||
-      inspected.status!=='orphan_confirmed')return '';
+      ['orphan_confirmed','confirmed_local_unpublished',
+        'confirmed_linked_orphan'].indexOf(inspected.status)<0)return '';
+    var id=String(conference.id||'');
+    var details=orphanedCleanupDetails[id]||null;
+    if(!details&&!orphanedCleanupDetailsLoading[id]&&
+      typeof service.inspectDetails==='function'){
+      orphanedCleanupDetailsLoading[id]=true;
+      service.inspectDetails(id).then(function(result){
+        if(result&&result.ok===true)orphanedCleanupDetails[id]=result;
+      }).finally(function(){
+        orphanedCleanupDetailsLoading[id]=false;
+        rerender();
+      });
+    }
+    var queueCount=details&&details.data
+      ?Number(details.data.pendingQueueCount||0):null;
+    var queueWarning=queueCount>0
+      ?'<div class="settings-summary-note"><strong>تحذير:</strong> توجد '+
+        escapeHtml(queueCount)+' عملية محلية غير مرفوعة. سيتم حذفها نهائيًا من هذا الجهاز فقط ولن يتم تشغيلها أو رفعها.</div>'
+      :'';
     return '<section class="settings-section sync-settings-section">'+
       '<div class="settings-section-title">نسخة محلية لمؤتمر غير متاح</div>'+
       '<div class="settings-summary-note">تعذر إثبات صلاحية الوصول إلى المؤتمر السحابي. يمكن إزالة نسخته المحلية من هذا الجهاز فقط.</div>'+
+      queueWarning+
       '<button class="btn btn-red" onclick="SyncSettingsUI.removeOrphanedConference()">إزالة النسخة المحلية لهذا المؤتمر</button>'+
       '<div id="orphaned_cleanup_message" class="sync-settings-message"></div>'+
       '</section>';
@@ -400,13 +422,27 @@
     if(!conference||!service||typeof service.cleanup!=='function'){
       return Promise.resolve({ok:false,status:'cleanup_unavailable'});
     }
-    var warning='سيتم حذف النسخة المحلية لهذا المؤتمر من هذا الجهاز فقط. لن يتم حذف أي بيانات سحابية، ولن يتم حذف الحساب أو المؤسسة، ولن تتغير هوية الجهاز أو جلسة تسجيل الدخول. هل تريد المتابعة؟';
-    if(!global.confirm||global.confirm(warning)!==true){
-      return Promise.resolve({ok:false,status:'cancelled'});
-    }
     setBusy(true);
-    return service.cleanup(conference.id).then(function(result){
+    var id=String(conference.id||'');
+    var details=typeof service.inspectDetails==='function'
+      ?service.inspectDetails(id):Promise.resolve(service.inspect(id));
+    return details.then(function(inspected){
+      if(!inspected||inspected.ok!==true)return inspected;
+      var queueCount=Number(inspected.data&&
+        inspected.data.pendingQueueCount||0);
+      var warning='سيتم حذف النسخة المحلية لهذا المؤتمر من هذا الجهاز فقط. لن يتم حذف أي بيانات سحابية، ولن يتم حذف الحساب أو المؤسسة، ولن تتغير هوية الجهاز أو جلسة تسجيل الدخول.';
+      if(queueCount>0){
+        warning+=' توجد '+queueCount+
+          ' عملية محلية غير مرفوعة وسيتم حذفها نهائيًا من هذا الجهاز فقط دون تشغيلها أو رفعها.';
+      }
+      warning+=' هل تريد المتابعة؟';
+      if(!global.confirm||global.confirm(warning)!==true){
+        return {ok:false,status:'cancelled'};
+      }
+      return service.cleanup(id);
+    }).then(function(result){
       if(!result||result.ok!==true){
+        if(result&&result.status==='cancelled')return result;
         message('orphaned_cleanup_message',
           'تعذر إزالة النسخة المحلية بأمان: '+
           String(result&&result.error&&result.error.code||result&&result.status||'error'),
@@ -416,6 +452,7 @@
       if(typeof global.syncCurrentConferenceRefs==='function'){
         global.syncCurrentConferenceRefs();
       }
+      delete orphanedCleanupDetails[id];
       if(typeof global.showSelectConferenceModal==='function'){
         global.showSelectConferenceModal();
       }

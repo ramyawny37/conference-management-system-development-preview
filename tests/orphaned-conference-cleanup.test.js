@@ -6,6 +6,9 @@ const vm=require('vm');
 
 const LOCAL='058f2855-ae3a-4768-8c60-931a97c88150';
 const REMOTE='ed337f4c-58fa-4e21-be27-9e9645f42860';
+const UNPUBLISHED='d257b1c5-cc20-4e1c-a188-5572d334e485';
+const RAMI='0e854d69-8420-44ba-86e5-5b6a1616e708';
+const RAMI_REMOTE='fdbcde22-528a-44f3-9ee0-e5e912695585';
 const OTHER='835cb97d-50cd-4bba-8285-1d81dfa8608e';
 const STORE_NAMES=[
   'conferences','rooms','sync_metadata','pending_operations',
@@ -15,6 +18,8 @@ const STORE_NAMES=[
 ];
 const UI_SOURCE=fs.readFileSync(path.join(__dirname,
   '../js/sync/sync-settings-ui.js'),'utf8');
+const SERVICE_SOURCE=fs.readFileSync(path.join(__dirname,
+  '../js/sync/orphaned-conference-cleanup.js'),'utf8');
 
 function clone(value){return JSON.parse(JSON.stringify(value));}
 function storage(initial){
@@ -65,21 +70,32 @@ function objectStore(records){
     records(){return clone(values);}
   };
 }
-function fixture(environment='production'){
+function fixture(environment='production',settings={}){
+  const target=settings.localId||LOCAL;
+  const remote=settings.remoteId===undefined?REMOTE:settings.remoteId;
+  const linked=settings.linked!==false;
+  const queueCount=settings.queueCount===undefined?1:settings.queueCount;
+  const targetRecordCount=settings.targetRecordCount===undefined
+    ?1:settings.targetRecordCount;
   const appData={
-    currentConferenceId:LOCAL,
-    conferences:[{id:LOCAL,name:'Production Smoke Test 2'},{id:OTHER,name:'Real'}],
-    conferenceLifecycle:{records:{[LOCAL]:{cloudLifecycle:'cloud_linked'},[OTHER]:{cloudLifecycle:'cloud_linked'}}}
+    currentConferenceId:target,
+    conferences:[{id:target,name:settings.name||'Production Smoke Test 2'},
+      {id:OTHER,name:'Real'}],
+    conferenceLifecycle:{records:{
+      [target]:{localLifecycle:'active',cloudLifecycle:settings.cloudLifecycle||'cloud_linked'},
+      [OTHER]:{localLifecycle:'active',cloudLifecycle:'cloud_linked'}
+    }}
   };
-  const links={
-    [LOCAL]:{localConferenceId:LOCAL,remoteConferenceId:REMOTE,linkStatus:'linked',knownRevision:13},
-    [OTHER]:{localConferenceId:OTHER,remoteConferenceId:'916c0d83-4c5a-4a9e-89bb-4faa671166f7',linkStatus:'linked',knownRevision:2}
-  };
+  const links={[OTHER]:{localConferenceId:OTHER,
+    remoteConferenceId:'916c0d83-4c5a-4a9e-89bb-4faa671166f7',
+    linkStatus:'linked',knownRevision:2}};
+  if(linked)links[target]={localConferenceId:target,
+    remoteConferenceId:remote,linkStatus:'linked',knownRevision:13};
   const localStorage=storage({
     conf_v5:JSON.stringify(appData),
     conference_manager_sync_links:JSON.stringify(links),
     conference_manager_link_status_diagnostics_v1:JSON.stringify([
-      {localConferenceId:LOCAL,reason:'membership_read_denied'},
+      {localConferenceId:target,reason:'membership_read_denied'},
       {localConferenceId:OTHER,reason:'linked'}
     ]),
     'sb-mpezfbvcdfxpgflehuot-auth-token':'AUTH_PRESERVED',
@@ -90,10 +106,13 @@ function fixture(environment='production'){
   STORE_NAMES.forEach(name=>{
     stores[name]=objectStore(name==='conferences'?[{
       conferenceId:'**app_snapshot**',data:appData
-    },{conferenceId:LOCAL},{conferenceId:OTHER}]:[
-      {conferenceId:REMOTE,localConferenceId:LOCAL,value:'target'},
-      {conferenceId:OTHER,localConferenceId:OTHER,value:'other'}
-    ]);
+    },{conferenceId:target},{conferenceId:OTHER}]:[
+      ...Array.from({length:name==='sync_operations_queue'
+        ?queueCount:targetRecordCount},(_,index)=>({
+        operationId:'target-'+index,conferenceId:remote||target,
+        localConferenceId:target,value:'target'
+      })),
+      {conferenceId:OTHER,localConferenceId:OTHER,value:'other'}]);
   });
   const authState={authenticated:true,user:{id:'user-one'}};
   const deviceState={id:'device-one',deviceName:'Windows'};
@@ -103,17 +122,22 @@ function fixture(environment='production'){
     structuredClone:clone,queueMicrotask,
     BrowserStorageNamespace:{environment,key:value=>value},
     localStorage,appData,
+    UploadService:{upload(){throw new Error('UPLOAD_CALLED');}},
+    SyncService:{sync(){throw new Error('SYNC_CALLED');}},
+    RetryService:{retry(){throw new Error('RETRY_CALLED');}},
+    RepairService:{repair(){throw new Error('REPAIR_CALLED');}},
     AppIndexedDB:{runTransaction(names,mode,executor){
       assert.deepStrictEqual(Array.from(names),STORE_NAMES);
       assert.strictEqual(mode,'readwrite');
       return Promise.resolve(executor(stores));
-    }},
+    },getAllRecords(name){return Promise.resolve(stores[name].records());}},
     ConferenceLinkStore:{get(id){
       const all=JSON.parse(localStorage.getItem('conference_manager_sync_links')||'{}');
       return all[id]||null;
     }},
-    ConferenceRealtimeManager:{getState(id){return id===LOCAL?{
-      status:'suspended',reason:'membership_read_denied',cloudConferenceId:null
+    ConferenceRealtimeManager:{getState(id){return id===target?{
+      status:settings.realtimeStatus||'suspended',
+      reason:settings.realtimeReason||'membership_read_denied',cloudConferenceId:null
     }:null;}},
     AutomaticSyncOrchestrator:{stop(){stopCount++;return {ok:true,status:'stopped',promise:Promise.resolve()};}},
     SupabaseAuth:{getState(){return clone(authState);}},
@@ -175,12 +199,61 @@ function fixture(environment='production'){
   assert.strictEqual(second.status,'already_clean');
   assert.strictEqual(env.stopCount,1,'idempotent cleanup must not stop runtime again');
 
+  const unpublished=fixture('production',{
+    localId:UNPUBLISHED,remoteId:null,linked:false,
+    cloudLifecycle:'unpublished',name:'Production Smoke Test',
+    queueCount:0,targetRecordCount:0
+  });
+  const unpublishedInspection=unpublished.sandbox.OrphanedConferenceCleanup
+    .inspect(UNPUBLISHED);
+  assert.strictEqual(unpublishedInspection.ok,true);
+  assert.strictEqual(unpublishedInspection.status,'confirmed_local_unpublished');
+  unpublished.localStorage.setItem('conference_manager_linking_attempts_v1',
+    JSON.stringify({[UNPUBLISHED]:{localConferenceId:UNPUBLISHED}}));
+  const unpublishedCleanup=await unpublished.sandbox.OrphanedConferenceCleanup
+    .cleanup(UNPUBLISHED);
+  assert.strictEqual(unpublishedCleanup.ok,true);
+  assert.deepStrictEqual(JSON.parse(unpublished.localStorage.getItem(
+    'conference_manager_linking_attempts_v1')),{});
+
+  const rami=fixture('production',{
+    localId:RAMI,remoteId:RAMI_REMOTE,name:'رامي عوني',
+    realtimeStatus:'closed',realtimeReason:'closed',queueCount:14,
+    targetRecordCount:0
+  });
+  const ramiInspection=rami.sandbox.OrphanedConferenceCleanup.inspect(RAMI);
+  assert.strictEqual(ramiInspection.ok,true);
+  assert.strictEqual(ramiInspection.status,'confirmed_linked_orphan');
+  const ramiDetails=await rami.sandbox.OrphanedConferenceCleanup
+    .inspectDetails(RAMI);
+  assert.strictEqual(ramiDetails.data.pendingQueueCount,14);
+  const ramiCleanup=await rami.sandbox.OrphanedConferenceCleanup.cleanup(RAMI);
+  assert.strictEqual(ramiCleanup.ok,true);
+  assert.strictEqual(ramiCleanup.data.storeCounts.sync_operations_queue,14);
+  assert.strictEqual(rami.stores.sync_operations_queue.records().length,1,
+    'only the other conference queue entry must remain');
+  const wrongRemote=fixture('production',{
+    localId:RAMI,remoteId:REMOTE,name:'رامي عوني',realtimeStatus:'closed',
+    realtimeReason:'closed'
+  });
+  assert.strictEqual(wrongRemote.sandbox.OrphanedConferenceCleanup
+    .inspect(RAMI).ok,false,'confirmed linked proof must require the exact remote ID');
+
   const network=fixture();
   network.sandbox.ConferenceRealtimeManager.getState=()=>({
     status:'suspended',reason:'prerequisite_check_failed',cloudConferenceId:null
   });
   assert.strictEqual(network.sandbox.OrphanedConferenceCleanup.inspect(LOCAL).ok,false,
     'temporary/network failure must not expose cleanup');
+  ['offline','timeout','authentication_required'].forEach(reason=>{
+    const transient=fixture('production',{
+      realtimeStatus:'suspended',realtimeReason:reason
+    });
+    assert.strictEqual(
+      transient.sandbox.OrphanedConferenceCleanup.inspect(LOCAL).ok,false,
+      reason+' must not prove that a cloud conference is missing'
+    );
+  });
 
   const development=fixture('development');
   assert.strictEqual(development.sandbox.OrphanedConferenceCleanup.inspect(LOCAL).status,
@@ -194,6 +267,28 @@ function fixture(environment='production'){
   assert(UI_SOURCE.includes('هوية الجهاز أو جلسة تسجيل الدخول'));
   assert(!/location\.reload\s*\(/.test(UI_SOURCE),
     'cleanup UI must not force a reload');
+  assert(!/\.(upload|sync|retry|repair)\s*\(/.test(SERVICE_SOURCE),
+    'local-only cleanup must not invoke cloud operations');
+
+  let rerenders=0;
+  const uiSandbox={window:null,Promise,JSON,Object,String,Number,Array,console,
+    document:null,renderSettings(){rerenders++;},
+    getCurrentConference(){return {id:RAMI,name:'رامي عوني'};},
+    OrphanedConferenceCleanup:{
+      inspect(){return {ok:true,status:'confirmed_linked_orphan',data:{}};},
+      inspectDetails(){return Promise.resolve({ok:true,
+        status:'confirmed_linked_orphan',data:{pendingQueueCount:14}});}
+    }
+  };
+  uiSandbox.window=uiSandbox;
+  vm.createContext(uiSandbox);
+  vm.runInContext(UI_SOURCE,uiSandbox);
+  uiSandbox.SyncSettingsUI.renderSection();
+  await new Promise(resolve=>setImmediate(resolve));
+  const queueWarningHtml=uiSandbox.SyncSettingsUI.renderSection();
+  assert(queueWarningHtml.includes('14 عملية محلية غير مرفوعة'));
+  assert(queueWarningHtml.includes('لن يتم تشغيلها أو رفعها'));
+  assert(rerenders>0,'queue count completion must request a safe rerender');
 
   console.log('orphaned conference local-only cleanup tests passed');
 })().catch(error=>{console.error(error);process.exitCode=1;});
