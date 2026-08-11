@@ -154,6 +154,15 @@
     );
     Array.prototype.forEach.call(controls,function(control){
       control.style.display='';
+      control.disabled=restricted;
+      control.setAttribute('aria-disabled',restricted?'true':'false');
+      if(restricted){
+        control.setAttribute(
+          'title','هذا الحساب غير مخول بإنشاء مؤتمرات جديدة.'
+        );
+      }else{
+        control.removeAttribute('title');
+      }
     });
     var notice=document.getElementById('systemAccessStartupNotice');
     var actions=document.querySelector('.startup-actions');

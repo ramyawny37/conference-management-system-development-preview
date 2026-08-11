@@ -10,7 +10,7 @@ const start=scriptSource.indexOf(
   'var conferenceOrganizationOptions='
 );
 const end=scriptSource.indexOf(
-  'function collectConferenceSelection()',start
+  'function openImportHouseModal()',start
 );
 assert.ok(start>=0&&end>start);
 const creationSource=scriptSource.slice(start,end);
@@ -65,6 +65,19 @@ function formEnvironment(overrides={}){
       organizationId:'11111111-1111-4111-8111-111111111111',
       displayName:'المؤسسة'
     }],
+    SupabaseAuth:{
+      getState(){return {authenticated:true};}
+    },
+    SystemAccessService:{
+      getState(){
+        return {
+          authenticated:true,profileLoaded:true,fresh:true,
+          accountStatus:'approved',canCreateConferences:true,
+          isSystemOwner:true
+        };
+      },
+      canCreateConference(){return true;}
+    },
     window:null,
     ge(id){return fields[id]||null;},
     calculateConferencePeriod(startDate,endDate){
@@ -108,6 +121,7 @@ function formEnvironment(overrides={}){
   vm.runInNewContext(creationSource,sandbox,{
     filename:'createConferenceFromSelection.js'
   });
+  sandbox.closeNewConferenceModal=function(){};
   sandbox.conferenceOrganizationOptions=[{
     organizationId:'11111111-1111-4111-8111-111111111111',
     displayName:'المؤسسة'
@@ -207,6 +221,52 @@ function formEnvironment(overrides={}){
   missingOrganization.sandbox.createConferenceFromSelection();
   assert.strictEqual(missingOrganization.saved.length,0);
   assert.deepStrictEqual(alerts,['يجب اختيار مؤسسة قبل إنشاء المؤتمر.']);
+
+  const unauthorizedCalls={repository:0,indexedDb:0,rpc:0,queue:0,sync:0};
+  const unauthorizedAlerts=[];
+  const unauthorized=formEnvironment({
+    SupabaseAuth:{
+      getState(){return {authenticated:true};}
+    },
+    SystemAccessService:{
+      getState(){
+        return {
+          authenticated:true,profileLoaded:true,fresh:true,
+          accountStatus:'approved',canCreateConferences:false,
+          isSystemOwner:false
+        };
+      },
+      canCreateConference(){return false;}
+    },
+    ConferenceRepository:{
+      addLocalConference(){unauthorizedCalls.repository++;}
+    },
+    AppIndexedDB:{putRecord(){unauthorizedCalls.indexedDb++;}},
+    SupabaseClientLayer:{
+      getClient(){return {rpc(){unauthorizedCalls.rpc++;}};}
+    },
+    ConferenceSyncQueue:{enqueue(){unauthorizedCalls.queue++;}},
+    OfflineFirstIntegration:{handleLocalSave(){unauthorizedCalls.sync++;}},
+    alert(message){unauthorizedAlerts.push(message);}
+  });
+  const unauthorizedCount=unauthorized.sandbox.appData.conferences.length;
+  assert.strictEqual(
+    unauthorized.sandbox.openNewConferenceModal('create'),false
+  );
+  assert.strictEqual(
+    unauthorized.sandbox.createConferenceFromSelection(),false
+  );
+  assert.strictEqual(
+    unauthorized.sandbox.appData.conferences.length,unauthorizedCount
+  );
+  assert.strictEqual(unauthorized.saved.length,0);
+  assert.deepStrictEqual(unauthorizedCalls,{
+    repository:0,indexedDb:0,rpc:0,queue:0,sync:0
+  });
+  assert.deepStrictEqual(unauthorizedAlerts,[
+    'هذا الحساب غير مخول بإنشاء مؤتمرات جديدة.',
+    'هذا الحساب غير مخول بإنشاء مؤتمرات جديدة.'
+  ]);
 
   console.log('local conference creation regression tests: passed');
 })();

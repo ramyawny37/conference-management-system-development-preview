@@ -12,7 +12,8 @@ const manager=fs.readFileSync(path.join(root,'js/sync/conference-edit-lock-manag
 const previous='exclusive-edit-lock-v1';
 const next='organization-membership-operation-key-v1';
 const mobileRoomInputRevision='anchored-glass-person-picker-v5';
-const shellRevision='test-house-template-cleanup-v1';
+const shellRevision='conference-create-authorization-v1';
+const testTemplateCleanupRevision='test-house-template-cleanup-v1';
 const hardeningRevision='legacy-rpc-hardening-v1';
 const memberDiagnosticsRevision='legacy-conference-preflight-v2';
 const legacyConferenceRevision='legacy-conference-preflight-v2';
@@ -30,7 +31,7 @@ const houseTemplateRevision='template-floor-conference-sync-v1';
 const pwaAssetRevision=next;
 const appAssetRevision='section-accommodation-edit-lock-v1';
 const snapshotGuardRevision='conference-snapshot-device-guard-v1';
-const priorFrontendRevision='person-picker-free-text-v1';
+const priorFrontendRevision='conference-create-authorization-v1';
 const conferenceSyncRevision='conference-organization-context-v1';
 const organizationMembersRevision='admin-xlsx-template-room-fixes-v1';
 assert(worker.includes("CACHE_REVISION = '"+shellRevision+"'"));
@@ -69,7 +70,7 @@ assert(index.includes('pwa.js?rev='+pwaAssetRevision));
   'js/sync/sync-settings-ui.js',
   'js/sync/test-house-template-cleanup.js'
 ].forEach(asset=>{
-  const versioned=asset+'?rev='+shellRevision;
+  const versioned=asset+'?rev='+testTemplateCleanupRevision;
   assert(index.includes(versioned),'index missing '+versioned);
   assert(worker.includes("'./"+versioned+"'"),'app shell missing '+versioned);
 });

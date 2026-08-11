@@ -8643,6 +8643,8 @@ function loadConferenceOrganizationOptions(){
 }
 
 function createConferenceFromSelection(){
+  if(conferenceDialogMode!=='edit'&&
+    !systemAccessAllowsConferenceCreation())return false;
   var name = (ge('cfg_name') ? ge('cfg_name').value.trim() : '') || 'المؤتمر';
   var startDate = ge('cfg_start') ? ge('cfg_start').value : '';
   var endDate = ge('cfg_end') ? ge('cfg_end').value : '';
@@ -8793,8 +8795,10 @@ function systemAccessAllowsConferenceCreation(){
   var authState=window.SupabaseAuth.getState();
   if(!authState||!authState.authenticated)return true;
   if(!window.SystemAccessService||
-    typeof window.SystemAccessService.getState!=='function'){
-    return true;
+    typeof window.SystemAccessService.getState!=='function'||
+    typeof window.SystemAccessService.canCreateConference!=='function'){
+    alert('تعذر التحقق حديثًا من صلاحية إنشاء المؤتمرات.');
+    return false;
   }
   var access=window.SystemAccessService.getState();
   if(!access.profileLoaded||!access.fresh){
@@ -8809,8 +8813,7 @@ function systemAccessAllowsConferenceCreation(){
     alert('الحساب موقوف.');
     return false;
   }
-  if(access.accountStatus==='approved'&&
-    !access.canCreateConferences&&!access.isSystemOwner){
+  if(!window.SystemAccessService.canCreateConference()){
     alert('هذا الحساب غير مخول بإنشاء مؤتمرات جديدة.');
     return false;
   }
@@ -8819,6 +8822,7 @@ function systemAccessAllowsConferenceCreation(){
 
 function openNewConferenceModal(mode){
   if(window.StartupAccessGate&&!window.StartupAccessGate.isAllowed())return false;
+  if(mode!=='edit'&&!systemAccessAllowsConferenceCreation())return false;
   conferenceDraft = null;
   conferenceDialogMode = (mode === 'edit') ? 'edit' : 'create';
   var current = getCurrentConference();
@@ -8836,6 +8840,7 @@ function openNewConferenceModal(mode){
   updateConferencePeriodPreview();
   if(conferenceDialogMode==='create')loadConferenceOrganizationOptions();
   else renderConferenceOrganizationOptions('');
+  return true;
 }
 
 function closeNewConferenceModal(){
@@ -8915,7 +8920,7 @@ function toggleConferenceRoom(houseId, floorId, roomId, checked){
 }
 
 function createNewConference(){
-  openNewConferenceModal('create');
+  return openNewConferenceModal('create');
 }
 
 function openImportHouseModal() {

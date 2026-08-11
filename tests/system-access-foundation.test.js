@@ -106,6 +106,7 @@ function loadService(options){
     structuredClone:structuredClone,
     localStorage:options.storage||storage(),
     navigator:options.navigator||{onLine:true},
+    document:options.document,
     SupabaseAuth:options.auth,
     SupabaseClientLayer:options.clientLayer
   };
@@ -197,6 +198,30 @@ async function run(){
     false
   );
 
+  var createControl={
+    style:{},disabled:false,attributes:{},
+    setAttribute:function(name,value){this.attributes[name]=value;},
+    removeAttribute:function(name){delete this.attributes[name];}
+  };
+  var memberUi=loadService({
+    auth:auth(userId),
+    clientLayer:clientLayer(userId,{
+      account_status:'approved',can_create_conferences:false
+    },[]),
+    document:{
+      querySelectorAll:function(){return [createControl];},
+      querySelector:function(){return null;},
+      getElementById:function(){return null;}
+    }
+  });
+  await memberUi.SystemAccessService.load();
+  assert.strictEqual(createControl.disabled,true);
+  assert.strictEqual(createControl.attributes['aria-disabled'],'true');
+  assert.strictEqual(
+    createControl.attributes.title,
+    'هذا الحساب غير مخول بإنشاء مؤتمرات جديدة.'
+  );
+
   var offline=loadService({
     storage:cache,
     navigator:{onLine:false},
@@ -239,7 +264,19 @@ async function run(){
   );
   assert.match(script,/!access\.profileLoaded\|\|!access\.fresh/);
   assert.match(script,/systemAccessAllowsConferenceCreation/);
+  assert.match(script,
+    /createConferenceFromSelection\(\)\s*\{[\s\S]{0,180}!systemAccessAllowsConferenceCreation\(\)/
+  );
+  assert.match(script,
+    /openNewConferenceModal\(mode\)\s*\{[\s\S]{0,220}!systemAccessAllowsConferenceCreation\(\)/
+  );
   assert.match(index,/data-system-conference-create/);
+  assert.match(
+    fs.readFileSync(path.join(
+      root,'js/supabase/system-access-service.js'
+    ),'utf8'),
+    /control\.disabled=restricted[\s\S]*aria-disabled/
+  );
   assert.match(serviceWorker,/js\/supabase\/system-access-service\.js/);
 
   console.log('system access foundation tests: passed');

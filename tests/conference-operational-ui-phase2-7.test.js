@@ -333,8 +333,8 @@ function lifecycle(cloudLifecycle,metadata=null){
   assert.ok(storagePosition>=0&&storagePosition<discoveryPosition);
   assert.ok(discoveryPosition<linkingPosition);
   assert.ok(linkingPosition<orchestratorPosition);
-  assert.doesNotMatch(startupSource,
-    /openNewConferenceModal\(mode\)\s*\{[\s\S]{0,120}systemAccessAllowsConferenceCreation/);
+  assert.match(startupSource,
+    /openNewConferenceModal\(mode\)\s*\{[\s\S]{0,220}systemAccessAllowsConferenceCreation/);
 
   console.log('conference operational UI phase 2.7 tests: passed');
 })().catch(error=>{

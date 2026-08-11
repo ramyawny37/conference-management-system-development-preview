@@ -6,7 +6,7 @@ const CACHE_NAMESPACE = IS_DEVELOPMENT
   ? 'cms:development:' + DEVELOPMENT_PROJECT_REF + ':'
   : '';
 const CACHE_PREFIX = CACHE_NAMESPACE + 'conference-manager-core-';
-const CACHE_REVISION = 'test-house-template-cleanup-v1';
+const CACHE_REVISION = 'conference-create-authorization-v1';
 const CACHE_NAME = CACHE_PREFIX + 'v' + APP_VERSION + '-' + CACHE_REVISION;
 const CORE_ASSETS = [
   './',
@@ -27,7 +27,7 @@ const CORE_ASSETS = [
   './js/supabase/runtime-config.js',
   './js/supabase/client.js',
   './js/supabase/auth.js?rev=organization-membership-operation-key-v1',
-  './js/supabase/system-access-service.js',
+  './js/supabase/system-access-service.js?rev=conference-create-authorization-v1',
   './js/sync/diagnostics-privacy-policy.js?rev=diagnostics-privacy-hardening-v1',
   './js/sync/organization-administration-utils.js',
   './js/sync/access-diagnostics-ui.js?rev=organization-membership-operation-key-v1',
@@ -109,7 +109,7 @@ const CORE_ASSETS = [
   './js/conference-template-houses-editor.js',
   './cards.js',
   './libs/xlsx.full.min.js',
-  './script.js?rev=person-picker-free-text-v1',
+  './script.js?rev=conference-create-authorization-v1',
   './version.js',
   './pwa.js?rev=organization-membership-operation-key-v1',
   './libs/html2canvas.min.js',
