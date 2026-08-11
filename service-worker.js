@@ -6,7 +6,7 @@ const CACHE_NAMESPACE = IS_DEVELOPMENT
   ? 'cms:development:' + DEVELOPMENT_PROJECT_REF + ':'
   : '';
 const CACHE_PREFIX = CACHE_NAMESPACE + 'conference-manager-core-';
-const CACHE_REVISION = 'make-a-difference-branding-v4';
+const CACHE_REVISION = 'orphaned-local-cleanup-v1';
 const CACHE_NAME = CACHE_PREFIX + 'v' + APP_VERSION + '-' + CACHE_REVISION;
 const CORE_ASSETS = [
   './',
@@ -56,7 +56,7 @@ const CORE_ASSETS = [
   './js/sync/conference-edit-lock-manager.js?rev=section-accommodation-edit-lock-v1',
   './js/sync/offline-first-integration.js?rev=revision-publish-1',
   './js/sync/device-rescue-export.js?rev=diagnostics-privacy-hardening-v1',
-  './js/sync/sync-settings-ui.js?rev=diagnostics-privacy-hardening-v1',
+  './js/sync/sync-settings-ui.js?rev=orphaned-local-cleanup-v1',
   './js/supabase/first-system-bootstrap-service.js?rev=first-owner-bootstrap-hardening-v1',
   './js/sync/startup-access-gate.js?rev=organization-membership-operation-key-v1',
   './js/sync/link-status-diagnostic-store.js',
@@ -87,6 +87,7 @@ const CORE_ASSETS = [
   './js/sync/conference-sync-state-resolver.js?rev=phase-5',
   './js/sync/conference-queue-integration.js?rev=queue-legacy-compat-v1',
   './js/sync/conference-realtime-manager.js?rev=template-sync-isolation-v1',
+  './js/sync/orphaned-conference-cleanup.js?rev=orphaned-local-cleanup-v1',
   './js/sync/conference-operational-ui.js',
   './js/sync/automatic-queue-runner.js?rev=template-sync-isolation-v1',
   './js/sync/automatic-conference-linking.js?rev=realtime-refresh-completion-v1',

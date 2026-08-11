@@ -238,6 +238,7 @@
     var preferences=getAutomaticSyncPreferences();
     var email=auth.user&&auth.user.email?auth.user.email:'';
     var html=renderMemberRuntimeDiagnostics();
+    html+=renderOrphanedCleanup();
     html+='<section class="settings-section sync-settings-section">';
     html+='<div class="settings-section-title">المزامنة والأجهزة</div>';
     html+='<div class="sync-settings-status">';
@@ -316,6 +317,21 @@
     return html;
   }
 
+  function renderOrphanedCleanup(){
+    var conference=currentConference();
+    var service=global.OrphanedConferenceCleanup;
+    if(!conference||!service||typeof service.inspect!=='function')return '';
+    var inspected=service.inspect(conference.id);
+    if(!inspected||inspected.ok!==true||
+      inspected.status!=='orphan_confirmed')return '';
+    return '<section class="settings-section sync-settings-section">'+
+      '<div class="settings-section-title">نسخة محلية لمؤتمر غير متاح</div>'+
+      '<div class="settings-summary-note">تعذر إثبات صلاحية الوصول إلى المؤتمر السحابي. يمكن إزالة نسخته المحلية من هذا الجهاز فقط.</div>'+
+      '<button class="btn btn-red" onclick="SyncSettingsUI.removeOrphanedConference()">إزالة النسخة المحلية لهذا المؤتمر</button>'+
+      '<div id="orphaned_cleanup_message" class="sync-settings-message"></div>'+
+      '</section>';
+  }
+
   function element(id){
     return global.document?global.document.getElementById(id):null;
   }
@@ -375,6 +391,40 @@
     Array.prototype.forEach.call(buttons,function(button){
       button.disabled=busy;
     });
+  }
+
+  function removeOrphanedConference(){
+    if(busy)return Promise.resolve({ok:false,status:'busy'});
+    var conference=currentConference();
+    var service=global.OrphanedConferenceCleanup;
+    if(!conference||!service||typeof service.cleanup!=='function'){
+      return Promise.resolve({ok:false,status:'cleanup_unavailable'});
+    }
+    var warning='سيتم حذف النسخة المحلية لهذا المؤتمر من هذا الجهاز فقط. لن يتم حذف أي بيانات سحابية، ولن يتم حذف الحساب أو المؤسسة، ولن تتغير هوية الجهاز أو جلسة تسجيل الدخول. هل تريد المتابعة؟';
+    if(!global.confirm||global.confirm(warning)!==true){
+      return Promise.resolve({ok:false,status:'cancelled'});
+    }
+    setBusy(true);
+    return service.cleanup(conference.id).then(function(result){
+      if(!result||result.ok!==true){
+        message('orphaned_cleanup_message',
+          'تعذر إزالة النسخة المحلية بأمان: '+
+          String(result&&result.error&&result.error.code||result&&result.status||'error'),
+          true);
+        return result;
+      }
+      if(typeof global.syncCurrentConferenceRefs==='function'){
+        global.syncCurrentConferenceRefs();
+      }
+      if(typeof global.showSelectConferenceModal==='function'){
+        global.showSelectConferenceModal();
+      }
+      if(typeof global.renderSettings==='function')global.renderSettings();
+      if(typeof global.showToast==='function'){
+        global.showToast('تمت إزالة النسخة المحلية للمؤتمر فقط.');
+      }
+      return result;
+    }).finally(function(){setBusy(false);});
   }
 
   function saveRuntimeConfig(){
@@ -622,6 +672,7 @@
     exportDeviceRescueBundle:exportDeviceRescueBundle,
     refreshAccommodationLockDiagnostics:refreshAccommodationLockDiagnostics,
     releaseOwnedAccommodationLock:releaseOwnedAccommodationLock,
+    removeOrphanedConference:removeOrphanedConference,
     saveAutomaticSyncPreferences:saveAutomaticSyncPreferences,
     setConnectivity:setConnectivity,
     getState:getState

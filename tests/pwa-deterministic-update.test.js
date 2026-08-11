@@ -12,7 +12,7 @@ const manager=fs.readFileSync(path.join(root,'js/sync/conference-edit-lock-manag
 const previous='exclusive-edit-lock-v1';
 const next='organization-membership-operation-key-v1';
 const mobileRoomInputRevision='anchored-glass-person-picker-v5';
-const shellRevision='make-a-difference-branding-v4';
+const shellRevision='orphaned-local-cleanup-v1';
 const hardeningRevision='legacy-rpc-hardening-v1';
 const memberDiagnosticsRevision='legacy-conference-preflight-v2';
 const legacyConferenceRevision='legacy-conference-preflight-v2';
@@ -59,9 +59,17 @@ assert(index.includes('pwa.js?rev='+pwaAssetRevision));
   assert(index.includes(versioned),'index missing '+versioned);
   assert(worker.includes("'./"+versioned+"'"),'app shell missing '+versioned);
 });
-['js/sync/diagnostics-privacy-policy.js','js/sync/sync-settings-ui.js',
+['js/sync/diagnostics-privacy-policy.js',
   'js/sync/device-rescue-export.js','js/sync/conflict-resolution-ui.js'].forEach(asset=>{
   const versioned=asset+'?rev='+privacyRevision;
+  assert(index.includes(versioned),'index missing '+versioned);
+  assert(worker.includes("'./"+versioned+"'"),'app shell missing '+versioned);
+});
+[
+  'js/sync/sync-settings-ui.js',
+  'js/sync/orphaned-conference-cleanup.js'
+].forEach(asset=>{
+  const versioned=asset+'?rev='+shellRevision;
   assert(index.includes(versioned),'index missing '+versioned);
   assert(worker.includes("'./"+versioned+"'"),'app shell missing '+versioned);
 });
