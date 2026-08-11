@@ -273,6 +273,7 @@
     var html=renderTemplateDiagnosticExport();
     html+=renderMemberRuntimeDiagnostics();
     html+=renderOrphanedCleanup();
+    html+=renderPartialTemplateStateCleanup();
     html+=renderTestHouseTemplateCleanup();
     html+='<section class="settings-section sync-settings-section">';
     html+='<div class="settings-section-title">المزامنة والأجهزة</div>';
@@ -404,6 +405,20 @@
       '<div class="settings-summary-note"><strong>تحذير:</strong> الحذف نهائي للقوالب المحددة ولن يمس الحساب أو المؤسسة أو الجهاز أو أي قالب آخر.</div>'+
       '<button class="btn btn-red" onclick="SyncSettingsUI.cleanupTestHouseTemplates()">تنظيف قوالب الاختبار</button>'+
       '<div id="test_template_cleanup_message" class="sync-settings-message"></div>'+
+      '</section>';
+  }
+
+  function renderPartialTemplateStateCleanup(){
+    var service=global.PartialTemplateStateCleanup;
+    if(!service||typeof service.inspectLocal!=='function')return '';
+    var inspected=service.inspectLocal();
+    if(!inspected||inspected.ok!==true||
+      inspected.status!=='partial_local_state_confirmed')return '';
+    return '<section class="settings-section sync-settings-section">'+
+      '<div class="settings-section-title">تنظيف حالة نقل قالب غير مكتملة</div>'+
+      '<div class="settings-summary-note">سيتم إرجاع قالب بيت ابونا سمعان إلى حالة شخصية مستقرة على هذا الجهاز فقط، وحذف محاولة الإتاحة الفاشلة المحددة دون إعادة تشغيلها أو تعديل Cloud.</div>'+
+      '<button class="btn btn-red" onclick="SyncSettingsUI.cleanupPartialTemplateState()">تنظيف الحالة الجزئية محليًا</button>'+
+      '<div id="partial_template_cleanup_message" class="sync-settings-message"></div>'+
       '</section>';
   }
 
@@ -556,6 +571,44 @@
         global.showToast('تم تنظيف قوالب الاختبار المحددة فقط.');
       }
       return result;
+    }).finally(function(){setBusy(false);});
+  }
+
+  function cleanupPartialTemplateState(){
+    if(busy)return Promise.resolve({ok:false,status:'busy'});
+    var service=global.PartialTemplateStateCleanup;
+    if(!service||typeof service.preflight!=='function'||
+      typeof service.cleanup!=='function'){
+      return Promise.resolve({ok:false,status:'cleanup_unavailable'});
+    }
+    setBusy(true);
+    return service.preflight().then(function(checked){
+      if(!checked||checked.ok!==true){
+        message('partial_template_cleanup_message',
+          'توقف التنظيف لعدم تطابق حالة القالب أو العملية المحددة: '+
+          String(checked&&checked.status||'verification_failed'),true);
+        return checked;
+      }
+      if(checked.status==='already_clean')return checked;
+      var warning='سيتم حذف محاولة إتاحة قالب بيت ابونا سمعان الفاشلة من هذا الجهاز فقط وإرجاع القالب إلى حالة شخصية مستقرة. لن يتم استدعاء Cloud أو إعادة المحاولة، ولن يتأثر الحساب أو المؤسسة أو اعتماد الجهاز. هل تريد المتابعة؟';
+      if(!global.confirm||global.confirm(warning)!==true){
+        return {ok:false,status:'cancelled'};
+      }
+      return service.cleanup();
+    }).then(function(cleaned){
+      if(!cleaned||cleaned.ok!==true){
+        if(cleaned&&cleaned.status==='cancelled')return cleaned;
+        message('partial_template_cleanup_message',
+          'تعذر تنظيف الحالة الجزئية بأمان: '+
+          String(cleaned&&cleaned.error&&cleaned.error.code||
+            cleaned&&cleaned.status||'cleanup_failed'),true);
+        return cleaned;
+      }
+      if(typeof global.renderSettings==='function')global.renderSettings();
+      if(typeof global.showToast==='function'){
+        global.showToast('تمت إعادة القالب إلى الحالة الشخصية المستقرة على هذا الجهاز فقط.');
+      }
+      return cleaned;
     }).finally(function(){setBusy(false);});
   }
 
@@ -806,6 +859,7 @@
     refreshAccommodationLockDiagnostics:refreshAccommodationLockDiagnostics,
     releaseOwnedAccommodationLock:releaseOwnedAccommodationLock,
     removeOrphanedConference:removeOrphanedConference,
+    cleanupPartialTemplateState:cleanupPartialTemplateState,
     cleanupTestHouseTemplates:cleanupTestHouseTemplates,
     saveAutomaticSyncPreferences:saveAutomaticSyncPreferences,
     setConnectivity:setConnectivity,

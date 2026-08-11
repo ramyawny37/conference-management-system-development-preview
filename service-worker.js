@@ -6,7 +6,7 @@ const CACHE_NAMESPACE = IS_DEVELOPMENT
   ? 'cms:development:' + DEVELOPMENT_PROJECT_REF + ':'
   : '';
 const CACHE_PREFIX = CACHE_NAMESPACE + 'conference-manager-core-';
-const CACHE_REVISION = 'legacy-template-adoption-authorization-v1';
+const CACHE_REVISION = 'partial-template-state-cleanup-v1';
 const CACHE_NAME = CACHE_PREFIX + 'v' + APP_VERSION + '-' + CACHE_REVISION;
 const CORE_ASSETS = [
   './',
@@ -48,6 +48,7 @@ const CORE_ASSETS = [
   './js/sync/startup-conference-discovery.js?rev=shared-template-library-v1',
   './js/sync/organization-template-sync.js?rev=legacy-template-adoption-authorization-v1',
   './js/sync/test-house-template-cleanup.js?rev=test-house-template-cleanup-v1',
+  './js/sync/partial-template-state-cleanup.js?rev=partial-template-state-cleanup-v1',
   './js/sync/legacy-template-adoption-ui.js?rev=legacy-template-adoption-authorization-v1',
   './js/sync/sync-processor.js?rev=startup-queue-recovery-v1',
   './js/sync/realtime.js',
@@ -58,7 +59,7 @@ const CORE_ASSETS = [
   './js/sync/offline-first-integration.js?rev=revision-publish-1',
   './js/sync/device-rescue-export.js?rev=diagnostics-privacy-hardening-v1',
   './js/sync/template-diagnostic-export.js?rev=template-diagnostic-export-v1',
-  './js/sync/sync-settings-ui.js?rev=template-diagnostic-export-v1',
+  './js/sync/sync-settings-ui.js?rev=partial-template-state-cleanup-v1',
   './js/supabase/first-system-bootstrap-service.js?rev=first-owner-bootstrap-hardening-v1',
   './js/sync/startup-access-gate.js?rev=organization-membership-operation-key-v1',
   './js/sync/link-status-diagnostic-store.js',
