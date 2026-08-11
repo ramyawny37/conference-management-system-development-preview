@@ -12,7 +12,7 @@ const manager=fs.readFileSync(path.join(root,'js/sync/conference-edit-lock-manag
 const previous='exclusive-edit-lock-v1';
 const next='organization-membership-operation-key-v1';
 const mobileRoomInputRevision='anchored-glass-person-picker-v5';
-const shellRevision='orphaned-local-cleanup-v2';
+const shellRevision='test-house-template-cleanup-v1';
 const hardeningRevision='legacy-rpc-hardening-v1';
 const memberDiagnosticsRevision='legacy-conference-preflight-v2';
 const legacyConferenceRevision='legacy-conference-preflight-v2';
@@ -67,12 +67,14 @@ assert(index.includes('pwa.js?rev='+pwaAssetRevision));
 });
 [
   'js/sync/sync-settings-ui.js',
-  'js/sync/orphaned-conference-cleanup.js'
+  'js/sync/test-house-template-cleanup.js'
 ].forEach(asset=>{
   const versioned=asset+'?rev='+shellRevision;
   assert(index.includes(versioned),'index missing '+versioned);
   assert(worker.includes("'./"+versioned+"'"),'app shell missing '+versioned);
 });
+assert(index.includes('js/sync/orphaned-conference-cleanup.js?rev=orphaned-local-cleanup-v2'));
+assert(worker.includes("'./js/sync/orphaned-conference-cleanup.js?rev=orphaned-local-cleanup-v2'"));
 [
   'js/supabase/organization-administration-service.js',
   'js/sync/conference-members-service.js',

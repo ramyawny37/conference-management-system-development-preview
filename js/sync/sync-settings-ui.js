@@ -241,6 +241,7 @@
     var email=auth.user&&auth.user.email?auth.user.email:'';
     var html=renderMemberRuntimeDiagnostics();
     html+=renderOrphanedCleanup();
+    html+=renderTestHouseTemplateCleanup();
     html+='<section class="settings-section sync-settings-section">';
     html+='<div class="settings-section-title">المزامنة والأجهزة</div>';
     html+='<div class="sync-settings-status">';
@@ -354,6 +355,26 @@
       '</section>';
   }
 
+  function renderTestHouseTemplateCleanup(){
+    var service=global.TestHouseTemplateCleanup;
+    if(!service||typeof service.inspectLocal!=='function')return '';
+    var inspected=service.inspectLocal();
+    if(!inspected||inspected.ok!==true||
+      inspected.status!=='local_candidates_confirmed')return '';
+    var templates=inspected.data&&inspected.data.templates||[];
+    var names=templates.map(function(item){
+      return '<li>'+escapeHtml(item.name)+' <span dir="ltr">('+escapeHtml(item.id)+')</span></li>';
+    }).join('');
+    return '<section class="settings-section sync-settings-section">'+
+      '<div class="settings-section-title">تنظيف قوالب الاختبار</div>'+
+      '<div class="settings-summary-note">سيتم حذف قوالب الاختبار التالية من Cloud ومن هذا الجهاز فقط بعد التحقق من الملكية وعدم وجود مؤتمرات:</div>'+
+      '<ul>'+names+'</ul>'+
+      '<div class="settings-summary-note"><strong>تحذير:</strong> الحذف نهائي للقوالب المحددة ولن يمس الحساب أو المؤسسة أو الجهاز أو أي قالب آخر.</div>'+
+      '<button class="btn btn-red" onclick="SyncSettingsUI.cleanupTestHouseTemplates()">تنظيف قوالب الاختبار</button>'+
+      '<div id="test_template_cleanup_message" class="sync-settings-message"></div>'+
+      '</section>';
+  }
+
   function element(id){
     return global.document?global.document.getElementById(id):null;
   }
@@ -459,6 +480,48 @@
       if(typeof global.renderSettings==='function')global.renderSettings();
       if(typeof global.showToast==='function'){
         global.showToast('تمت إزالة النسخة المحلية للمؤتمر فقط.');
+      }
+      return result;
+    }).finally(function(){setBusy(false);});
+  }
+
+  function cleanupTestHouseTemplates(){
+    if(busy)return Promise.resolve({ok:false,status:'busy'});
+    var service=global.TestHouseTemplateCleanup;
+    if(!service||typeof service.preflight!=='function'||
+      typeof service.cleanup!=='function'){
+      return Promise.resolve({ok:false,status:'cleanup_unavailable'});
+    }
+    setBusy(true);
+    return service.preflight().then(function(checked){
+      if(!checked||checked.ok!==true){
+        message('test_template_cleanup_message',
+          'توقف التنظيف لعدم اكتمال تحقق الأمان: '+
+          String(checked&&checked.status||'verification_failed'),true);
+        return checked;
+      }
+      if(checked.status==='already_clean')return checked;
+      var names=(checked.data.templates||[]).map(function(item){
+        return item.name+' ('+item.id+')';
+      }).join('\n');
+      var warning='سيتم حذف قوالب الاختبار التالية نهائيًا من Cloud ومن هذا الجهاز فقط:\n'+
+        names+'\nلن يتم نقلها إلى المؤسسة، ولن يتأثر الحساب أو المؤسسة أو اعتماد الجهاز أو أي قالب آخر. هل تريد المتابعة؟';
+      if(!global.confirm||global.confirm(warning)!==true){
+        return {ok:false,status:'cancelled'};
+      }
+      return service.cleanup();
+    }).then(function(result){
+      if(!result||result.ok!==true){
+        if(result&&result.status==='cancelled')return result;
+        message('test_template_cleanup_message',
+          'تعذر إكمال تنظيف قوالب الاختبار بأمان: '+
+          String(result&&result.error&&result.error.code||
+            result&&result.status||'cleanup_failed'),true);
+        return result;
+      }
+      if(typeof global.renderSettings==='function')global.renderSettings();
+      if(typeof global.showToast==='function'){
+        global.showToast('تم تنظيف قوالب الاختبار المحددة فقط.');
       }
       return result;
     }).finally(function(){setBusy(false);});
@@ -710,6 +773,7 @@
     refreshAccommodationLockDiagnostics:refreshAccommodationLockDiagnostics,
     releaseOwnedAccommodationLock:releaseOwnedAccommodationLock,
     removeOrphanedConference:removeOrphanedConference,
+    cleanupTestHouseTemplates:cleanupTestHouseTemplates,
     saveAutomaticSyncPreferences:saveAutomaticSyncPreferences,
     setConnectivity:setConnectivity,
     getState:getState

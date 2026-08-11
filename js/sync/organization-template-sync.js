@@ -43,6 +43,16 @@
   function grantAccess(type,id,organizationId,options){return queueAccess(type,id,organizationId,'grant').then(function(){return flush(options);});}
   function revokeAccess(type,id,organizationId,options){return queueAccess(type,id,organizationId,'revoke').then(function(){return flush(options);});}
   function scopeTemplate(){return true;}
+  function forgetDeletedTemplates(items){
+    (Array.isArray(items)?items:[]).forEach(function(item){
+      var type=String(item&&item.templateType||'');
+      var id=String(item&&item.templateId||'');
+      if(!TYPE_MAP[type]||!id)return;
+      baseline[key(type,id)]={templateType:type,templateId:id,
+        revision:Number(item.revision||0),deleted:true,
+        fingerprint:'',ownerUserId:''};
+    });
+  }
   function getState(){return {organizationIds:organizations.map(function(item){return item.organizationId;}),baselineCount:Object.keys(baseline).length,refreshActive:!!refreshFlight,flushActive:!!flushFlight,realtimeChannelCount:realtimeChannels.length,adoption:adoptionSnapshot()};}
-  global.OrganizationTemplateSync=Object.freeze({refresh:refresh,flush:flush,captureLocalSave:captureLocalSave,scopeTemplate:scopeTemplate,adoptLegacyTemplates:adoptLegacyTemplates,grantAccess:grantAccess,revokeAccess:revokeAccess,getAdoptionState:adoptionSnapshot,getState:getState,getDiagnostics:function(){return diagnostics.slice();}});
+  global.OrganizationTemplateSync=Object.freeze({refresh:refresh,flush:flush,captureLocalSave:captureLocalSave,scopeTemplate:scopeTemplate,adoptLegacyTemplates:adoptLegacyTemplates,grantAccess:grantAccess,revokeAccess:revokeAccess,forgetDeletedTemplates:forgetDeletedTemplates,getAdoptionState:adoptionSnapshot,getState:getState,getDiagnostics:function(){return diagnostics.slice();}});
 })(window);
