@@ -5,11 +5,11 @@ const vm=require('vm');
 
 const root=path.join(__dirname,'..');
 const marker='canonical-conference-schema-v1';
-const cacheMarker='legacy-conference-preflight-v2';
-const shellMarker='legacy-rpc-hardening-v1';
+const cacheMarker='repository-rejection-diagnostics-v1';
+const shellMarker='repository-rejection-diagnostics-v1';
 const houseMarker='template-floor-conference-sync-v1';
-const scriptMarker='person-picker-free-text-v1';
-const privacyMarker='diagnostics-privacy-hardening-v1';
+const scriptMarker='conference-create-authorization-v1';
+const privacyMarker='test-house-template-cleanup-v1';
 const realtimeMarker='template-sync-isolation-v1';
 const source=fs.readFileSync(path.join(
   root,'js/sync/member-runtime-diagnostics.js'),'utf8');
@@ -37,6 +37,9 @@ const sandbox={window:null,structuredClone:value=>JSON.parse(JSON.stringify(valu
     readAfterWriteCounts:{houses:0,activeRooms:0},
     currentConferenceResolved:true,currentConferenceContentComplete:true,
     activationReached:false,settingsConferenceResolved:true,
+    repositoryRejectionStatus:'invalid_repository',
+    repositoryRejectionIssueCodes:['LIFECYCLE_CLASSIFICATION_REQUIRED'],
+    repositoryVersion:1,
     remoteConferenceId:'sensitive-remote-id',conferenceName:'sensitive-name',
     accessToken:'sensitive-token',
     linkedRefreshCurrentStage:'trusted_check',
@@ -73,6 +76,10 @@ assert.strictEqual(first.orchestratorStarted,true);
 assert.strictEqual(first.lastScheduledReason,'startup');
 assert.strictEqual(first.materializationTrusted,true);
 assert.strictEqual(first.downloadRequestReached,false);
+assert.strictEqual(first.repositoryRejectionStatus,'invalid_repository');
+assert.deepStrictEqual(first.repositoryRejectionIssueCodes,
+  ['LIFECYCLE_CLASSIFICATION_REQUIRED']);
+assert.strictEqual(first.repositoryVersion,1);
 assert.strictEqual(first.realtimeManagerState[0].status,'subscribed');
 assert.strictEqual(first.realtimeTrace[0].stage,'START_SUBSCRIBE');
 assert.strictEqual(first['realtime.lastAcceptedRevision'],5);

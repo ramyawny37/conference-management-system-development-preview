@@ -121,7 +121,12 @@ function environment(settings={}){
       },
       remove(id){delete links[id];events.push('link:removed');return {ok:true};}
     },
-    ConferenceRepository:{addLocalConference(data,conference){
+    ConferenceRepository:{
+      getContract(){return {schemaVersion:settings.repositoryVersion||1};},
+      addLocalConference(data,conference){
+      if(settings.repositoryRejection){
+        return clone(settings.repositoryRejection);
+      }
       const next=clone(data);
       next.conferences=(next.conferences||[]).concat([clone(conference)]);
       return {ok:true,data:next};
@@ -237,6 +242,43 @@ function environment(settings={}){
   assert.strictEqual(first.configured(),1);
   assert.strictEqual(Object.prototype.hasOwnProperty.call(
     Object.values(first.links)[0],'membershipRole'),false);
+
+  const rejected=environment({cached:false,repositoryVersion:1,
+    repositoryRejection:{ok:false,status:'invalid_repository',issues:[
+      {code:'LIFECYCLE_CLASSIFICATION_REQUIRED',path:'sensitive.path'},
+      {code:'ORPHAN_LIFECYCLE_RECORD',path:'another.sensitive.path'}
+    ]}});
+  const rejectedResult=await rejected.api.open(rejected.remoteId);
+  assert.strictEqual(rejectedResult.ok,false);
+  assert.strictEqual(rejectedResult.status,'local_repository_rejected');
+  assert.deepStrictEqual(clone(rejectedResult.data),{
+    status:'invalid_repository',
+    issueCodes:[
+      'LIFECYCLE_CLASSIFICATION_REQUIRED','ORPHAN_LIFECYCLE_RECORD'
+    ],
+    repositoryVersion:1
+  });
+  assert.deepStrictEqual(clone(rejected.api.getState()
+    .repositoryRejectionIssueCodes),[
+      'LIFECYCLE_CLASSIFICATION_REQUIRED','ORPHAN_LIFECYCLE_RECORD'
+    ]);
+  assert.strictEqual(rejected.api.getState().repositoryRejectionStatus,
+    'invalid_repository');
+  assert.strictEqual(rejected.api.getState().repositoryVersion,1);
+  const repositoryDiagnostic=rejected.api.getDiagnostics().data.events
+    .find(item=>item.stage==='local_repository');
+  assert.deepStrictEqual(clone(repositoryDiagnostic.data),
+    clone(rejectedResult.data));
+  assert.strictEqual(JSON.stringify(repositoryDiagnostic).includes(
+    'sensitive.path'),false);
+  assert.deepStrictEqual(rejected.events,[],
+    'repository rejection must not persist');
+  assert.strictEqual(Object.keys(rejected.links).length,0);
+  assert.strictEqual(rejected.configured(),0);
+  assert.strictEqual(rejected.activated(),0);
+  assert.deepStrictEqual(rejected.forbidden(),{
+    queue:0,publication:0,rpc:0
+  });
 
   const repeated=environment();
   const one=repeated.api.open(repeated.remoteId);

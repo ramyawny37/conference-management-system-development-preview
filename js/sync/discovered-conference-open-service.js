@@ -22,6 +22,8 @@
     metadataRequestReached:false,downloadRequestReached:false,
     localMaterializedRevision:null,materializationTrusted:false,
     materializationComplete:false,activationReached:false,
+    repositoryRejectionStatus:null,repositoryRejectionIssueCodes:[],
+    repositoryVersion:null,
     linkedRefreshTrace:[],linkedRefreshCurrentStage:null,
     linkedRefreshExceptionStage:null
   };
@@ -59,6 +61,23 @@
     return {ok:true,status:'read',data:{events:copy(diagnostics)}};
   }
   function getState(){return copy(diagnosticState);}
+  function repositoryRejectionDetails(repository,added){
+    var contract=null;
+    try{
+      contract=repository&&typeof repository.getContract==='function'
+        ?repository.getContract():null;
+    }catch(error){contract=null;}
+    var issueCodes=added&&Array.isArray(added.issues)
+      ?added.issues.map(function(item){return String(item&&item.code||'');})
+        .filter(function(code){return !!code;})
+      :[];
+    return {
+      status:String(added&&added.status||'missing_result'),
+      issueCodes:issueCodes,
+      repositoryVersion:Number.isInteger(contract&&contract.schemaVersion)
+        ?contract.schemaVersion:null
+    };
+  }
   function traceLinkedRefresh(stage,status,reason){
     diagnosticState.linkedRefreshCurrentStage=String(stage||'unknown');
     diagnosticState.linkedRefreshTrace.push({
@@ -1060,7 +1079,15 @@
         if(!recovery){
           var added=d.repository&&typeof d.repository.addLocalConference==='function'
             ?d.repository.addLocalConference(previous,normalizedConference):null;
-          if(!added||!added.ok)return result(false,'local_repository_rejected');
+          if(!added||!added.ok){
+            var rejection=repositoryRejectionDetails(d.repository,added);
+            diagnosticState.repositoryRejectionStatus=rejection.status;
+            diagnosticState.repositoryRejectionIssueCodes=
+              rejection.issueCodes.slice();
+            diagnosticState.repositoryVersion=rejection.repositoryVersion;
+            diagnostic('local_repository','rejected',rejection);
+            return result(false,'local_repository_rejected',rejection);
+          }
           normalized=added.data;
         }
         var stagePromise;
@@ -1325,6 +1352,9 @@
     remoteConferenceId=String(remoteConferenceId||'');
     if(!remoteConferenceId)return Promise.resolve(result(false,'invalid_remote_id'));
     if(flights[remoteConferenceId])return flights[remoteConferenceId];
+    diagnosticState.repositoryRejectionStatus=null;
+    diagnosticState.repositoryRejectionIssueCodes=[];
+    diagnosticState.repositoryVersion=null;
     var d=deps(options),account=userId(d),activeClient=client(d),token=++generation;
     if(restoreIsolationPending(d,options)){
       return Promise.resolve(result(false,'restore_isolated'));
@@ -1399,6 +1429,9 @@
     diagnosticState.localMaterializedRevision=null;
     diagnosticState.materializationTrusted=false;
     diagnosticState.materializationComplete=false;
+    diagnosticState.repositoryRejectionStatus=null;
+    diagnosticState.repositoryRejectionIssueCodes=[];
+    diagnosticState.repositoryVersion=null;
     diagnosticState.downloadedRevision=null;
     diagnosticState.downloadedCounts=null;
     diagnosticState.materializedCounts=null;

@@ -1,7 +1,7 @@
 (function(global){
   'use strict';
   var RUNTIME_BUILD_REVISION='canonical-conference-schema-v1';
-  var SERVICE_WORKER_CACHE_REVISION='legacy-conference-preflight-v2';
+  var SERVICE_WORKER_CACHE_REVISION='repository-rejection-diagnostics-v1';
   var FIELDS=Object.freeze([
     'runtimeBuildRevision','serviceWorkerCacheRevision',
     'orchestratorStarted','lastScheduledReason',
@@ -11,6 +11,8 @@
     'materializationComplete','metadataRequestReached',
     'downloadRequestReached','downloadedRevision','downloadedCounts',
     'materializedCounts','persistedCounts','readAfterWriteCounts',
+    'repositoryRejectionStatus','repositoryRejectionIssueCodes',
+    'repositoryVersion',
     'currentConferenceResolved','currentConferenceContentComplete',
     'activationReached','settingsConferenceResolved',
     'realtimeManagerState','realtimeTrace','linkStatusWriteTrace',
@@ -192,6 +194,15 @@
       materializedCounts:copy(openState.materializedCounts),
       persistedCounts:copy(openState.persistedCounts),
       readAfterWriteCounts:copy(openState.readAfterWriteCounts),
+      repositoryRejectionStatus:
+        openState.repositoryRejectionStatus||null,
+      repositoryRejectionIssueCodes:Array.isArray(
+        openState.repositoryRejectionIssueCodes
+      )?openState.repositoryRejectionIssueCodes.map(function(code){
+        return String(code);
+      }):[],
+      repositoryVersion:Number.isInteger(openState.repositoryVersion)
+        ?openState.repositoryVersion:null,
       currentConferenceResolved:openState.currentConferenceResolved===true,
       currentConferenceContentComplete:
         openState.currentConferenceContentComplete===true,
