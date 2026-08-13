@@ -10,7 +10,7 @@
 <link rel="apple-touch-icon" sizes="180x180" href="./icons/apple-touch-icon-180x180-v3.png">
 
 <title>إرسالية اصنع فرق</title>
-<link rel="stylesheet" href="style.css?rev=accommodation-dashboard-v2">
+<link rel="stylesheet" href="style.css?rev=accommodation-reference-ui-v3">
 </head>
 <body>
 
@@ -24,6 +24,7 @@
 
 <div id="startupAccessGate" class="startup-access-gate"><div class="startup-access-card">جارٍ التحقق من جلسة الدخول...</div></div>
 <div class="topbar" id="applicationTopbar" style="display:none">
+  <div class="application-page-heading"><span class="application-page-icon">🛏️</span><div><strong>التسكين</strong><small>إدارة تسكين النزلاء في غرف المؤتمر</small></div></div>
   <div class="logo" id="logo-text">🏨 إدارة المؤتمر</div>
   <div class="main-tabs">
     <div class="main-tab" id="homeTabButton" onclick="showHomePage()"><span class="main-tab-icon">🏠</span><span class="main-tab-label">الرئيسية</span></div>
@@ -35,7 +36,7 @@
     <div class="tab main-tab" onclick="switchTab(5)"><span class="main-tab-icon">🔍</span><span class="main-tab-label">بحث</span></div>
     <div class="tab main-tab" data-tab-id="6" data-tab-name="settings" onclick="switchTab(6)"><span class="main-tab-icon">⚙️</span><span class="main-tab-label">إعدادات</span></div>
   </div>
-  <div style="margin-right:auto;display:flex;gap:6px;padding:6px 0;align-items:center">
+  <div class="application-utility-actions" style="margin-right:auto;display:flex;gap:6px;padding:6px 0;align-items:center">
     <div class="sync-bar live" id="syncBar">✔</div>
     <button class="btn btn-green" style="font-size:10px;padding:4px 9px" onclick="saveToFile()">💾</button>
     <button id="install-app-btn" class="btn btn-green btn-sm" style="display:none;">تثبيت البرنامج</button>
@@ -587,18 +588,18 @@
 <script src="js/sync/wrong-remote-binding-repair-service.js?rev=wrong-remote-binding-repair-v1"></script>
 <script src="js/sync/wrong-remote-binding-repair-ui.js?rev=diagnostics-privacy-hardening-v1"></script>
 <script src="utils.js"></script>
-<script src="core.js?rev=accommodation-dashboard-v2"></script>
+<script src="core.js?rev=accommodation-reference-ui-v3"></script>
 <script src="people.js?rev=canonical-conference-schema-v1"></script>
 <script src="houses.js?rev=template-floor-conference-sync-v1"></script>
 <script src="transport.js"></script>
 <script src="houseTemplates.js?rev=shared-house-template-read-only-v1"></script>
-<script src="state.js?rev=accommodation-dashboard-v2"></script>
+<script src="state.js?rev=accommodation-reference-ui-v3"></script>
 <script src="js/conference/accounts.js"></script>
 <script src="js/conference-template-houses-editor.js"></script>
 <script src="cards.js"></script>
 <script src="libs/html2canvas.min.js"></script>
 <script src="libs/xlsx.full.min.js"></script>
-<script src="script.js?rev=accommodation-dashboard-v2"></script>
+<script src="script.js?rev=accommodation-reference-ui-v3"></script>
 <script src="version.js"></script>
 <script>
   document.addEventListener('DOMContentLoaded', function() {
