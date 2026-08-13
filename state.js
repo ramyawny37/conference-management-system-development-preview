@@ -14,6 +14,7 @@ var appData = {
 
 // UI and editing state
 var currentTab=0,editRoomId=null,editTransId=null,editSeatTransId=null,editSeatNum=null,editHouseId=null;
+var accommodationSearchQuery='';
 var settingsTab='general';
 var selectedHouseTemplateId=null;
 var templateFloorDialog = { houseId: null, floorId: null };

@@ -2270,6 +2270,56 @@ function requireAccommodationMutation(){
     window.ConferenceEditLockManager.requireAccommodationMutation());
 }
 
+function normalizeAccommodationSearchText(value){
+  var arabicDigits='٠١٢٣٤٥٦٧٨٩';
+  var persianDigits='۰۱۲۳۴۵۶۷۸۹';
+  return String(value===undefined||value===null?'':value)
+    .replace(/[٠-٩]/g,function(digit){return String(arabicDigits.indexOf(digit));})
+    .replace(/[۰-۹]/g,function(digit){return String(persianDigits.indexOf(digit));})
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g,' ');
+}
+
+function accommodationRoomMatchesSearch(room,normalizedQuery){
+  if(!normalizedQuery)return true;
+  if(normalizeAccommodationSearchText(room&&room.number).indexOf(normalizedQuery)!==-1)return true;
+  var people=(room&&room.guests||[]).concat(room&&room.children||[]);
+  return people.some(function(person){
+    var name=typeof getAccommodationPersonDisplayName==='function'
+      ?getAccommodationPersonDisplayName(person)
+      :(typeof gn==='function'?gn(person):(person&&person.name||''));
+    return normalizeAccommodationSearchText(name).indexOf(normalizedQuery)!==-1;
+  });
+}
+
+function updateAccommodationSearch(value){
+  accommodationSearchQuery=String(value===undefined||value===null?'':value);
+  renderAccommodation();
+  var input=ge('accommodationSearchInput');
+  if(input){
+    input.focus();
+    if(typeof input.setSelectionRange==='function')input.setSelectionRange(input.value.length,input.value.length);
+  }
+}
+
+function clearAccommodationSearch(){
+  accommodationSearchQuery='';
+  renderAccommodation();
+  var input=ge('accommodationSearchInput');
+  if(input)input.focus();
+}
+
+function renderAccommodationSearchControls(matchCount,isFiltering){
+  var value=String(accommodationSearchQuery||'');
+  var h='<div class="accommodation-search" role="search">';
+  h+='<div class="accommodation-search-controls"><input id="accommodationSearchInput" type="search" value="'+esc(value)+'" placeholder="ابحث باسم شخص أو رقم غرفة..." aria-label="ابحث باسم شخص أو رقم غرفة" oninput="updateAccommodationSearch(this.value)">';
+  h+='<button type="button" class="btn btn-gray accommodation-search-clear" onclick="clearAccommodationSearch()" '+(value?'':'disabled')+'>مسح</button></div>';
+  if(isFiltering)h+='<div class="accommodation-search-count" aria-live="polite">'+(matchCount===1?'غرفة واحدة مطابقة':matchCount+' غرف مطابقة')+'</div>';
+  h+='</div>';
+  return h;
+}
+
 function renderAccommodation() {
   var current = getCurrentConference();
   renderGlobalConferenceHeader();
@@ -2291,18 +2341,30 @@ function renderAccommodation() {
     ?ensureAccommodationDisplayState(current)
     :ensureAccommodationDisplayState(deepClone(current));
   var allRooms = getAllRooms();
+  var normalizedSearchQuery=normalizeAccommodationSearchText(accommodationSearchQuery);
+  var isFiltering=!!normalizedSearchQuery;
+  var visibleRooms=allRooms.filter(function(roomEntry){
+    return !!displayed[roomEntry.id]&&accommodationRoomMatchesSearch(roomEntry,normalizedSearchQuery);
+  });
+  h+=renderAccommodationSearchControls(visibleRooms.length,isFiltering);
+  if(isFiltering&&!visibleRooms.length){
+    h+='<div class="card accommodation-search-empty" role="status">لا توجد غرف مطابقة.</div>';
+    ge('tab0').innerHTML=h;
+    return;
+  }
   var canEditAccommodation=canEditCurrentConferenceAccommodation();
   var grouped = {};
-  (current.houses || []).forEach(function(house) {
-    if (!grouped[house.id]) grouped[house.id] = { house: house, floors: {} };
-    (house.floors || []).forEach(function(floor) {
-      if (!grouped[house.id].floors[floor.id]) {
-        grouped[house.id].floors[floor.id] = { floor: floor, rooms: [] };
-      }
+  if(!isFiltering){
+    (current.houses || []).forEach(function(house) {
+      if (!grouped[house.id]) grouped[house.id] = { house: house, floors: {} };
+      (house.floors || []).forEach(function(floor) {
+        if (!grouped[house.id].floors[floor.id]) {
+          grouped[house.id].floors[floor.id] = { floor: floor, rooms: [] };
+        }
+      });
     });
-  });
-  allRooms.forEach(function(roomEntry) {
-    if (!displayed[roomEntry.id]) return;
+  }
+  visibleRooms.forEach(function(roomEntry) {
     var house = roomEntry.house || { id: '', name: 'بيت غير معروف', description: '' };
     var floor = roomEntry.floor || { id: '', name: 'دور غير مسمى' };
     var displayFloorId = roomEntry.closed ? '__closed_rooms__' : floor.id;
