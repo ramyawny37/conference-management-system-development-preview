@@ -15,6 +15,8 @@ var appData = {
 // UI and editing state
 var currentTab=0,editRoomId=null,editTransId=null,editSeatTransId=null,editSeatNum=null,editHouseId=null;
 var accommodationSearchQuery='';
+var accommodationQuickFilter='all';
+var accommodationCollapsedFloors={};
 var settingsTab='general';
 var selectedHouseTemplateId=null;
 var templateFloorDialog = { houseId: null, floorId: null };
@@ -259,6 +261,9 @@ function save(options){
   options=options||{};
   var json;
   try{
+    if(typeof reconcileAccommodationRoomKeyHolders==='function'){
+      reconcileAccommodationRoomKeyHolders(getCurrentConference());
+    }
     if(!options.skipCurrentConferenceUpdate)updateCurrentConferenceData();
     var currentConference=options.skipConferenceTracking
       ?null:getCurrentConference();

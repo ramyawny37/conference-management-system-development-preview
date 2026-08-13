@@ -1481,6 +1481,14 @@ function normalizeHouseStructure(house){
       room.notes = room.notes || '';
       room.guests = room.guests || [];
       room.children = room.children || [];
+      room.guests.forEach(function(guest){ guest.arrived = guest.arrived === true; });
+      room.children.forEach(function(child){ child.arrived = child.arrived === true; });
+      var roomOccupantIds = room.guests.concat(room.children).map(function(person){
+        return String(person.personId || person.id || '');
+      }).filter(Boolean);
+      room.keyHolderPersonId = room.keyHolderPersonId && roomOccupantIds.indexOf(String(room.keyHolderPersonId)) !== -1
+        ? String(room.keyHolderPersonId)
+        : '';
       room.closed = !!room.closed;
       room.closedDay = room.closedDay === undefined ? null : room.closedDay;
     });

@@ -2098,6 +2098,12 @@ function statsHtml(){
     return total+(room.guests||[]).filter(function(guest){return !gl(guest)&&guest.bedType==='extra'}).length;
   },0);
   var availableExtraBeds=Math.max(0,extraBeds-usedExtraBeds);
+  var activeOccupants=[];
+  allRooms.forEach(function(room){activeOccupants=activeOccupants.concat(getAccommodationOccupants(room));});
+  var occupiedRooms=allRooms.filter(function(room){return getAccommodationOccupants(room).length>0;}).length;
+  var arrivedCount=activeOccupants.filter(function(person){return person.arrived===true;}).length;
+  var deliveredKeys=allRooms.filter(function(room){return !!room.keyHolderPersonId;}).length;
+  var occupancyPercent=totalBeds?Math.round((activeOccupants.length/totalBeds)*100):0;
   var tSeats=0,tUsed=0;
   (current.transports || []).forEach(function(t){
     tSeats+=t.capacity;
@@ -2112,15 +2118,11 @@ function statsHtml(){
   });
   var h='<div class="stats accommodation-summary-grid">';
   h+='<div class="stat-card accommodation-summary-card" style="border-top:4px solid #1F4E79"><span class="accommodation-summary-icon">🏨</span><div class="stat-val accommodation-summary-value" style="color:#1F4E79">'+activeC+'<span style="font-size:10px;color:#95A5A6">'+(closedC?' +'+closedC+'🔒':'')+'</span></div><div class="stat-lbl accommodation-summary-label">غرف</div></div>';
-  h+='<div class="stat-card accommodation-summary-card" style="border-top:4px solid #27AE60"><span class="accommodation-summary-icon">👤</span><div class="stat-val accommodation-summary-value" style="color:#27AE60">'+displayedAdults+'</div><div class="stat-lbl accommodation-summary-label">بالغون</div></div>';
-  h+='<div class="stat-card accommodation-summary-card" style="border-top:4px solid #F39C12"><span class="accommodation-summary-icon">🧒</span><div class="stat-val accommodation-summary-value" style="color:#F39C12">'+displayedChildren+'</div><div class="stat-lbl accommodation-summary-label">أطفال</div></div>';
-  h+='<div class="stat-card accommodation-summary-card" style="border-top:4px solid #8E44AD"><span class="accommodation-summary-icon">👥</span><div class="stat-val accommodation-summary-value" style="color:#8E44AD">'+(displayedAdults+displayedChildren)+'</div><div class="stat-lbl accommodation-summary-label">إجمالي</div></div>';
-  h+='<div class="stat-card accommodation-summary-card" style="border-top:4px solid #2E86C1"><span class="accommodation-summary-icon">🛏️</span><div class="stat-val accommodation-summary-value" style="color:#2E86C1">'+baseBeds+'</div><div class="stat-lbl accommodation-summary-label">إجمالي الأسرّة الأساسية</div></div>';
-  h+='<div class="stat-card accommodation-summary-card" style="border-top:4px solid #E67E22"><span class="accommodation-summary-icon">➕🛏️</span><div class="stat-val accommodation-summary-value" style="color:#E67E22">'+extraBeds+'</div><div class="stat-lbl accommodation-summary-label">إجمالي الأسرّة الإضافية</div></div>';
-  h+='<div class="stat-card accommodation-summary-card" style="border-top:4px solid #6C3483"><span class="accommodation-summary-icon">🛏️</span><div class="stat-val accommodation-summary-value" style="color:#6C3483">'+totalBeds+'</div><div class="stat-lbl accommodation-summary-label">إجمالي الأسرّة</div></div>';
-  h+='<div class="stat-card accommodation-summary-card" style="border-top:4px solid #D35400"><span class="accommodation-summary-icon">➕</span><div class="stat-val accommodation-summary-value" style="color:#D35400">'+usedExtraBeds+'</div><div class="stat-lbl accommodation-summary-label">المستخدم من الأسرّة الإضافية</div></div>';
-  h+='<div class="stat-card accommodation-summary-card" style="border-top:4px solid #16A085"><span class="accommodation-summary-icon">➕</span><div class="stat-val accommodation-summary-value" style="color:#16A085">'+availableExtraBeds+'</div><div class="stat-lbl accommodation-summary-label">المتاح من الأسرّة الإضافية</div></div>';
-  h+='<div class="stat-card accommodation-summary-card" style="border-top:4px solid #E67E22"><span class="accommodation-summary-icon">🚌</span><div class="stat-val accommodation-summary-value" style="color:#E67E22">'+tUsed+'/'+tSeats+'</div><div class="stat-lbl accommodation-summary-label">كراسي</div></div>';
+  h+='<div class="stat-card accommodation-summary-card" style="border-top:4px solid #F97316"><span class="accommodation-summary-icon">👥</span><div class="stat-val accommodation-summary-value" style="color:#EA580C">'+activeOccupants.length+'</div><div class="stat-lbl accommodation-summary-label">إجمالي النزلاء</div></div>';
+  h+='<div class="stat-card accommodation-summary-card" style="border-top:4px solid #1554B4"><span class="accommodation-summary-icon">🛏️</span><div class="stat-val accommodation-summary-value" style="color:#1554B4">'+occupiedRooms+'</div><div class="stat-lbl accommodation-summary-label">الغرف المشغولة</div></div>';
+  h+='<div class="stat-card accommodation-summary-card" style="border-top:4px solid #16A05D"><span class="accommodation-summary-icon">✓</span><div class="stat-val accommodation-summary-value" style="color:#159455">'+arrivedCount+'</div><div class="stat-lbl accommodation-summary-label">الأشخاص الذين وصلوا</div></div>';
+  h+='<div class="stat-card accommodation-summary-card" style="border-top:4px solid #1554B4"><span class="accommodation-summary-icon">🔑</span><div class="stat-val accommodation-summary-value" style="color:#1554B4">'+deliveredKeys+'</div><div class="stat-lbl accommodation-summary-label">المفاتيح المسلمة</div></div>';
+  h+='<div class="stat-card accommodation-summary-card" style="border-top:4px solid #18A6D1"><span class="accommodation-summary-icon">◔</span><div class="stat-val accommodation-summary-value" style="color:#1554B4">'+occupancyPercent+'%</div><div class="stat-lbl accommodation-summary-label">نسبة الإشغال</div></div>';
   h+='</div>';
   return h;
 }
@@ -2293,6 +2295,79 @@ function accommodationRoomMatchesSearch(room,normalizedQuery){
   });
 }
 
+function getAccommodationOccupants(room){
+  return (room&&room.guests||[]).filter(function(person){return !gl(person);})
+    .concat((room&&room.children||[]).filter(function(person){return !person.leftDay;}));
+}
+
+function getAccommodationPersonIdentity(person){
+  return String((person&&(person.personId||person.id))||'');
+}
+
+function reconcileAccommodationRoomKeyHolders(conference){
+  (conference&&conference.houses||[]).forEach(function(house){
+    (house.floors||[]).forEach(function(floor){
+      (floor.rooms||[]).forEach(function(room){
+        var holderId=String(room.keyHolderPersonId||'');
+        if(holderId&&!getAccommodationOccupants(room).some(function(person){
+          return getAccommodationPersonIdentity(person)===holderId;
+        }))room.keyHolderPersonId='';
+      });
+    });
+  });
+}
+
+function setAccommodationQuickFilter(filter){
+  accommodationQuickFilter=filter||'all';
+  renderAccommodation();
+}
+
+function accommodationRoomMatchesQuickFilter(room,filter){
+  var occupants=getAccommodationOccupants(room);
+  if(filter==='occupied')return occupants.length>0;
+  if(filter==='empty')return occupants.length===0;
+  if(filter==='arrived')return occupants.some(function(person){return person.arrived===true;});
+  if(filter==='not-arrived')return occupants.some(function(person){return person.arrived!==true;});
+  if(filter==='key-delivered')return !!room.keyHolderPersonId;
+  if(filter==='key-not-delivered')return !room.keyHolderPersonId;
+  return true;
+}
+
+function toggleAccommodationFloor(houseId,floorId){
+  var key=String(houseId)+'|'+String(floorId);
+  accommodationCollapsedFloors[key]=!accommodationCollapsedFloors[key];
+  renderAccommodation();
+}
+
+function setAccommodationPersonArrival(houseId,floorId,roomId,personId,arrived){
+  if(!requireAccommodationMutation())return false;
+  var result=findRoomInHouses((getCurrentConference()||{}).houses||[],houseId,floorId,roomId);
+  if(!result||!result.room)return false;
+  var person=getAccommodationOccupants(result.room).filter(function(item){return getAccommodationPersonIdentity(item)===String(personId);})[0];
+  if(!person)return false;
+  person.arrived=arrived===true;
+  if(!save())return false;
+  renderAccommodation();
+  return true;
+}
+
+function setAccommodationRoomKeyHolder(houseId,floorId,roomId,personId){
+  if(!requireAccommodationMutation())return false;
+  var result=findRoomInHouses((getCurrentConference()||{}).houses||[],houseId,floorId,roomId);
+  if(!result||!result.room)return false;
+  var nextId=String(personId||'');
+  if(nextId&&!getAccommodationOccupants(result.room).some(function(item){return getAccommodationPersonIdentity(item)===nextId;}))return false;
+  result.room.keyHolderPersonId=nextId;
+  if(!save())return false;
+  renderAccommodation();
+  return true;
+}
+
+function renderAccommodationQuickFilters(){
+  var filters=[['all','كل الغرف'],['occupied','الغرف المشغولة'],['empty','الغرف الفارغة'],['arrived','الذين وصلوا'],['not-arrived','الذين لم يصلوا'],['key-delivered','المفاتيح المسلمة'],['key-not-delivered','المفاتيح غير المسلمة']];
+  return '<div class="accommodation-quick-filters" aria-label="فلترة سريعة">'+filters.map(function(item){return '<button type="button" class="'+(accommodationQuickFilter===item[0]?'active':'')+'" onclick="setAccommodationQuickFilter(\''+item[0]+'\')">'+item[1]+'</button>';}).join('')+'</div>';
+}
+
 function updateAccommodationSearch(value){
   accommodationSearchQuery=String(value===undefined||value===null?'':value);
   renderAccommodation();
@@ -2323,12 +2398,15 @@ function renderAccommodationSearchControls(matchCount,isFiltering){
 function renderAccommodation() {
   var current = getCurrentConference();
   renderGlobalConferenceHeader();
+  var normalizedSearchQuery=normalizeAccommodationSearchText(accommodationSearchQuery);
+  var isFiltering=!!normalizedSearchQuery;
   var lockState=window.ConferenceEditLockManager&&
     window.ConferenceEditLockManager.getState?window.ConferenceEditLockManager.getState():{status:'viewing'};
-  var h='<div class="accommodation-edit-mode-toolbar">';
-  if(lockState.status==='editing')h+='<button class="btn btn-red" onclick="endAccommodationEditing()">إنهاء تعديل التسكين</button><span class="accommodation-edit-state">وضع التعديل فعّال على هذا الجهاز</span>';
-  else h+='<button class="btn btn-blue" '+(lockState.status==='acquiring'?'disabled':'')+' onclick="beginAccommodationEditing()">'+(lockState.status==='acquiring'?'جارٍ طلب القفل...':'بدء تعديل التسكين')+'</button><span class="accommodation-edit-state">وضع مشاهدة فقط</span>';
-  h+='</div>'+statsHtml();
+  var editToolbar='<div class="accommodation-edit-mode-toolbar">';
+  if(lockState.status==='editing')editToolbar+='<button class="btn btn-red" onclick="endAccommodationEditing()">إنهاء تعديل التسكين</button><span class="accommodation-edit-state">وضع التعديل فعّال على هذا الجهاز</span>';
+  else editToolbar+='<button class="btn btn-blue" '+(lockState.status==='acquiring'?'disabled':'')+' onclick="beginAccommodationEditing()">'+(lockState.status==='acquiring'?'جارٍ طلب القفل...':'بدء تعديل التسكين')+'</button><span class="accommodation-edit-state">وضع مشاهدة فقط</span>';
+  editToolbar+='</div>';
+  var h=isFiltering?'':editToolbar+statsHtml();
   if (!current || !current.houses || !current.houses.length) {
     h += '<div class="card" style="text-align:center;padding:20px;color:#95a5a6;">لم يتم اختيار بيت للمؤتمر.';
     if(canEditCurrentConferenceAccommodation())h += '<div style="margin-top:10px"><button class="btn btn-blue" onclick="openAssignConferenceHouseSelector()">اختيار بيت المؤتمر</button></div>';
@@ -2341,12 +2419,13 @@ function renderAccommodation() {
     ?ensureAccommodationDisplayState(current)
     :ensureAccommodationDisplayState(deepClone(current));
   var allRooms = getAllRooms();
-  var normalizedSearchQuery=normalizeAccommodationSearchText(accommodationSearchQuery);
-  var isFiltering=!!normalizedSearchQuery;
   var visibleRooms=allRooms.filter(function(roomEntry){
-    return !!displayed[roomEntry.id]&&accommodationRoomMatchesSearch(roomEntry,normalizedSearchQuery);
+    return !!displayed[roomEntry.id]&&accommodationRoomMatchesSearch(roomEntry,normalizedSearchQuery)&&
+      (isFiltering||accommodationRoomMatchesQuickFilter(roomEntry,accommodationQuickFilter));
   });
   h+=renderAccommodationSearchControls(visibleRooms.length,isFiltering);
+  if(isFiltering)h+=editToolbar;
+  if(!isFiltering)h+=renderAccommodationQuickFilters();
   if(isFiltering&&!visibleRooms.length){
     h+='<div class="card accommodation-search-empty" role="status">لا توجد غرف مطابقة.</div>';
     ge('tab0').innerHTML=h;
@@ -2385,7 +2464,7 @@ function renderAccommodation() {
   Object.keys(grouped).forEach(function(houseKey) {
     var houseEntry = grouped[houseKey];
     var house = houseEntry.house;
-    h += '<div class="card"><div class="card-title" style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap"><span>🏠 ' + esc(house.name) + '</span>'+(canEditAccommodation?'<div class="row" style="gap:6px"><button class="btn btn-blue btn-sm" onclick="openActiveRoomsManager(\'' + house.id + '\')">إدارة غرف التسكين</button><button class="btn btn-red btn-sm" onclick="removeConferenceHouseFromAccommodation(\'' + house.id + '\')">إزالة بيت المؤتمر</button></div>':'')+'</div>';
+    h += '<section class="card accommodation-house"><div class="accommodation-house-title"><span>🏠</span><strong>' + esc(house.name) + '</strong>'+(canEditAccommodation?'<div class="accommodation-house-actions"><button class="btn btn-blue btn-sm" onclick="openActiveRoomsManager(\'' + house.id + '\')">إدارة غرف التسكين</button><button class="btn btn-red btn-sm" onclick="removeConferenceHouseFromAccommodation(\'' + house.id + '\')">إزالة بيت المؤتمر</button></div>':'')+'</div>';
     if (house.description) {
       h += '<p style="font-size:11px; color:#5a7a9a; margin:-8px 0 10px 0;">' + esc(house.description) + '</p>';
     }
@@ -2395,7 +2474,7 @@ function renderAccommodation() {
     });
     var openSelectedHouseRooms=selectedHouseRooms.filter(function(room){return !room.closed});
     var closedSelectedHouseRooms=selectedHouseRooms.length-openSelectedHouseRooms.length;
-    h+='<div class="card" style="background:#f8fbfd;border:1px solid #dce7f0;margin:0 0 10px;padding:10px">';
+    h+='<div class="card accommodation-house-summary">';
     h+='<div style="font-weight:800;color:#1F4E79;margin-bottom:10px">ملخص غرف التسكين</div>';
     h+='<div class="house-templates-heading-stats" dir="rtl" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;width:100%;margin-bottom:10px">';
     h+='<div class="house-heading-stat-card"><span class="house-heading-stat-icon">☑️</span><span class="house-heading-stat-label">الغرف المختارة</span><strong>'+selectedHouseRooms.length+'</strong></div>';
@@ -2429,6 +2508,8 @@ function renderAccommodation() {
       var floorEntry = houseEntry.floors[floorKey];
       if(!(floorEntry.rooms || []).length) return;
       var floor = floorEntry.floor;
+      var floorStateKey=String(house.id)+'|'+String(floor.id);
+      var floorCollapsed=!isFiltering&&accommodationCollapsedFloors[floorStateKey]===true;
       var floorOccupants = 0;
       var floorBaseBeds = 0;
       floorEntry.rooms.forEach(function(room){
@@ -2436,9 +2517,9 @@ function renderAccommodation() {
         (room.guests || []).forEach(function(guest){ if(!gl(guest)) floorOccupants++; });
         (room.children || []).forEach(function(child){ if(!child.leftDay) floorOccupants++; });
       });
-      h += '<div class="floor-container">';
-      h += '<div class="accommodation-floor-header"><div class="floor-title">'+esc(floor.name)+'</div><div class="accommodation-floor-summary"><span>'+floorEntry.rooms.length+' غرفة</span><span>'+floorOccupants+' نزيل</span><span>'+floorBaseBeds+' سرير أساسي</span></div></div>';
-      h += '<div class="grid3">';
+      h += '<div class="floor-container'+(floorCollapsed?' is-collapsed':'')+'">';
+      h += '<button type="button" class="accommodation-floor-header" aria-expanded="'+(floorCollapsed?'false':'true')+'" onclick="toggleAccommodationFloor(\''+house.id+'\',\''+floor.id+'\')"><span class="floor-title">'+esc(floor.name)+' — '+floorEntry.rooms.length+' غرفة</span><span class="accommodation-floor-toggle">'+(floorCollapsed?'⌄':'⌃')+'</span></button>';
+      h += '<div class="grid3 accommodation-floor-rooms">';
       floorEntry.rooms.forEach(function(r) {
         var roomFloorId=r.floor&&r.floor.id?r.floor.id:floor.id;
         var ag = [], ac = [], lg = [];
@@ -2482,9 +2563,13 @@ function renderAccommodation() {
           var badgeTitle = emptyExtraBeds > 0 ? 'متاح: ' + emptyExtraBeds : 'مستخدم: ' + usedExtraBeds;
           extraBedsBadge = '<span style="display:inline-block;background:' + badgeBg + ';color:white;padding:1px 6px;border-radius:3px;font-size:9px;margin-left:6px;font-weight:bold" title="' + badgeTitle + '">🛏️ +' + badgeText + '</span>';
         }
-        h += '<div class="rcard" style="border:2px solid ' + headColor + '">';
+        var roomStatus=isClosed?'مغلقة':occupiedBeds>=bedsCount?'مكتملة':occupiedBeds>0?'غير مكتملة':'فارغة';
+        var roomOccupants=getAccommodationOccupants(r);
+        var keyHolder=roomOccupants.filter(function(person){return getAccommodationPersonIdentity(person)===String(r.keyHolderPersonId||'');})[0]||null;
+        h += '<article class="rcard accommodation-room-card" style="--room-status-color:' + headColor + '">';
         h += '<div class="rcard-head ' + headClass + '"><span class="accommodation-room-name">غرفة ' + esc(r.number) + '<span class="accommodation-room-indicators">' + roomIndicators + '</span></span><span style="' + occupancyStyle + '">' + occupancyText + extraBedsBadge + (isClosed ? ' <span style="display:inline-block;background:#7F8C8D;color:#fff;border-radius:999px;padding:2px 7px;margin-right:5px;font-weight:700">مغلقة</span>' : '') + '</span></div>';
         h += '<div class="rcard-body">';
+        h += '<div class="accommodation-room-status"><span>'+roomStatus+'</span><strong>'+occupancyDisplayText+'</strong></div>';
         h += '<div class="accommodation-occupancy"><div class="accommodation-occupancy-label"><span>الإشغال</span><strong>' + occupancyDisplayText + '</strong></div><div class="accommodation-occupancy-track"><span style="width:' + occupancyPercent + '%;background:' + headColor + '"></span></div></div>';
         ag.forEach(function(g) {
           var guestIcon = '👤';
@@ -2493,11 +2578,13 @@ function renderAccommodation() {
             guestIcon = g.extraBedPersonType==='child' ? '🧒➕🛏️' : '➕🛏️';
             guestTypeLabel = g.extraBedPersonType==='child' ? 'طفل' : (g.extraBedPersonType==='adult' ? 'بالغ' : 'غير محدد');
           }
-          h += '<div class="guest-row"><span>' + guestIcon + ' ' + esc(getAccommodationPersonDisplayName(g)) + '</span><span class="pill '+(g.extraBedPersonType==='child'?'p-child':'p-adult')+'">'+guestTypeLabel+'</span></div>';
+          var guestIdentity=getAccommodationPersonIdentity(g);
+          h += '<div class="guest-row"><span>' + guestIcon + ' ' + esc(getAccommodationPersonDisplayName(g)) + '</span><button type="button" class="accommodation-arrival '+(g.arrived===true?'arrived':'not-arrived')+'" '+(canEditAccommodation&&guestIdentity?'onclick="setAccommodationPersonArrival(\''+house.id+'\',\''+roomFloorId+'\',\''+r.id+'\',\''+esc(guestIdentity)+'\','+(g.arrived===true?'false':'true')+')"':'disabled')+'>'+(g.arrived===true?'✓ وصل':'○ لم يصل')+'</button></div>';
         });
-        ac.forEach(function(c) { h += '<div class="guest-row"><span>' + (c.bedType==='extra'?'🧒➕🛏️':'👨‍👧') + ' ' + esc(getAccommodationPersonDisplayName(c)) + '</span><span class="pill p-child">مع ' + esc(c.guardianPersonId?getAccommodationPersonDisplayName({personId:c.guardianPersonId,name:c.guardian}):c.guardian) + '</span></div>' });
+        ac.forEach(function(c) { var childIdentity=getAccommodationPersonIdentity(c);h += '<div class="guest-row"><span>' + (c.bedType==='extra'?'🧒➕🛏️':'👨‍👧') + ' ' + esc(getAccommodationPersonDisplayName(c)) + '</span><button type="button" class="accommodation-arrival '+(c.arrived===true?'arrived':'not-arrived')+'" '+(canEditAccommodation&&childIdentity?'onclick="setAccommodationPersonArrival(\''+house.id+'\',\''+roomFloorId+'\',\''+r.id+'\',\''+esc(childIdentity)+'\','+(c.arrived===true?'false':'true')+')"':'disabled')+'>'+(c.arrived===true?'✓ وصل':'○ لم يصل')+'</button></div>' });
         if (lg.length) h += '<div style="font-size:9px;color:#E74C3C;margin-top:3px">غادر: ' + lg.map(function(g) { return esc(gn(g)) }).join('، ') + '</div>';
         if (!totalResidents && !lg.length) h += '<div class="accommodation-empty-room">لا يوجد نزلاء</div>';
+        h += '<label class="accommodation-room-key"><span>🔑 المفتاح</span><select '+(canEditAccommodation?'onchange="setAccommodationRoomKeyHolder(\''+house.id+'\',\''+roomFloorId+'\',\''+r.id+'\',this.value)"':'disabled')+'><option value="">لم يُسلَّم</option>'+roomOccupants.map(function(person){var identity=getAccommodationPersonIdentity(person);return identity?'<option value="'+esc(identity)+'" '+(keyHolder===person?'selected':'')+'>'+esc(getAccommodationPersonDisplayName(person))+'</option>':'';}).join('')+'</select></label>';
         if(canEditAccommodation){
           h += '<div class="accommodation-room-actions">';
           h += '<button class="btn btn-blue btn-sm accommodation-room-edit" onclick="openRoomEditor(\''+house.id+'\', \''+roomFloorId+'\', \''+r.id+'\')">✏️ تعديل</button>';
@@ -2507,7 +2594,7 @@ function renderAccommodation() {
           h += '<button class="btn btn-red btn-sm" onclick="deleteConferenceRoom(\'' + house.id + '\', \'' + roomFloorId + '\', \'' + r.id + '\')" title="حذف الغرفة">🗑️</button>';
           h += '</div>';
         }
-        h += '</div></div>';
+        h += '</div></article>';
       });
       h += '</div></div>';
     });
