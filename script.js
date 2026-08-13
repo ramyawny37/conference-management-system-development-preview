@@ -2388,10 +2388,10 @@ function clearAccommodationSearch(){
 function renderAccommodationSearchControls(matchCount,isFiltering){
   var value=String(accommodationSearchQuery||'');
   var h='<div class="accommodation-search" role="search">';
-  h+='<div class="accommodation-search-controls"><input id="accommodationSearchInput" type="search" value="'+esc(value)+'" placeholder="ابحث باسم شخص أو رقم غرفة..." aria-label="ابحث باسم شخص أو رقم غرفة" oninput="updateAccommodationSearch(this.value)">';
+  h+='<div class="accommodation-search-controls"><span class="accommodation-search-icon" aria-hidden="true">⌕</span><input id="accommodationSearchInput" type="search" value="'+esc(value)+'" placeholder="ابحث برقم الغرفة أو اسم النزيل..." aria-label="ابحث باسم شخص أو رقم غرفة" oninput="updateAccommodationSearch(this.value)">';
   h+='<button type="button" class="btn btn-gray accommodation-search-clear" onclick="clearAccommodationSearch()" '+(value?'':'disabled')+'>مسح</button></div>';
-  if(isFiltering)h+='<div class="accommodation-search-count" aria-live="polite">'+(matchCount===1?'غرفة واحدة مطابقة':matchCount+' غرف مطابقة')+'</div>';
   h+='</div>';
+  if(isFiltering)h+='<div class="accommodation-search-count" aria-live="polite">'+(matchCount===1?'غرفة واحدة مطابقة':matchCount+' غرف مطابقة')+'</div>';
   return h;
 }
 
@@ -2406,12 +2406,12 @@ function renderAccommodation() {
   if(lockState.status==='editing')editToolbar+='<button class="btn btn-red" onclick="endAccommodationEditing()">إنهاء تعديل التسكين</button><span class="accommodation-edit-state">وضع التعديل فعّال على هذا الجهاز</span>';
   else editToolbar+='<button class="btn btn-blue" '+(lockState.status==='acquiring'?'disabled':'')+' onclick="beginAccommodationEditing()">'+(lockState.status==='acquiring'?'جارٍ طلب القفل...':'بدء تعديل التسكين')+'</button><span class="accommodation-edit-state">وضع مشاهدة فقط</span>';
   editToolbar+='</div>';
-  var h=isFiltering?'':editToolbar+statsHtml();
+  var h='<main class="accommodation-dashboard">'+(isFiltering?'':editToolbar+statsHtml());
   if (!current || !current.houses || !current.houses.length) {
     h += '<div class="card" style="text-align:center;padding:20px;color:#95a5a6;">لم يتم اختيار بيت للمؤتمر.';
     if(canEditCurrentConferenceAccommodation())h += '<div style="margin-top:10px"><button class="btn btn-blue" onclick="openAssignConferenceHouseSelector()">اختيار بيت المؤتمر</button></div>';
     h += '</div>';
-    ge('tab0').innerHTML = h;
+    ge('tab0').innerHTML = h+'</main>';
     return;
   }
 
@@ -2424,11 +2424,10 @@ function renderAccommodation() {
       (isFiltering||accommodationRoomMatchesQuickFilter(roomEntry,accommodationQuickFilter));
   });
   h+=renderAccommodationSearchControls(visibleRooms.length,isFiltering);
-  if(isFiltering)h+=editToolbar;
   if(!isFiltering)h+=renderAccommodationQuickFilters();
   if(isFiltering&&!visibleRooms.length){
     h+='<div class="card accommodation-search-empty" role="status">لا توجد غرف مطابقة.</div>';
-    ge('tab0').innerHTML=h;
+    ge('tab0').innerHTML=h+'</main>';
     return;
   }
   var canEditAccommodation=canEditCurrentConferenceAccommodation();
@@ -2601,7 +2600,7 @@ function renderAccommodation() {
     h += '</div>';
   });
 
-  ge('tab0').innerHTML = h;
+  ge('tab0').innerHTML = h+'</main>';
 }
 var editRoomData = {};
 var personDialogContext = { guestRowId: null, childRowId: null, targetField: '' };
