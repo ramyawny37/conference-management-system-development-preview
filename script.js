@@ -2366,7 +2366,9 @@ function setAccommodationRoomKeyHolder(houseId,floorId,roomId,personId){
 
 function renderAccommodationQuickFilters(){
   var filters=[['all','⌂','كل الغرف'],['occupied','🛏','الغرف المشغولة'],['empty','▱','الغرف الفارغة'],['arrived','●','النزلاء الذين وصلوا'],['not-arrived','○','النزلاء الذين لم يصلوا'],['key-delivered','🔑','المفاتيح المسلمة'],['key-not-delivered','◇','المفاتيح غير المسلمة']];
-  return '<aside class="accommodation-filter-panel" aria-label="فلترة سريعة"><h2>فلترة سريعة</h2><div class="accommodation-quick-filters">'+filters.map(function(item){return '<button type="button" class="'+(accommodationQuickFilter===item[0]?'active':'')+'" onclick="setAccommodationQuickFilter(\''+item[0]+'\')"><span>'+item[1]+'</span>'+item[2]+'</button>';}).join('')+'</div></aside>';
+  var h='<aside class="accommodation-sidebar"><section class="accommodation-filter-panel" aria-label="فلترة سريعة"><h2>فلترة سريعة</h2><div class="accommodation-quick-filters">'+filters.map(function(item){return '<button type="button" class="'+(accommodationQuickFilter===item[0]?'active':'')+'" onclick="setAccommodationQuickFilter(\''+item[0]+'\')"><span>'+item[1]+'</span>'+item[2]+'</button>';}).join('')+'</div></section>';
+  h+='<section class="accommodation-legend"><h2>مفتاح الرموز</h2><div><span><i class="legend-arrived">✓</i> وصل</span><span><i class="legend-waiting">○</i> لم يصل</span><span><i>🔑</i> المفتاح مُسلّم</span><span><i>◇</i> المفتاح غير مُسلّم</span><span><i>🛏</i> متبقي سرير</span></div></section></aside>';
+  return h;
 }
 
 function updateAccommodationSearch(value){
@@ -2565,7 +2567,7 @@ function renderAccommodation() {
         h += '<article class="rcard accommodation-room-card" style="--room-status-color:' + headColor + '">';
         h += '<div class="rcard-head ' + headClass + '"><span class="accommodation-room-name"><b>' + esc(r.number) + '</b><i>🛏</i><span class="accommodation-room-indicators">' + roomIndicators + '</span></span><span class="accommodation-room-status-badge">'+roomStatus+'</span><span class="accommodation-room-occupancy-badge">👥 '+occupancyDisplayText+'</span>'+extraBedsBadge+'</div>';
         h += '<div class="rcard-body">';
-        h += '<label class="accommodation-room-key"><span>🔑 المفتاح</span><select '+(canEditAccommodation?'onchange="setAccommodationRoomKeyHolder(\''+house.id+'\',\''+roomFloorId+'\',\''+r.id+'\',this.value)"':'disabled')+'><option value="">لم يُسلَّم بعد</option>'+roomOccupants.map(function(person){var identity=getAccommodationPersonIdentity(person);return identity?'<option value="'+esc(identity)+'" '+(keyHolder===person?'selected':'')+'>استلمه '+esc(getAccommodationPersonDisplayName(person))+'</option>':'';}).join('')+'</select></label>';
+        h += '<label class="accommodation-room-key"><span>🔑 المفتاح: <strong>'+(keyHolder?'استلمه '+esc(getAccommodationPersonDisplayName(keyHolder)):'لم يُسلَّم بعد')+'</strong></span><small>'+(canEditAccommodation?'تغيير':'')+'</small><select aria-label="تغيير مستلم مفتاح الغرفة" '+(canEditAccommodation?'onchange="setAccommodationRoomKeyHolder(\''+house.id+'\',\''+roomFloorId+'\',\''+r.id+'\',this.value)"':'disabled')+'><option value="">لم يُسلَّم بعد</option>'+roomOccupants.map(function(person){var identity=getAccommodationPersonIdentity(person);return identity?'<option value="'+esc(identity)+'" '+(keyHolder===person?'selected':'')+'>'+esc(getAccommodationPersonDisplayName(person))+'</option>':'';}).join('')+'</select></label>';
         ag.forEach(function(g) {
           var guestIcon = '👤';
           var guestTypeLabel = 'بالغ';
@@ -2581,7 +2583,7 @@ function renderAccommodation() {
         if (!totalResidents && !lg.length) h += '<div class="accommodation-empty-room">لا يوجد نزلاء</div>';
         if(canEditAccommodation){
           h += '<div class="accommodation-room-actions">';
-          h += '<button class="btn btn-blue btn-sm accommodation-room-edit" onclick="openRoomEditor(\''+house.id+'\', \''+roomFloorId+'\', \''+r.id+'\')">✏️ تعديل</button>';
+          h += '<button class="btn btn-blue btn-sm accommodation-room-edit" onclick="openRoomEditor(\''+house.id+'\', \''+roomFloorId+'\', \''+r.id+'\')">◉ عرض التفاصيل</button>';
           h += '<button class="btn btn-blue btn-sm" onclick="openMoveRoomDialog(\'' + house.id + '\', \'' + roomFloorId + '\', \'' + r.id + '\')" title="نقل الغرفة">↔️</button>';
           h += '<button class="btn btn-teal btn-sm" onclick="clearConferenceRoom(\'' + house.id + '\', \'' + roomFloorId + '\', \'' + r.id + '\')" title="تفريغ البيانات">🧹</button>';
           h += '<button class="btn btn-gray btn-sm" onclick="toggleConferenceRoomClosed(\'' + house.id + '\', \'' + roomFloorId + '\', \'' + r.id + '\')" title="إغلاق/فتح مؤقت">' + (isClosed ? '🔓' : '🔒') + '</button>';

@@ -444,19 +444,19 @@ tr:nth-child(even) td{background:#F7FBFF}
 
 /* Accommodation dashboard visual system */
 .accommodation-shell-active{background:linear-gradient(145deg,#f7f9fc 0%,#f1f6fb 62%,#faf5f0 100%)}
-.accommodation-shell-active .topbar{display:grid!important;min-height:var(--ds-nav-height);grid-template-columns:minmax(230px,1fr) auto minmax(230px,1fr);grid-template-areas:"heading nav conference";align-items:center;padding:14px 28px;border-bottom:1px solid var(--ds-border);background:rgba(255,255,255,.84);box-shadow:0 2px 15px rgba(31,70,110,.06);backdrop-filter:blur(15px)}
+.accommodation-shell-active .topbar{display:grid!important;min-height:108px;grid-template-columns:minmax(260px,1fr) auto minmax(260px,1fr);grid-template-areas:"heading nav conference";align-items:center;padding:10px 28px;border-bottom:1px solid var(--ds-border);background:rgba(255,255,255,.88);box-shadow:0 2px 15px rgba(31,70,110,.06);backdrop-filter:blur(15px)}
 .accommodation-shell-active .application-page-heading{grid-area:heading;display:flex;align-items:center;justify-self:end;gap:13px;color:var(--ds-primary-dark)}
-.accommodation-shell-active .application-page-icon{display:flex;width:64px;height:76px;align-items:center;justify-content:center;border-radius:16px;background:linear-gradient(145deg,#174eb0,#0a3d91);color:#fff;font-size:30px;box-shadow:0 8px 18px rgba(15,79,174,.2)}
+.accommodation-shell-active .application-page-icon{display:flex;width:58px;height:72px;align-items:center;justify-content:center;border-radius:15px;background:linear-gradient(145deg,#174eb0,#0a3d91);color:#fff;font-size:27px;box-shadow:0 8px 18px rgba(15,79,174,.2)}
 .accommodation-shell-active .application-page-heading div{display:flex;flex-direction:column;gap:5px}.accommodation-shell-active .application-page-heading strong{font-size:24px;font-weight:900}.accommodation-shell-active .application-page-heading small{color:var(--ds-text-muted);font-size:12px;font-weight:600}
 .accommodation-shell-active .logo{grid-area:conference;justify-self:start;max-width:235px;padding:15px 18px;border:1px solid var(--ds-border);border-radius:14px;background:#fff;color:var(--ds-primary-dark);font-size:13px;box-shadow:var(--ds-shadow-sm)}
-.accommodation-shell-active .main-tabs{grid-area:nav;align-self:stretch;gap:18px}
-.accommodation-shell-active .main-tab{position:relative;min-width:66px;min-height:84px;flex-direction:column;gap:9px;padding:13px 8px;border:0;border-radius:0;color:#66798e;font-size:10px}
+.accommodation-shell-active .main-tabs{grid-area:nav;align-self:stretch;gap:11px}
+.accommodation-shell-active .main-tab{position:relative;min-width:64px;min-height:78px;flex-direction:column;gap:8px;padding:11px 8px;border:0;border-radius:0;color:#66798e;font-size:10px}
 .accommodation-shell-active .main-tab:hover{background:#f6f9fd;color:var(--ds-primary)}
 .accommodation-shell-active .main-tab.active,.accommodation-shell-active .main-tab-active{border:0;background:transparent;color:var(--ds-primary);box-shadow:none}
 .accommodation-shell-active .main-tab.active:after,.accommodation-shell-active .main-tab-active:after{content:"";position:absolute;right:10px;bottom:-14px;left:10px;height:3px;border-radius:999px;background:var(--ds-primary)}
 .accommodation-shell-active .main-tab-icon{font-size:24px;filter:grayscale(1)}.accommodation-shell-active .main-tab.active .main-tab-icon{filter:none}
 .accommodation-shell-active .application-utility-actions{display:none!important}
-.accommodation-shell-active .body{max-width:var(--ds-page-max);padding:18px 28px 28px}
+.accommodation-shell-active .body{max-width:var(--ds-page-max);padding:14px 28px 24px}
 .accommodation-shell-active #globalConferenceHeader{position:absolute;top:20px;left:28px;z-index:2;width:255px}
 .accommodation-shell-active .global-conference-header{display:grid;min-height:88px;grid-template-columns:42px minmax(0,1fr) 16px;align-items:center;gap:10px;margin:0;padding:12px 14px;border:1px solid var(--ds-border);border-right:1px solid var(--ds-border);border-radius:14px;background:rgba(255,255,255,.96);box-shadow:var(--ds-shadow-sm)}
 .accommodation-shell-active .global-conference-compact-icon{display:flex;width:38px;height:38px;align-items:center;justify-content:center;border-radius:50%;background:#edf4fd;font-size:18px}.accommodation-shell-active .global-conference-content{display:block;min-width:0}.accommodation-shell-active .global-conference-chevron{display:block;color:var(--ds-primary);font-size:19px}
@@ -475,25 +475,26 @@ tr:nth-child(even) td{background:#F7FBFF}
 }
 #tab0 .accommodation-dashboard{position:relative;padding:0 0 24px;background:transparent}
 #tab0 .accommodation-edit-mode-toolbar{min-height:48px;margin-bottom:14px;padding:10px 14px;border:1px solid var(--acc-border);border-radius:var(--acc-radius);background:rgba(255,255,255,.88);box-shadow:0 3px 12px rgba(30,67,105,.06)}
-#tab0 .accommodation-summary-grid{grid-template-columns:repeat(6,minmax(0,1fr));gap:12px;margin-bottom:18px}
-#tab0 .accommodation-summary-card{position:relative;min-height:112px;grid-template-columns:48px minmax(0,1fr);grid-template-areas:"icon label" "icon value";align-content:center;padding:17px 15px;border:1px solid var(--acc-border);border-top:1px solid var(--acc-border)!important;border-radius:var(--acc-radius);background:rgba(255,255,255,.94);box-shadow:var(--acc-shadow);overflow:hidden}
+#tab0 .accommodation-summary-grid{grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;margin-bottom:14px}
+#tab0 .accommodation-summary-card{position:relative;min-height:94px;grid-template-columns:42px minmax(0,1fr);grid-template-areas:"icon label" "icon value";align-content:center;padding:13px 12px;border:1px solid var(--acc-border);border-top:1px solid var(--acc-border)!important;border-radius:13px;background:rgba(255,255,255,.94);box-shadow:0 4px 14px rgba(30,67,105,.07);overflow:hidden}
 #tab0 .accommodation-summary-card:after{content:"";position:absolute;inset:auto 16px 0;height:3px;border-radius:4px 4px 0 0;background:currentColor;opacity:.85}
-#tab0 .accommodation-summary-icon{display:flex;width:42px;height:42px;align-items:center;justify-content:center;border-radius:50%;background:color-mix(in srgb,currentColor 12%,white);font-size:23px}
+#tab0 .accommodation-summary-icon{display:flex;width:36px;height:36px;align-items:center;justify-content:center;border-radius:50%;background:color-mix(in srgb,currentColor 12%,white);font-size:19px}
 #tab0 .accommodation-summary-label{align-self:end;margin:0;color:#31537b;font-size:10px;line-height:1.4;font-weight:800}
-#tab0 .accommodation-summary-value{align-self:start;margin-top:3px;font-size:26px;line-height:1;font-weight:900}
+#tab0 .accommodation-summary-value{align-self:start;margin-top:2px;font-size:22px;line-height:1;font-weight:900}
 #tab0 .accommodation-search{margin-bottom:8px;padding:0;border:1px solid #ccdaea;border-radius:14px;background:rgba(255,255,255,.96);box-shadow:0 5px 17px rgba(31,78,121,.07);overflow:hidden}
-#tab0 .accommodation-search-controls{min-height:58px;gap:9px;padding:8px 12px}
+#tab0 .accommodation-search-controls{min-height:52px;gap:8px;padding:6px 11px}
 #tab0 .accommodation-search-icon{display:flex;width:34px;align-items:center;justify-content:center;color:var(--acc-primary);font-size:30px;line-height:1;transform:rotate(-20deg)}
 #tab0 .accommodation-search-controls input{min-height:40px;padding:7px 4px;border:0;background:transparent;color:#214665;font-size:13px;box-shadow:none}
 #tab0 .accommodation-search-controls input:focus{border:0;box-shadow:none}
 #tab0 .accommodation-search-clear{min-width:68px;padding:8px 13px;border:1px solid #d4e0ec;background:#fff;color:var(--acc-primary)}
 #tab0 .accommodation-search-clear:disabled{opacity:.45}
 #tab0 .accommodation-search-count{margin:0 2px 10px;padding:9px 13px;border-radius:10px;background:#eaf2fc;color:var(--acc-primary);font-size:12px}
-#tab0 .accommodation-workspace{display:grid;grid-template-columns:minmax(0,1fr) 230px;gap:18px;align-items:start}#tab0 .accommodation-primary-column{min-width:0}
-#tab0 .accommodation-filter-panel{grid-column:2;grid-row:1;padding:17px 14px;border:1px solid var(--acc-border);border-radius:var(--acc-radius);background:rgba(255,255,255,.94);box-shadow:var(--acc-shadow)}#tab0 .accommodation-filter-panel h2{margin-bottom:14px;color:var(--acc-primary-dark);font-size:14px}
+#tab0 .accommodation-workspace{display:grid;grid-template-columns:230px minmax(0,1fr);grid-template-areas:"sidebar main";gap:18px;align-items:start;direction:rtl}#tab0 .accommodation-primary-column{grid-area:main;min-width:0}#tab0 .accommodation-sidebar{grid-area:sidebar;display:grid;gap:14px;min-width:0}
+#tab0 .accommodation-filter-panel,#tab0 .accommodation-legend{padding:16px 14px;border:1px solid var(--acc-border);border-radius:var(--acc-radius);background:rgba(255,255,255,.94);box-shadow:var(--acc-shadow)}#tab0 .accommodation-filter-panel h2,#tab0 .accommodation-legend h2{margin-bottom:12px;color:var(--acc-primary-dark);font-size:14px}
 #tab0 .accommodation-quick-filters{display:grid;gap:6px;margin:0;padding:0;overflow:visible}
 #tab0 .accommodation-quick-filters button{display:flex;min-height:40px;align-items:center;gap:9px;padding:8px 11px;border-color:transparent;border-radius:8px;background:#f7f9fc;color:#446480;box-shadow:none;font-size:10px;text-align:right}
 #tab0 .accommodation-quick-filters button span{display:flex;width:23px;justify-content:center;color:var(--acc-primary);font-size:14px}
+#tab0 .accommodation-legend>div{display:grid;gap:9px}#tab0 .accommodation-legend span{display:flex;align-items:center;gap:8px;color:#536c84;font-size:10px}#tab0 .accommodation-legend i{display:flex;width:22px;justify-content:center;font-style:normal;font-size:13px}.legend-arrived{color:var(--acc-success)}.legend-waiting{color:var(--acc-neutral)}
 #tab0 .accommodation-quick-filters button.active{border-color:var(--acc-primary);background:linear-gradient(135deg,var(--acc-primary),#1d65c8);color:#fff;box-shadow:0 5px 13px rgba(20,82,173,.22)}
 #tab0 .accommodation-house{margin-bottom:16px;border:1px solid var(--acc-border);border-radius:17px;background:rgba(255,255,255,.82);box-shadow:var(--acc-shadow)}
 #tab0 .accommodation-house-title{min-height:62px;padding:13px 16px;border-bottom:1px solid var(--acc-border);border-right:0;background:linear-gradient(90deg,#fff,#f2f7fd)}
@@ -501,31 +502,30 @@ tr:nth-child(even) td{background:#F7FBFF}
 #tab0 .accommodation-house-title strong{font-size:17px;color:var(--acc-primary-dark)}
 #tab0 .accommodation-house>p{margin:10px 16px!important}
 #tab0 .accommodation-house-summary{display:none}
-#tab0 .floor-container{margin:11px 12px;border:1px solid #ccdeee;border-radius:13px;background:rgba(255,255,255,.94);box-shadow:0 3px 12px rgba(30,67,105,.05)}
-#tab0 .accommodation-floor-header{min-height:60px;padding:11px 15px;background:linear-gradient(90deg,#fbfdff,#f2f7fc)}
+#tab0 .floor-container{margin:8px 10px;border:1px solid #ccdeee;border-radius:12px;background:rgba(255,255,255,.94);box-shadow:0 3px 10px rgba(30,67,105,.045)}
+#tab0 .accommodation-floor-header{min-height:52px;padding:9px 13px;background:linear-gradient(90deg,#fbfdff,#f2f7fc)}
 #tab0 .accommodation-floor-header .floor-title{font-size:14px;color:var(--acc-primary-dark)}
 #tab0 .accommodation-floor-toggle{width:30px;height:30px;background:var(--acc-success);box-shadow:0 3px 8px rgba(21,153,87,.2)}
-#tab0 .accommodation-floor-rooms{grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;padding:13px;background:linear-gradient(180deg,rgba(245,249,253,.7),rgba(255,255,255,.6))}
-#tab0 .accommodation-room-card{display:flex;min-width:0;min-height:265px;flex-direction:column;border:1px solid var(--acc-border);border-top:0;background:var(--acc-surface);box-shadow:0 5px 15px rgba(31,78,121,.09);overflow:hidden}
+#tab0 .accommodation-floor-rooms{grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;padding:10px;background:linear-gradient(180deg,rgba(245,249,253,.7),rgba(255,255,255,.6))}
+#tab0 .accommodation-room-card{display:flex;min-width:0;min-height:225px;flex-direction:column;border:1px solid var(--acc-border);border-top:0;background:var(--acc-surface);box-shadow:0 4px 12px rgba(31,78,121,.075);overflow:hidden}
 #tab0 .accommodation-room-card:before{content:"";display:block;height:4px;background:var(--room-status-color)}
-#tab0 .accommodation-room-card .rcard-head{min-height:55px;justify-content:flex-start;gap:8px;padding:9px 11px;border-bottom:1px solid #e7eef5;background:#fff;color:var(--acc-primary-dark);font-size:12px}
+#tab0 .accommodation-room-card .rcard-head{min-height:48px;justify-content:flex-start;gap:6px;padding:7px 9px;border-bottom:1px solid #e7eef5;background:#fff;color:var(--acc-primary-dark);font-size:11px}
 #tab0 .accommodation-room-name{display:flex;align-items:center;gap:5px;margin-left:auto;font-size:16px;font-weight:900}#tab0 .accommodation-room-name b{display:flex;min-width:54px;height:34px;align-items:center;justify-content:center;border-radius:8px;background:var(--room-status-color);color:#fff;font-size:17px}#tab0 .accommodation-room-name i{font-style:normal;font-size:15px}
 #tab0 .accommodation-room-status-badge,#tab0 .accommodation-room-occupancy-badge{border-radius:999px;padding:4px 8px;font-size:9px;font-weight:800}#tab0 .accommodation-room-status-badge{background:#e8f6ef;color:var(--acc-success)}#tab0 .accommodation-room-occupancy-badge{background:#edf3fb;color:var(--acc-primary)}
-#tab0 .accommodation-room-card .rcard-body{display:flex;flex:1;flex-direction:column;padding:10px 12px}
+#tab0 .accommodation-room-card .rcard-body{display:flex;flex:1;flex-direction:column;padding:7px 10px}
 #tab0 .accommodation-room-status{margin-bottom:8px}
 #tab0 .accommodation-room-status span{padding:4px 11px;background:#e9f7f0;color:var(--acc-success);font-size:10px}
 #tab0 .accommodation-room-status strong{padding:3px 8px;border-radius:7px;background:#edf3fb;color:var(--acc-primary);font-size:11px}
 #tab0 .accommodation-occupancy{margin-bottom:9px}
-#tab0 .guest-row{min-height:34px;padding:5px 2px;border-bottom:1px solid #edf2f6;color:#274766;font-size:11px}
+#tab0 .guest-row{min-height:29px;padding:3px 2px;border-bottom:1px solid #edf2f6;color:#274766;font-size:10px}
 #tab0 .accommodation-arrival{min-width:62px;padding:4px 9px;font-size:9px}
 #tab0 .accommodation-arrival.arrived{background:#e5f6ed;color:var(--acc-success)}
 #tab0 .accommodation-arrival.not-arrived{background:#f0f3f6;color:var(--acc-neutral)}
 #tab0 .accommodation-empty-room{margin:auto 0;padding:18px 8px;background:#f7f9fb}
-#tab0 .accommodation-room-key{margin:0 0 7px;padding:9px 10px;border:1px solid #d9ebe3;background:#eff8f4;color:#176d4d}
-#tab0 .accommodation-room-key select{min-height:32px;border-color:#cce2d8;background:#fff;color:#235a48}
+#tab0 .accommodation-room-key{position:relative;display:flex;min-height:36px;align-items:center;justify-content:space-between;margin:0 0 5px;padding:7px 9px;border:1px solid #d9ebe3;background:#eff8f4;color:#176d4d;overflow:hidden}#tab0 .accommodation-room-key span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}#tab0 .accommodation-room-key small{color:var(--acc-primary);font-size:9px}#tab0 .accommodation-room-key select{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer}#tab0 .accommodation-room-key select:disabled{cursor:default}
 #tab0 .accommodation-room-actions{gap:6px;margin-top:auto;padding-top:10px;border-top:1px solid #edf2f6}
 #tab0 .accommodation-room-actions .btn{min-height:30px;border-radius:7px}
-@media(max-width:1100px){.accommodation-shell-active .topbar{grid-template-columns:1fr;grid-template-areas:"heading" "nav";padding:12px 16px}.accommodation-shell-active .application-page-heading{justify-self:stretch}.accommodation-shell-active .logo{display:none}.accommodation-shell-active .main-tabs{width:100%;overflow-x:auto}.accommodation-shell-active #globalConferenceHeader{position:static;width:auto;margin-bottom:12px}#tab0 .accommodation-summary-grid{grid-template-columns:repeat(3,minmax(0,1fr))}#tab0 .accommodation-workspace{grid-template-columns:1fr}#tab0 .accommodation-filter-panel{grid-column:1;grid-row:auto}#tab0 .accommodation-quick-filters{display:flex;overflow-x:auto}#tab0 .accommodation-quick-filters button{flex:0 0 auto}#tab0 .accommodation-floor-rooms{grid-template-columns:repeat(2,minmax(220px,1fr))}}
+@media(max-width:1100px){.accommodation-shell-active .topbar{grid-template-columns:1fr;grid-template-areas:"heading" "nav";padding:12px 16px}.accommodation-shell-active .application-page-heading{justify-self:stretch}.accommodation-shell-active .logo{display:none}.accommodation-shell-active .main-tabs{width:100%;overflow-x:auto}.accommodation-shell-active #globalConferenceHeader{position:static;width:auto;margin-bottom:12px}#tab0 .accommodation-summary-grid{grid-template-columns:repeat(3,minmax(0,1fr))}#tab0 .accommodation-workspace{grid-template-columns:1fr;grid-template-areas:"sidebar" "main"}#tab0 .accommodation-sidebar{display:block}#tab0 .accommodation-legend{display:none}#tab0 .accommodation-quick-filters{display:flex;overflow-x:auto}#tab0 .accommodation-quick-filters button{flex:0 0 auto}#tab0 .accommodation-floor-rooms{grid-template-columns:repeat(2,minmax(220px,1fr))}}
 @media(max-width:600px){.accommodation-shell-active .topbar{min-height:auto;padding:10px}.accommodation-shell-active .application-page-icon{width:46px;height:50px;border-radius:12px;font-size:22px}.accommodation-shell-active .application-page-heading strong{font-size:19px}.accommodation-shell-active .application-page-heading small{font-size:10px}.accommodation-shell-active .main-tabs{gap:4px}.accommodation-shell-active .main-tab{min-width:60px;min-height:66px;padding:9px 6px}.accommodation-shell-active .main-tab-icon{font-size:20px}.accommodation-shell-active .body{padding:10px 8px 20px}#tab0 .accommodation-dashboard{padding:0 0 18px}#tab0 .accommodation-summary-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}#tab0 .accommodation-summary-card{min-height:94px;grid-template-columns:38px minmax(0,1fr);padding:12px 10px}#tab0 .accommodation-summary-icon{width:34px;height:34px;font-size:18px}#tab0 .accommodation-summary-value{font-size:21px}#tab0 .accommodation-search-controls{min-height:54px;flex-wrap:nowrap}#tab0 .accommodation-search-controls input{flex-basis:auto!important;min-width:0;font-size:16px!important}#tab0 .accommodation-search-clear{width:auto;min-width:58px}#tab0 .accommodation-house-title{align-items:flex-start}#tab0 .accommodation-house-actions{display:grid;grid-template-columns:1fr 1fr}#tab0 .floor-container{margin:8px}#tab0 .accommodation-floor-rooms{grid-template-columns:1fr;padding:8px}#tab0 .accommodation-room-card{min-height:250px}#tab0 .accommodation-room-card .rcard-head{flex-wrap:wrap}#tab0 .accommodation-room-name{width:100%;margin-left:0}#tab0 .accommodation-room-actions .btn{min-width:38px;min-height:36px}}
 /* User Management Phase 1 prototype */
 .user-management-layout{display:grid;grid-template-columns:minmax(260px,32%) minmax(0,1fr);gap:18px;align-items:start}
