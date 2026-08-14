@@ -6,12 +6,12 @@ const CACHE_NAMESPACE = IS_DEVELOPMENT
   ? 'cms:development:' + DEVELOPMENT_PROJECT_REF + ':'
   : '';
 const CACHE_PREFIX = CACHE_NAMESPACE + 'conference-manager-core-';
-const CACHE_REVISION = 'accommodation-visual-match-v8';
+const CACHE_REVISION = 'accommodation-visual-match-v9';
 const CACHE_NAME = CACHE_PREFIX + 'v' + APP_VERSION + '-' + CACHE_REVISION;
 const CORE_ASSETS = [
   './',
   './index.html',
-  './style.css?rev=accommodation-visual-match-v8',
+  './style.css?rev=accommodation-visual-match-v9',
   './js/storage/environment-namespace.js',
   './js/storage/indexeddb.js?rev=shared-template-library-v1',
   './js/storage/storage-repository.js?rev=organization-template-sync-v1',
