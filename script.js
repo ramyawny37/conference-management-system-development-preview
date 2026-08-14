@@ -2514,7 +2514,7 @@ function renderAccommodation() {
     });
     if(!hasActiveRoomsInHouse){
       h += '<div style="color:#AAB5C0;font-size:11px;padding:8px 0">لم يتم اختيار غرف للتسكين بعد. استخدم إدارة غرف التسكين لاختيار الغرف.</div>';
-      h += '</div>';
+      h += '</section>';
       return;
     }
 
@@ -2598,7 +2598,7 @@ function renderAccommodation() {
       });
       h += '</div></div>';
     });
-    h += '</div>';
+    h += '</section>';
   });
   h+='</div>'+(isFiltering?'':renderAccommodationQuickFilters())+'</div>';
   ge('tab0').innerHTML = h+'</main>';

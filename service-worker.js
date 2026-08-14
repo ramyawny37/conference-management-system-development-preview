@@ -6,7 +6,7 @@ const CACHE_NAMESPACE = IS_DEVELOPMENT
   ? 'cms:development:' + DEVELOPMENT_PROJECT_REF + ':'
   : '';
 const CACHE_PREFIX = CACHE_NAMESPACE + 'conference-manager-core-';
-const CACHE_REVISION = 'accommodation-visual-match-v10';
+const CACHE_REVISION = 'accommodation-visual-match-v11';
 const CACHE_NAME = CACHE_PREFIX + 'v' + APP_VERSION + '-' + CACHE_REVISION;
 const CORE_ASSETS = [
   './',
@@ -116,7 +116,7 @@ const CORE_ASSETS = [
   './cards.js',
   './libs/xlsx.full.min.js',
   './js/ui-icons.js?rev=accommodation-visual-match-v6',
-  './script.js?rev=accommodation-visual-match-v10',
+  './script.js?rev=accommodation-visual-match-v11',
   './version.js',
   './pwa.js?rev=organization-membership-operation-key-v1',
   './libs/html2canvas.min.js',
