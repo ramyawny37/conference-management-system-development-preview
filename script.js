@@ -2417,12 +2417,13 @@ function renderAccommodation() {
   var isFiltering=!!normalizedSearchQuery;
   var lockState=window.ConferenceEditLockManager&&
     window.ConferenceEditLockManager.getState?window.ConferenceEditLockManager.getState():{status:'viewing'};
-  var editToolbar='<div class="accommodation-edit-mode-toolbar">';
-  if(lockState.status==='editing')editToolbar+='<button class="btn btn-red" onclick="endAccommodationEditing()">إنهاء تعديل التسكين</button><span class="accommodation-edit-state">وضع التعديل فعّال على هذا الجهاز</span>';
-  else editToolbar+='<button class="btn btn-blue" '+(lockState.status==='acquiring'?'disabled':'')+' onclick="beginAccommodationEditing()">'+(lockState.status==='acquiring'?'جارٍ طلب القفل...':'بدء تعديل التسكين')+'</button><span class="accommodation-edit-state">وضع مشاهدة فقط</span>';
-  editToolbar+='</div>';
-  var h='<main class="accommodation-dashboard">'+(isFiltering?'':editToolbar+statsHtml('primary'));
+  var editControls='<div class="accommodation-edit-mode-toolbar">';
+  if(lockState.status==='editing')editControls+='<button class="btn btn-red" onclick="endAccommodationEditing()">إنهاء تعديل التسكين</button><span class="accommodation-edit-state">وضع التعديل فعّال على هذا الجهاز</span>';
+  else editControls+='<button class="btn btn-blue" '+(lockState.status==='acquiring'?'disabled':'')+' onclick="beginAccommodationEditing()">'+(lockState.status==='acquiring'?'جارٍ طلب القفل...':'بدء تعديل التسكين')+'</button><span class="accommodation-edit-state">وضع مشاهدة فقط</span>';
+  editControls+='</div>';
+  var h='<main class="accommodation-dashboard">'+(isFiltering?'':statsHtml('primary'));
   if (!current || !current.houses || !current.houses.length) {
+    if(!isFiltering)h+='<div class="accommodation-edit-toolbar accommodation-edit-toolbar-empty">'+editControls+'</div>';
     h += '<div class="card" style="text-align:center;padding:20px;color:#95a5a6;">لم يتم اختيار بيت للمؤتمر.';
     if(canEditCurrentConferenceAccommodation())h += '<div style="margin-top:10px"><button class="btn btn-blue" onclick="openAssignConferenceHouseSelector()">اختيار بيت المؤتمر</button></div>';
     h += '</div>';
@@ -2438,7 +2439,7 @@ function renderAccommodation() {
     return !!displayed[roomEntry.id]&&accommodationRoomMatchesSearch(roomEntry,normalizedSearchQuery)&&
       (isFiltering||accommodationRoomMatchesQuickFilter(roomEntry,accommodationQuickFilter));
   });
-  h+='<div class="accommodation-tools-row'+(isFiltering?' is-searching':'')+'">'+(isFiltering?'':statsHtml('secondary'))+renderAccommodationSearchControls(visibleRooms.length,isFiltering)+'</div>';
+  h+='<div class="accommodation-edit-toolbar'+(isFiltering?' is-searching':'')+'">'+(isFiltering?'':editControls+statsHtml('secondary'))+renderAccommodationSearchControls(visibleRooms.length,isFiltering)+'</div>';
   if(isFiltering&&!visibleRooms.length){
     h+='<div class="card accommodation-search-empty" role="status">لا توجد غرف مطابقة.</div>';
     ge('tab0').innerHTML=h+'</main>';
