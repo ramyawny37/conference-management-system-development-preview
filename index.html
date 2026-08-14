@@ -10,7 +10,7 @@
 <link rel="apple-touch-icon" sizes="180x180" href="./icons/apple-touch-icon-180x180-v3.png">
 
 <title>إرسالية اصنع فرق</title>
-<link rel="stylesheet" href="style.css?rev=accommodation-visual-match-v14">
+<link rel="stylesheet" href="style.css?rev=accommodation-visual-match-v15">
 </head>
 <body>
 
@@ -146,44 +146,36 @@
 
 <!-- Room Modal -->
 <div class="overlay app-modal" id="roomModal" style="display:none" onclick="if(event.target===this)closeRM()">
-<div class="modal"><div class="mhead"><span id="rmTitle">غرفة</span><span style="cursor:pointer" onclick="closeRM()">✕</span></div>
+<div class="modal room-editor-modal"><div class="mhead room-modal-header"><span class="room-modal-header-icon" aria-hidden="true">✎</span><div class="room-modal-heading"><strong id="rmTitle">تعديل الغرفة</strong><small id="rmContext"></small></div><button type="button" class="room-modal-close" aria-label="إغلاق" onclick="closeRM()">✕</button></div>
 <div class="mbody">
-  <div class="row" style="margin-bottom:9px">
-    <div style="flex:1"><label class="lbl">رقم الغرفة</label><input id="m_num" placeholder="305"></div>
-    <div style="flex:1"><label class="lbl">عدد الأسرة</label><input id="m_beds" type="number" min="1" value="1"></div>
-  </div>
-  <div class="row" style="margin-bottom:9px">
-    <div style="flex:1"><label class="lbl">أسرة إضافية</label><input id="m_extra_beds" type="number" min="0" value="0"></div>
-  </div>
-  <div class="row" style="margin-bottom:9px;align-items:center;gap:8px">
-    <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:#1F4E79;font-weight:700"><input type="checkbox" id="m_closed" style="width:auto"> الغرفة مغلقة مؤقتًا</label>
-    <div style="flex:1"><label class="lbl">من يوم</label><input id="m_closed_day" type="number" min="1" placeholder="اختياري"></div>
-  </div>
-  <div style="margin-bottom:9px"><label class="lbl">ملاحظات الغرفة</label><input id="m_notes" placeholder="ملاحظات إدارية للغرفة"></div>
-  
-  <hr style="border:0; border-top:1px solid #eef3f8; margin: 15px 0;">
-  
-  <div id="m_guests_sec" style="margin-bottom:9px">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
-      <label class="lbl" style="color:#1F4E79;margin:0">👥 البالغون</label>
-      <div style="font-size:10px;color:#5a7a9a">السرائر تُدار تلقائيًا حسب السعة</div>
+  <section class="room-modal-section room-information-section">
+    <div class="room-modal-section-title"><strong>بيانات الغرفة</strong><span>المعلومات الأساسية وحالة الإتاحة</span></div>
+    <div class="room-information-grid">
+      <div class="room-modal-field"><label class="lbl">رقم الغرفة</label><input id="m_num" placeholder="305"></div>
+      <div class="room-modal-field"><label class="lbl">عدد الأسرة</label><input id="m_beds" type="number" min="1" value="1"></div>
+      <div class="room-modal-field"><label class="lbl">أسرة إضافية</label><input id="m_extra_beds" type="number" min="0" value="0"></div>
+      <label class="room-closed-state"><input type="checkbox" id="m_closed"> <span>الغرفة مغلقة مؤقتًا</span></label>
+      <div class="room-modal-field"><label class="lbl">من يوم</label><input id="m_closed_day" type="number" min="1" placeholder="اختياري"></div>
+      <div class="room-modal-field room-notes-field"><label class="lbl">ملاحظات الغرفة</label><input id="m_notes" placeholder="ملاحظات إدارية للغرفة"></div>
     </div>
+  </section>
+  <section id="m_guests_sec" class="room-modal-section room-guests-section">
+    <div class="room-modal-section-title room-modal-section-heading"><strong>النزلاء في الغرفة <b id="rmGuestsCount">0</b></strong><span>السرائر تُدار تلقائيًا حسب السعة</span></div>
     <div id="m_guests"></div>
-  </div>
+  </section>
 
   <datalist id="people_datalist"></datalist>
   <datalist id="people_datalist_guardian"></datalist>
-  
-  <div style="margin-bottom:9px">
-    <div class="row" style="justify-content:space-between;margin-bottom:5px">
-      <label class="lbl" style="color:#E67E22;margin:0">🧒 أطفال</label>
+  <section class="room-modal-section room-children-section">
+    <div class="room-modal-section-title room-modal-section-heading">
+      <strong>الأطفال المرافقون <b id="rmChildrenCount">0</b></strong>
       <button class="btn btn-orange btn-sm" onclick="addCI()">+ طفل</button>
     </div>
     <div id="m_children"></div>
-  </div>
-  <div class="row">
+  </section>
+  <div class="row room-modal-footer">
     <button class="btn btn-blue" id="moveRoomBtn" onclick="return false">↔️ نقل الغرفة</button>
-    <button class="btn btn-green" style="flex:1" onclick="saveRoomData()">💾 حفظ</button>
+    <button class="btn btn-green" onclick="saveRoomData()">💾 حفظ</button>
     <button class="btn btn-gray" onclick="closeRM()">إلغاء</button>
   </div>
 </div></div></div>
@@ -600,7 +592,7 @@
 <script src="libs/html2canvas.min.js"></script>
 <script src="libs/xlsx.full.min.js"></script>
 <script src="js/ui-icons.js?rev=accommodation-visual-match-v6"></script>
-<script src="script.js?rev=accommodation-visual-match-v14"></script>
+<script src="script.js?rev=accommodation-visual-match-v15"></script>
 <script src="version.js"></script>
 <script>
   document.addEventListener('DOMContentLoaded', function() {

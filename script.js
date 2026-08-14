@@ -2376,6 +2376,26 @@ function setAccommodationRoomKeyHolder(houseId,floorId,roomId,personId){
   return true;
 }
 
+function closeOpenRoomActionMenus(exceptElement){
+  document.querySelectorAll('.room-more-actions[open]').forEach(function(menu){
+    if(menu!==exceptElement)menu.removeAttribute('open');
+  });
+}
+
+document.addEventListener('click',function(event){
+  var target=event.target;
+  var menu=target&&target.closest?target.closest('.room-more-actions'):null;
+  if(!menu){
+    closeOpenRoomActionMenus();
+    return;
+  }
+  if(target.closest('button'))closeOpenRoomActionMenus();
+},true);
+
+document.addEventListener('keydown',function(event){
+  if(event.key==='Escape'&&document.querySelector('.room-more-actions[open]'))closeOpenRoomActionMenus();
+});
+
 function renderAccommodationQuickFilters(extraClass){
   var filters=[['all','home','كل الغرف'],['occupied','bed','الغرف المشغولة'],['empty','door','الغرف الفارغة'],['arrived','checkCircle','النزلاء الذين وصلوا'],['not-arrived','circle','النزلاء الذين لم يصلوا'],['key-delivered','key','المفاتيح المسلمة'],['key-not-delivered','key','المفاتيح غير المسلمة']];
   var h='<aside class="accommodation-sidebar '+String(extraClass||'')+'"><section class="accommodation-filter-panel sidebar-card" aria-label="فلترة سريعة"><h2>فلترة سريعة</h2><div class="accommodation-quick-filters">'+filters.map(function(item){return '<button type="button" class="filter-item '+(accommodationQuickFilter===item[0]?'active':'')+'" onclick="setAccommodationQuickFilter(\''+item[0]+'\')"><span>'+accommodationIcon(item[1])+'</span>'+item[2]+'</button>';}).join('')+'</div></section>';
@@ -3101,7 +3121,8 @@ function renderRoomEditorFromDraft(){
   editRoomData.floorId = draftResult.floor.id;
   editRoomData.roomId = draftResult.room.id;
 
-  ge('rmTitle').textContent = '✏️ غرفة ' + draftResult.room.number + ' (' + draftResult.house.name + ' - ' + draftResult.floor.name + ')';
+  ge('rmTitle').textContent = 'تعديل الغرفة ' + draftResult.room.number;
+  ge('rmContext').textContent = draftResult.house.name + ' • ' + draftResult.floor.name;
   ge('m_num').value = draftResult.room.number;
   ge('m_beds').value = draftResult.room.beds;
   ge('m_extra_beds').value = draftResult.room.extraBeds || 0;
@@ -3126,6 +3147,8 @@ function renderRoomEditorFromDraft(){
   var extraBeds = draftResult.room.extraBeds || 0;
   syncGuestSlotsByCapacity(draftResult.room.beds || 1, (draftResult.room.guests || []), days, extraBeds);
   (draftResult.room.children || []).forEach(function(c) { addCI(c.name, c.guardian, c.leftDay, c.personId, c.guardianPersonId, c.id, c.arrivalDay); });
+  ge('rmGuestsCount').textContent = (draftResult.room.guests || []).filter(function(g){return !!String(g&&g.name||'').trim();}).length;
+  ge('rmChildrenCount').textContent = (draftResult.room.children || []).filter(function(c){return !!String(c&&c.name||'').trim();}).length;
 
   ge('m_closed').onchange = function(){
     ge('m_closed_day').disabled = !this.checked;
@@ -3466,7 +3489,6 @@ function createGuestSlotRow(slot, index, days, isExtra, capacity){
   div.className = 'guest-person-row';
   div.id = id;
   div.setAttribute('data-bed-type',isExtra?'extra':'');
-  div.style.cssText = 'display:flex;gap:5px;margin-bottom:5px;align-items:center;flex-wrap:wrap';
   var slotLabel = '';
   if(isExtra){
     var extraIndex = index - (capacity || 0) + 1;
