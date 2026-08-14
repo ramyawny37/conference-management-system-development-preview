@@ -2109,6 +2109,9 @@ function statsHtml(){
   var occupiedRooms=allRooms.filter(function(room){return getAccommodationOccupants(room).length>0;}).length;
   var arrivedCount=activeOccupants.filter(function(person){return person.arrived===true;}).length;
   var deliveredKeys=allRooms.filter(function(room){return !!room.keyHolderPersonId;}).length;
+  var emptyRooms=Math.max(0,allRooms.length-occupiedRooms);
+  var notArrivedCount=Math.max(0,activeOccupants.length-arrivedCount);
+  var undeliveredKeys=Math.max(0,allRooms.length-deliveredKeys);
   var occupancyPercent=totalBeds?Math.round((activeOccupants.length/totalBeds)*100):0;
   var tSeats=0,tUsed=0;
   (current.transports || []).forEach(function(t){
@@ -2123,13 +2126,14 @@ function statsHtml(){
     tUsed += usedSeatsInTransport;
   });
   var h='<div class="stats accommodation-summary-grid">';
-  h+='<div class="stat-card accommodation-summary-card stat-rooms"><span class="accommodation-summary-icon">'+accommodationIcon('building')+'</span><div class="stat-val accommodation-summary-value">'+activeC+'<small>'+(closedC?' +'+closedC:'')+'</small></div><div class="stat-lbl accommodation-summary-label">إجمالي الغرف</div><span class="accommodation-summary-unit">غرفة</span></div>';
-  h+='<div class="stat-card accommodation-summary-card stat-guests"><span class="accommodation-summary-icon">'+accommodationIcon('users')+'</span><div class="stat-val accommodation-summary-value">'+activeOccupants.length+'</div><div class="stat-lbl accommodation-summary-label">إجمالي النزلاء</div><span class="accommodation-summary-unit">نزيل</span></div>';
-  h+='<div class="stat-card accommodation-summary-card stat-occupied"><span class="accommodation-summary-icon">'+accommodationIcon('bed')+'</span><div class="stat-val accommodation-summary-value">'+occupiedRooms+'</div><div class="stat-lbl accommodation-summary-label">الغرف المشغولة</div><span class="accommodation-summary-unit">غرفة</span></div>';
-  h+='<div class="stat-card accommodation-summary-card stat-arrived"><span class="accommodation-summary-icon">'+accommodationIcon('checkCircle')+'</span><div class="stat-val accommodation-summary-value">'+arrivedCount+'</div><div class="stat-lbl accommodation-summary-label">النزلاء الذين وصلوا</div><span class="accommodation-summary-unit">نزيل</span></div>';
-  h+='<div class="stat-card accommodation-summary-card stat-keys"><span class="accommodation-summary-icon">'+accommodationIcon('key')+'</span><div class="stat-val accommodation-summary-value">'+deliveredKeys+'</div><div class="stat-lbl accommodation-summary-label">المفاتيح المسلمة</div><span class="accommodation-summary-unit">غرفة</span></div>';
-  h+='<div class="stat-card accommodation-summary-card stat-rate"><span class="accommodation-summary-icon">'+accommodationIcon('chart')+'</span><div class="stat-val accommodation-summary-value">'+occupancyPercent+'%</div><div class="stat-lbl accommodation-summary-label">نسبة الإشغال</div><span class="accommodation-summary-unit">من السعة</span></div>';
+  h+='<div class="stat-card accommodation-summary-card stat-rooms"><span class="accommodation-summary-icon">'+accommodationIcon('building')+'</span><div class="stat-val accommodation-summary-value">'+activeC+'<small>'+(closedC?' +'+closedC:'')+'</small></div><div class="stat-lbl accommodation-summary-label">إجمالي الغرف</div><span class="accommodation-summary-meta"><span>غرفة</span></span></div>';
+  h+='<div class="stat-card accommodation-summary-card stat-guests"><span class="accommodation-summary-icon">'+accommodationIcon('users')+'</span><div class="stat-val accommodation-summary-value">'+activeOccupants.length+'</div><div class="stat-lbl accommodation-summary-label">إجمالي النزلاء</div><span class="accommodation-summary-meta"><span>نزيل</span></span></div>';
+  h+='<div class="stat-card accommodation-summary-card stat-occupied"><span class="accommodation-summary-icon">'+accommodationIcon('bed')+'</span><div class="stat-val accommodation-summary-value">'+occupiedRooms+'</div><div class="stat-lbl accommodation-summary-label">الغرف المشغولة</div><span class="accommodation-summary-meta"><span>غرفة</span><small>فارغة: '+emptyRooms+'</small></span></div>';
+  h+='<div class="stat-card accommodation-summary-card stat-arrived"><span class="accommodation-summary-icon">'+accommodationIcon('checkCircle')+'</span><div class="stat-val accommodation-summary-value">'+arrivedCount+'</div><div class="stat-lbl accommodation-summary-label">النزلاء الذين وصلوا</div><span class="accommodation-summary-meta"><span>نزيل</span><small>لم يصلوا: '+notArrivedCount+'</small></span></div>';
+  h+='<div class="stat-card accommodation-summary-card stat-keys"><span class="accommodation-summary-icon">'+accommodationIcon('key')+'</span><div class="stat-val accommodation-summary-value">'+deliveredKeys+'</div><div class="stat-lbl accommodation-summary-label">المفاتيح المسلمة</div><span class="accommodation-summary-meta"><span>غرفة</span><small>غير مسلمة: '+undeliveredKeys+'</small></span></div>';
+  h+='<div class="stat-card accommodation-summary-card stat-rate"><span class="accommodation-summary-icon">'+accommodationIcon('chart')+'</span><div class="stat-val accommodation-summary-value">'+occupancyPercent+'%</div><div class="stat-lbl accommodation-summary-label">نسبة الإشغال</div><span class="accommodation-summary-meta"><span>من السعة</span></span></div>';
   h+='</div>';
+  h+='<div class="accommodation-secondary-summary" aria-label="ملخص إضافي للتسكين"><span>'+accommodationIcon('user')+' الأطفال: <strong>'+displayedChildren+'</strong></span><span>'+accommodationIcon('bed')+' الأسرة الإضافية: <strong>'+extraBeds+'</strong></span><span>المتاح: <strong>'+availableExtraBeds+'</strong></span></div>';
   return h;
 }
 
