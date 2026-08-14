@@ -6,12 +6,12 @@ const CACHE_NAMESPACE = IS_DEVELOPMENT
   ? 'cms:development:' + DEVELOPMENT_PROJECT_REF + ':'
   : '';
 const CACHE_PREFIX = CACHE_NAMESPACE + 'conference-manager-core-';
-const CACHE_REVISION = 'accommodation-svg-ui-v5';
+const CACHE_REVISION = 'accommodation-visual-match-v6';
 const CACHE_NAME = CACHE_PREFIX + 'v' + APP_VERSION + '-' + CACHE_REVISION;
 const CORE_ASSETS = [
   './',
   './index.html',
-  './style.css?rev=accommodation-svg-ui-v5',
+  './style.css?rev=accommodation-visual-match-v6',
   './js/storage/environment-namespace.js',
   './js/storage/indexeddb.js?rev=shared-template-library-v1',
   './js/storage/storage-repository.js?rev=organization-template-sync-v1',
@@ -105,18 +105,18 @@ const CORE_ASSETS = [
   './js/sync/wrong-remote-binding-repair-service.js?rev=wrong-remote-binding-repair-v1',
   './js/sync/wrong-remote-binding-repair-ui.js?rev=diagnostics-privacy-hardening-v1',
   './utils.js',
-  './core.js?rev=accommodation-svg-ui-v5',
+  './core.js?rev=accommodation-visual-match-v6',
   './people.js?rev=canonical-conference-schema-v1',
   './houses.js?rev=template-floor-conference-sync-v1',
   './transport.js',
   './houseTemplates.js?rev=shared-house-template-read-only-v1',
-  './state.js?rev=accommodation-svg-ui-v5',
+  './state.js?rev=accommodation-visual-match-v6',
   './js/conference/accounts.js',
   './js/conference-template-houses-editor.js',
   './cards.js',
   './libs/xlsx.full.min.js',
-  './js/ui-icons.js?rev=accommodation-svg-ui-v5',
-  './script.js?rev=accommodation-svg-ui-v5',
+  './js/ui-icons.js?rev=accommodation-visual-match-v6',
+  './script.js?rev=accommodation-visual-match-v6',
   './version.js',
   './pwa.js?rev=organization-membership-operation-key-v1',
   './libs/html2canvas.min.js',
