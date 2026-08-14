@@ -10,7 +10,7 @@
 <link rel="apple-touch-icon" sizes="180x180" href="./icons/apple-touch-icon-180x180-v3.png">
 
 <title>إرسالية اصنع فرق</title>
-<link rel="stylesheet" href="style.css?rev=accommodation-reference-ui-v4">
+<link rel="stylesheet" href="style.css?rev=accommodation-svg-ui-v5">
 </head>
 <body>
 
@@ -24,17 +24,17 @@
 
 <div id="startupAccessGate" class="startup-access-gate"><div class="startup-access-card">جارٍ التحقق من جلسة الدخول...</div></div>
 <div class="topbar" id="applicationTopbar" style="display:none">
-  <div class="application-page-heading"><span class="application-page-icon">🛏️</span><div><strong>التسكين</strong><small>إدارة تسكين النزلاء في غرف المؤتمر</small></div></div>
-  <div class="logo" id="logo-text">🏨 إدارة المؤتمر</div>
+  <div class="application-page-heading"><span class="application-page-icon" data-app-icon="bed"></span><div><strong>التسكين</strong><small>إدارة تسكين النزلاء في غرف المؤتمر</small></div></div>
+  <div class="logo" id="logo-text">إدارة المؤتمر</div>
   <div class="main-tabs">
-    <div class="main-tab" id="homeTabButton" onclick="showHomePage()"><span class="main-tab-icon">🏠</span><span class="main-tab-label">الرئيسية</span></div>
-    <div class="tab main-tab" onclick="switchTab(0)"><span class="main-tab-icon">🏨</span><span class="main-tab-label">التسكين</span></div>
-    <div class="tab main-tab" onclick="switchTab(1)"><span class="main-tab-icon">🚌</span><span class="main-tab-label">المواصلات</span></div>
-    <div class="tab main-tab" onclick="switchTab(2)"><span class="main-tab-icon">💰</span><span class="main-tab-label">الحسابات</span></div>
-    <div class="tab main-tab" onclick="switchTab(3)"><span class="main-tab-icon">📊</span><span class="main-tab-label">التقارير</span></div>
-    <div class="tab main-tab" onclick="switchTab(4)"><span class="main-tab-icon">🪪</span><span class="main-tab-label">كروت</span></div>
-    <div class="tab main-tab" onclick="switchTab(5)"><span class="main-tab-icon">🔍</span><span class="main-tab-label">بحث</span></div>
-    <div class="tab main-tab" data-tab-id="6" data-tab-name="settings" onclick="switchTab(6)"><span class="main-tab-icon">⚙️</span><span class="main-tab-label">إعدادات</span></div>
+    <div class="main-tab" id="homeTabButton" onclick="showHomePage()"><span class="main-tab-icon" data-app-icon="home"></span><span class="main-tab-label">الرئيسية</span></div>
+    <div class="tab main-tab" onclick="switchTab(0)"><span class="main-tab-icon" data-app-icon="bed"></span><span class="main-tab-label">التسكين</span></div>
+    <div class="tab main-tab" onclick="switchTab(1)"><span class="main-tab-icon" data-app-icon="bus"></span><span class="main-tab-label">المواصلات</span></div>
+    <div class="tab main-tab" onclick="switchTab(2)"><span class="main-tab-icon" data-app-icon="money"></span><span class="main-tab-label">الحسابات</span></div>
+    <div class="tab main-tab" onclick="switchTab(3)"><span class="main-tab-icon" data-app-icon="chart"></span><span class="main-tab-label">التقارير</span></div>
+    <div class="tab main-tab" onclick="switchTab(4)"><span class="main-tab-icon" data-app-icon="user"></span><span class="main-tab-label">كروت</span></div>
+    <div class="tab main-tab" onclick="switchTab(5)"><span class="main-tab-icon" data-app-icon="search"></span><span class="main-tab-label">بحث</span></div>
+    <div class="tab main-tab" data-tab-id="6" data-tab-name="settings" onclick="switchTab(6)"><span class="main-tab-icon" data-app-icon="settings"></span><span class="main-tab-label">إعدادات</span></div>
   </div>
   <div class="application-utility-actions" style="margin-right:auto;display:flex;gap:6px;padding:6px 0;align-items:center">
     <div class="sync-bar live" id="syncBar">✔</div>
@@ -588,18 +588,19 @@
 <script src="js/sync/wrong-remote-binding-repair-service.js?rev=wrong-remote-binding-repair-v1"></script>
 <script src="js/sync/wrong-remote-binding-repair-ui.js?rev=diagnostics-privacy-hardening-v1"></script>
 <script src="utils.js"></script>
-<script src="core.js?rev=accommodation-reference-ui-v4"></script>
+<script src="core.js?rev=accommodation-svg-ui-v5"></script>
 <script src="people.js?rev=canonical-conference-schema-v1"></script>
 <script src="houses.js?rev=template-floor-conference-sync-v1"></script>
 <script src="transport.js"></script>
 <script src="houseTemplates.js?rev=shared-house-template-read-only-v1"></script>
-<script src="state.js?rev=accommodation-reference-ui-v4"></script>
+<script src="state.js?rev=accommodation-svg-ui-v5"></script>
 <script src="js/conference/accounts.js"></script>
 <script src="js/conference-template-houses-editor.js"></script>
 <script src="cards.js"></script>
 <script src="libs/html2canvas.min.js"></script>
 <script src="libs/xlsx.full.min.js"></script>
-<script src="script.js?rev=accommodation-reference-ui-v4"></script>
+<script src="js/ui-icons.js?rev=accommodation-svg-ui-v5"></script>
+<script src="script.js?rev=accommodation-svg-ui-v5"></script>
 <script src="version.js"></script>
 <script>
   document.addEventListener('DOMContentLoaded', function() {
