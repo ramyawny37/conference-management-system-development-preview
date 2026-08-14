@@ -1084,7 +1084,8 @@ function loadFromFile(e){
 
 function updateLogoText() {
   var logoEl = ge('logo-text');
-  if (logoEl) logoEl.textContent = 'إدارة المؤتمر';
+  var accountLabel = logoEl && logoEl.querySelector('.application-account-label');
+  if (accountLabel) accountLabel.textContent = 'صاحب الحساب';
   renderGlobalConferenceHeader();
 }
 
