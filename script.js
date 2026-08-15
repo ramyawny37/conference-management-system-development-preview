@@ -4434,21 +4434,42 @@ function deleteConferenceRoom(houseId, floorId, roomId) {
 function renderTransports(){
   var current = getCurrentConference();
   if (!current) {
-    ge('tab1').innerHTML = '<div class="card" style="text-align:center;padding:20px;color:#95a5a6;">لا توجد بيانات مؤتمر جاهزة حالياً.</div>';
+    ge('tab1').innerHTML = '<div class="transport-empty-state transport-empty-state-standalone">'+accommodationIcon('bus')+'<strong>لا توجد بيانات مؤتمر جاهزة حالياً.</strong></div>';
     return;
   }
   var transports = current.transports || [];
   var canEditTransport=canEditCurrentConferenceData();
-  var h='<div class="card no-print"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:9px"><div class="card-title">🚌 وسائل المواصلات ('+transports.length+')</div>';
+  var totalSeats=0,totalUsed=0;
+  transports.forEach(function(transport){
+    totalSeats+=transport.capacity;
+    (transport.seats||[]).forEach(function(seat){
+      if(seat.name&&seat.type!=='child_shared'&&seat.type!=='infant')totalUsed++;
+    });
+  });
+  var totalAvailable=Math.max(0,totalSeats-totalUsed);
+  var totalUnassigned=unassigned('').length;
+  var h='<div class="transport-dashboard">';
+  h+='<section class="transport-stats" aria-label="إحصائيات المواصلات">';
+  h+='<article class="transport-stat transport-stat-primary"><span class="transport-stat-icon">'+accommodationIcon('bus')+'</span><div><strong>'+transports.length+'</strong><span>وسائل النقل</span></div></article>';
+  h+='<article class="transport-stat transport-stat-primary"><span class="transport-stat-icon">'+accommodationIcon('building')+'</span><div><strong>'+totalSeats+'</strong><span>إجمالي المقاعد</span></div></article>';
+  h+='<article class="transport-stat transport-stat-success"><span class="transport-stat-icon">'+accommodationIcon('user')+'</span><div><strong>'+totalUsed+'</strong><span>المقاعد المشغولة</span></div></article>';
+  h+='<article class="transport-stat transport-stat-success"><span class="transport-stat-icon">'+accommodationIcon('checkCircle')+'</span><div><strong>'+totalAvailable+'</strong><span>المقاعد المتاحة</span></div></article>';
+  h+='<article class="transport-stat transport-stat-warning"><span class="transport-stat-icon">'+accommodationIcon('users')+'</span><div><strong>'+totalUnassigned+'</strong><span>غير المسكنين</span></div></article>';
+  h+='</section>';
+  h+='<section class="transport-toolbar no-print"><div class="transport-toolbar-title"><span>'+accommodationIcon('bus')+'</span><div><strong>إدارة المواصلات</strong><small>وسائل النقل وتوزيع المقاعد</small></div></div>';
   if(canEditTransport){
-    h+='<div class="row" style="gap:5px">';
-    if(transports.length) h+='<button class="btn btn-dark" onclick="openBulkAssign()">⚡ تسكين جماعي</button>';
-    h+='<button class="btn btn-green" onclick="openTM(null)">➕ إضافة</button>';
+    h+='<div class="transport-toolbar-actions">';
+    if(transports.length) h+='<button class="btn transport-action-secondary" onclick="openBulkAssign()">'+accommodationIcon('users')+'<span>تسكين جماعي</span></button>';
+    h+='<button class="btn transport-action-primary" onclick="openTM(null)">'+accommodationIcon('plus')+'<span>إضافة وسيلة</span></button>';
     h+='</div>';
   }
-  h+='</div>';
-  if(!transports.length)h+='<div style="text-align:center;padding:16px;color:#AAB5C0;font-size:11px">لا توجد وسائل — اضغط ➕</div>';
-  h+='</div>';
+  h+='</section>';
+  h+='<section class="transport-vehicles-workspace">';
+  if(!transports.length){
+    h+='<div class="transport-empty-state">'+accommodationIcon('bus')+'<strong>لا توجد وسائل مواصلات</strong><span>أضف وسيلة نقل لبدء توزيع المشاركين على المقاعد.</span>';
+    if(canEditTransport)h+='<button class="btn transport-action-primary" onclick="openTM(null)">'+accommodationIcon('plus')+'<span>إضافة وسيلة</span></button>';
+    h+='</div>';
+  }
   transports.forEach(function(t){
     var realSeats = [], sharedKids = [];
     (t.seats || []).forEach(function(s) {
@@ -4464,32 +4485,38 @@ function renderTransports(){
     var riderList=[];
     t.seats.forEach(function(s){if(s.riders&&s.riders.length)s.riders.forEach(function(r,riderIndex){riderList.push({r:getTransportRiderData(r),riderIndex:riderIndex,parentSeat:s.seat,parentName:s.name})})});
     var used=realSeats.length;
-    h+='<div class="card">';
-    h+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">';
-    h+='<div class="card-title" style="margin:0">'+esc(t.icon)+' '+esc(t.name)+' <span style="font-size:10px;color:#E67E22;font-weight:normal">('+used+'/'+t.capacity+' كرسي'+(sharedKids.length+riderList.length?' + '+(sharedKids.length+riderList.length)+' طفل مشترك':'')+')</span></div>';
-    if(canEditTransport)h+='<button class="btn btn-blue btn-sm" onclick="openTM(\''+t.id+'\')">✏️</button>';
-    h+='</div>';
-    h+='<div style="font-size:9px;color:#5a7a9a;margin-bottom:6px">🟩 مشغول  🟨 طفل كرسي  🟪 مع والده  ⬜ فارغ — اضغط للتعيين</div>';
-    h+='<div class="seat-grid">';
+    var available=Math.max(0,t.capacity-used);
+    var occupancyPercent=t.capacity?Math.min(100,Math.round((used/t.capacity)*100)):0;
+    var occupancyState=available===0?'full':available<=Math.max(2,Math.ceil(t.capacity*.15))?'near':'available';
+    var occupancyText=occupancyState==='full'?'مكتمل':occupancyState==='near'?'قارب على الامتلاء':'متاح';
+    h+='<article class="transport-vehicle-card transport-capacity-'+occupancyState+'">';
+    h+='<header class="transport-vehicle-header"><span class="transport-vehicle-icon">'+accommodationIcon('bus')+'</span><div class="transport-vehicle-heading"><strong>'+esc(t.name)+'</strong><span>'+used+' / '+t.capacity+' كرسي</span></div><div class="transport-vehicle-status"><span class="transport-status-badge">'+occupancyText+'</span><small>المتاح: '+available+'</small></div>';
+    if(canEditTransport)h+='<button class="btn transport-vehicle-edit" onclick="openTM(\''+t.id+'\')" aria-label="تعديل وسيلة النقل">'+accommodationIcon('settings')+'<span>تعديل</span></button>';
+    h+='</header>';
+    h+='<div class="transport-capacity-summary"><div><span>إشغال المقاعد</span><strong>'+occupancyPercent+'%</strong></div><div class="transport-capacity-track"><span style="width:'+occupancyPercent+'%"></span></div></div>';
+    h+='<section class="transport-seat-section"><div class="transport-section-title"><div><span>'+accommodationIcon('bus')+'</span><strong>خريطة المقاعد</strong></div><div class="transport-seat-legend"><span class="is-empty">فارغ</span><span class="is-occupied">مشغول</span><span class="is-child">طفل</span><span class="is-shared">مشارك</span></div></div>';
+    h+='<div class="seat-grid transport-seat-grid">';
     t.seats.forEach(function(s){
       var riders=s.riders&&s.riders.length?s.riders:[];
       var cls='seat'+(s.name?s.type==='child_seat'?' ch':s.type==='child_shared'||s.type==='infant'?' shared':' occ':'');
-      var show=s.type==='child_shared'||s.type==='infant'?'👶':s.name?s.name.split(' ')[0]:'';
-      h+='<div class="'+cls+'" '+(canEditTransport?'onclick="openSM(\''+t.id+'\','+s.seat+')" ':'')+'title="'+(s.name||'فارغ')+(riders.length?' + '+riders.map(function(r){return getTransportRiderData(r).name}).join(', '):'')+'">';
-      h+='<div style="font-size:10px;font-weight:800">'+s.seat+(riders.length?'<span style="font-size:7px;color:#8E44AD"> +'+riders.length+'👶</span>':'')+'</div>';
-      if(show)h+='<div style="font-size:7px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(show)+'</div>';
+      var stateText=!s.name?'فارغ':s.type==='child_seat'?'طفل':s.type==='child_shared'||s.type==='infant'?'مشارك':'مشغول';
+      var seatIcon=!s.name?'circle':s.type==='child_shared'||s.type==='infant'?'users':'user';
+      var show=s.name?s.name.split(' ')[0]:'';
+      h+='<div class="'+cls+' transport-seat" '+(canEditTransport?'onclick="openSM(\''+t.id+'\','+s.seat+')" ':'')+'title="'+(s.name||'فارغ')+(riders.length?' + '+riders.map(function(r){return getTransportRiderData(r).name}).join(', '):'')+'">';
+      h+='<div class="transport-seat-head"><strong>'+s.seat+'</strong><span>'+accommodationIcon(seatIcon)+'</span></div><small>'+stateText+'</small>';
+      if(show)h+='<span class="transport-seat-name">'+esc(show)+'</span>';
+      if(riders.length)h+='<b class="transport-seat-linked">'+accommodationIcon('users')+' '+riders.length+'</b>';
       h+='</div>';
     });
-    h+='</div>';
+    h+='</div></section>';
     if(sharedKids.length||riderList.length){
-      h+='<div style="margin-top:8px;font-size:10px;color:#7D4E00;font-weight:700">👶 أطفال مع أولياء الأمور (لا يُحتسب لهم كرسي)</div>';
-      h+='<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px">';
-      sharedKids.forEach(function(s){h+='<span style="background:#EDE7F6;border:1px solid #8E44AD;border-radius:8px;padding:2px 7px;font-size:10px">'+esc(s.name)+'<span style="color:#7A9AB8"> — '+esc(formatTransportSeatLabel(s.note)||'مع ولي الأمر')+'</span></span>'});
-      riderList.forEach(function(x){h+='<span style="background:#EDE7F6;border:1px solid #8E44AD;border-radius:8px;padding:2px 7px;font-size:10px">'+esc(x.r.name)+'<span style="color:#7A9AB8"> — مع '+esc(x.parentName||'المرافق')+' (كرسي '+x.parentSeat+')</span></span>'});
-      h+='</div>';
+      h+='<section class="transport-shared-summary"><div class="transport-section-title"><div><span>'+accommodationIcon('users')+'</span><strong>الأطفال المشاركون</strong></div><small>لا يُحتسب لهم كرسي مستقل</small></div><div class="transport-shared-list">';
+      sharedKids.forEach(function(s){h+='<span>'+accommodationIcon('users')+'<strong>'+esc(s.name)+'</strong><small>'+esc(formatTransportSeatLabel(s.note)||'مع ولي الأمر')+'</small></span>'});
+      riderList.forEach(function(x){h+='<span>'+accommodationIcon('users')+'<strong>'+esc(x.r.name)+'</strong><small>مع '+esc(x.parentName||'المرافق')+' — كرسي '+x.parentSeat+'</small></span>'});
+      h+='</div></section>';
     }
     if(used>0||sharedKids.length||riderList.length){
-      h+='<div style="margin-top:8px"><table><thead><tr><th>الكرسي</th><th>الاسم</th><th>الغرفة</th><th>النوع</th>'+(canEditTransport?'<th></th>':'')+'</tr></thead><tbody>';
+      h+='<section class="transport-passenger-section"><div class="transport-section-title"><div><span>'+accommodationIcon('users')+'</span><strong>تفاصيل الركاب</strong></div></div><div class="transport-passenger-list"><div class="transport-passenger-head"><span>الكرسي</span><span>الاسم</span><span>الغرفة</span><span>النوع</span>'+(canEditTransport?'<span>الإجراءات</span>':'')+'</div>';
       var occupiedSeats = [];
       (t.seats || []).forEach(function(s) {
         if (s.name && s.type !== 'child_shared' && s.type !== 'infant') {
@@ -4497,26 +4524,26 @@ function renderTransports(){
         }
       });
       occupiedSeats.forEach(function(s){
-        h+='<tr><td><b style="color:#E67E22">'+s.seat+'</b></td><td>'+esc(s.name)+(s.type==='child_seat'&&!s.personId?' <span class="transport-manual-badge">اسم يدوي</span>':'')+'</td><td>'+esc(s.room)+'</td>';
-        h+='<td>'+(s.type==='child_seat'?'<span class="pill p-child">طفل — كرسي مستقل</span>':'<span class="pill p-adult">👤</span>')+'</td>';
-        if(canEditTransport)h+='<td><div class="transport-rider-actions"><button class="btn btn-blue btn-sm" onclick="openSM(\''+t.id+'\','+s.seat+')">تعديل</button><button class="btn btn-red btn-sm" onclick="removeTransportSeatRider(\''+t.id+'\','+s.seat+',null)">حذف</button></div></td>';
-        h+='</tr>';
+        h+='<div class="transport-passenger-row"><b data-label="الكرسي">'+s.seat+'</b><span data-label="الاسم">'+esc(s.name)+(s.type==='child_seat'&&!s.personId?' <small class="transport-manual-badge">اسم يدوي</small>':'')+'</span><span data-label="الغرفة">'+esc(s.room)+'</span><span data-label="النوع"><i class="transport-passenger-type '+(s.type==='child_seat'?'is-child':'is-adult')+'">'+(s.type==='child_seat'?'طفل — كرسي مستقل':'بالغ')+'</i></span>';
+        if(canEditTransport)h+='<span data-label="الإجراءات"><div class="transport-rider-actions"><button class="btn transport-row-edit" onclick="openSM(\''+t.id+'\','+s.seat+')">'+accommodationIcon('settings')+'<span>تعديل</span></button><button class="btn transport-row-delete" onclick="removeTransportSeatRider(\''+t.id+'\','+s.seat+',null)">'+accommodationIcon('close')+'<span>حذف</span></button></div></span>';
+        h+='</div>';
       });
       sharedKids.forEach(function(s){
-        h+='<tr><td><b style="color:#8E44AD">'+s.seat+'</b></td><td>'+esc(s.name)+(!s.personId?' <span class="transport-manual-badge">اسم يدوي</span>':'')+'</td><td>'+esc(s.room)+'</td><td><span class="pill p-child">طفل مشارك — '+esc(formatTransportSeatLabel(s.note))+'</span></td>';
-        if(canEditTransport)h+='<td><div class="transport-rider-actions"><button class="btn btn-blue btn-sm" onclick="openSM(\''+t.id+'\','+s.seat+')">تعديل</button><button class="btn btn-red btn-sm" onclick="removeTransportSeatRider(\''+t.id+'\','+s.seat+',null)">حذف</button></div></td>';
-        h+='</tr>';
+        h+='<div class="transport-passenger-row is-shared"><b data-label="الكرسي">'+s.seat+'</b><span data-label="الاسم">'+esc(s.name)+(!s.personId?' <small class="transport-manual-badge">اسم يدوي</small>':'')+'</span><span data-label="الغرفة">'+esc(s.room)+'</span><span data-label="النوع"><i class="transport-passenger-type is-shared">طفل مشارك — '+esc(formatTransportSeatLabel(s.note))+'</i></span>';
+        if(canEditTransport)h+='<span data-label="الإجراءات"><div class="transport-rider-actions"><button class="btn transport-row-edit" onclick="openSM(\''+t.id+'\','+s.seat+')">'+accommodationIcon('settings')+'<span>تعديل</span></button><button class="btn transport-row-delete" onclick="removeTransportSeatRider(\''+t.id+'\','+s.seat+',null)">'+accommodationIcon('close')+'<span>حذف</span></button></div></span>';
+        h+='</div>';
       });
       riderList.forEach(function(item){
         var riderEditHandler=item.r.type==='child_shared'?'openTransportRiderEditor(\''+t.id+'\','+item.parentSeat+','+item.riderIndex+')':'openSM(\''+t.id+'\','+item.parentSeat+')';
-        h+='<tr><td><b style="color:#8E44AD">'+item.parentSeat+'</b></td><td>'+esc(item.r.name)+(!item.r.personId?' <span class="transport-manual-badge">اسم يدوي</span>':'')+'</td><td>'+esc(item.r.room||'')+'</td><td><span class="pill p-child">طفل مشارك مع '+esc(item.parentName||'المرافق')+'</span></td>';
-        if(canEditTransport)h+='<td><div class="transport-rider-actions"><button class="btn btn-blue btn-sm" onclick="'+riderEditHandler+'">تعديل</button><button class="btn btn-red btn-sm" onclick="removeTransportSeatRider(\''+t.id+'\','+item.parentSeat+','+item.riderIndex+')">حذف</button></div></td>';
-        h+='</tr>';
+        h+='<div class="transport-passenger-row is-shared"><b data-label="الكرسي">'+item.parentSeat+'</b><span data-label="الاسم">'+esc(item.r.name)+(!item.r.personId?' <small class="transport-manual-badge">اسم يدوي</small>':'')+'</span><span data-label="الغرفة">'+esc(item.r.room||'')+'</span><span data-label="النوع"><i class="transport-passenger-type is-shared">طفل مشارك مع '+esc(item.parentName||'المرافق')+'</i></span>';
+        if(canEditTransport)h+='<span data-label="الإجراءات"><div class="transport-rider-actions"><button class="btn transport-row-edit" onclick="'+riderEditHandler+'">'+accommodationIcon('settings')+'<span>تعديل</span></button><button class="btn transport-row-delete" onclick="removeTransportSeatRider(\''+t.id+'\','+item.parentSeat+','+item.riderIndex+')">'+accommodationIcon('close')+'<span>حذف</span></button></div></span>';
+        h+='</div>';
       });
-      h+='</tbody></table></div>';
+      h+='</div></section>';
     }
-    h+='</div>';
+    h+='</article>';
   });
+  h+='</section></div>';
   ge('tab1').innerHTML=h;
 }
 

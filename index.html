@@ -10,7 +10,7 @@
 <link rel="apple-touch-icon" sizes="180x180" href="./icons/apple-touch-icon-180x180-v3.png">
 
 <title>إرسالية اصنع فرق</title>
-<link rel="stylesheet" href="style.css?rev=home-dashboard-v4">
+<link rel="stylesheet" href="style.css?rev=transport-dashboard-v1">
 </head>
 <body>
 
@@ -182,85 +182,88 @@
 
 <!-- Transport Modal -->
 <div class="overlay app-modal" id="transportModal" style="display:none" onclick="if(event.target===this)closeTM()">
-<div class="modal"><div class="mhead"><span id="tmTitle">وسيلة</span><span style="cursor:pointer" onclick="closeTM()">✕</span></div>
-<div class="mbody">
-  <div class="row" style="margin-bottom:9px">
-    <div style="flex:2"><label class="lbl">الاسم</label><input id="t_name" placeholder="أتوبيس 1"></div>
-    <div style="flex:1"><label class="lbl">أيقونة</label>
-      <select id="t_icon"><option>🚌</option><option>🚐</option><option>🚎</option><option>🚑</option><option>✈️</option><option>🚢</option><option>🚂</option></select>
+<div class="modal transport-editor-modal"><div class="mhead transport-modal-header"><span class="transport-modal-header-icon" data-app-icon="bus"></span><span id="tmTitle">وسيلة</span><button type="button" class="transport-modal-close" aria-label="إغلاق" onclick="closeTM()"><span data-app-icon="close"></span></button></div>
+<div class="mbody transport-modal-body">
+  <section class="transport-modal-section">
+    <div class="transport-modal-section-title"><span data-app-icon="bus"></span><div><strong>بيانات وسيلة النقل</strong><small>الاسم والنوع المستخدم في المؤتمر</small></div></div>
+    <div class="transport-modal-fields transport-modal-fields-two">
+      <div class="transport-modal-field"><label class="lbl">الاسم</label><input id="t_name" placeholder="أتوبيس 1"></div>
+      <div class="transport-modal-field"><label class="lbl">أيقونة</label>
+        <select id="t_icon"><option value="🚌">أتوبيس</option><option value="🚐">حافلة صغيرة</option><option value="🚎">حافلة</option><option value="🚑">سيارة خدمة</option><option value="✈️">طائرة</option><option value="🚢">سفينة</option><option value="🚂">قطار</option></select>
+      </div>
     </div>
-  </div>
-  <div style="margin-bottom:9px"><label class="lbl">عدد الكراسي</label><input id="t_cap" type="number" min="1" max="300" placeholder="مثال: 50"></div>
-  <div class="row">
-    <button class="btn btn-green" style="flex:1" onclick="saveTransport()">💾 حفظ</button>
-    <button class="btn btn-red" id="delTransBtn" style="display:none" onclick="deleteTransport()">🗑️</button>
-    <button class="btn btn-gray" onclick="closeTM()">إلغاء</button>
+  </section>
+  <section class="transport-modal-section">
+    <div class="transport-modal-section-title"><span data-app-icon="users"></span><div><strong>السعة</strong><small>إجمالي المقاعد المتاحة داخل الوسيلة</small></div></div>
+    <div class="transport-modal-field"><label class="lbl">عدد الكراسي</label><input id="t_cap" type="number" min="1" max="300" placeholder="مثال: 50"></div>
+  </section>
+  <div class="transport-modal-footer">
+    <button class="btn transport-modal-save" onclick="saveTransport()"><span data-app-icon="checkCircle"></span><span>حفظ</span></button>
+    <button class="btn transport-modal-delete" id="delTransBtn" style="display:none" onclick="deleteTransport()"><span data-app-icon="close"></span><span>حذف</span></button>
+    <button class="btn transport-modal-cancel" onclick="closeTM()">إلغاء</button>
   </div>
 </div></div></div>
 
 <!-- Seat Modal -->
 <div class="overlay app-modal" id="seatModal" style="display:none" onclick="if(event.target===this)closeSM()">
-<div class="modal"><div class="mhead"><span id="smTitle">كرسي</span><span style="cursor:pointer" onclick="closeSM()">✕</span></div>
-<div class="mbody" style="display:flex;flex-direction:column;gap:9px">
-  <div><label class="lbl">اختيار شخص مسجل</label>
-    <select id="s_pick" onchange="pickGuest()"><option value="">— اختر —</option></select></div>
-  <input type="hidden" id="s_person_id">
-  <div><label class="lbl">أو كتابة اسم يدويًا</label><input id="s_name" placeholder="الاسم" oninput="handleSeatPersonInput()"></div>
-  <div><label class="lbl">رقم الغرفة</label><input id="s_room"></div>
-  <div><label class="lbl">نوع الراكب</label>
-    <select id="s_type" onchange="toggleSeatNote()">
-      <option value="adult">👤 بالغ</option>
-      <option value="child_seat">🧒 كرسي مستقل — يحتسب كرسيًا</option>
-      <option value="child_shared">🧒 مع المرافق — لا يحتسب كرسيًا</option>
-      <option value="infant">👶 رضيع — مع والده</option>
-      <option value="special">♿ ذوو احتياجات</option>
-    </select></div>
-  <div id="s_note_row" style="display:none">
-    <label class="lbl">اسم ولي الأمر / رقم كرسيه</label>
-    <input id="s_note" placeholder="مع والده — كرسي 5" style="border-color:#F39C12"></div>
-  <div id="s_guardian_row" style="display:none">
-    <label class="lbl">المرافق الذي سيشارك الطفل معه</label>
-    <select id="s_guardian_select"></select>
-  </div>
-  <div id="s_child_seat_row" style="display:none">
-    <label class="lbl">رقم الكرسي المستقل</label>
-    <select id="s_child_seat_number"><option value="">اختر كرسيًا متاحًا</option></select>
-  </div>
-  <div id="s_shared_children_section" class="modal-section" style="display:none">
-    <label class="lbl">أطفال مشاركون مع المرافق</label>
+<div class="modal transport-seat-modal"><div class="mhead transport-modal-header"><span class="transport-modal-header-icon" data-app-icon="user"></span><span id="smTitle">كرسي</span><button type="button" class="transport-modal-close" aria-label="إغلاق" onclick="closeSM()"><span data-app-icon="close"></span></button></div>
+<div class="mbody transport-modal-body transport-seat-modal-body">
+  <section class="transport-modal-section">
+    <div class="transport-modal-section-title"><span data-app-icon="user"></span><div><strong>بيانات الراكب</strong><small>اختر شخصًا مسجلًا أو أدخل البيانات يدويًا</small></div></div>
+    <div class="transport-modal-fields">
+      <div class="transport-modal-field transport-modal-field-wide"><label class="lbl">اختيار شخص مسجل</label><select id="s_pick" onchange="pickGuest()"><option value="">— اختر —</option></select></div>
+      <input type="hidden" id="s_person_id">
+      <div class="transport-modal-field"><label class="lbl">أو كتابة اسم يدويًا</label><input id="s_name" placeholder="الاسم" oninput="handleSeatPersonInput()"></div>
+      <div class="transport-modal-field"><label class="lbl">رقم الغرفة</label><input id="s_room"></div>
+    </div>
+  </section>
+  <section class="transport-modal-section">
+    <div class="transport-modal-section-title"><span data-app-icon="settings"></span><div><strong>نوع الراكب</strong><small>حدد طريقة احتساب المقعد</small></div></div>
+    <div class="transport-modal-field"><label class="lbl">نوع الراكب</label>
+      <select id="s_type" onchange="toggleSeatNote()">
+        <option value="adult">بالغ</option>
+        <option value="child_seat">كرسي مستقل — يحتسب كرسيًا</option>
+        <option value="child_shared">مع المرافق — لا يحتسب كرسيًا</option>
+        <option value="infant">رضيع — مع والده</option>
+        <option value="special">ذوو احتياجات</option>
+      </select>
+    </div>
+  </section>
+  <section class="transport-modal-section transport-relationship-section">
+    <div class="transport-modal-section-title"><span data-app-icon="users"></span><div><strong>المرافق وعلاقة المقعد</strong><small>تظهر الخيارات المناسبة حسب نوع الراكب</small></div></div>
+    <div id="s_note_row" style="display:none"><label class="lbl">اسم ولي الأمر / رقم كرسيه</label><input id="s_note" placeholder="مع والده — كرسي 5"></div>
+    <div id="s_guardian_row" style="display:none"><label class="lbl">المرافق الذي سيشارك الطفل معه</label><select id="s_guardian_select"></select></div>
+    <div id="s_child_seat_row" style="display:none"><label class="lbl">رقم الكرسي المستقل</label><select id="s_child_seat_number"><option value="">اختر كرسيًا متاحًا</option></select></div>
+  </section>
+  <section id="s_shared_children_section" class="modal-section transport-modal-section transport-children-section" style="display:none">
+    <div class="transport-modal-section-title"><span data-app-icon="users"></span><div><strong>الأطفال</strong><small>الأطفال المشاركون مع المرافق</small></div></div>
     <div id="s_shared_children_list"></div>
-    <div class="transport-manual-child-entry"><input id="s_manual_child_name" placeholder="اسم طفل يدوي"><button type="button" class="btn btn-blue btn-sm" onclick="addManualSharedChildToSeat()">إضافة</button></div>
+    <div class="transport-manual-child-entry"><input id="s_manual_child_name" placeholder="اسم طفل يدوي"><button type="button" class="btn transport-inline-add" onclick="addManualSharedChildToSeat()"><span data-app-icon="plus"></span><span>إضافة</span></button></div>
     <div id="s_manual_children_list"></div>
-  </div>
-  <div class="row">
-    <button class="btn btn-green" style="flex:1" onclick="saveSeat()">💾 حفظ</button>
-    <button class="btn btn-red" id="clearSeatBtn" style="display:none" onclick="clearSeat()">🗑️</button>
-    <button class="btn btn-gray" onclick="closeSM()">إلغاء</button>
+  </section>
+  <div class="transport-modal-footer">
+    <button class="btn transport-modal-save" onclick="saveSeat()"><span data-app-icon="checkCircle"></span><span>حفظ</span></button>
+    <button class="btn transport-modal-delete" id="clearSeatBtn" style="display:none" onclick="clearSeat()"><span data-app-icon="close"></span><span>حذف</span></button>
+    <button class="btn transport-modal-cancel" onclick="closeSM()">إلغاء</button>
   </div>
 </div></div></div>
 
 <!-- Bulk Assign Modal -->
 <div class="overlay app-modal" id="bulkModal" style="display:none" onclick="if(event.target===this)closeBulk()">
-<div class="modal" style="max-width:560px">
-  <div class="mhead"><span>⚡ تسكين جماعي</span><span style="cursor:pointer" onclick="closeBulk()">✕</span></div>
-  <div class="mbody">
-    <div style="margin-bottom:10px">
-      <label class="lbl">اختر وسيلة المواصلات</label>
-      <select id="bulk_trans" onchange="renderBulkGuests()">
-        <option value="">— اختر —</option>
-      </select>
-    </div>
-    <div id="bulk_info" style="font-size:11px;color:#5a7a9a;margin-bottom:8px"></div>
-    <div style="display:flex;gap:6px;margin-bottom:8px">
-      <button class="btn btn-blue btn-sm" onclick="bulkSelectAll(true)">✔️ تحديد الكل</button>
-      <button class="btn btn-gray btn-sm" onclick="bulkSelectAll(false)">✖️ إلغاء</button>
-      <span style="font-size:10px;color:#5a7a9a;align-self:center" id="bulk_count"></span>
-    </div>
-    <div id="bulk_guests" style="max-height:320px;overflow-y:auto;border:1px solid #EEF3F8;border-radius:8px;padding:6px"></div>
-    <div class="row" style="margin-top:12px">
-      <button class="btn btn-green" style="flex:1" onclick="doBulkAssign()">⚡ تسكين المحدد تلقائياً</button>
-      <button class="btn btn-gray" onclick="closeBulk()">إلغاء</button>
-    </div>
+<div class="modal transport-bulk-modal">
+  <div class="mhead transport-modal-header"><span class="transport-modal-header-icon" data-app-icon="users"></span><span>تسكين جماعي</span><button type="button" class="transport-modal-close" aria-label="إغلاق" onclick="closeBulk()"><span data-app-icon="close"></span></button></div>
+  <div class="mbody transport-modal-body">
+    <section class="transport-modal-section">
+      <div class="transport-modal-section-title"><span data-app-icon="bus"></span><div><strong>وسيلة المواصلات</strong><small>اختر الوسيلة المطلوب توزيع المشاركين عليها</small></div></div>
+      <div class="transport-modal-field"><label class="lbl">اختر وسيلة المواصلات</label><select id="bulk_trans" onchange="renderBulkGuests()"><option value="">— اختر —</option></select></div>
+    </section>
+    <div id="bulk_info" class="transport-bulk-summary"></div>
+    <section class="transport-modal-section transport-bulk-selection">
+      <div class="transport-modal-section-title"><span data-app-icon="users"></span><div><strong>اختيار المشاركين</strong><small>حدد الأسماء المطلوب توزيعها تلقائيًا</small></div></div>
+      <div class="transport-bulk-controls"><button class="btn transport-row-edit" onclick="bulkSelectAll(true)"><span data-app-icon="checkCircle"></span><span>تحديد الكل</span></button><button class="btn transport-modal-cancel" onclick="bulkSelectAll(false)">إلغاء التحديد</button><span id="bulk_count"></span></div>
+      <div id="bulk_guests" class="transport-bulk-guests"></div>
+    </section>
+    <div class="transport-modal-footer"><button class="btn transport-modal-save" onclick="doBulkAssign()"><span data-app-icon="users"></span><span>تسكين المحدد تلقائياً</span></button><button class="btn transport-modal-cancel" onclick="closeBulk()">إلغاء</button></div>
   </div>
 </div>
 </div>
@@ -583,7 +586,7 @@
 <script src="libs/html2canvas.min.js"></script>
 <script src="libs/xlsx.full.min.js"></script>
 <script src="js/ui-icons.js?rev=accommodation-visual-match-v6"></script>
-<script src="script.js?rev=home-dashboard-v4"></script>
+<script src="script.js?rev=transport-dashboard-v1"></script>
 <script src="version.js"></script>
 <script>
   document.addEventListener('DOMContentLoaded', function() {
