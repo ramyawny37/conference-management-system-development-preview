@@ -1,4 +1,109 @@
-:root{--ds-app-bg:#f4f7fb;--ds-surface:#fff;--ds-primary:#0f4fae;--ds-primary-dark:#093b82;--ds-success:#169b57;--ds-warning:#f47a0b;--ds-danger:#dc4b4b;--ds-text:#173a60;--ds-text-muted:#6e8299;--ds-border:#dbe5ef;--ds-shadow-sm:0 3px 12px rgba(30,65,100,.07);--ds-shadow-md:0 8px 24px rgba(30,65,100,.10);--ds-radius-sm:8px;--ds-radius-md:13px;--ds-radius-lg:17px;--ds-space-1:4px;--ds-space-2:8px;--ds-space-3:12px;--ds-space-4:16px;--ds-space-5:24px;--ds-page-max:1480px;--ds-nav-height:120px;--ds-card-padding:16px;--ds-input-height:56px;--ds-button-height:38px}
+/* App Design System foundation
+   Colors: blue = primary/navigation/edit; green = success/save/available/completed;
+   orange = warning/extra capacity/attention; red = destructive/critical;
+   gray = neutral/disabled/secondary; purple = auxiliary administrative/person actions only.
+   Glass is reserved for headers, navigation, toolbars, stats, sidebars, workspace shells,
+   and secondary summaries. Inputs, dense data cards, dropdowns, and critical modal content
+   use solid or near-solid surfaces.
+   Responsive contract: desktop >1100px; compact desktop <=1100px; tablet <=820px;
+   intermediate wrapping <=700px when needed; mobile <=600px.
+   RTL is the default. Prefer logical properties; LTR is limited to layout shells whose
+   columns require it, with Arabic content restored to RTL. Avoid unintended overflow. */
+:root{
+  --app-primary:#1452ad;
+  --app-primary-dark:#0d3f89;
+  --app-primary-secondary:#2e75b6;
+  --app-primary-active:#1d65c8;
+  --app-success:#159957;
+  --app-warning:#f07a12;
+  --app-danger:#dc4b4b;
+  --app-danger-strong:#c63e35;
+  --app-purple:#8e44ad;
+  --app-neutral:#708196;
+  --app-success-soft:#e5f6ed;
+  --app-warning-soft:#fff2df;
+  --app-danger-soft:#fff1ef;
+  --app-primary-soft:#e8f1fc;
+  --app-neutral-soft:#eef2f6;
+  --app-text:#173a60;
+  --app-text-secondary:#426987;
+  --app-text-muted:#6e8299;
+  --app-text-on-color:#fff;
+  --app-bg:#f3f7fb;
+  --app-page-background:radial-gradient(ellipse at 7% 16%,rgba(174,208,247,.3) 0,rgba(174,208,247,0) 36%),radial-gradient(ellipse at 94% 70%,rgba(232,205,176,.18) 0,rgba(232,205,176,0) 39%),radial-gradient(ellipse at 48% 100%,rgba(176,207,242,.22) 0,rgba(176,207,242,0) 46%),linear-gradient(145deg,#fcfdff 0%,#f2f7fc 56%,#fcf8f4 100%);
+  --app-surface:#fff;
+  --app-surface-soft:#f4f8fc;
+  --app-surface-glass:rgba(255,255,255,.72);
+  --app-surface-glass-compact:rgba(255,255,255,.58);
+  --app-surface-near-solid:rgba(255,255,255,.92);
+  --app-overlay:rgba(17,39,61,.55);
+  --app-border:#dce6f0;
+  --app-border-strong:#d9e6f2;
+  --app-input-border:#d6e3ef;
+  --app-focus-ring:0 0 0 3px rgba(46,117,182,.14);
+  --app-radius-sm:8px;
+  --app-radius-control:9px;
+  --app-radius-md:12px;
+  --app-radius-card:14px;
+  --app-radius-lg:16px;
+  --app-radius-pill:999px;
+  --app-shadow-sm:0 3px 12px rgba(30,65,100,.07);
+  --app-shadow-md:0 8px 24px rgba(30,65,100,.10);
+  --app-shadow-active:0 5px 13px rgba(20,82,173,.22);
+  --app-shadow-modal:0 20px 52px rgba(17,54,88,.28);
+  --app-glass-highlight:inset 0 1px 0 rgba(255,255,255,.8);
+  --app-blur-sm:8px;
+  --app-blur-md:9px;
+  --app-blur-header:12px;
+  --app-space-1:4px;
+  --app-space-2:6px;
+  --app-space-3:8px;
+  --app-space-4:10px;
+  --app-space-5:12px;
+  --app-space-6:16px;
+  --app-space-7:20px;
+  --app-space-8:24px;
+  --app-control-height-sm:31px;
+  --app-control-height:36px;
+  --app-touch-target:40px;
+  --app-page-max:1480px;
+  --app-font-family:'Segoe UI',Arial,sans-serif;
+  --app-font-size-xs:8px;
+  --app-font-size-sm:10px;
+  --app-font-size-body:12px;
+  --app-font-size-section:12px;
+  --app-font-size-heading:16px;
+  --app-font-weight-medium:600;
+  --app-font-weight-bold:800;
+  --app-font-weight-heavy:900;
+
+  /* Legacy design-system aliases: only exact-value matches are aliased in Phase 1. */
+  --ds-app-bg:#f4f7fb;
+  --ds-surface:var(--app-surface);
+  --ds-primary:#0f4fae;
+  --ds-primary-dark:#093b82;
+  --ds-success:#169b57;
+  --ds-warning:#f47a0b;
+  --ds-danger:var(--app-danger);
+  --ds-text:var(--app-text);
+  --ds-text-muted:var(--app-text-muted);
+  --ds-border:#dbe5ef;
+  --ds-shadow-sm:var(--app-shadow-sm);
+  --ds-shadow-md:var(--app-shadow-md);
+  --ds-radius-sm:var(--app-radius-sm);
+  --ds-radius-md:13px;
+  --ds-radius-lg:17px;
+  --ds-space-1:var(--app-space-1);
+  --ds-space-2:var(--app-space-3);
+  --ds-space-3:var(--app-space-5);
+  --ds-space-4:var(--app-space-6);
+  --ds-space-5:var(--app-space-8);
+  --ds-page-max:var(--app-page-max);
+  --ds-nav-height:120px;
+  --ds-card-padding:16px;
+  --ds-input-height:56px;
+  --ds-button-height:38px;
+}
 .app-icon{display:inline-block;width:1em;height:1em;flex:0 0 auto;vertical-align:-.14em}
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'Segoe UI',Arial,sans-serif;direction:rtl;background:linear-gradient(135deg,#f7f9fc 0%,#f2f6fa 58%,#faf6f2 100%);color:#1a2a3a;min-height:100vh}
@@ -490,14 +595,14 @@ tr:nth-child(even) td{background:#F7FBFF}
 .accommodation-shell-active .global-conference-compact-icon{display:flex;width:38px;height:38px;align-items:center;justify-content:center;border-radius:50%;background:#edf4fd;font-size:18px}.accommodation-shell-active .global-conference-content{display:block;min-width:0}.accommodation-shell-active .global-conference-chevron{display:block;color:var(--ds-primary);font-size:19px}
 .accommodation-shell-active .global-conference-eyebrow{display:block;margin-bottom:2px;color:var(--ds-text-muted);font-size:8px}.accommodation-shell-active .global-conference-main{justify-content:flex-start;margin-bottom:4px}.accommodation-shell-active .global-conference-name{font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.accommodation-shell-active .global-conference-status{display:none}.accommodation-shell-active .global-conference-meta{gap:3px}.accommodation-shell-active .global-conference-meta span{padding:0;border:0;background:transparent;font-size:9px}.accommodation-shell-active .global-conference-house,.accommodation-shell-active .global-conference-meta span:last-child{display:none}
 #tab0{
-  --acc-primary:#1452ad;
-  --acc-primary-dark:#0d3f89;
-  --acc-success:#159957;
-  --acc-warning:#f07a12;
-  --acc-neutral:#708196;
-  --acc-surface:#fff;
-  --acc-background:#f3f7fb;
-  --acc-border:#dce6f0;
+  --acc-primary:var(--app-primary);
+  --acc-primary-dark:var(--app-primary-dark);
+  --acc-success:var(--app-success);
+  --acc-warning:var(--app-warning);
+  --acc-neutral:var(--app-neutral);
+  --acc-surface:var(--app-surface);
+  --acc-background:var(--app-bg);
+  --acc-border:var(--app-border);
   --acc-shadow:0 7px 22px rgba(30,67,105,.09);
   --acc-radius:15px;
 }
