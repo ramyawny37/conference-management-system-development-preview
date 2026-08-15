@@ -6767,7 +6767,10 @@ function getStartupConferenceParticipantCount(conference){
 
 function renderStartupConferenceCards(conferences, status){
   if(!conferences.length){
-    return '<div class="startup-empty">'+(status === 'active' ? 'لا توجد مؤتمرات نشطة' : 'لا توجد مؤتمرات مكتملة')+'</div>';
+    var emptyIcon=status==='completed'&&window.AppIcons
+      ?'<span class="startup-empty-icon">'+window.AppIcons.icon('checkCircle','','')+'</span>'
+      :'';
+    return '<div class="startup-empty">'+emptyIcon+'<span>'+(status === 'active' ? 'لا توجد مؤتمرات نشطة' : 'لا توجد مؤتمرات مكتملة')+'</span></div>';
   }
   var html = '';
   conferences.forEach(function(conf){
