@@ -6774,13 +6774,14 @@ function renderStartupConferenceCards(conferences, status){
     var days = parseInt(conf.days || ((conf.conf || {}).days), 10) || 1;
     var participantCount = getStartupConferenceParticipantCount(conf);
     var statusClass = status === 'active' ? 'startup-status-active' : 'startup-status-completed';
+    var cardClass = status === 'active' ? 'startup-conference-card-active' : 'startup-conference-card-completed';
     if(conf.__startupDiscoveredRemoteId&&
       startupDiscoveredOpenBusy[conf.__startupDiscoveredRemoteId]){
-      html += '<article class="startup-conference-card" aria-disabled="true">';
+      html += '<article class="startup-conference-card '+cardClass+'" aria-disabled="true">';
     }else if(conf.__startupDiscoveredRemoteId){
-      html += '<article class="startup-conference-card" onclick="openDiscoveredConferenceFromStartup(\''+conf.__startupDiscoveredRemoteId+'\')">';
+      html += '<article class="startup-conference-card '+cardClass+'" onclick="openDiscoveredConferenceFromStartup(\''+conf.__startupDiscoveredRemoteId+'\')">';
     }else{
-      html += '<article class="startup-conference-card" onclick="openConferenceFromStartup(\''+conf.id+'\')">';
+      html += '<article class="startup-conference-card '+cardClass+'" onclick="openConferenceFromStartup(\''+conf.id+'\')">';
     }
     html += '<div class="startup-conference-head"><span class="startup-status-badge '+statusClass+'">'+conferenceStatusText(conf)+'</span><strong>'+esc(conf.name || ((conf.conf || {}).name) || 'المؤتمر')+'</strong></div>';
     html += '<div class="startup-conference-meta">';
@@ -6788,7 +6789,7 @@ function renderStartupConferenceCards(conferences, status){
     html += '<span>← 📅 '+esc(conf.endDate || ((conf.conf || {}).endDate) || '-')+'</span>';
     html += '<span>📅 '+days+' أيام</span>';
     html += '<span>👥 '+participantCount+' مشارك</span>';
-    html += '</div></article>';
+    html += '</div><span class="startup-conference-open">'+accommodationIcon('eye')+(status === 'active' ? 'فتح المؤتمر' : 'عرض التفاصيل')+'</span></article>';
   });
   return html;
 }

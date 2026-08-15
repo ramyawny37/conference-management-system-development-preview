@@ -10,7 +10,7 @@
 <link rel="apple-touch-icon" sizes="180x180" href="./icons/apple-touch-icon-180x180-v3.png">
 
 <title>إرسالية اصنع فرق</title>
-<link rel="stylesheet" href="style.css?rev=home-dashboard-v1">
+<link rel="stylesheet" href="style.css?rev=home-dashboard-v2">
 </head>
 <body>
 
@@ -58,79 +58,70 @@
 
 <div id="startupScreen" class="startup-dashboard" style="display:none">
   <div class="startup-shell">
-    <section class="startup-column startup-active-column">
-      <div class="startup-glass startup-conference-panel">
+    <header class="startup-home-header">
+      <div class="startup-brand">
+        <img src="assets/logo.jpg" alt="إرسالية اصنع فرق" class="startup-logo">
+        <div class="startup-brand-copy">
+          <h1>إدارة المؤتمرات</h1>
+          <p>تنظيم أفضل... خدمة أرقى</p>
+        </div>
+      </div>
+      <div class="startup-date-card">
+        <div class="startup-date-copy"><strong id="startupDayName">—</strong><small id="startupDateText">—</small></div>
+        <div class="startup-time"><strong id="startupTimeText">—</strong></div>
+      </div>
+      <div class="startup-auth-actions">
+        <button type="button" class="startup-auth-create" onclick="StartupAccessGate.showAuthView('signup')">إنشاء حساب</button>
+        <button type="button" class="startup-auth-login" onclick="StartupAccessGate.showAuthView('login')">تسجيل الدخول</button>
+      </div>
+    </header>
+
+    <section class="startup-overview">
+      <div class="startup-actions-panel">
+        <div class="startup-actions">
+          <button class="startup-action startup-action-green" data-system-conference-create onclick="openNewConferenceModal('create')">
+            <span class="startup-action-icon" data-app-icon="plus"></span>
+            <span class="startup-action-copy"><strong>إنشاء مؤتمر جديد</strong><small>إنشاء مؤتمر جديد من البداية</small></span>
+            <b>‹</b>
+          </button>
+          <button class="startup-action startup-action-blue" onclick="openCompletedConferencesModal()">
+            <span class="startup-action-icon" data-app-icon="building"></span>
+            <span class="startup-action-copy"><strong>فتح مؤتمر سابق</strong><small>فتح مؤتمر موجود والعمل عليه</small></span>
+            <b>‹</b>
+          </button>
+          <button class="startup-action startup-action-purple" onclick="ge('startupImportInput').click()">
+            <span class="startup-action-icon" data-app-icon="note"></span>
+            <span class="startup-action-copy"><strong>استيراد ملف</strong><small>استيراد بيانات مؤتمر من ملف محفوظ</small></span>
+            <b>‹</b>
+          </button>
+          <button class="startup-action startup-action-settings" onclick="openSettingsFromHome()">
+            <span class="startup-action-icon" data-app-icon="settings"></span>
+            <span class="startup-action-copy"><strong>الإعدادات</strong><small>فتح إعدادات المؤتمر الحالي</small></span>
+            <b>‹</b>
+          </button>
+          <input id="startupImportInput" type="file" accept=".html,.json" style="display:none" onchange="loadFromFile(event)">
+        </div>
+      </div>
+      <div class="startup-stats">
+        <div class="startup-stat startup-stat-blue"><span class="startup-stat-icon" data-app-icon="building"></span><div><strong id="startupActiveStat">0</strong><span>مؤتمرات نشطة</span></div></div>
+        <span id="startupCompletedStat" hidden>0</span>
+        <div class="startup-stat startup-stat-green"><span class="startup-stat-icon" data-app-icon="users"></span><div><strong id="startupPeopleStat">0</strong><span>إجمالي المشاركين</span><small>في جميع المؤتمرات</small></div></div>
+      </div>
+    </section>
+
+    <section class="startup-conferences-layout">
+      <div class="startup-conference-panel startup-active-panel">
         <div class="startup-panel-title startup-green">
-          <span class="startup-panel-icon">👥</span>
+          <span class="startup-panel-icon" data-app-icon="users"></span>
           <span>المؤتمرات النشطة</span>
           <span class="startup-count" id="startupActiveCount">0</span>
         </div>
         <div class="startup-conference-list" id="startupActiveList"></div>
         <button class="startup-list-action startup-list-action-green" onclick="showStartupConferenceList()">← عرض جميع المؤتمرات النشطة</button>
       </div>
-    </section>
-
-    <main class="startup-column startup-center-column">
-      <div class="startup-date-card startup-glass">
-        <div><span class="startup-date-icon">📅</span><strong id="startupDayName">—</strong><small id="startupDateText">—</small></div>
-        <div class="startup-time"><span>◷</span><strong id="startupTimeText">—</strong></div>
-      </div>
-
-      <header class="startup-brand">
-        <img src="assets/logo.jpg" alt="إرسالية اصنع فرق" class="startup-logo">
-        <h1>إدارة المؤتمرات</h1>
-        <p>تنظيم أفضل... خدمة أرقى</p>
-        <div class="startup-brand-divider"><span></span><i></i><span></span></div>
-        <strong>لِوَقْتٍ مِثْلِ هذَا</strong>
-        <small>(أس 4 : 14)</small>
-      </header>
-
-      <div class="startup-actions">
-        <button class="startup-action startup-action-green" data-system-conference-create onclick="openNewConferenceModal('create')">
-          <span class="startup-action-icon" data-app-icon="plus"></span>
-          <strong>إنشاء مؤتمر جديد</strong>
-          <small>إنشاء مؤتمر جديد من البداية</small>
-          <b>‹</b>
-        </button>
-        <button class="startup-action startup-action-blue" onclick="openCompletedConferencesModal()">
-          <span class="startup-action-icon" data-app-icon="building"></span>
-          <strong>فتح مؤتمر سابق</strong>
-          <small>فتح مؤتمر موجود والعمل عليه</small>
-          <b>‹</b>
-        </button>
-        <button class="startup-action startup-action-purple" onclick="ge('startupImportInput').click()">
-          <span class="startup-action-icon" data-app-icon="note"></span>
-          <strong>استيراد ملف</strong>
-          <small>استيراد بيانات مؤتمر من ملف محفوظ</small>
-          <b>‹</b>
-        </button>
-        <button class="startup-action startup-action-settings" onclick="openSettingsFromHome()">
-          <span class="startup-action-icon" data-app-icon="settings"></span>
-          <strong>الإعدادات</strong>
-          <small>فتح إعدادات المؤتمر الحالي</small>
-          <b>‹</b>
-        </button>
-        <input id="startupImportInput" type="file" accept=".html,.json" style="display:none" onchange="loadFromFile(event)">
-      </div>
-
-      <div class="startup-stats startup-glass">
-        <div class="startup-stat startup-stat-green"><strong id="startupActiveStat">0</strong><span>👥 مؤتمرات نشطة</span></div>
-        <div class="startup-stat startup-stat-purple"><strong id="startupCompletedStat">0</strong><span>✓ مؤتمرات مكتملة</span></div>
-        <div class="startup-stat startup-stat-blue"><strong id="startupPeopleStat">0</strong><span>👥 إجمالي المشاركين</span><small>في جميع المؤتمرات</small></div>
-      </div>
-    </main>
-
-    <section class="startup-column startup-completed-column">
-      <blockquote class="startup-verse startup-glass">
-        <span class="startup-quote startup-quote-open">“</span>
-        <p>«لأَنَّكِ إِنْ سَكَتِّ سُكُوتًا فِي هذَا الْوَقْتِ يَكُونُ الْفَرَجُ وَالنَّجَاةُ لِلْيَهُودِ مِنْ مَكَانٍ آخَرَ، وَأَمَّا أَنْتِ وَبَيْتُ أَبِيكِ فَتَبِيدُونَ. وَمَنْ يَعْلَمُ إِنْ كُنْتِ لِوَقْتٍ مِثْلِ هذَا وَصَلْتِ إِلَى الْمُلْكِ؟»</p>
-        <cite>(أس 4 : 14)</cite>
-        <span class="startup-quote startup-quote-close">”</span>
-      </blockquote>
-
-      <div class="startup-glass startup-conference-panel startup-completed-panel">
+      <div class="startup-conference-panel startup-completed-panel">
         <div class="startup-panel-title startup-purple">
-          <span class="startup-panel-icon">✓</span>
+          <span class="startup-panel-icon" data-app-icon="checkCircle"></span>
           <span>المؤتمرات المكتملة</span>
           <span class="startup-count" id="startupCompletedCount">0</span>
         </div>
@@ -592,7 +583,7 @@
 <script src="libs/html2canvas.min.js"></script>
 <script src="libs/xlsx.full.min.js"></script>
 <script src="js/ui-icons.js?rev=accommodation-visual-match-v6"></script>
-<script src="script.js?rev=home-dashboard-v1"></script>
+<script src="script.js?rev=home-dashboard-v2"></script>
 <script src="version.js"></script>
 <script>
   document.addEventListener('DOMContentLoaded', function() {
