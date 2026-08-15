@@ -3493,28 +3493,28 @@ function createGuestSlotRow(slot, index, days, isExtra, capacity){
   if(isExtra){
     var extraIndex = index - (capacity || 0) + 1;
     div.setAttribute('data-slot-label','سرير إضافي ' + extraIndex);
-    slotLabel = '<div style="min-width:90px;font-size:10px;color:#E67E22;font-weight:700">سرير إضافي ' + extraIndex + '</div>';
+    slotLabel = '<div class="guest-slot-label guest-slot-label-extra">سرير إضافي ' + extraIndex + '</div>';
   } else {
     div.setAttribute('data-slot-label','سرير ' + (index + 1));
-    slotLabel = '<div style="min-width:70px;font-size:10px;color:#5a7a9a">سرير ' + (index + 1) + '</div>';
+    slotLabel = '<div class="guest-slot-label">سرير ' + (index + 1) + '</div>';
   }
   var extraTypeControls = isExtra
-    ? '<div style="display:flex;align-items:center;gap:7px;font-size:10px;white-space:nowrap"><span style="font-weight:700;color:#7D4E00">نوع مستخدم السرير:</span><label style="display:flex;align-items:center;gap:2px"><input class="extra-bed-person-type" type="radio" name="extra_bed_type_'+id+'" value="adult" '+(extraBedPersonType==='adult'?'checked':'')+' style="width:auto"> بالغ</label><label style="display:flex;align-items:center;gap:2px"><input class="extra-bed-person-type" type="radio" name="extra_bed_type_'+id+'" value="child" '+(extraBedPersonType==='child'?'checked':'')+' style="width:auto"> طفل</label></div>'
+    ? '<div class="extra-bed-type-controls"><span>نوع الاستخدام</span><label><input class="extra-bed-person-type" type="radio" name="extra_bed_type_'+id+'" value="adult" '+(extraBedPersonType==='adult'?'checked':'')+' style="width:auto"> بالغ</label><label><input class="extra-bed-person-type" type="radio" name="extra_bed_type_'+id+'" value="child" '+(extraBedPersonType==='child'?'checked':'')+' style="width:auto"> طفل</label></div>'
     : '';
   div.innerHTML = slotLabel
-    + '<div style="flex:1;min-width:180px">'
+    + '<div class="guest-slot-person">'
     + '<input class="person-name" style="width:100%;border-color:' + (name ? '#27AE60' : '#BDD7EE') + '" placeholder="ابحث أو اكتب اسمًا" value="' + esc(name) + '" onclick="openGuestPersonPicker(\''+id+'\',event)" onkeydown="openGuestPersonPickerFromKeyboard(\''+id+'\',event)" oninput="bindGuestPersonRow(\''+id+'\')">'
     + '<input type="hidden" class="person-id" value="' + esc(personId) + '">'
     + '<input type="hidden" class="guest-entry-id" value="' + esc(guestId) + '">'
     + '<div class="person-meta" style="font-size:9px;color:#5a7a9a;margin-top:2px"></div>'
     + '</div>'
     + extraTypeControls
-    + '<div style="display:flex;align-items:center;gap:3px;font-size:10px;white-space:nowrap"><label class="lbl" style="margin:0">يوم الوصول:</label>'
+    + '<div class="guest-slot-day guest-slot-arrival"><label class="lbl">يوم الوصول</label>'
     + '<select class="guest-arrival-day" style="width:78px;font-size:10px">' + accommodationArrivalDayOptions(days, arrivalDay) + '</select></div>'
-    + '<div style="display:flex;align-items:center;gap:3px;font-size:10px;white-space:nowrap"><label class="lbl" style="margin:0">غادر يوم:</label>'
+    + '<div class="guest-slot-day guest-slot-left"><label class="lbl">غادر يوم</label>'
     + '<select class="guest-left-day" style="width:70px;font-size:10px">' + dayOptions(days, leftDay) + '</select></div>'
-    + '<button class="btn btn-blue btn-sm" type="button" onclick="openMoveGuestDialog(\''+id+'\')" title="نقل النزيل">↔️</button>'
-    + '<button class="btn btn-red btn-sm" type="button" onclick="removeGuestFromEditorRow(\''+id+'\')" title="إزالة النزيل">✕</button>';
+    + '<button class="btn btn-blue btn-sm guest-slot-move" type="button" onclick="openMoveGuestDialog(\''+id+'\')" title="نقل النزيل">↔️</button>'
+    + '<button class="btn btn-red btn-sm guest-slot-remove" type="button" onclick="removeGuestFromEditorRow(\''+id+'\')" title="إزالة النزيل">✕</button>';
   return div;
 }
 
@@ -3777,7 +3777,7 @@ function openMoveGuestDialog(rowId){
       return;
     }
 
-    var guestsToMoveCount = 1;
+    var guestsToMoveCount = gl({ leftDay: leftDay }) ? 0 : 1;
 
     var validation = prepareTransfer(sourceRoom, targetRoom, guestsToMoveCount, { sameHouseOnly: false });
 
@@ -3869,6 +3869,11 @@ function openMoveRoomDialog(houseId, floorId, roomId){
     var sourceResidentCount=(sourceRoom.guests||[]).length+(sourceRoom.children||[]).length;
     var incomingOccupancy = countRoomOccupancy(sourceRoom);
 
+    if(sourceResidentCount === 0){
+      alert('لا يوجد نزلاء أو أطفال لنقلهم من الغرفة المصدر.');
+      return;
+    }
+
     console.log("SOURCE", sourceRoom);
     console.log("TARGET", targetRoomResult);
     console.log("TARGET.ROOM", targetRoomResult && targetRoomResult.room);
@@ -3886,6 +3891,18 @@ function openMoveRoomDialog(houseId, floorId, roomId){
     }
 
     var doFullTransfer = function(){
+      var sourceSnapshot = deepClone({guests:sourceRoom.guests||[],children:sourceRoom.children||[],extraBeds:sourceRoom.extraBeds,autoExtraBeds:sourceRoom.autoExtraBeds});
+      var targetSnapshot = deepClone({guests:targetRoom.guests||[],children:targetRoom.children||[],extraBeds:targetRoom.extraBeds,autoExtraBeds:targetRoom.autoExtraBeds});
+      var duplicateGuest = (sourceRoom.guests || []).some(function(guest){
+        return (targetRoom.guests || []).some(function(targetGuest){ return isSameAccommodationGuest(guest,targetGuest); });
+      });
+      var duplicateChild = (sourceRoom.children || []).some(function(child){
+        return (targetRoom.children || []).some(function(targetChild){ return isSameAccommodationGuest(child,targetChild); });
+      });
+      if(duplicateGuest || duplicateChild){
+        alert('تعذر النقل لأن بعض بيانات الغرفة المصدر موجودة بالفعل في الغرفة الهدف.');
+        return false;
+      }
       if (validation.needsExtraBeds > 0) {
         targetRoom.extraBeds = (parseInt(targetRoom.extraBeds, 10) || 0) + validation.needsExtraBeds;
         targetRoom.autoExtraBeds = (parseInt(targetRoom.autoExtraBeds || 0, 10) || 0) + validation.needsExtraBeds;
@@ -3897,6 +3914,15 @@ function openMoveRoomDialog(houseId, floorId, roomId){
       cleanupAutoExtraBeds(sourceRoom);
       syncRoomGuestBedTypes(sourceRoom);
       syncRoomGuestBedTypes(targetRoom);
+      var fullSourceUpdated = sourceRoom.guests.length === 0 && sourceRoom.children.length === 0;
+      var fullTargetUpdated = targetRoom.guests.length === targetSnapshot.guests.length + sourceSnapshot.guests.length &&
+        targetRoom.children.length === targetSnapshot.children.length + sourceSnapshot.children.length;
+      if(!fullSourceUpdated || !fullTargetUpdated){
+        restorePartialTransferRoomSnapshot(sourceRoom,sourceSnapshot);
+        restorePartialTransferRoomSnapshot(targetRoom,targetSnapshot);
+        alert('لم يتم نقل بيانات الغرفة لأن تحديث المصدر أو الهدف لم يكتمل.');
+        return false;
+      }
 
       if(useDraft){
         editRoomData.fullRoomMove={sourceId:sourceRoom.id,targetId:targetRoom.id,sourceNumber:sourceRoom.number||'',targetNumber:targetRoom.number||''};
@@ -3907,7 +3933,12 @@ function openMoveRoomDialog(houseId, floorId, roomId){
 
       var current = getCurrentConference();
       setRoomDisplayedInAccommodation(current, sourceResult.room.id, true);
-      if(!save())return false;
+      if(!save()){
+        restorePartialTransferRoomSnapshot(sourceRoom,sourceSnapshot);
+        restorePartialTransferRoomSnapshot(targetRoom,targetSnapshot);
+        alert('تعذر حفظ نقل الغرفة. لم يتم اعتماد أي تغيير على الغرفتين.');
+        return false;
+      }
       if(sourceResidentCount)addActivityLog('room_occupancy_moved','تم نقل تسكين الغرفة '+sourceRoom.number+' إلى الغرفة '+targetRoom.number,{details:'الغرفة السابقة: '+sourceRoom.number+' — الغرفة الجديدة: '+targetRoom.number,section:'accommodation',entityType:'room',entityId:targetRoom.id});
       if(validation.needsExtraBeds>0)addActivityLog('extra_bed_added','تم إضافة سرير إضافي بالغرفة '+targetRoom.number,{details:'عدد الأسرة الإضافية: '+targetRoom.extraBeds,section:'accommodation',entityType:'room',entityId:targetRoom.id});
       if((parseInt(sourceRoom.extraBeds,10)||0)<sourceExtraBedsBefore)addActivityLog('extra_bed_removed','تم إزالة سرير إضافي من الغرفة '+sourceRoom.number,{details:'عدد الأسرة الإضافية: '+(parseInt(sourceRoom.extraBeds,10)||0),section:'accommodation',entityType:'room',entityId:sourceRoom.id});
@@ -3939,12 +3970,51 @@ function openMoveRoomDialog(houseId, floorId, roomId){
       incomingOccupancy: incomingOccupancy,
       useDraft: useDraft,
       overflowConfirmed: true,
-      selectedGuestIds: []
+      selectedGuestIds: [],
+      guestOptions: buildPartialTransferGuestOptions(sourceRoom)
     };
     renderPartialTransferActionView();
     var modal = ge('partialTransferModal');
     if(modal) modal.style.display = 'flex';
   });
+}
+
+function getAccommodationEffectiveCapacity(room){
+  if(!room) return 0;
+  var baseCapacity = Array.isArray(room.beds) ? room.beds.length : (parseInt(room.beds, 10) || 1);
+  var extraBeds = Math.max(0, parseInt(room.extraBeds, 10) || 0);
+  return baseCapacity + extraBeds;
+}
+
+function buildPartialTransferGuestOptions(room){
+  var usedKeys = {};
+  return (room && room.guests || []).map(function(guest,index){
+    var baseKey = guest && guest.id
+      ? 'guest:' + guest.id
+      : guest && guest.personId
+        ? 'person:' + guest.personId
+        : 'legacy:' + index + ':' + uid();
+    var key = baseKey;
+    while(usedKeys[key]) key = baseKey + ':' + uid();
+    usedKeys[key] = true;
+    return { key: key, guest: guest };
+  });
+}
+
+function getLivePartialTransferGuestOptions(state){
+  if(!state || !state.sourceRoom) return [];
+  var sourceGuests = state.sourceRoom.guests || [];
+  state.guestOptions = (state.guestOptions || []).filter(function(option){
+    return option && sourceGuests.indexOf(option.guest) !== -1;
+  });
+  return state.guestOptions;
+}
+
+function isSameAccommodationGuest(first,second){
+  if(!first || !second) return false;
+  if(first.personId && second.personId) return first.personId === second.personId;
+  if(first.id && second.id) return first.id === second.id;
+  return first === second;
 }
 
 function closePartialTransferModal(){
@@ -3956,20 +4026,35 @@ function closePartialTransferModal(){
 function renderPartialTransferActionView(){
   var state = partialTransferState;
   if(!state || !state.sourceRoom || !state.targetRoom) return;
-  var overflow = state.currentOccupancy + state.incomingOccupancy - state.targetCapacity;
+  state.currentOccupancy = countRoomOccupancy(state.targetRoom);
+  var effectiveCapacity = getAccommodationEffectiveCapacity(state.targetRoom);
+  var finalOccupancy = state.currentOccupancy + state.incomingOccupancy;
+  var overflow = Math.max(finalOccupancy - effectiveCapacity, 0);
   var content = '';
-  content += '<div style="margin-bottom:12px;line-height:1.5;font-size:13px">';
-  content += '<strong>⚠️ الغرفة الهدف ستتجاوز سعتها!</strong><br>';
-  content += 'السعة: ' + state.targetCapacity + '<br>';
-  content += 'الإشغال الحالي: ' + state.currentOccupancy + '<br>';
-  content += 'الإشغال الوارد: ' + state.incomingOccupancy + '<br>';
-  content += 'الإشغال النهائي: ' + (state.currentOccupancy + state.incomingOccupancy) + '<br>';
-  content += 'مقدار التجاوز: +' + overflow + '</div>';
-  content += '<div class="row" style="gap:8px;flex-wrap:wrap">';
+  setPartialTransferModalHeading('تنبيه تجاوز السعة','الغرفة الهدف ' + (state.targetRoom.number || ''),'⚠');
+  content += '<section class="transfer-capacity-warning">';
+  content += '<div class="transfer-warning-message"><span>!</span><div><strong>الغرفة الهدف ستتجاوز سعتها</strong><small>اختر النزلاء الذين تريد نقلهم بما يناسب المساحة المتاحة.</small></div></div>';
+  content += '<div class="transfer-capacity-summary">';
+  content += '<div><span>السعة</span><strong>' + effectiveCapacity + '</strong></div>';
+  content += '<div><span>الإشغال الحالي</span><strong>' + state.currentOccupancy + '</strong></div>';
+  content += '<div><span>الإشغال الوارد</span><strong>' + state.incomingOccupancy + '</strong></div>';
+  content += '<div><span>الإشغال النهائي</span><strong>' + finalOccupancy + '</strong></div>';
+  content += '<div class="is-overflow"><span>مقدار التجاوز</span><strong>+' + overflow + '</strong></div>';
+  content += '</div></section>';
+  content += '<div class="transfer-modal-footer">';
   content += '<button class="btn btn-purple" onclick="partialTransferSelectGuests()">اختيار نزلاء للنقل</button>';
   content += '<button class="btn btn-gray" onclick="closePartialTransferModal()">إلغاء</button>';
   content += '</div>';
   ge('partialTransferContent').innerHTML = content;
+}
+
+function setPartialTransferModalHeading(title,context,icon){
+  var titleElement = ge('partialTransferTitle');
+  var contextElement = ge('partialTransferContext');
+  var iconElement = ge('partialTransferIcon');
+  if(titleElement) titleElement.textContent = title || 'نقل جزئي';
+  if(contextElement) contextElement.textContent = context || '';
+  if(iconElement) iconElement.textContent = icon || '↔';
 }
 
 function partialTransferContinue(){
@@ -3984,49 +4069,58 @@ function partialTransferSelectGuests(){
 function renderPartialTransferGuestView(){
   var state = partialTransferState;
   if(!state || !state.sourceRoom || !state.targetRoom) return;
-  var targetExtraBeds = parseInt(state.targetRoom.extraBeds || 0, 10);
-  var totalTargetCapacity = state.targetCapacity + targetExtraBeds;
+  state.currentOccupancy = countRoomOccupancy(state.targetRoom);
+  var totalTargetCapacity = getAccommodationEffectiveCapacity(state.targetRoom);
   var totalAvailable = Math.max(totalTargetCapacity - state.currentOccupancy, 0);
-  var selected = (state.selectedGuestIds || []).length;
-  var willNeedExtra = Math.max(selected - totalAvailable, 0);
-
-  state.selectedGuestIds = (state.selectedGuestIds || []).filter(function(id){
-    return (state.sourceRoom.guests || []).some(function(g){ return g && g.id === id; });
-  });
+  var guestOptions = getLivePartialTransferGuestOptions(state);
+  var validKeys = {};
+  guestOptions.forEach(function(option){ validKeys[option.key] = true; });
+  state.selectedGuestIds = (state.selectedGuestIds || []).filter(function(id){ return !!validKeys[id]; });
+  var selected = state.selectedGuestIds.length;
+  var selectedOccupancy = guestOptions.filter(function(option){
+    return state.selectedGuestIds.indexOf(option.key) !== -1 && !gl(option.guest);
+  }).length;
+  var willNeedExtra = Math.max(selectedOccupancy - totalAvailable, 0);
+  var allSelected = guestOptions.length > 0 && selected === guestOptions.length;
 
   var content = '';
-  content += '<div style="margin-bottom:12px;line-height:1.5;font-size:13px">';
-  content += 'السعة الأساسية: ' + state.targetCapacity + '<br>';
-  content += 'الإشغال الحالي: ' + state.currentOccupancy + '<br>';
-  if(targetExtraBeds > 0){
-    content += 'أسرّة إضافية موجودة: ' + targetExtraBeds + '<br>';
-  }
-  content += 'الأماكن المتاحة: ' + totalAvailable + '<br>';
-  content += 'المختار: ' + selected;
+  setPartialTransferModalHeading('نقل جزئي','إلى الغرفة ' + (state.targetRoom.number || ''),'↔');
+  content += '<div class="transfer-availability-summary"><span>السعة المتاحة في الغرفة الهدف</span><strong>' + totalAvailable + '</strong>';
   if(willNeedExtra > 0){
-    content += ' <span style="color:#E67E22;font-size:11px">(سيتم إنشاء ' + willNeedExtra + ' أسرّة إضافية تلقائياً)</span>';
+    content += '<small>سيتم إنشاء ' + willNeedExtra + ' أسرّة إضافية تلقائيًا وفق السياسة الحالية</small>';
   }
   content += '</div>';
+  content += '<section class="partial-transfer-guests"><div class="partial-transfer-section-title"><div><strong>النزلاء في الغرفة المصدر</strong><small>الغرفة ' + esc(state.sourceRoom.number || '') + '</small></div>';
+  content += '<label class="partial-transfer-select-all"><input type="checkbox"' + (allSelected ? ' checked' : '') + ' onchange="partialTransferToggleAll(this)"><span>اختر الكل</span></label></div>';
 
-  var guests = state.sourceRoom.guests || [];
-  if(!guests.length){
-    content += '<div style="color:#AAB5C0">لا يوجد نزلاء متاحون في الغرفة المصدر.</div>';
+  if(!guestOptions.length){
+    content += '<div class="partial-transfer-empty">لا يوجد نزلاء متاحون في الغرفة المصدر.</div>';
   } else {
-    content += '<div id="partialTransferGuestList" style="display:flex;flex-direction:column;gap:10px;max-height:40vh;overflow-y:auto;">';
-    guests.forEach(function(g){
-      var checked = (state.selectedGuestIds || []).indexOf(g.id) !== -1 ? ' checked' : '';
-      content += '<label class="guest-row" style="display:flex;justify-content:space-between;gap:8px;align-items:center;">';
-      content += '<span>👤 ' + esc(g.name || '') + '</span>';
-      content += '<input type="checkbox"' + checked + ' onclick="partialTransferToggleGuestSelection(\'' + g.id + '\', this)">';
+    content += '<div id="partialTransferGuestList" class="partial-transfer-guest-list">';
+    guestOptions.forEach(function(option){
+      var g = option.guest || {};
+      var checked = state.selectedGuestIds.indexOf(option.key) !== -1 ? ' checked' : '';
+      var bedLabel = g.bedType === 'extra' ? 'سرير إضافي' : 'سرير أساسي';
+      content += '<label class="partial-transfer-guest-row">';
+      content += '<span class="partial-transfer-guest-icon">👤</span><span class="partial-transfer-guest-name"><strong>' + esc(g.name || '') + '</strong><small>' + bedLabel + '</small></span>';
+      content += '<input type="checkbox"' + checked + ' onchange="partialTransferToggleGuestSelection(decodeURIComponent(\'' + encodeURIComponent(option.key) + '\'), this)">';
       content += '</label>';
     });
     content += '</div>';
   }
-  content += '<div class="row" style="margin-top:12px;gap:8px;flex-wrap:wrap;align-items:center">';
-  content += '<button class="btn btn-blue" onclick="partialTransferConfirmSelection()">✅ تأكيد النقل</button>';
-  content += '<button class="btn btn-gray" onclick="closePartialTransferModal()">إغلاق</button>';
-  content += '</div>';
+  content += '</section><div class="transfer-modal-footer">';
+  content += '<button class="btn btn-blue" onclick="partialTransferConfirmSelection()">تأكيد النقل (' + selected + ')</button>';
+  content += '<button class="btn btn-gray" onclick="closePartialTransferModal()">إلغاء</button></div>';
   ge('partialTransferContent').innerHTML = content;
+}
+
+function partialTransferToggleAll(checkbox){
+  var state = partialTransferState;
+  if(!state || !state.sourceRoom || !state.targetRoom) return;
+  state.selectedGuestIds = checkbox.checked
+    ? getLivePartialTransferGuestOptions(state).map(function(option){ return option.key; })
+    : [];
+  renderPartialTransferGuestView();
 }
 
 function partialTransferToggleGuestSelection(guestId, checkbox){
@@ -4047,35 +4141,67 @@ function partialTransferConfirmSelection(){
   var state = partialTransferState;
   if(!state || !state.sourceRoom || !state.targetRoom) return;
   var selectedIds = (state.selectedGuestIds || []).slice();
-  var sourceExtraBedsBefore=parseInt(state.sourceRoom.extraBeds,10)||0;
   if(!selectedIds.length){
     alert('❌ اختر نزيلاً واحداً على الأقل للنقل.');
     return;
   }
 
-  // حساب الأماكن المتاحة في الغرفة الهدف (أساسية + إضافية)
-  var targetExtraBeds = parseInt(state.targetRoom.extraBeds || 0, 10);
-  var totalTargetCapacity = state.targetCapacity + targetExtraBeds;
-  var totalAvailable = totalTargetCapacity - state.currentOccupancy;
+  var selectedMap = {};
+  selectedIds.forEach(function(id){ selectedMap[id] = true; });
+  var matchedOptions = getLivePartialTransferGuestOptions(state).filter(function(option){ return !!selectedMap[option.key]; });
+  var matchedIds = matchedOptions.map(function(option){ return option.key; });
+  var movedGuests = matchedOptions.map(function(option){ return option.guest; });
+  if(!movedGuests.length || movedGuests.length !== selectedIds.length){
+    alert('تعذر مطابقة النزلاء المحددين مع الغرفة المصدر. أعد فتح نافذة النقل وحاول مرة أخرى.');
+    renderPartialTransferGuestView();
+    return false;
+  }
 
-  // إنشاء أسرّة إضافية جديدة إذا لم تكفِ الأماكن (تُعامَل كمؤقتة)
-  var needed = selectedIds.length - totalAvailable;
+  var duplicateMovedGuest = movedGuests.some(function(guest,index){
+    return movedGuests.slice(0,index).some(function(previousGuest){ return isSameAccommodationGuest(guest,previousGuest); });
+  });
+  if(duplicateMovedGuest){
+    alert('تعذر النقل لأن قائمة الاختيار تحتوي على نزيل مكرر.');
+    return false;
+  }
+
+  var targetGuestsBefore = state.targetRoom.guests || [];
+  var hasDuplicateTargetGuest = movedGuests.some(function(guest){
+    return targetGuestsBefore.some(function(targetGuest){ return isSameAccommodationGuest(guest,targetGuest); });
+  });
+  if(hasDuplicateTargetGuest){
+    alert('تعذر النقل لأن أحد النزلاء المحددين موجود بالفعل في الغرفة الهدف.');
+    return false;
+  }
+
+  var sourceSnapshot = deepClone({
+    guests: state.sourceRoom.guests || [],
+    children: state.sourceRoom.children || [],
+    extraBeds: state.sourceRoom.extraBeds,
+    autoExtraBeds: state.sourceRoom.autoExtraBeds
+  });
+  var targetSnapshot = deepClone({
+    guests: state.targetRoom.guests || [],
+    children: state.targetRoom.children || [],
+    extraBeds: state.targetRoom.extraBeds,
+    autoExtraBeds: state.targetRoom.autoExtraBeds
+  });
+  var sourceExtraBedsBefore = parseInt(state.sourceRoom.extraBeds,10) || 0;
+  var targetExtraBeds = Math.max(0,parseInt(state.targetRoom.extraBeds,10) || 0);
+  var currentOccupancy = countRoomOccupancy(state.targetRoom);
+  var totalAvailable = getAccommodationEffectiveCapacity(state.targetRoom) - currentOccupancy;
+  var movedOccupancy = movedGuests.filter(function(guest){ return !gl(guest); }).length;
+  var needed = Math.max(movedOccupancy - totalAvailable, 0);
+  var movedGuestReferences = movedGuests.slice();
+
+  state.sourceRoom.guests = (state.sourceRoom.guests || []).filter(function(guest){
+    return movedGuestReferences.indexOf(guest) === -1;
+  });
+  state.targetRoom.guests = targetGuestsBefore.concat(movedGuests.map(function(guest){ return deepClone(guest); }));
   if(needed > 0){
     state.targetRoom.extraBeds = targetExtraBeds + needed;
     state.targetRoom.autoExtraBeds = (parseInt(state.targetRoom.autoExtraBeds || 0, 10)) + needed;
   }
-
-  var movedGuests = [];
-  var remainingGuests = [];
-  (state.sourceRoom.guests || []).forEach(function(g){
-    if(g && selectedIds.indexOf(g.id) !== -1){
-      movedGuests.push(g);
-    } else {
-      remainingGuests.push(g);
-    }
-  });
-  state.sourceRoom.guests = remainingGuests;
-  state.targetRoom.guests = (state.targetRoom.guests || []).concat(movedGuests.map(function(g){ return deepClone(g); }));
 
   var movedChildren = [];
   state.sourceRoom.children = (state.sourceRoom.children || []).filter(function(c){
@@ -4085,19 +4211,51 @@ function partialTransferConfirmSelection(){
     if(isLinked){ movedChildren.push(c); return false; }
     return true;
   });
+  var hasDuplicateTargetChild = movedChildren.some(function(child){
+    return (state.targetRoom.children || []).some(function(targetChild){ return isSameAccommodationGuest(child,targetChild); });
+  });
+  if(hasDuplicateTargetChild){
+    restorePartialTransferRoomSnapshot(state.sourceRoom,sourceSnapshot);
+    restorePartialTransferRoomSnapshot(state.targetRoom,targetSnapshot);
+    state.guestOptions = buildPartialTransferGuestOptions(state.sourceRoom);
+    alert('تعذر النقل لأن أحد الأطفال المرتبطين موجود بالفعل في الغرفة الهدف.');
+    renderPartialTransferGuestView();
+    return false;
+  }
   if(movedChildren.length){
     state.targetRoom.children = state.targetRoom.children || [];
-    state.targetRoom.children = state.targetRoom.children.concat(movedChildren);
+    state.targetRoom.children = state.targetRoom.children.concat(movedChildren.map(function(child){ return deepClone(child); }));
   }
 
-  state.currentOccupancy += movedGuests.length;
-  state.selectedGuestIds = [];
-  // تنظيف الأسرّة الإضافية المؤقتة من الغرفة المصدر إن أصبحت فارغة
   cleanupAutoExtraBeds(state.sourceRoom);
   syncRoomGuestBedTypes(state.sourceRoom);
   syncRoomGuestBedTypes(state.targetRoom);
+  var sourceUpdated = state.sourceRoom.guests.length === sourceSnapshot.guests.length - movedGuests.length &&
+    movedGuestReferences.every(function(guest){ return state.sourceRoom.guests.indexOf(guest) === -1; });
+  var targetUpdated = state.targetRoom.guests.length === targetSnapshot.guests.length + movedGuests.length &&
+    movedGuests.every(function(guest){
+      if(!guest.id && !guest.personId) return true;
+      return (state.targetRoom.guests || []).some(function(targetGuest){ return isSameAccommodationGuest(guest,targetGuest); });
+    });
+  var movedCount = movedGuests.length;
+  if(!sourceUpdated || !targetUpdated || movedCount === 0){
+    restorePartialTransferRoomSnapshot(state.sourceRoom,sourceSnapshot);
+    restorePartialTransferRoomSnapshot(state.targetRoom,targetSnapshot);
+    state.guestOptions = buildPartialTransferGuestOptions(state.sourceRoom);
+    alert('لم يتم النقل لأن تحديث الغرفة المصدر أو الهدف لم يكتمل.');
+    renderPartialTransferGuestView();
+    return false;
+  }
+
   if(!state.useDraft){
-    if(!save())return false;
+    if(!save()){
+      restorePartialTransferRoomSnapshot(state.sourceRoom,sourceSnapshot);
+      restorePartialTransferRoomSnapshot(state.targetRoom,targetSnapshot);
+      state.guestOptions = buildPartialTransferGuestOptions(state.sourceRoom);
+      alert('تعذر حفظ النقل. لم يتم اعتماد أي تغيير على الغرفتين.');
+      renderPartialTransferGuestView();
+      return false;
+    }
     movedGuests.forEach(function(guest){addActivityLog('guest_moved','تم نقل '+(gn(guest)||guest.name||'شخص')+' من الغرفة '+state.sourceRoom.number+' إلى الغرفة '+state.targetRoom.number,{details:'الغرفة السابقة: '+state.sourceRoom.number+' — الغرفة الجديدة: '+state.targetRoom.number,section:'accommodation',entityType:'person',entityId:guest.id||guest.personId||''})});
     if(needed>0)addActivityLog('extra_bed_added','تم إضافة سرير إضافي بالغرفة '+state.targetRoom.number,{details:'عدد الأسرة الإضافية: '+state.targetRoom.extraBeds,section:'accommodation',entityType:'room',entityId:state.targetRoom.id});
     if((parseInt(state.sourceRoom.extraBeds,10)||0)<sourceExtraBedsBefore)addActivityLog('extra_bed_removed','تم إزالة سرير إضافي من الغرفة '+state.sourceRoom.number,{details:'عدد الأسرة الإضافية: '+(parseInt(state.sourceRoom.extraBeds,10)||0),section:'accommodation',entityType:'room',entityId:state.sourceRoom.id});
@@ -4105,10 +4263,24 @@ function partialTransferConfirmSelection(){
   } else {
     renderRoomEditorFromDraft();
   }
+  state.currentOccupancy = countRoomOccupancy(state.targetRoom);
+  state.selectedGuestIds = [];
   closePartialTransferModal();
-  var toastMsg = '↔️ تم نقل ' + movedGuests.length + ' نزلاء';
+  var toastMsg = '↔️ تم نقل ' + movedCount + ' نزلاء';
+  if(state.useDraft) toastMsg += ' (مؤقتًا حتى الحفظ)';
   if(needed > 0) toastMsg += ' (تم إنشاء ' + needed + ' أسرّة إضافية)';
   showToast(toastMsg);
+  return { movedIds: matchedIds, movedCount: movedCount };
+}
+
+function restorePartialTransferRoomSnapshot(room,snapshot){
+  if(!room || !snapshot) return;
+  room.guests = deepClone(snapshot.guests || []);
+  room.children = deepClone(snapshot.children || []);
+  if(snapshot.extraBeds === undefined) delete room.extraBeds;
+  else room.extraBeds = snapshot.extraBeds;
+  if(snapshot.autoExtraBeds === undefined) delete room.autoExtraBeds;
+  else room.autoExtraBeds = snapshot.autoExtraBeds;
 }
 
 function cleanupAutoExtraBeds(room){
@@ -4132,7 +4304,8 @@ function partialTransferGuest(guestId){
   if(!requireAccommodationMutation())return false;
   var state = partialTransferState;
   if(!state || !state.sourceRoom || !state.targetRoom) return;
-  var available = Math.max(state.targetCapacity - state.currentOccupancy, 0);
+  state.currentOccupancy = countRoomOccupancy(state.targetRoom);
+  var available = Math.max(getAccommodationEffectiveCapacity(state.targetRoom) - state.currentOccupancy, 0);
   if(available <= 0) return;
 
   var guestIndex = -1;
