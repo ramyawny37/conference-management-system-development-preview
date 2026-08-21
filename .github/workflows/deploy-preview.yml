@@ -29,6 +29,7 @@ jobs:
           path: controller
 
       - name: Checkout develop source
+        id: source
         uses: actions/checkout@v4
         with:
           repository: ramyawny37/conference-management-system-v1
@@ -94,3 +95,5 @@ jobs:
       - name: Deploy preview
         id: deployment
         uses: actions/deploy-pages@v4
+        env:
+          GITHUB_SHA: ${{ steps.source.outputs.commit }}
