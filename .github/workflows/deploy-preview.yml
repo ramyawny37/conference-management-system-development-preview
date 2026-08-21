@@ -35,6 +35,7 @@ jobs:
           repository: ramyawny37/conference-management-system-v1
           ref: develop
           path: site
+          fetch-depth: 0
 
       - name: Mirror develop source revision for Pages
         env:
