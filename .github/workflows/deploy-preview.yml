@@ -6,7 +6,7 @@ on:
     - cron: '*/5 * * * *'
 
 permissions:
-  contents: read
+  contents: write
   pages: write
   id-token: write
 
@@ -35,6 +35,14 @@ jobs:
           repository: ramyawny37/conference-management-system-v1
           ref: develop
           path: site
+
+      - name: Mirror develop source revision for Pages
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git -C site push --force \
+            "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" \
+            HEAD:refs/heads/development-preview-source
 
       - name: Configure Development Supabase in preview artifact
         env:
