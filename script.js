@@ -5600,6 +5600,8 @@ function renderRestaurantV3Settings(conference){
   var summary=calculateMealSummary(conference);
   var labels={breakfast:'فطار',lunch:'غداء',dinner:'عشاء'};
   var people=getRestaurantV3People(conference);
+  var personExceptionIcon=window.AppIcons&&typeof window.AppIcons.icon==='function'?window.AppIcons.icon('user','',''):'';
+  var priceExceptionIcon=window.AppIcons&&typeof window.AppIcons.icon==='function'?window.AppIcons.icon('money','',''):'';
   function dayOptions(includeBlank){
     var options='<option value="">اختر اليوم</option>';
     mealSchedule.forEach(function(item){
@@ -5618,50 +5620,50 @@ function renderRestaurantV3Settings(conference){
     });
   }
   var html='<div class="card"><div class="card-title">حساب المطعم</div>';
-  html+='<div class="row" style="align-items:flex-end;margin-bottom:10px">';
-  html+='<div style="flex:1;min-width:150px"><label class="lbl">أول وجبة</label><select onchange="setRestaurantV3MealBoundary(\'firstMeal\',this.value)">';
+  html+='<div class="row restaurant-v3-boundaries">';
+  html+='<div class="restaurant-v3-field restaurant-v3-field-medium"><label class="lbl">أول وجبة</label><select onchange="setRestaurantV3MealBoundary(\'firstMeal\',this.value)">';
   MKEYS.forEach(function(mealKey){
     html+='<option value="'+mealKey+'" '+(plan.firstMeal===mealKey?'selected':'')+'>'+labels[mealKey]+'</option>';
   });
   html+='</select></div>';
-  html+='<div style="flex:1;min-width:150px"><label class="lbl">آخر وجبة</label><select onchange="setRestaurantV3MealBoundary(\'lastMeal\',this.value)">';
+  html+='<div class="restaurant-v3-field restaurant-v3-field-medium"><label class="lbl">آخر وجبة</label><select onchange="setRestaurantV3MealBoundary(\'lastMeal\',this.value)">';
   MKEYS.forEach(function(mealKey){
     html+='<option value="'+mealKey+'" '+(plan.lastMeal===mealKey?'selected':'')+'>'+labels[mealKey]+'</option>';
   });
   html+='</select></div></div>';
-  html+='<div style="overflow-x:auto;margin-bottom:10px"><table><thead><tr><th>الوجبة</th><th>السعر الأساسي</th></tr></thead><tbody>';
+  html+='<div class="accounts-table-scroll restaurant-v3-base-prices"><table><thead><tr><th>الوجبة</th><th>السعر الأساسي</th></tr></thead><tbody>';
   MKEYS.forEach(function(mealKey){
-    html+='<tr><td><b>'+labels[mealKey]+'</b></td><td><input type="number" min="0" step="0.5" style="width:110px" value="'+
+    html+='<tr><td><b>'+labels[mealKey]+'</b></td><td><input class="restaurant-v3-price-input" type="number" min="0" step="0.5" value="'+
       esc(plan.prices[mealKey])+'" onchange="setRestaurantV3BasePrice(\''+mealKey+'\',this.value)"></td></tr>';
   });
   html+='</tbody></table></div>';
-  html+='<div style="overflow-x:auto"><table><thead><tr><th>اليوم</th><th>التاريخ</th>';
+  html+='<div class="accounts-table-scroll"><table><thead><tr><th>اليوم</th><th>التاريخ</th>';
   MKEYS.forEach(function(mealKey){html+='<th>'+labels[mealKey]+'</th>'});
   html+='<th>إجمالي اليوم</th>';
   html+='</tr></thead><tbody>';
   if(!mealSchedule.length){
-    html+='<tr><td colspan="6" style="text-align:center;color:#95A5A6">حدد فترة المؤتمر لبناء جدول الوجبات.</td></tr>';
+    html+='<tr><td colspan="6" class="restaurant-v3-muted-cell">حدد فترة المؤتمر لبناء جدول الوجبات.</td></tr>';
   }else{
     mealSchedule.forEach(function(scheduleDay){
       var daySummary=summary.days.filter(function(item){return item.day===scheduleDay.day})[0];
-      html+='<tr><td><b>'+scheduleDay.day+'</b>'+(hasPersonOverrideOnDay(scheduleDay.day)?' <span title="استثناء شخص">👤</span>':'')+
+      html+='<tr><td><b>'+scheduleDay.day+'</b>'+(hasPersonOverrideOnDay(scheduleDay.day)?' <span class="restaurant-v3-exception-icon" title="استثناء شخص">'+personExceptionIcon+'</span>':'')+
         '</td><td>'+esc(formatConferenceScheduleDate(scheduleDay.date))+'</td>';
       MKEYS.forEach(function(mealKey){
         var mealSummary=daySummary&&daySummary.meals[mealKey];
         var hasPrice=plan.mealPriceOverrides.some(function(item){return Number(item.day)===scheduleDay.day&&item.meal===mealKey});
         var hasCount=plan.mealCountOverrides.some(function(item){return Number(item.day)===scheduleDay.day&&item.meal===mealKey});
-        html+='<td style="text-align:center;color:'+(scheduleDay.meals[mealKey]?'#27AE60':'#95A5A6')+'">'+
+        html+='<td class="restaurant-v3-meal-state '+(scheduleDay.meals[mealKey]?'is-included':'is-muted')+'">'+
           (scheduleDay.meals[mealKey]
-            ?'<b>✓</b><div style="font-size:10px;color:#425f78">'+mealSummary.finalCount+' × '+mealSummary.price+'</div>'
+            ?'<b>✓</b><div class="restaurant-v3-meal-detail">'+mealSummary.finalCount+' × '+mealSummary.price+'</div>'
             :'—')+
-          (hasPrice?' <span title="سعر استثنائي">💲</span>':'')+
+          (hasPrice?' <span class="restaurant-v3-exception-icon" title="سعر استثنائي">'+priceExceptionIcon+'</span>':'')+
           (hasCount?' <span title="تعديل عدد">±</span>':'')+'</td>';
       });
       html+='<td><b>'+esc(daySummary?daySummary.total:0)+'</b></td></tr>';
     });
   }
   html+='</tbody></table></div>';
-  html+='<div style="margin-top:10px;text-align:left"><b>الإجمالي: '+esc(summary.grandTotal)+'</b></div></div>';
+  html+='<div class="restaurant-v3-result"><span>النتيجة الحالية</span><strong>'+esc(summary.grandTotal)+'</strong><small>إجمالي المطعم</small></div></div>';
 
   html+='<div class="card"><div class="card-title">استثناءات أسعار الوجبات</div>';
   html+='<div class="row" style="align-items:flex-end"><div style="flex:1;min-width:160px"><label class="lbl">اليوم</label>'+
@@ -5670,7 +5672,7 @@ function renderRestaurantV3Settings(conference){
   html+='<div style="flex:1;min-width:130px"><label class="lbl">السعر الاستثنائي</label><input id="restaurantV3PriceValue" type="number" min="0" step="0.5"></div>';
   html+='<button type="button" class="btn btn-sm" onclick="saveRestaurantV3PriceOverride()">إضافة أو حفظ</button></div>';
   if(!plan.mealPriceOverrides.length){
-    html+='<div style="margin-top:10px;color:#95A5A6">لا توجد استثناءات مسجلة.</div>';
+    html+='<div class="restaurant-v3-empty-note">لا توجد استثناءات مسجلة.</div>';
   }else{
     html+='<div style="overflow-x:auto;margin-top:10px"><table><thead><tr><th>اليوم والوجبة</th><th>السعر الأساسي</th><th>السعر الاستثنائي</th><th>إجراءات</th></tr></thead><tbody>';
     plan.mealPriceOverrides.forEach(function(item){
@@ -5691,7 +5693,7 @@ function renderRestaurantV3Settings(conference){
   html+='<div style="flex:1;min-width:150px"><label class="lbl">ملاحظة</label><input id="restaurantV3CountNote" maxlength="120"></div>';
   html+='<button type="button" class="btn btn-sm" onclick="saveRestaurantV3CountOverride()">إضافة أو حفظ</button></div>';
   if(!plan.mealCountOverrides.length){
-    html+='<div style="margin-top:10px;color:#95A5A6">لا توجد استثناءات مسجلة.</div>';
+    html+='<div class="restaurant-v3-empty-note">لا توجد استثناءات مسجلة.</div>';
   }else{
     html+='<div style="overflow-x:auto;margin-top:10px"><table><thead><tr><th>اليوم والوجبة</th><th>العدد الأساسي</th><th>الإضافة</th><th>الخصم</th><th>العدد النهائي</th><th>الملاحظة</th><th>إجراءات</th></tr></thead><tbody>';
     plan.mealCountOverrides.forEach(function(item){
@@ -5717,7 +5719,7 @@ function renderRestaurantV3Settings(conference){
   html+='<div style="flex:1;min-width:170px"><label class="lbl">ملاحظة اختيارية</label><input id="restaurantV3PersonNote" maxlength="120"></div>';
   html+='<button type="button" class="btn btn-sm" onclick="saveRestaurantV3PersonOverride()">حفظ</button></div>';
   if(!mealExceptions.length){
-    html+='<div style="margin-top:10px;color:#95A5A6">لا توجد استثناءات مسجلة.</div>';
+    html+='<div class="restaurant-v3-empty-note">لا توجد استثناءات مسجلة.</div>';
   }else{
     html+='<div style="overflow-x:auto;margin-top:10px"><table><thead><tr><th>الشخص</th><th>اليوم</th><th>الوجبة</th><th>النوع</th><th>الملاحظة</th><th>إجراءات</th></tr></thead><tbody>';
     mealExceptions.forEach(function(item){

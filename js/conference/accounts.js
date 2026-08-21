@@ -5068,6 +5068,7 @@ function deleteFinancialV3Adjustment(adjustmentId){
 function renderFinancialV3AdjustmentEditor(summary){
   var draft=getFinancialV3Draft();
   var editing=!!draft.editingId;
+  var saveIcon=window.AppIcons&&typeof window.AppIcons.icon==='function'?window.AppIcons.icon('checkCircle','',''):'';
   var html='<div class="settings-section" style="margin-top:10px">';
   html+='<div class="settings-section-title"><b>'+(editing?'تعديل مالي':'إضافة تعديل مالي')+'</b></div>';
   html+='<div class="settings-branding-grid">';
@@ -5084,7 +5085,7 @@ function renderFinancialV3AdjustmentEditor(summary){
   html+='<div class="settings-branding-field"><label class="lbl">الملاحظة</label><textarea rows="2" oninput="updateFinancialV3Draft(\'note\',this.value)">'+esc(draft.note)+'</textarea></div>';
   html+='</div>';
   html+='<div class="settings-branding-actions">';
-  html+='<button class="btn btn-green" onclick="saveFinancialV3Adjustment()">💾 حفظ</button>';
+  html+='<button class="btn btn-green" onclick="saveFinancialV3Adjustment()">'+saveIcon+' حفظ</button>';
   if(editing)html+='<button class="btn btn-gray" onclick="resetFinancialV3DraftFromSaved();renderAccounts()">إلغاء التعديل</button>';
   html+='</div>';
   if(summary&&summary.enabled===false){
@@ -5114,23 +5115,35 @@ function renderFinancialV3AdjustmentsList(summary){
   return html;
 }
 
+function renderAccountsV3PrimarySummary(summary){
+  var cards=[
+    {label:'الإجمالي النهائي',value:summary.grandTotal,tone:'primary',icon:'money'},
+    {label:'إجمالي الإقامة',value:summary.accommodationTotal,tone:'accommodation',icon:'bed'},
+    {label:'إجمالي المطعم',value:summary.restaurantTotal,tone:'restaurant',icon:'food'},
+    {label:'إجمالي التكييف',value:summary.airConditioningTotal,tone:'air',icon:'settings'}
+  ];
+  var html='<section class="accounts-summary-section" aria-label="الملخص المالي الأساسي"><div class="accounts-primary-summary">';
+  cards.forEach(function(card){
+    var icon=window.AppIcons&&typeof window.AppIcons.icon==='function'?window.AppIcons.icon(card.icon,'',''):'';
+    html+='<article class="accounts-primary-stat accounts-primary-stat-'+card.tone+'">';
+    html+='<span class="accounts-primary-stat-icon">'+icon+'</span><div><span>'+card.label+'</span><strong>'+formatAccountMoney(card.value)+'</strong></div>';
+    html+='</article>';
+  });
+  html+='</div></section>';
+  return html;
+}
+
+function renderAccountsV3SecondarySummary(summary){
+  return '<div class="accounts-secondary-summary" aria-label="الملخص المالي الثانوي">'+
+    '<div class="accounts-secondary-item accounts-secondary-before"><span>المجموع قبل التعديلات</span><strong>'+formatAccountMoney(summary.subtotal)+'</strong></div>'+
+    '<div class="accounts-secondary-item accounts-secondary-addition"><span>الإضافات</span><strong>'+formatAccountMoney(summary.additionsTotal)+'</strong></div>'+
+    '<div class="accounts-secondary-item accounts-secondary-deduction"><span>الخصومات</span><strong>'+formatAccountMoney(summary.deductionsTotal)+'</strong></div>'+
+    '</div>';
+}
+
 function renderFinancialV3Section(summary){
   summary=summary||calculateFinancialV3Summary();
   var html='';
-  html+='<div class="settings-empty-state" style="margin-bottom:10px">يتم تجميع نتائج المطعم والإقامة والتكييف في هذا الملخص فقط، مع بقاء المحركات القديمة كما هي.</div>';
-  html+='<div class="settings-summary-grid">';
-  [
-    ['🏨','إجمالي الإقامة',summary.accommodationTotal],
-    ['🍽️','إجمالي المطعم',summary.restaurantTotal],
-    ['❄️','إجمالي التكييف',summary.airConditioningTotal],
-    ['📊','المجموع قبل التعديلات',summary.subtotal],
-    ['➕','إجمالي الإضافات',summary.additionsTotal],
-    ['➖','إجمالي الخصومات',summary.deductionsTotal],
-    ['💰','الإجمالي النهائي',summary.grandTotal]
-  ].forEach(function(card){
-    html+='<div class="settings-summary-card"><span>'+card[0]+' '+card[1]+'</span><strong>'+formatAccountMoney(card[2])+'</strong></div>';
-  });
-  html+='</div>';
   html+=renderFinancialV3AdjustmentEditor(summary);
   html+=renderFinancialV3AdjustmentsList(summary);
   return html;
@@ -5147,21 +5160,27 @@ function renderAccounts(){
   normalizeConferenceAccounts(conference);
   var financialV3Summary=calculateFinancialV3Summary();
   var sections=[
-    {title:'حساب الإقامة',v3Card:true,content:renderAccommodationV3Settings(conference)},
-    {title:'حساب التكييف',v3Card:true,content:renderAirConditioningV3Settings(conference)},
-    {title:'حساب المطعم',v3Card:true,content:renderRestaurantV3Settings(conference)},
-    {title:'الملخص المالي',v3Card:true,content:renderFinancialV3Section(financialV3Summary)}
+    {key:'accommodation',title:'الإقامة',subtitle:'طريقة التسعير والإعدادات والنتيجة الحالية',icon:'bed',content:renderAccommodationV3Settings(conference)},
+    {key:'restaurant',title:'المطعم',subtitle:'التسعير والاستثناءات وجدول الوجبات التفصيلي',icon:'food',content:renderRestaurantV3Settings(conference)},
+    {key:'air-conditioning',title:'التكييف',subtitle:'طريقة الحساب والأسعار والمدة والنتيجة الحالية',icon:'settings',content:renderAirConditioningV3Settings(conference)}
   ];
   var html='<div class="settings-dashboard settings-accounts-dashboard">';
+  html+='<div class="accounts-dashboard-heading"><div><span>Accounts Dashboard</span><h2>الحسابات</h2></div></div>';
+  html+=renderAccountsV3PrimarySummary(financialV3Summary);
+  html+=renderAccountsV3SecondarySummary(financialV3Summary);
+  html+='<div class="accounts-workspace-heading"><span>Cost Engines Workspace</span><strong>محركات التكلفة</strong></div>';
+  html+='<div class="accounts-cost-workspace">';
   sections.forEach(function(section){
-    if(section.v3Card){
-      html+='<section class="settings-section settings-accounts-panel">';
-      html+='<div class="settings-section-title settings-accounts-panel-title">'+section.title+'</div>';
-      html+='<div class="settings-accounts-panel-body">'+section.content+'</div>';
-      html+='</section>';
-      return;
-    }
+    var icon=window.AppIcons&&typeof window.AppIcons.icon==='function'?window.AppIcons.icon(section.icon,'',''):'';
+    html+='<section class="settings-section settings-accounts-panel accounts-engine-panel accounts-engine-'+section.key+'">';
+    html+='<div class="settings-section-title settings-accounts-panel-title"><span class="accounts-panel-icon">'+icon+'</span><div><strong>'+section.title+'</strong><small>'+section.subtitle+'</small></div></div>';
+    html+='<div class="settings-accounts-panel-body">'+section.content+'</div>';
+    html+='</section>';
   });
+  html+='</div>';
+  html+='<section class="settings-section settings-accounts-panel accounts-adjustments-panel">';
+  html+='<div class="settings-section-title settings-accounts-panel-title"><span class="accounts-panel-icon">'+(window.AppIcons&&typeof window.AppIcons.icon==='function'?window.AppIcons.icon('money','',''):'')+'</span><div><strong>التعديلات المالية</strong><small>الإضافات والخصومات والتصنيفات والملاحظات</small></div></div>';
+  html+='<div class="settings-accounts-panel-body">'+renderFinancialV3Section(financialV3Summary)+'</div></section>';
   html+='</div>';
   container.innerHTML=html;
 }
