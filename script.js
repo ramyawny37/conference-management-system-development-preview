@@ -1493,11 +1493,11 @@ function renderV3ReportsTopCards(context){
   var html='<div class="settings-summary-grid reports-v3-top-grid">';
   [
     ['الإقامة',financial.accommodationTotal,getAccommodationPricingModeLabel(financial.breakdown.accommodation.pricingMode)],
-    ['التكييف',financial.airConditioningTotal,getAirConditioningPricingModeLabel(financial.breakdown.airConditioning.pricingMode)],
     ['المطعم',financial.restaurantTotal,'حسب الوجبات المجدولة'],
-    ['الإجمالي النهائي',financial.grandTotal,'بعد الإضافات والخصومات']
+    ['التكييف',financial.airConditioningTotal,getAirConditioningPricingModeLabel(financial.breakdown.airConditioning.pricingMode)],
+    ['الإجمالي النهائي',financial.grandTotal,'بعد الإضافات والخصومات','reports-v3-top-card-final']
   ].forEach(function(card){
-    html+='<div class="settings-summary-card reports-v3-top-card"><span>'+esc(card[0])+'</span><strong>'+formatAccountMoney(card[1])+'</strong><small>'+esc(card[2])+'</small></div>';
+    html+='<div class="reports-v3-top-card '+(card[3]||'')+'"><span>'+esc(card[0])+'</span><strong>'+formatAccountMoney(card[1])+'</strong><small>'+esc(card[2])+'</small></div>';
   });
   html+='</div>';
   return html;
@@ -1505,19 +1505,15 @@ function renderV3ReportsTopCards(context){
 
 function renderV3FinancialSummaryReport(context){
   var financial=context.financialSummary;
-  var html='<section class="settings-section reports-v3-section">';
+  var html='<section class="settings-section reports-v3-section reports-v3-financial-summary">';
   html+='<div class="settings-section-title">الملخص المالي</div>';
-  html+='<div class="settings-summary-grid">';
+  html+='<div class="reports-v3-secondary-grid">';
   [
-    ['إجمالي الإقامة',financial.accommodationTotal],
-    ['إجمالي التكييف',financial.airConditioningTotal],
-    ['إجمالي المطعم',financial.restaurantTotal],
-    ['إجمالي الإضافات',financial.additionsTotal],
-    ['إجمالي الخصومات',financial.deductionsTotal],
     ['المجموع قبل التعديلات',financial.subtotal],
-    ['الإجمالي النهائي',financial.grandTotal]
+    ['إجمالي الإضافات',financial.additionsTotal],
+    ['إجمالي الخصومات',financial.deductionsTotal]
   ].forEach(function(item){
-    html+='<div class="settings-summary-card"><span>'+esc(item[0])+'</span><strong>'+formatAccountMoney(item[1])+'</strong></div>';
+    html+='<div class="reports-v3-secondary-item"><span>'+esc(item[0])+'</span><strong>'+formatAccountMoney(item[1])+'</strong></div>';
   });
   html+='</div></section>';
   return html;
@@ -1528,7 +1524,8 @@ function renderV3AccommodationReport(context){
   var financial=context.financialSummary;
   var html='<section class="settings-section reports-v3-section">';
   html+='<div class="settings-section-title">تقرير الإقامة</div>';
-  html+='<div class="settings-summary-grid">';
+  html+='<div class="reports-v3-result-card"><span>إجمالي تكلفة الإقامة</span><strong>'+formatAccountMoney(summary.totalCost)+'</strong></div>';
+  html+='<div class="reports-v3-metrics-grid">';
   [
     ['عدد الأشخاص',summary.totalPersons],
     ['Person Nights',summary.totalPersonNights],
@@ -1536,13 +1533,12 @@ function renderV3AccommodationReport(context){
     ['Room Nights',summary.roomNights],
     ['Room Days',summary.roomDays],
     ['نسبة الإشغال',Math.round((summary.occupancyRate||0)*100)/100+'%'],
-    ['طريقة التسعير',getAccommodationPricingModeLabel(financial.breakdown.accommodation.pricingMode)],
-    ['إجمالي تكلفة الإقامة',formatAccountMoney(summary.totalCost)]
+    ['طريقة التسعير',getAccommodationPricingModeLabel(financial.breakdown.accommodation.pricingMode)]
   ].forEach(function(item){
-    html+='<div class="settings-summary-card"><span>'+esc(item[0])+'</span><strong>'+esc(item[1])+'</strong></div>';
+    html+='<div class="reports-v3-metric"><span>'+esc(item[0])+'</span><strong>'+esc(item[1])+'</strong></div>';
   });
   html+='</div>';
-  html+='<div class="card reports-v3-subcard"><div class="card-title">جدول الليالي</div><div style="overflow-x:auto"><table><thead><tr><th>الليلة</th><th>من</th><th>إلى</th><th>الأشخاص</th><th>الغرف المشغولة</th><th>نسبة الإشغال</th><th>التكلفة</th></tr></thead><tbody>';
+  html+='<div class="card reports-v3-subcard"><div class="card-title">جدول الليالي</div><div class="reports-v3-table-scroll"><table><thead><tr><th>الليلة</th><th>من</th><th>إلى</th><th>الأشخاص</th><th>الغرف المشغولة</th><th>نسبة الإشغال</th><th>التكلفة</th></tr></thead><tbody>';
   if(!(summary.dailySummary||[]).length){
     html+='<tr><td colspan="7" class="settings-empty-state">لا توجد ليالٍ في جدول المؤتمر.</td></tr>';
   }else{
@@ -1551,7 +1547,7 @@ function renderV3AccommodationReport(context){
     });
   }
   html+='</tbody></table></div></div>';
-  html+='<div class="card reports-v3-subcard"><div class="card-title">جدول الأيام</div><div style="overflow-x:auto"><table><thead><tr><th>اليوم</th><th>التاريخ</th><th>الأشخاص</th><th>الغرف المشغولة</th><th>التكلفة</th></tr></thead><tbody>';
+  html+='<div class="card reports-v3-subcard"><div class="card-title">جدول الأيام</div><div class="reports-v3-table-scroll"><table><thead><tr><th>اليوم</th><th>التاريخ</th><th>الأشخاص</th><th>الغرف المشغولة</th><th>التكلفة</th></tr></thead><tbody>';
   if(!(summary.daySummary||[]).length){
     html+='<tr><td colspan="5" class="settings-empty-state">لا توجد أيام في جدول المؤتمر.</td></tr>';
   }else{
@@ -1568,18 +1564,18 @@ function renderV3AirConditioningReport(context){
   var summary=context.airConditioningSummary;
   var html='<section class="settings-section reports-v3-section">';
   html+='<div class="settings-section-title">تقرير التكييف</div>';
-  html+='<div class="settings-summary-grid">';
+  html+='<div class="reports-v3-result-card"><span>إجمالي التكييف</span><strong>'+formatAccountMoney(summary.totalCost)+'</strong></div>';
+  html+='<div class="reports-v3-metrics-grid">';
   [
     ['Person Days',summary.totalPersonDays],
     ['Room Days',summary.totalRoomDays],
     ['Unit Days',summary.totalUnitDays],
-    ['طريقة التسعير',getAirConditioningPricingModeLabel(summary.pricingMode)],
-    ['إجمالي التكييف',formatAccountMoney(summary.totalCost)]
+    ['طريقة التسعير',getAirConditioningPricingModeLabel(summary.pricingMode)]
   ].forEach(function(item){
-    html+='<div class="settings-summary-card"><span>'+esc(item[0])+'</span><strong>'+esc(item[1])+'</strong></div>';
+    html+='<div class="reports-v3-metric"><span>'+esc(item[0])+'</span><strong>'+esc(item[1])+'</strong></div>';
   });
   html+='</div>';
-  html+='<div class="card reports-v3-subcard"><div class="card-title">جدول الأيام</div><div style="overflow-x:auto"><table><thead><tr><th>اليوم</th><th>التاريخ</th><th>الأشخاص</th><th>الغرف</th><th>الأجهزة</th><th>التكلفة</th></tr></thead><tbody>';
+  html+='<div class="card reports-v3-subcard"><div class="card-title">جدول الأيام</div><div class="reports-v3-table-scroll"><table><thead><tr><th>اليوم</th><th>التاريخ</th><th>الأشخاص</th><th>الغرف</th><th>الأجهزة</th><th>التكلفة</th></tr></thead><tbody>';
   if(!(summary.daySummary||[]).length){
     html+='<tr><td colspan="6" class="settings-empty-state">لا توجد أيام في جدول المؤتمر.</td></tr>';
   }else{
@@ -1597,18 +1593,18 @@ function renderV3RestaurantReport(context){
   var financial=context.financialSummary;
   var html='<section class="settings-section reports-v3-section">';
   html+='<div class="settings-section-title">تقرير المطعم</div>';
-  html+='<div class="settings-summary-grid">';
+  html+='<div class="reports-v3-result-card"><span>الإجمالي النهائي</span><strong>'+formatAccountMoney(summary.grandTotal)+'</strong></div>';
+  html+='<div class="reports-v3-metrics-grid">';
   [
     ['عدد الوجبات',financial.breakdown.restaurant.totalMeals],
     ['إجمالي الإفطار',formatAccountMoney(summary.mealTotals.breakfast||0)],
     ['إجمالي الغداء',formatAccountMoney(summary.mealTotals.lunch||0)],
-    ['إجمالي العشاء',formatAccountMoney(summary.mealTotals.dinner||0)],
-    ['الإجمالي النهائي',formatAccountMoney(summary.grandTotal)]
+    ['إجمالي العشاء',formatAccountMoney(summary.mealTotals.dinner||0)]
   ].forEach(function(item){
-    html+='<div class="settings-summary-card"><span>'+esc(item[0])+'</span><strong>'+esc(item[1])+'</strong></div>';
+    html+='<div class="reports-v3-metric"><span>'+esc(item[0])+'</span><strong>'+esc(item[1])+'</strong></div>';
   });
   html+='</div>';
-  html+='<div class="card reports-v3-subcard"><div class="card-title">جدول الوجبات الحالي</div><div style="overflow-x:auto"><table><thead><tr><th>اليوم</th><th>التاريخ</th><th>الإفطار</th><th>الغداء</th><th>العشاء</th><th>إجمالي اليوم</th></tr></thead><tbody>';
+  html+='<div class="card reports-v3-subcard"><div class="card-title">جدول الوجبات الحالي</div><div class="reports-v3-table-scroll"><table><thead><tr><th>اليوم</th><th>التاريخ</th><th>الإفطار</th><th>الغداء</th><th>العشاء</th><th>إجمالي اليوم</th></tr></thead><tbody>';
   if(!(summary.days||[]).length){
     html+='<tr><td colspan="6" class="settings-empty-state">لا توجد بيانات وجبات حالية.</td></tr>';
   }else{
@@ -1638,15 +1634,18 @@ function renderV3Reports(){
     return;
   }
   var context=getV3ReportsContext(conference);
+  var conferenceName=(conference.conf&&conference.conf.name)||conference.name||'المؤتمر';
+  var periodText=getV3ReportsPeriodText(conference);
   var html='<div id="v3ReportsPage" class="settings-dashboard reports-v3-dashboard">';
-  html+='<section class="settings-section reports-v3-hero"><div class="settings-section-title">تقارير الحسابات</div>';
+  html+='<section class="settings-section reports-v3-hero"><div class="reports-v3-header"><div><div class="settings-section-title">تقارير الحسابات</div><div class="reports-v3-header-meta"><span>'+esc(conferenceName)+'</span><span>'+esc(periodText)+'</span></div></div>';
   html+=renderV3ReportsActions();
+  html+='</div>';
   html+=renderV3ReportsTopCards(context);
   html+='</section>';
   html+=renderV3FinancialSummaryReport(context);
   html+=renderV3AccommodationReport(context);
-  html+=renderV3AirConditioningReport(context);
   html+=renderV3RestaurantReport(context);
+  html+=renderV3AirConditioningReport(context);
   html+='</div>';
   container.innerHTML=html;
 }
