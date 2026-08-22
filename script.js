@@ -6950,30 +6950,30 @@ function showSelectConferenceModal(){
   var confs = (appData.conferences || []).filter(function(conf){ return conf.status === 'active'; });
   var completedConfs = (appData.conferences || []).filter(function(conf){ return conf.status === 'completed'; });
   if (confs.length === 0) {
-    var html = '<div id="selectConfModal" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:9999">';
-    html += '<div style="background:#fff;border-radius:15px;padding:30px;max-width:500px;box-shadow:0 4px 20px rgba(0,0,0,0.2);text-align:center">';
-    html += '<div style="font-size:18px;font-weight:700;color:#1F4E79;margin-bottom:20px">📌 لا توجد مؤتمرات محفوظة</div>';
-    html += '<div style="color:#666;margin-bottom:30px;line-height:1.6">يرجى إنشاء مؤتمر جديد للبدء.</div>';
-    html += '<button class="btn btn-blue" data-system-conference-create style="width:100%;margin-bottom:8px" onclick="createNewConference();var m=ge(\'selectConfModal\');if(m)m.remove();">➕ إنشاء أول مؤتمر</button>';
+    var html = '<div id="selectConfModal" class="final-dialog-backdrop">';
+    html += '<div class="final-dialog-panel final-dialog-panel-compact final-dialog-panel-centered">';
+    html += '<div class="final-dialog-title">📌 لا توجد مؤتمرات محفوظة</div>';
+    html += '<div class="final-dialog-description">يرجى إنشاء مؤتمر جديد للبدء.</div>';
+    html += '<button class="btn btn-blue final-dialog-full-action" data-system-conference-create onclick="createNewConference();var m=ge(\'selectConfModal\');if(m)m.remove();">➕ إنشاء أول مؤتمر</button>';
     if (completedConfs.length) {
-      html += '<button class="btn btn-purple" style="width:100%;margin-bottom:8px" onclick="openCompletedConferencesModal()">📂 فتح مؤتمر سابق</button>';
+      html += '<button class="btn btn-purple final-dialog-full-action" onclick="openCompletedConferencesModal()">📂 فتح مؤتمر سابق</button>';
     }
-    html += '<button class="btn btn-gray" style="width:100%" onclick="ge(\'selectConfImportInput\').click()">📂 استيراد مؤتمر</button>';
+    html += '<button class="btn btn-gray final-dialog-full-action" onclick="ge(\'selectConfImportInput\').click()">📂 استيراد مؤتمر</button>';
     html += '<input id="selectConfImportInput" type="file" accept=".html,.json" style="display:none" onchange="loadFromFile(event);var m=ge(\'selectConfModal\');if(m)m.remove();">';
     html += '</div></div>';
     document.body.insertAdjacentHTML('beforeend', html);
   } else {
-    var html = '<div id="selectConfModal" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:9999">';
-    html += '<div style="background:#fff;border-radius:15px;padding:30px;max-width:600px;max-height:80vh;overflow-y:auto;box-shadow:0 4px 20px rgba(0,0,0,0.2)">';
-    html += '<div style="font-size:18px;font-weight:700;color:#1F4E79;margin-bottom:20px">📌 لا يوجد مؤتمر نشط</div>';
-    html += '<div style="margin-bottom:20px;padding:15px;background:#FFF3CD;border-radius:8px;color:#856404">اختر مؤتمراً أو أنشئ واحداً جديداً</div>';
-    html += '<div style="margin-bottom:20px"><button class="btn btn-green" data-system-conference-create onclick="openNewConferenceModal(\'create\');var m=ge(\'selectConfModal\');if(m)m.remove();" style="width:100%">➕ إنشاء مؤتمر جديد</button></div>';
-    html += '<div style="margin-bottom:20px"><button class="btn btn-gray" onclick="ge(\'selectConfImportInput\').click()" style="width:100%">📂 استيراد مؤتمر</button><input id="selectConfImportInput" type="file" accept=".html,.json" style="display:none" onchange="loadFromFile(event);var m=ge(\'selectConfModal\');if(m)m.remove();"></div>';
-    html += '<div style="margin-bottom:15px;font-weight:700;color:#1F4E79">المؤتمرات المحفوظة:</div>';
-    html += '<div style="display:flex;flex-direction:column;gap:10px">';
+    var html = '<div id="selectConfModal" class="final-dialog-backdrop">';
+    html += '<div class="final-dialog-panel final-dialog-panel-wide">';
+    html += '<div class="final-dialog-title">📌 لا يوجد مؤتمر نشط</div>';
+    html += '<div class="final-dialog-notice">اختر مؤتمراً أو أنشئ واحداً جديداً</div>';
+    html += '<div class="final-dialog-action-row"><button class="btn btn-green final-dialog-full-action" data-system-conference-create onclick="openNewConferenceModal(\'create\');var m=ge(\'selectConfModal\');if(m)m.remove();">➕ إنشاء مؤتمر جديد</button></div>';
+    html += '<div class="final-dialog-action-row"><button class="btn btn-gray final-dialog-full-action" onclick="ge(\'selectConfImportInput\').click()">📂 استيراد مؤتمر</button><input id="selectConfImportInput" type="file" accept=".html,.json" style="display:none" onchange="loadFromFile(event);var m=ge(\'selectConfModal\');if(m)m.remove();"></div>';
+    html += '<div class="final-dialog-section-title">المؤتمرات المحفوظة:</div>';
+    html += '<div class="final-dialog-list">';
     confs.forEach(function(conf){
-      html += '<div style="padding:12px;background:#F7FBFF;border:1px solid #E3EEF9;border-radius:8px;display:flex;justify-content:space-between;align-items:center">';
-      html += '<div><div style="font-weight:600;color:#1F4E79">'+esc(conf.name)+'</div><div style="font-size:12px;color:#666">'+esc(conf.startDate||'-')+'</div></div>';
+      html += '<div class="final-dialog-list-item">';
+      html += '<div><div class="final-dialog-item-title">'+esc(conf.name)+'</div><div class="final-dialog-item-meta">'+esc(conf.startDate||'-')+'</div></div>';
       html += '<button class="btn btn-blue btn-sm" onclick="openConferenceFromStartup(\''+conf.id+'\');var m=ge(\'selectConfModal\');if(m)m.remove();">فتح</button>';
       html += '</div>';
     });
@@ -6992,18 +6992,18 @@ function openCompletedConferencesModal(){
     alert('لا توجد مؤتمرات سابقة متاحة.');
     return;
   }
-  var html = '<div id="completedConfModal" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:10000">';
-  html += '<div style="background:#fff;border-radius:15px;padding:30px;max-width:600px;max-height:80vh;overflow-y:auto;box-shadow:0 4px 20px rgba(0,0,0,0.2)">';
-  html += '<div style="font-size:18px;font-weight:700;color:#1F4E79;margin-bottom:20px">📂 فتح مؤتمر سابق</div>';
-  html += '<div style="display:flex;flex-direction:column;gap:10px">';
+  var html = '<div id="completedConfModal" class="final-dialog-backdrop">';
+  html += '<div class="final-dialog-panel final-dialog-panel-wide">';
+  html += '<div class="final-dialog-title">📂 فتح مؤتمر سابق</div>';
+  html += '<div class="final-dialog-list">';
   completedConfs.forEach(function(conf){
-    html += '<div style="padding:12px;background:#F7FBFF;border:1px solid #E3EEF9;border-radius:8px;display:flex;justify-content:space-between;align-items:center">';
-    html += '<div><div style="font-weight:600;color:#1F4E79">'+esc(conf.name)+'</div><div style="font-size:12px;color:#666">'+esc(conf.startDate||'-')+'</div></div>';
+    html += '<div class="final-dialog-list-item">';
+    html += '<div><div class="final-dialog-item-title">'+esc(conf.name)+'</div><div class="final-dialog-item-meta">'+esc(conf.startDate||'-')+'</div></div>';
     html += '<button class="btn btn-blue btn-sm" onclick="openPreviousConferenceById(\''+conf.id+'\');var m=ge(\'completedConfModal\');if(m)m.remove();var s=ge(\'selectConfModal\');if(s)s.remove();">فتح</button>';
     html += '</div>';
   });
   html += '</div>';
-  html += '<div style="margin-top:12px"><button class="btn btn-gray" style="width:100%" onclick="var m=ge(\'completedConfModal\');if(m)m.remove();">إغلاق</button></div>';
+  html += '<div class="final-dialog-footer"><button class="btn btn-gray final-dialog-full-action" onclick="var m=ge(\'completedConfModal\');if(m)m.remove();">إغلاق</button></div>';
   html += '</div></div>';
   document.body.insertAdjacentHTML('beforeend', html);
 }
