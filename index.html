@@ -39,9 +39,6 @@
   </div>
   <div class="application-utility-actions" style="margin-right:auto;display:flex;gap:6px;padding:6px 0;align-items:center">
     <div class="sync-bar live" id="syncBar">✔</div>
-    <button class="btn btn-green" style="font-size:10px;padding:4px 9px" onclick="saveToFile()">💾</button>
-    <button id="install-app-btn" class="btn btn-green btn-sm" style="display:none;">تثبيت البرنامج</button>
-    <button class="btn btn-blue" style="font-size:10px;padding:4px 9px" onclick="exportJsonFile()">📄</button>
     <label class="btn btn-orange" style="font-size:10px;padding:4px 9px;cursor:pointer;margin:0">📂<input type="file" accept=".html,.json" style="display:none" onchange="loadFromFile(event)"></label>
   </div>
 </div>
@@ -73,6 +70,7 @@
       <div class="startup-auth-actions">
         <button type="button" class="startup-auth-create" onclick="StartupAccessGate.showAuthView('signup')">إنشاء حساب</button>
         <button type="button" class="startup-auth-login" onclick="StartupAccessGate.showAuthView('login')">تسجيل الدخول</button>
+        <button id="install-app-btn" type="button" class="startup-auth-create" style="display:none;">تثبيت البرنامج</button>
       </div>
     </header>
 

@@ -8030,6 +8030,8 @@ function renderSettings(){
   h+='<div class="settings-action-group"><div class="settings-action-group-title">حفظ واسترجاع</div><div class="settings-actions-grid">';
   h+='<button class="btn btn-gray" onclick="backupAppData()">🔁 إنشاء نسخة احتياطية</button>';
   h+='<button class="btn btn-blue" onclick="downloadFullApplicationBackup()">تنزيل نسخة احتياطية كاملة</button>';
+  h+='<button class="btn btn-green" onclick="saveToFile()">حفظ ملف HTML</button>';
+  h+='<button class="btn btn-blue" onclick="exportJsonFile()">تصدير JSON</button>';
   h+='<button class="btn btn-purple" onclick="ge(\'fullBackupPreflightInput\').click()">فحص نسخة احتياطية كاملة</button>';
   h+='<input id="fullBackupPreflightInput" type="file" accept=".json,application/json" style="display:none" onchange="inspectFullApplicationBackup(event)">';
   h+='<button class="btn btn-orange" onclick="archiveCurrentConference()">🗄️ أرشفة المؤتمر</button>';
