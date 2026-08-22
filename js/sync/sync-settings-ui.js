@@ -269,7 +269,11 @@
     var auth=getAuthState();
     var device=getDevice();
     var preferences=getAutomaticSyncPreferences();
+    var authUser=auth.user||{};
     var email=auth.user&&auth.user.email?auth.user.email:'';
+    var displayName=authUser.user_metadata&&authUser.user_metadata.display_name
+      ?String(authUser.user_metadata.display_name).trim():'';
+    var accountName=displayName||email;
     var html=renderTemplateDiagnosticExport();
     html+=renderMemberRuntimeDiagnostics();
     html+=renderOrphanedCleanup();
@@ -309,8 +313,12 @@
     html+='<div id="sync_config_message" class="sync-settings-message"></div></div>';
     html+='<div class="sync-settings-panel"><h3>الحساب</h3>';
     if(auth.authenticated){
-      html+='<div class="sync-settings-user">المستخدم: <strong>'+
-        escapeHtml(email)+'</strong></div>';
+      html+='<div class="sync-settings-user sync-settings-account-identity">'+
+        '<div class="sync-settings-account-name">'+escapeHtml(accountName)+'</div>'+
+        (email&&email!==accountName
+          ?'<div class="sync-settings-account-email" dir="ltr">'+escapeHtml(email)+'</div>'
+          :'')+
+        '</div>';
       html+='<button class="btn btn-red btn-sm" onclick="SyncSettingsUI.signOut()">تسجيل الخروج</button>';
     }else{
       html+='<div class="sync-auth-landing"><div class="sync-auth-card"><h4>تسجيل الدخول</h4>';
