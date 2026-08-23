@@ -6,12 +6,12 @@ const CACHE_NAMESPACE = IS_DEVELOPMENT
   ? 'cms:development:' + DEVELOPMENT_PROJECT_REF + ':'
   : '';
 const CACHE_PREFIX = CACHE_NAMESPACE + 'conference-manager-core-';
-const CACHE_REVISION = 'application-ui-refresh-v1';
+const CACHE_REVISION = 'organization-members-refresh-v1';
 const CACHE_NAME = CACHE_PREFIX + 'v' + APP_VERSION + '-' + CACHE_REVISION;
 const CORE_ASSETS = [
   './',
   './index.html',
-  './style.css?rev=application-ui-refresh-v1',
+  './style.css?rev=organization-members-refresh-v1',
   './js/storage/environment-namespace.js',
   './js/storage/indexeddb.js?rev=shared-template-library-v1',
   './js/storage/storage-repository.js?rev=organization-template-sync-v1',
@@ -116,7 +116,7 @@ const CORE_ASSETS = [
   './cards.js',
   './libs/xlsx.full.min.js',
   './js/ui-icons.js?rev=accommodation-visual-match-v6',
-  './script.js?rev=application-ui-refresh-v1',
+  './script.js?rev=organization-members-refresh-v1',
   './version.js',
   './pwa.js?rev=organization-membership-operation-key-v1',
   './libs/html2canvas.min.js',
