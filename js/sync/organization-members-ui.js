@@ -24,55 +24,56 @@
   function paint(){var host=element('organization_members_content');if(host)host.innerHTML=body();}
   function body(){
     if(!context||!context.organizationId){
-      if(state.organizationsStatus==='loading'||state.organizationsStatus==='idle')return '<div class="settings-empty-state">جارٍ تحميل المؤسسات…</div>';
-      if(!state.organizations.length)return '<div class="settings-empty-state">لا توجد مؤسسة متاحة لهذا الحساب.</div>';
+      if(state.organizationsStatus==='loading'||state.organizationsStatus==='idle')return '<div class="settings-empty-state organization-members-state organization-members-state-loading" role="status" aria-live="polite" aria-atomic="true">جارٍ تحميل المؤسسات…</div>';
+      if(!state.organizations.length)return '<div class="settings-empty-state organization-members-state">لا توجد مؤسسة متاحة لهذا الحساب.</div>';
       return organizationSelector();
     }
-    if(state.accessStatus==='loading'||state.accessStatus==='idle')return '<div class="settings-empty-state">جارٍ التحقق من الصلاحية…</div>';
-    if(!state.access)return '<div class="settings-empty-state">تعذر التحقق من صلاحية المؤسسة.</div>';
-    var html=organizationSelector()+statusHtml()+'<div class="sync-settings-message">صلاحيتك: <strong>'+escapeHtml(roleLabel(state.access.role))+'</strong></div>';
+    if(state.accessStatus==='loading'||state.accessStatus==='idle')return '<div class="settings-empty-state organization-members-state organization-members-state-loading" role="status" aria-live="polite" aria-atomic="true">جارٍ التحقق من الصلاحية…</div>';
+    if(!state.access)return '<div class="settings-empty-state organization-members-state organization-members-state-error" role="status" aria-live="polite" aria-atomic="true">تعذر التحقق من صلاحية المؤسسة.</div>';
+    var html=organizationSelector()+statusHtml()+'<div class="sync-settings-message organization-members-access-summary">صلاحيتك: <strong>'+escapeHtml(roleLabel(state.access.role))+'</strong></div>';
     if(canManage()){
       html+='<div class="sync-settings-actions"><button type="button" class="btn btn-gray btn-sm" onclick="OrganizationMembersUI.refresh()">تحديث القائمة</button></div>';
       html+=membersHtml()+managementHtml();
-    }else html+='<div class="settings-empty-state">حسابك للقراءة فقط.</div>';
-    html+=operationsHtml();if(state.message)html+='<div class="sync-settings-message">'+escapeHtml(state.message)+'</div>';
+    }else html+='<div class="settings-empty-state organization-members-state organization-members-state-readonly">حسابك للقراءة فقط.</div>';
+    html+=operationsHtml();if(state.message)html+='<div class="sync-settings-message organization-members-feedback" role="status" aria-live="polite" aria-atomic="true">'+escapeHtml(state.message)+'</div>';
     return html;
   }
   function organizationSelector(){
     var current=state.organizations.find(function(item){return context&&item.organizationId===context.organizationId;})||null;
-    var html='<div class="sync-settings-panel"><h3>إدارة أعضاء المؤسسة</h3>'+(current?'<div class="sync-settings-message">المؤسسة المُدارة حاليًا: <strong>'+escapeHtml(current.displayName)+'</strong></div>':'')+'<label class="lbl" for="organization_select">المؤسسة</label><select id="organization_select" onchange="OrganizationMembersUI.selectOrganization(this.value)"><option value="">اختر مؤسسة</option>';
+    var html='<div class="sync-settings-panel organization-members-context-panel"><h3 class="organization-members-context-title">إدارة أعضاء المؤسسة</h3>'+(current?'<div class="sync-settings-message organization-members-current">المؤسسة المُدارة حاليًا: <strong>'+escapeHtml(current.displayName)+'</strong></div>':'')+'<label class="lbl" for="organization_select">المؤسسة</label><select id="organization_select" onchange="OrganizationMembersUI.selectOrganization(this.value)"><option value="">اختر مؤسسة</option>';
     state.organizations.forEach(function(organization){html+='<option value="'+escapeHtml(organization.organizationId)+'"'+(context&&context.organizationId===organization.organizationId?' selected':'')+'>'+escapeHtml(organization.displayName)+'</option>';});
     return html+='</select></div>';
   }
   function statusHtml(){var count=state.operations.filter(function(operation){return operation.organizationId===context.organizationId;}).length;
-    return '<div class="sync-settings-panel"><h3>حالة إدارة المؤسسة</h3><div class="sync-settings-message">الدور: '+escapeHtml(roleLabel(state.access.role))+' · إدارة الأعضاء: '+(canManage()?'متاحة':'للقراءة فقط')+' · عمليات محلية معلقة: '+count+' · الاتصال: '+escapeHtml(state.connectionState)+(state.lastRefreshAt?' · آخر تحديث ناجح: '+escapeHtml(state.lastRefreshAt):'')+'</div></div>';}
+    return '<div class="sync-settings-panel organization-members-status-panel"><h3>حالة إدارة المؤسسة</h3><div class="sync-settings-message organization-members-status-copy">الدور: '+escapeHtml(roleLabel(state.access.role))+' · إدارة الأعضاء: '+(canManage()?'متاحة':'للقراءة فقط')+' · عمليات محلية معلقة: '+count+' · الاتصال: '+escapeHtml(state.connectionState)+(state.lastRefreshAt?' · آخر تحديث ناجح: '+escapeHtml(state.lastRefreshAt):'')+'</div></div>';}
   function actionLabel(action){return action==='add_organization_member'?'إضافة عضو':action==='remove_organization_member'?'إزالة عضو':'تغيير الدور';}
   function operationsHtml(){var operations=state.operations.filter(function(operation){return operation.organizationId===context.organizationId;});if(!operations.length)return '';
-    var html='<div class="sync-settings-panel"><h3>عمليات تحتاج متابعة</h3>';
-    operations.forEach(function(operation){html+='<div class="sync-settings-message">'+escapeHtml(actionLabel(operation.action))+' — '+(operation.state==='unknown'?'النتيجة غير مؤكدة':'جارٍ التنفيذ');
+    var html='<div class="sync-settings-panel organization-members-operations"><h3>عمليات تحتاج متابعة</h3>';
+    operations.forEach(function(operation){html+='<div class="sync-settings-message organization-members-operation" role="status" aria-live="polite" aria-atomic="true">'+escapeHtml(actionLabel(operation.action))+' — '+(operation.state==='unknown'?'النتيجة غير مؤكدة':'جارٍ التنفيذ');
       if(operation.state==='unknown')html+=' <button type="button" class="btn btn-blue btn-sm" onclick="OrganizationMembersUI.retryOperation(\''+escapeHtml(operation.operationId)+'\')">إعادة المحاولة</button><button type="button" class="btn btn-gray btn-sm" onclick="OrganizationMembersUI.stopTracking(\''+escapeHtml(operation.operationId)+'\')">إيقاف تتبع العملية على هذا الجهاز</button>';
       html+='</div>';});return html+'</div>';
   }
   function membersHtml(){
-    if(state.membersStatus==='loading')return '<div class="settings-empty-state">جارٍ تحميل الأعضاء…</div>';
+    if(state.membersStatus==='loading')return '<div class="settings-empty-state organization-members-state organization-members-state-loading" role="status" aria-live="polite" aria-atomic="true">جارٍ تحميل الأعضاء…</div>';
+    if(!state.members.length)return '<div class="settings-empty-state organization-members-state organization-members-empty">لا يوجد أعضاء في هذه المؤسسة.</div>';
     var html='<div class="settings-list">';state.members.forEach(function(member){
       var remove={organizationId:context.organizationId,targetUserId:member.userId,action:'remove_organization_member',requestedRole:null};
       var removeBusy=state.pending[key(remove)];
       var promote={organizationId:context.organizationId,targetUserId:member.userId,action:'change_organization_role',requestedRole:'organization_admin'};
       var demote={organizationId:context.organizationId,targetUserId:member.userId,action:'change_organization_role',requestedRole:'member'};
-      html+='<div class="settings-list-item"><div><strong>'+escapeHtml(member.displayName||'مستخدم بدون اسم')+'</strong><div class="sync-settings-message">'+escapeHtml(roleLabel(member.role))+(member.isCurrentUser?' — الحساب الحالي':'')+'</div></div>';
-      if(state.access.canManageMembers&&!member.isCurrentUser&&(member.role==='member'||(state.access.canManageAdmins&&member.role==='organization_admin')))html+='<button type="button" class="btn btn-red btn-sm" '+(removeBusy?'disabled ':'')+'onclick="OrganizationMembersUI.removeMember(\''+escapeHtml(member.userId)+'\')">'+(removeBusy?'جارٍ التنفيذ…':'إزالة العضو')+'</button>';
-      if(state.access.canManageAdmins&&!member.isCurrentUser&&member.role==='member')html+='<button type="button" class="btn btn-blue btn-sm" '+(state.pending[key(promote)]?'disabled ':'')+'onclick="OrganizationMembersUI.changeRole(\''+escapeHtml(member.userId)+'\',\'organization_admin\')">'+(state.pending[key(promote)]?'جارٍ التنفيذ…':'مدير المؤسسة')+'</button>';
-      if(state.access.canManageAdmins&&!member.isCurrentUser&&member.role==='organization_admin')html+='<button type="button" class="btn btn-gray btn-sm" '+(state.pending[key(demote)]?'disabled ':'')+'onclick="OrganizationMembersUI.changeRole(\''+escapeHtml(member.userId)+'\',\'member\')">'+(state.pending[key(demote)]?'جارٍ التنفيذ…':'عضو')+'</button>';
+      html+='<div class="settings-list-item organization-member-item"><div class="organization-member-identity"><strong>'+escapeHtml(member.displayName||'مستخدم بدون اسم')+'</strong><div class="sync-settings-message organization-member-role">'+escapeHtml(roleLabel(member.role))+(member.isCurrentUser?' — الحساب الحالي':'')+'</div></div>';
+      if(state.access.canManageMembers&&!member.isCurrentUser&&(member.role==='member'||(state.access.canManageAdmins&&member.role==='organization_admin')))html+='<button type="button" class="btn btn-red btn-sm organization-member-action" '+(removeBusy?'disabled aria-busy="true" ':'')+'onclick="OrganizationMembersUI.removeMember(\''+escapeHtml(member.userId)+'\')">'+(removeBusy?'جارٍ التنفيذ…':'إزالة العضو')+'</button>';
+      if(state.access.canManageAdmins&&!member.isCurrentUser&&member.role==='member')html+='<button type="button" class="btn btn-blue btn-sm organization-member-action" '+(state.pending[key(promote)]?'disabled aria-busy="true" ':'')+'onclick="OrganizationMembersUI.changeRole(\''+escapeHtml(member.userId)+'\',\'organization_admin\')">'+(state.pending[key(promote)]?'جارٍ التنفيذ…':'مدير المؤسسة')+'</button>';
+      if(state.access.canManageAdmins&&!member.isCurrentUser&&member.role==='organization_admin')html+='<button type="button" class="btn btn-gray btn-sm organization-member-action" '+(state.pending[key(demote)]?'disabled aria-busy="true" ':'')+'onclick="OrganizationMembersUI.changeRole(\''+escapeHtml(member.userId)+'\',\'member\')">'+(state.pending[key(demote)]?'جارٍ التنفيذ…':'عضو')+'</button>';
       html+='</div>';
     });return html+'</div>';
   }
   function managementHtml(){
-    var html='<div class="sync-settings-panel"><h3>إدارة أعضاء المؤسسة</h3><label class="lbl" for="organization_member_lookup_email">البريد الإلكتروني</label><input id="organization_member_lookup_email" type="email" dir="ltr" autocomplete="off"><div class="sync-settings-actions"><button type="button" class="btn btn-blue btn-sm" '+(state.lookupStatus==='loading'?'disabled ':'')+'onclick="OrganizationMembersUI.lookup()">بحث</button>';
-    if(state.candidate){var add={organizationId:context.organizationId,targetUserId:state.candidate.targetUserId,action:'add_organization_member',requestedRole:null};var busy=state.pending[key(add)];html+='<button type="button" class="btn btn-green btn-sm" '+(state.candidate.membershipStatus==='member'||busy?'disabled ':'')+'onclick="OrganizationMembersUI.addMember()">'+(busy?'جارٍ التنفيذ…':state.candidate.membershipStatus==='member'?'عضو بالفعل':'إضافة عضو')+'</button>';}
+    var html='<div class="sync-settings-panel organization-members-add-panel"><h3>إدارة أعضاء المؤسسة</h3><label class="lbl" for="organization_member_lookup_email">البريد الإلكتروني</label><input id="organization_member_lookup_email" type="email" dir="ltr" autocomplete="off"><div class="sync-settings-actions"><button type="button" class="btn btn-blue btn-sm" '+(state.lookupStatus==='loading'?'disabled aria-busy="true" ':'')+'onclick="OrganizationMembersUI.lookup()">بحث</button>';
+    if(state.candidate){var add={organizationId:context.organizationId,targetUserId:state.candidate.targetUserId,action:'add_organization_member',requestedRole:null};var busy=state.pending[key(add)];html+='<button type="button" class="btn btn-green btn-sm" '+(state.candidate.membershipStatus==='member'||busy?'disabled ':'')+(busy?'aria-busy="true" ':'')+'onclick="OrganizationMembersUI.addMember()">'+(busy?'جارٍ التنفيذ…':state.candidate.membershipStatus==='member'?'عضو بالفعل':'إضافة عضو')+'</button>';}
     html+='</div></div>';return html;
   }
-  function renderSection(options){var next={organizationId:String(options&&options.organizationId||'')};if(!context||(next.organizationId&&next.organizationId!==context.organizationId)){context=next;state=createState();}return '<section class="settings-section sync-settings-section"><div class="settings-section-title">إدارة أعضاء المؤسسة</div><div id="organization_members_content">'+body()+'</div></section>';}
+  function renderSection(options){var next={organizationId:String(options&&options.organizationId||'')};if(!context||(next.organizationId&&next.organizationId!==context.organizationId)){context=next;state=createState();}return '<section class="settings-section sync-settings-section organization-members-section" aria-labelledby="organization_members_title"><h2 id="organization_members_title" class="settings-section-title">إدارة أعضاء المؤسسة</h2><div id="organization_members_content">'+body()+'</div></section>';}
   function initialize(){
     if(initializationFlight)return initializationFlight;
     var service=api();if(!service||typeof service.listMyOrganizations!=='function')return Promise.resolve({ok:false,status:'unavailable'});

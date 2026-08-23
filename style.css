@@ -1125,6 +1125,52 @@ tr:nth-child(even) td{background:#F7FBFF}
 #tab6 .sync-link-summary{min-width:0;gap:var(--app-space-3);margin-bottom:var(--app-space-4)}
 #tab6 .sync-link-summary span{min-width:0;padding:var(--app-space-2) var(--app-space-3);border:1px solid var(--app-border);border-radius:var(--app-radius-control);background:var(--app-surface-soft);color:var(--app-text-secondary);font-size:var(--app-font-size-sm);overflow-wrap:anywhere}
 
+/* Organization members — direct view */
+#tab6 .organization-members-section{display:grid;min-width:0;gap:var(--app-space-5);color:var(--app-text)}
+#tab6 .organization-members-section>.settings-section-title{margin:0;padding-bottom:var(--app-space-4)}
+#tab6 .organization-members-section #organization_members_content{display:grid;min-width:0;gap:var(--app-space-4)}
+#tab6 .organization-members-section .sync-settings-panel{display:grid;min-width:0;gap:var(--app-space-3);margin:0;padding:var(--app-space-5);border:1px solid var(--app-border);border-radius:var(--app-radius-md);background:var(--app-surface-soft);box-shadow:none}
+#tab6 .organization-members-section .sync-settings-panel h3{margin:0;color:var(--app-text);font-size:var(--app-font-size-section);font-weight:var(--app-font-weight-heavy)}
+#tab6 .organization-members-section .organization-members-context-title{color:var(--app-text-muted);font-size:var(--app-font-size-sm);font-weight:var(--app-font-weight-bold)}
+#tab6 .organization-members-section .organization-members-current{margin:0;padding:var(--app-space-3) var(--app-space-4);border:1px solid var(--app-border);border-radius:var(--app-radius-control);background:var(--app-surface);color:var(--app-text-secondary)}
+#tab6 .organization-members-section .organization-members-current strong{color:var(--app-primary-dark);font-size:var(--app-font-size-body);overflow-wrap:anywhere}
+#tab6 .organization-members-section .lbl{color:var(--app-text-secondary);font-size:var(--app-font-size-sm);font-weight:var(--app-font-weight-bold)}
+#tab6 .organization-members-section input,#tab6 .organization-members-section select{max-width:100%;min-height:var(--app-control-height);border-color:var(--app-input-border);border-radius:var(--app-radius-control);background:var(--app-surface);color:var(--app-text)}
+#tab6 .organization-members-section input:focus-visible,#tab6 .organization-members-section select:focus-visible,#tab6 .organization-members-section .btn:focus-visible{border-color:var(--app-primary);outline:none;box-shadow:var(--app-focus-ring)}
+#tab6 .organization-members-section .sync-settings-actions{min-width:0;gap:var(--app-space-3);margin:0;flex-wrap:wrap}
+#tab6 .organization-members-section .btn{min-width:0;min-height:var(--app-control-height);padding:var(--app-space-2) var(--app-space-4);border-radius:var(--app-radius-control);font-size:var(--app-font-size-sm);font-weight:var(--app-font-weight-bold);white-space:normal;overflow-wrap:anywhere}
+#tab6 .organization-members-section .btn[disabled]{opacity:.58;cursor:not-allowed}
+#tab6 .organization-members-section .settings-list{min-width:0;gap:var(--app-space-3)}
+#tab6 .organization-members-section .organization-member-item{min-width:0;align-items:center;flex-wrap:wrap;gap:var(--app-space-3);padding:var(--app-space-4);border:1px solid var(--app-border);border-radius:var(--app-radius-md);background:var(--app-surface);box-shadow:none}
+#tab6 .organization-members-section .organization-member-identity{min-width:0;flex:1 1 220px}
+#tab6 .organization-members-section .organization-member-identity>strong{display:block;color:var(--app-text);font-size:var(--app-font-size-body);font-weight:var(--app-font-weight-heavy);overflow-wrap:anywhere}
+#tab6 .organization-members-section .organization-member-role{min-height:0;margin-top:var(--app-space-1);color:var(--app-text-muted)}
+#tab6 .organization-members-section .organization-member-action{flex:0 1 auto}
+#tab6 .organization-members-section .organization-members-status-panel{border-color:var(--app-border-strong);background:var(--app-primary-soft)}
+#tab6 .organization-members-section .organization-members-status-copy,#tab6 .organization-members-section .organization-members-access-summary{min-width:0;margin:0;padding:var(--app-space-3) var(--app-space-4);border:1px solid var(--app-border);border-radius:var(--app-radius-control);background:var(--app-surface);color:var(--app-text-secondary);line-height:1.7;overflow-wrap:anywhere}
+#tab6 .organization-members-section .organization-members-access-summary strong{color:var(--app-primary-dark)}
+#tab6 .organization-members-section .organization-members-state{min-width:0;margin:0;padding:var(--app-space-5);border-color:var(--app-border-strong);border-radius:var(--app-radius-md);background:var(--app-surface-soft);color:var(--app-text-muted);overflow-wrap:anywhere}
+#tab6 .organization-members-section .organization-members-state-loading{background:var(--app-primary-soft);color:var(--app-primary)}
+#tab6 .organization-members-section .organization-members-state-error{border-color:color-mix(in srgb,var(--app-danger) 30%,var(--app-border));background:var(--app-danger-soft);color:var(--app-danger)}
+#tab6 .organization-members-section .organization-members-state-readonly{background:var(--app-neutral-soft);color:var(--app-neutral)}
+#tab6 .organization-members-section .organization-members-empty{border-style:dashed}
+#tab6 .organization-members-section .organization-members-feedback{min-width:0;margin:0;padding:var(--app-space-3) var(--app-space-4);border:1px solid var(--app-border);border-radius:var(--app-radius-control);background:var(--app-surface-soft);color:var(--app-text-secondary);overflow-wrap:anywhere}
+#tab6 .organization-members-section .organization-members-operations{border-color:color-mix(in srgb,var(--app-warning) 30%,var(--app-border));background:var(--app-warning-soft)}
+#tab6 .organization-members-section .organization-members-operation{display:flex;min-width:0;align-items:center;gap:var(--app-space-2);margin:0;padding:var(--app-space-3);border:1px solid var(--app-border);border-radius:var(--app-radius-control);background:var(--app-surface);color:var(--app-text-secondary);flex-wrap:wrap;overflow-wrap:anywhere}
+
+@media(max-width:760px){
+  #tab6 .organization-members-section{gap:var(--app-space-4)}
+  #tab6 .organization-members-section .sync-settings-panel,#tab6 .organization-members-section .organization-member-item{padding:var(--app-space-4)}
+  #tab6 .organization-members-section .organization-member-action{flex:1 1 140px}
+}
+@media(max-width:600px){
+  #tab6 .organization-members-section .organization-member-item{align-items:stretch;flex-direction:column}
+  #tab6 .organization-members-section .organization-member-identity{width:100%;flex-basis:auto}
+  #tab6 .organization-members-section .organization-member-action,#tab6 .organization-members-section .sync-settings-actions .btn{width:100%;min-height:var(--app-touch-target)}
+  #tab6 .organization-members-section .organization-members-operation{align-items:stretch;flex-direction:column}
+  #tab6 .organization-members-section .organization-members-operation .btn{width:100%;min-height:var(--app-touch-target)}
+}
+
 /* Final UI Consistency — Accounts */
 #tab2 .settings-accounts-dashboard{min-width:0}
 #tab2 .settings-accounts-dashboard .stat-card{border-color:var(--app-border);border-radius:var(--app-radius-control);background:var(--app-surface);box-shadow:var(--app-shadow-sm)}
