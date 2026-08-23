@@ -218,6 +218,25 @@
       });
     });
   }
+  function retryPendingAfterReconciliation(operationId,options){
+    var ctx=context(options);if(ctx.error)return Promise.resolve(outcome(false,'unavailable',null,ctx.error));
+    return getStoredOperation(ctx,operationId,options).then(function(found){
+      if(!found.ok)return found;var original=found.data.operation;
+      if(original.state!=='pending')return outcome(false,'not_pending',{operation:original});
+      var flightKey=[original.authenticatedUserId,original.organizationId,original.targetUserId,original.action,original.requestedRole||''].join('|');
+      if(flights[flightKey])return flights[flightKey];
+      var flight=reconcileMembershipOperation(original.operationId,options).then(function(reconciled){
+        if(!reconciled||reconciled.status!=='not_found')return reconciled;
+        return getStoredOperation(ctx,original.operationId,options).then(function(current){
+          if(!current.ok)return current;var record=current.data.operation;
+          if(record.state!=='pending'||record.operationId!==original.operationId||record.organizationId!==original.organizationId||
+            record.targetUserId!==original.targetUserId||record.action!==original.action||
+            String(record.requestedRole||'')!==String(original.requestedRole||''))return outcome(false,'operation_mismatch',{operation:record});
+          return executeRecord(ctx,record,options);
+        });
+      }).finally(function(){delete flights[flightKey];});flights[flightKey]=flight;return flight;
+    });
+  }
   function retryUnknownOperation(operationId,options){
     var ctx=context(options);if(ctx.error)return Promise.resolve(outcome(false,'unavailable',null,ctx.error));
     return getStoredOperation(ctx,operationId,options).then(function(found){
@@ -245,6 +264,6 @@
     addMember:function(input,options){return mutate(Object.assign({},input,{action:'add_organization_member',requestedRole:null}),options);},
     removeMember:function(input,options){return mutate(Object.assign({},input,{action:'remove_organization_member',requestedRole:null}),options);},
     changeRole:function(input,options){return mutate(Object.assign({},input,{action:'change_organization_role'}),options);},
-    listPendingOperations:listPendingOperations,reconcileMembershipOperation:reconcileMembershipOperation,retryUnknownOperation:retryUnknownOperation,
+    listPendingOperations:listPendingOperations,reconcileMembershipOperation:reconcileMembershipOperation,retryPendingAfterReconciliation:retryPendingAfterReconciliation,retryUnknownOperation:retryUnknownOperation,
     abandonUnknownOperation:abandonUnknownOperation,getLastDiagnostic:function(){return lastDiagnostic&&JSON.parse(JSON.stringify(lastDiagnostic));}});
 })(window);

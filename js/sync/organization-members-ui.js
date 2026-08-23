@@ -8,7 +8,7 @@
   var initializationFlight=null;
   var STALE_PENDING_AGE_MS=5*60*1000;
 
-  function createState(){return {organizations:[],organizationsStatus:'idle',access:null,members:[],candidate:null,lookupEmail:'',message:'',operations:[],lastRefreshAt:null,connectionState:'غير متصل',
+  function createState(){return {organizations:[],organizationsStatus:'idle',access:null,members:[],candidate:null,lookupEmail:'',message:'',operations:[],pendingRetryOperationId:'',lastRefreshAt:null,connectionState:'غير متصل',
     accessStatus:'idle',membersStatus:'idle',lookupStatus:'idle',
     pending:Object.create(null),manualRetry:false};}
   function escapeHtml(value){return String(value==null?'':value).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
@@ -56,6 +56,7 @@
     var html='<div class="sync-settings-panel organization-members-operations"><h3>عمليات تحتاج متابعة</h3>';
     operations.forEach(function(operation){var stalePending=stalePendingOperation(operation);html+='<div class="sync-settings-message organization-members-operation" role="status" aria-live="polite" aria-atomic="true">'+escapeHtml(actionLabel(operation.action))+' — '+(operation.state==='unknown'?'النتيجة غير مؤكدة':stalePending?'هذه العملية لم تُحسم محليًا بعد. قد تكون اكتملت بالفعل. تحقّق من حالة الأعضاء قبل إعادة المحاولة.':'جارٍ التنفيذ');
       if(operation.state==='unknown')html+=' <button type="button" class="btn btn-blue btn-sm" onclick="OrganizationMembersUI.retryOperation(\''+escapeHtml(operation.operationId)+'\')">إعادة المحاولة</button><button type="button" class="btn btn-gray btn-sm" onclick="OrganizationMembersUI.stopTracking(\''+escapeHtml(operation.operationId)+'\')">إيقاف تتبع العملية على هذا الجهاز</button>';
+      else if(stalePending&&state.pendingRetryOperationId===operation.operationId)html+=' <button type="button" class="btn btn-blue btn-sm" onclick="OrganizationMembersUI.retryPendingOperation(\''+escapeHtml(operation.operationId)+'\')">إعادة المحاولة</button>';
       else if(stalePending)html+=' <button type="button" class="btn btn-blue btn-sm" onclick="OrganizationMembersUI.verifyPendingOperation(\''+escapeHtml(operation.operationId)+'\')">تحديث والتحقق من الحالة</button>';
       html+='</div>';});return html+'</div>';
   }
@@ -88,7 +89,7 @@
         context={organizationId:organizationId};
         contextUserId=userId;
         if(storedSelection&&!storedId)storeSelection('');
-        if(selectionChanged){state.candidate=null;state.lookupEmail='';state.message='';state.lookupStatus='idle';}
+        if(selectionChanged){state.candidate=null;state.lookupEmail='';state.message='';state.lookupStatus='idle';state.pendingRetryOperationId='';}
         if(requestedId)storeSelection(requestedId);
         return loadOperations().then(function(){return refreshUi();});
       }
@@ -100,7 +101,7 @@
     var requestedId=availableOrganizationId(organizationId);
     return !requestedId||context&&context.organizationId===requestedId?result:selectOrganization(organizationId);
   });}
-  function selectOrganization(organizationId){var previousOrganizationId=context&&context.organizationId||'';organizationId=availableOrganizationId(organizationId);var selectionChanged=previousOrganizationId!==organizationId;context={organizationId:organizationId};contextUserId=authenticatedUserId();storeSelection(organizationId);state.access=null;state.members=[];if(selectionChanged){state.candidate=null;state.lookupEmail='';state.message='';state.lookupStatus='idle';}return refreshUi();}
+  function selectOrganization(organizationId){var previousOrganizationId=context&&context.organizationId||'';organizationId=availableOrganizationId(organizationId);var selectionChanged=previousOrganizationId!==organizationId;context={organizationId:organizationId};contextUserId=authenticatedUserId();storeSelection(organizationId);state.access=null;state.members=[];if(selectionChanged){state.candidate=null;state.lookupEmail='';state.message='';state.lookupStatus='idle';state.pendingRetryOperationId='';}return refreshUi();}
   function refreshUi(){
     if(!context||!context.organizationId)return Promise.resolve({ok:false,status:'invalid_input'});
     var organizationId=context.organizationId,service=api();if(!service)return Promise.resolve({ok:false,status:'unavailable'});
@@ -112,8 +113,10 @@
   }
   function loadOperations(){var service=api();if(!service||typeof service.listPendingOperations!=='function')return Promise.resolve({ok:false,status:'unavailable'});
     return service.listPendingOperations().then(function(result){state.operations=result&&result.ok?result.data.operations:[];return result;});}
-  function verifyPendingOperation(operationId){var organizationId=context&&context.organizationId||'',service=api();if(!service||typeof service.reconcileMembershipOperation!=='function')return Promise.resolve({ok:false,status:'unavailable'});
-    return service.reconcileMembershipOperation(String(operationId||'')).then(function(result){return loadOperations().then(function(){if(isCurrentOrganization(organizationId)){if(result&&result.data&&result.data.refresh){state.access=result.data.refresh.access;state.members=result.data.refresh.members||[];state.membersStatus='loaded';state.lastRefreshAt=new Date().toLocaleString('ar');}state.message=result&&['applied','unchanged','denied','invalid_request'].indexOf(result.status)>=0?'تم التحقق من نتيجة العملية وتحديث البيانات من الخادم.':result&&result.status==='not_found'?'لم تُحسم نتيجة العملية على الخادم بعد. لم تتم إعادة المحاولة.':result&&result.status==='operation_mismatch'?'تعذر مطابقة العملية المحلية مع سجل الخادم. لم يتم تغيير التتبع المحلي.':result&&result.status==='terminal_refresh_failed'?'تم العثور على نتيجة العملية، لكن تعذر تحديث بيانات المؤسسة. تم الاحتفاظ بالتتبع المحلي.':'تعذر التحقق من نتيجة العملية. تم الاحتفاظ بالتتبع المحلي.';paint();}return result;});});}
+  function verifyPendingOperation(operationId){var organizationId=context&&context.organizationId||'',service=api();state.pendingRetryOperationId='';if(!service||typeof service.reconcileMembershipOperation!=='function'){paint();return Promise.resolve({ok:false,status:'unavailable'});}
+    return service.reconcileMembershipOperation(String(operationId||'')).then(function(result){return loadOperations().then(function(){if(isCurrentOrganization(organizationId)){if(result&&result.data&&result.data.refresh){state.access=result.data.refresh.access;state.members=result.data.refresh.members||[];state.membersStatus='loaded';state.lastRefreshAt=new Date().toLocaleString('ar');}state.pendingRetryOperationId=result&&result.status==='not_found'?String(operationId||''):'';state.message=result&&['applied','unchanged','denied','invalid_request'].indexOf(result.status)>=0?'تم التحقق من نتيجة العملية وتحديث البيانات من الخادم.':result&&result.status==='not_found'?'لم تُحسم نتيجة العملية على الخادم بعد. يمكنك إعادة المحاولة يدويًا بنفس العملية.':result&&result.status==='operation_mismatch'?'تعذر مطابقة العملية المحلية مع سجل الخادم. لم يتم تغيير التتبع المحلي.':result&&result.status==='terminal_refresh_failed'?'تم العثور على نتيجة العملية، لكن تعذر تحديث بيانات المؤسسة. تم الاحتفاظ بالتتبع المحلي.':'تعذر التحقق من نتيجة العملية. تم الاحتفاظ بالتتبع المحلي.';paint();}return result;});});}
+  function retryPendingOperation(operationId){var organizationId=context&&context.organizationId||'',service=api();if(state.pendingRetryOperationId!==String(operationId||''))return Promise.resolve({ok:false,status:'unavailable'});state.pendingRetryOperationId='';if(!service||typeof service.retryPendingAfterReconciliation!=='function'){paint();return Promise.resolve({ok:false,status:'unavailable'});}state.message='';paint();
+    return service.retryPendingAfterReconciliation(String(operationId||'')).then(function(result){return loadOperations().then(function(){if(isCurrentOrganization(organizationId)){if(result&&result.data&&result.data.refresh){state.access=result.data.refresh.access;state.members=result.data.refresh.members||[];state.membersStatus='loaded';state.lastRefreshAt=new Date().toLocaleString('ar');}var messages={unknown:'النتيجة غير مؤكدة وتتطلب متابعة صريحة.',applied:'تم تنفيذ العملية وتحديث البيانات من الخادم.',unchanged:'لم تتغير البيانات على الخادم.',denied:'رُفضت العملية من الخادم.',invalid_request:'تعذر تنفيذ الطلب لعدم صلاحيته.',operation_mismatch:'تعذر مطابقة العملية؛ لم يتم تنفيذ إعادة المحاولة.',terminal_refresh_failed:'تعذر تحديث بيانات الخادم؛ تم الاحتفاظ بتتبع العملية.'};state.message=messages[result&&result.status]||'تعذر إعادة محاولة العملية.';paint();}return result;});});}
   function lookup(){
     if(!canManage())return Promise.resolve({ok:false,status:'access_denied'});
     var input=element('organization_member_lookup_email'),email=String(input&&input.value||'').trim(),organizationId=context&&context.organizationId||'';state.lookupEmail=email;
@@ -159,5 +162,5 @@
   function stopTracking(operationId){var warning='قد تكون العملية اكتملت بالفعل على الخادم. هذا الإجراء يزيل التتبع المحلي على هذا الجهاز فقط ولا يلغي أو يتراجع عن بيانات الخادم.';
     if(!global.confirm||!global.confirm(warning))return Promise.resolve({ok:false,status:'abandonment_cancelled'});
     var organizationId=context&&context.organizationId||'';return api().abandonUnknownOperation(String(operationId||'')).then(function(result){return loadOperations().then(function(){if(isCurrentOrganization(organizationId)){if(result&&result.data&&result.data.refresh){state.access=result.data.refresh.access;state.members=result.data.refresh.members||[];state.lastRefreshAt=new Date().toLocaleString('ar');}state.message=result&&result.ok?'تم إيقاف تتبع العملية على هذا الجهاز.':result&&result.status==='refresh_failed'?'تعذر تحديث بيانات الخادم؛ تم الاحتفاظ بتتبع العملية.':'تعذر إيقاف تتبع العملية.';}paint();return result;});});}
-  global.OrganizationMembersUI=Object.freeze({renderSection:renderSection,initialize:initialize,initializeAndSelect:initializeAndSelect,selectOrganization:selectOrganization,refresh:refreshUi,verifyPendingOperation:verifyPendingOperation,lookup:lookup,addMember:addMember,removeMember:removeMember,changeRole:changeRole,retryOperation:retryOperation,stopTracking:stopTracking});
+  global.OrganizationMembersUI=Object.freeze({renderSection:renderSection,initialize:initialize,initializeAndSelect:initializeAndSelect,selectOrganization:selectOrganization,refresh:refreshUi,verifyPendingOperation:verifyPendingOperation,retryPendingOperation:retryPendingOperation,lookup:lookup,addMember:addMember,removeMember:removeMember,changeRole:changeRole,retryOperation:retryOperation,stopTracking:stopTracking});
 })(window);
