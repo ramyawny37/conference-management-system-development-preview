@@ -1450,6 +1450,14 @@ function openSettingsFromHome(){
   return opened;
 }
 
+function openOrganizationMembersFromManagement(organizationId){
+  var ui=window.OrganizationMembersUI;
+  if(!ui||typeof ui.initializeAndSelect!=='function')return false;
+  settingsTab='general';
+  if(!openSettingsFromHome())return false;
+  return ui.initializeAndSelect(String(organizationId||''));
+}
+
 function showHomePage(){
   return openStartupScreen({clearCurrentConference:false,persistView:true});
 }

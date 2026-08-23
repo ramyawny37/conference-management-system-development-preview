@@ -5,6 +5,7 @@
   var contextUserId='';
   var state=createState();
   var flights=Object.create(null);
+  var initializationFlight=null;
 
   function createState(){return {organizations:[],organizationsStatus:'idle',access:null,members:[],candidate:null,message:'',operations:[],lastRefreshAt:null,connectionState:'غير متصل',
     accessStatus:'idle',membersStatus:'idle',lookupStatus:'idle',
@@ -73,8 +74,9 @@
   }
   function renderSection(options){var next={organizationId:String(options&&options.organizationId||'')};if(!context||(next.organizationId&&next.organizationId!==context.organizationId)){context=next;state=createState();}return '<section class="settings-section sync-settings-section"><div class="settings-section-title">إدارة أعضاء المؤسسة</div><div id="organization_members_content">'+body()+'</div></section>';}
   function initialize(){
+    if(initializationFlight)return initializationFlight;
     var service=api();if(!service||typeof service.listMyOrganizations!=='function')return Promise.resolve({ok:false,status:'unavailable'});
-    state.operations=[];state.access=null;state.members=[];state.organizationsStatus='loading';paint();return service.listMyOrganizations().then(function(result){
+    state.operations=[];state.access=null;state.members=[];state.organizationsStatus='loading';paint();initializationFlight=service.listMyOrganizations().then(function(result){
       state.organizationsStatus=result&&result.ok?'loaded':'error';state.organizations=result&&result.ok?result.data.organizations:[];
       if(state.organizations.length){
         var userId=authenticatedUserId(),currentId=contextUserId===userId?availableOrganizationId(context&&context.organizationId):'',storedSelection=readStoredSelection(),storedId=availableOrganizationId(storedSelection),organizationId=currentId||storedId||state.organizations[0].organizationId;
@@ -84,8 +86,9 @@
         return loadOperations().then(function(){return refreshUi();});
       }
       contextUserId=authenticatedUserId();storeSelection('');paint();return result;
-    });
+    }).finally(function(){initializationFlight=null;});return initializationFlight;
   }
+  function initializeAndSelect(organizationId){organizationId=String(organizationId||'');return initialize().then(function(result){return result&&result.ok?selectOrganization(organizationId):result;});}
   function selectOrganization(organizationId){organizationId=availableOrganizationId(organizationId);context={organizationId:organizationId};contextUserId=authenticatedUserId();storeSelection(organizationId);state.access=null;state.members=[];state.candidate=null;return refreshUi();}
   function refreshUi(){
     if(!context||!context.organizationId)return Promise.resolve({ok:false,status:'invalid_input'});
@@ -127,5 +130,5 @@
   function stopTracking(operationId){var warning='قد تكون العملية اكتملت بالفعل على الخادم. هذا الإجراء يزيل التتبع المحلي على هذا الجهاز فقط ولا يلغي أو يتراجع عن بيانات الخادم.';
     if(!global.confirm||!global.confirm(warning))return Promise.resolve({ok:false,status:'abandonment_cancelled'});
     return api().abandonUnknownOperation(String(operationId||'')).then(function(result){return loadOperations().then(function(){if(result&&result.data&&result.data.refresh){state.access=result.data.refresh.access;state.members=result.data.refresh.members||[];state.lastRefreshAt=new Date().toLocaleString('ar');}state.message=result&&result.ok?'تم إيقاف تتبع العملية على هذا الجهاز.':result&&result.status==='refresh_failed'?'تعذر تحديث بيانات الخادم؛ تم الاحتفاظ بتتبع العملية.':'تعذر إيقاف تتبع العملية.';paint();return result;});});}
-  global.OrganizationMembersUI=Object.freeze({renderSection:renderSection,initialize:initialize,selectOrganization:selectOrganization,refresh:refreshUi,lookup:lookup,addMember:addMember,removeMember:removeMember,changeRole:changeRole,retryOperation:retryOperation,stopTracking:stopTracking});
+  global.OrganizationMembersUI=Object.freeze({renderSection:renderSection,initialize:initialize,initializeAndSelect:initializeAndSelect,selectOrganization:selectOrganization,refresh:refreshUi,lookup:lookup,addMember:addMember,removeMember:removeMember,changeRole:changeRole,retryOperation:retryOperation,stopTracking:stopTracking});
 })(window);
