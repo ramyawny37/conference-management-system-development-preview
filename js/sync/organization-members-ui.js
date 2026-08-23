@@ -7,7 +7,7 @@
   var flights=Object.create(null);
   var initializationFlight=null;
 
-  function createState(){return {organizations:[],organizationsStatus:'idle',access:null,members:[],candidate:null,message:'',operations:[],lastRefreshAt:null,connectionState:'غير متصل',
+  function createState(){return {organizations:[],organizationsStatus:'idle',access:null,members:[],candidate:null,lookupEmail:'',message:'',operations:[],lastRefreshAt:null,connectionState:'غير متصل',
     accessStatus:'idle',membersStatus:'idle',lookupStatus:'idle',
     pending:Object.create(null),manualRetry:false};}
   function escapeHtml(value){return String(value==null?'':value).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
@@ -24,7 +24,7 @@
   function validEmail(value){return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);}
   function isCurrentOrganization(organizationId){return !!(context&&context.organizationId===organizationId);}
   function roleLabel(role){return role==='organization_owner'?'مالك المؤسسة':role==='organization_admin'?'مدير المؤسسة':'عضو';}
-  function paint(){var host=element('organization_members_content');if(host)host.innerHTML=body();}
+  function paint(restoreLookupFocus){var host=element('organization_members_content'),lookupInput=element('organization_member_lookup_email');restoreLookupFocus=restoreLookupFocus===true||!!(lookupInput&&global.document&&global.document.activeElement===lookupInput);if(host){host.innerHTML=body();if(restoreLookupFocus){lookupInput=element('organization_member_lookup_email');if(lookupInput&&typeof lookupInput.focus==='function')lookupInput.focus();}}}
   function body(){
     if(!context||!context.organizationId){
       if(state.organizationsStatus==='loading'||state.organizationsStatus==='idle')return '<div class="settings-empty-state organization-members-state organization-members-state-loading" role="status" aria-live="polite" aria-atomic="true">جارٍ تحميل المؤسسات…</div>';
@@ -69,8 +69,8 @@
     });return html+'</div>';
   }
   function managementHtml(){
-    var html='<div class="sync-settings-panel organization-members-add-panel"><h3>إدارة أعضاء المؤسسة</h3><label class="lbl" for="organization_member_lookup_email">البريد الإلكتروني</label><input id="organization_member_lookup_email" type="email" dir="ltr" autocomplete="off"><div class="sync-settings-actions"><button type="button" class="btn btn-blue btn-sm" '+(state.lookupStatus==='loading'?'disabled aria-busy="true" ':'')+'onclick="OrganizationMembersUI.lookup()">بحث</button>';
-    if(state.candidate){var add={organizationId:context.organizationId,targetUserId:state.candidate.targetUserId,action:'add_organization_member',requestedRole:null};var busy=targetMutationPending(add.organizationId,add.targetUserId);html+='<button type="button" class="btn btn-green btn-sm" '+(state.candidate.membershipStatus==='member'||busy?'disabled ':'')+(busy?'aria-busy="true" ':'')+'onclick="OrganizationMembersUI.addMember()">'+(busy?'جارٍ التنفيذ…':state.candidate.membershipStatus==='member'?'عضو بالفعل':'إضافة عضو')+'</button>';}
+    var html='<div class="sync-settings-panel organization-members-add-panel"><h3>إدارة أعضاء المؤسسة</h3><label class="lbl" for="organization_member_lookup_email">البريد الإلكتروني</label><input id="organization_member_lookup_email" type="email" dir="ltr" autocomplete="off" value="'+escapeHtml(state.lookupEmail)+'"><div class="sync-settings-actions"><button type="button" class="btn btn-blue btn-sm" '+(state.lookupStatus==='loading'?'disabled aria-busy="true" ':'')+'onclick="OrganizationMembersUI.lookup()">بحث</button>';
+    if(state.candidate){var add={organizationId:context.organizationId,targetUserId:state.candidate.targetUserId,action:'add_organization_member',requestedRole:null},busy=targetMutationPending(add.organizationId,add.targetUserId);html+='</div><div class="sync-settings-message organization-member-candidate"><strong>'+escapeHtml(state.candidate.displayName||'مستخدم بدون اسم')+'</strong><div dir="ltr">'+escapeHtml(state.lookupEmail)+'</div></div><div class="sync-settings-actions"><button type="button" class="btn btn-green btn-sm" '+(state.candidate.membershipStatus==='member'||busy?'disabled ':'')+(busy?'aria-busy="true" ':'')+'onclick="OrganizationMembersUI.addMember()">'+(busy?'جارٍ التنفيذ…':state.candidate.membershipStatus==='member'?'عضو بالفعل':'إضافة عضو')+'</button>';}
     html+='</div></div>';return html;
   }
   function renderSection(options){var next={organizationId:String(options&&options.organizationId||'')};if(!context||(next.organizationId&&next.organizationId!==context.organizationId)){context=next;state=createState();}return '<section class="settings-section sync-settings-section organization-members-section" aria-labelledby="organization_members_title"><h2 id="organization_members_title" class="settings-section-title">إدارة أعضاء المؤسسة</h2><div id="organization_members_content">'+body()+'</div></section>';}
@@ -85,7 +85,7 @@
         context={organizationId:organizationId};
         contextUserId=userId;
         if(storedSelection&&!storedId)storeSelection('');
-        if(selectionChanged){state.candidate=null;state.message='';state.lookupStatus='idle';}
+        if(selectionChanged){state.candidate=null;state.lookupEmail='';state.message='';state.lookupStatus='idle';}
         if(requestedId)storeSelection(requestedId);
         return loadOperations().then(function(){return refreshUi();});
       }
@@ -97,7 +97,7 @@
     var requestedId=availableOrganizationId(organizationId);
     return !requestedId||context&&context.organizationId===requestedId?result:selectOrganization(organizationId);
   });}
-  function selectOrganization(organizationId){var previousOrganizationId=context&&context.organizationId||'';organizationId=availableOrganizationId(organizationId);var selectionChanged=previousOrganizationId!==organizationId;context={organizationId:organizationId};contextUserId=authenticatedUserId();storeSelection(organizationId);state.access=null;state.members=[];if(selectionChanged){state.candidate=null;state.message='';state.lookupStatus='idle';}return refreshUi();}
+  function selectOrganization(organizationId){var previousOrganizationId=context&&context.organizationId||'';organizationId=availableOrganizationId(organizationId);var selectionChanged=previousOrganizationId!==organizationId;context={organizationId:organizationId};contextUserId=authenticatedUserId();storeSelection(organizationId);state.access=null;state.members=[];if(selectionChanged){state.candidate=null;state.lookupEmail='';state.message='';state.lookupStatus='idle';}return refreshUi();}
   function refreshUi(){
     if(!context||!context.organizationId)return Promise.resolve({ok:false,status:'invalid_input'});
     var organizationId=context.organizationId,service=api();if(!service)return Promise.resolve({ok:false,status:'unavailable'});
@@ -111,11 +111,11 @@
     return service.listPendingOperations().then(function(result){state.operations=result&&result.ok?result.data.operations:[];return result;});}
   function lookup(){
     if(!canManage())return Promise.resolve({ok:false,status:'access_denied'});
-    var input=element('organization_member_lookup_email'),email=String(input&&input.value||'').trim(),organizationId=context&&context.organizationId||'';
-    if(!email||!validEmail(email)){state.lookupStatus='idle';state.candidate=null;state.message=!email?'أدخل البريد الإلكتروني.':'أدخل بريدًا إلكترونيًا صحيحًا.';paint();return Promise.resolve({ok:false,status:'invalid_input'});}
-    state.lookupStatus='loading';state.candidate=null;state.message='';paint();return api().lookupCandidate({organizationId:organizationId,email:email}).then(function(result){
+    var input=element('organization_member_lookup_email'),email=String(input&&input.value||'').trim(),organizationId=context&&context.organizationId||'';state.lookupEmail=email;
+    if(!email||!validEmail(email)){state.lookupStatus='idle';state.candidate=null;state.message=!email?'أدخل البريد الإلكتروني.':'أدخل بريدًا إلكترونيًا صحيحًا.';paint(true);return Promise.resolve({ok:false,status:'invalid_input'});}
+    state.lookupStatus='loading';state.candidate=null;state.message='';paint(true);return api().lookupCandidate({organizationId:organizationId,email:email}).then(function(result){
       if(!isCurrentOrganization(organizationId))return result;
-      state.lookupStatus=result&&result.ok?'candidate':'unavailable';state.candidate=result&&result.ok?result.data:null;state.message=result&&result.ok?'تم العثور على مرشح.':'لا يتوفر مرشح بهذا البريد.';paint();return result;
+      state.lookupStatus=result&&result.ok?'candidate':'unavailable';state.candidate=result&&result.ok?result.data:null;state.message=result&&result.ok?'تم العثور على مرشح.':'لا يتوفر مرشح بهذا البريد.';paint(true);return result;
     });
   }
   function run(input){
@@ -135,7 +135,7 @@
         else if(result.status==='terminal_refresh_failed'){state.message='تعذر تحديث بيانات الخادم؛ تم الاحتفاظ بتتبع العملية.';}
         else if(refreshed){state.message=result.ok?'تم تأكيد العملية من الخادم.':'تم تحديث البيانات من الخادم.';}
         else{state.message='تعذر تنفيذ العملية.';}
-        if(input.action==='add_organization_member'&&result&&result.ok&&(result.status==='applied'||result.status==='unchanged'))state.candidate=null;
+        if(input.action==='add_organization_member'&&result&&result.ok&&(result.status==='applied'||result.status==='unchanged')){state.candidate=null;state.lookupEmail='';}
       }
       return loadOperations().then(function(){paint();return result;});
     }).finally(function(){delete flights[intentKey];});flights[intentKey]=flight;return flight;
