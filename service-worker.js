@@ -6,7 +6,7 @@ const CACHE_NAMESPACE = IS_DEVELOPMENT
   ? 'cms:development:' + DEVELOPMENT_PROJECT_REF + ':'
   : '';
 const CACHE_PREFIX = CACHE_NAMESPACE + 'conference-manager-core-';
-const CACHE_REVISION = 'organization-members-refresh-v1';
+const CACHE_REVISION = 'auth-approval-ux-v1';
 const CACHE_NAME = CACHE_PREFIX + 'v' + APP_VERSION + '-' + CACHE_REVISION;
 const CORE_ASSETS = [
   './',
@@ -65,7 +65,7 @@ const CORE_ASSETS = [
   './js/sync/template-diagnostic-export.js?rev=template-diagnostic-export-v1',
   './js/sync/sync-settings-ui.js?rev=shared-template-copy-guard-v1',
   './js/supabase/first-system-bootstrap-service.js?rev=first-owner-bootstrap-hardening-v1',
-  './js/sync/startup-access-gate.js?rev=organization-membership-operation-key-v1',
+  './js/sync/startup-access-gate.js?rev=auth-approval-ux-v1',
   './js/sync/link-status-diagnostic-store.js',
   './js/sync/conference-link-store.js',
   './js/sync/conference-membership-attempt-store.js',
