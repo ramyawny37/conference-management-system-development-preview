@@ -1085,7 +1085,19 @@ function loadFromFile(e){
 function updateLogoText() {
   var logoEl = ge('logo-text');
   var accountLabel = logoEl && logoEl.querySelector('.application-account-label');
-  if (accountLabel) accountLabel.textContent = 'صاحب الحساب';
+  var authState = window.SupabaseAuth &&
+    typeof window.SupabaseAuth.getState === 'function'
+    ? window.SupabaseAuth.getState()
+    : null;
+  var authUser = authState && authState.user ? authState.user : null;
+  var displayName = authUser && authUser.user_metadata &&
+    authUser.user_metadata.display_name
+    ? String(authUser.user_metadata.display_name).trim()
+    : '';
+  var email = authUser && authUser.email
+    ? String(authUser.email).trim()
+    : '';
+  if (accountLabel) accountLabel.textContent = displayName || email || 'صاحب الحساب';
   renderGlobalConferenceHeader();
 }
 

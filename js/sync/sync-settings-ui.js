@@ -502,6 +502,12 @@
   function rerender(){
     if(typeof global.renderSettings==='function')global.renderSettings();
   }
+  function clearStartupAuthDraft(){
+    if(global.StartupAccessGate&&
+      typeof global.StartupAccessGate.clearAuthDraft==='function'){
+      global.StartupAccessGate.clearAuthDraft();
+    }
+  }
   function scheduleAuthChanged(){
     if(global.AutomaticSyncOrchestrator&&
       typeof global.AutomaticSyncOrchestrator.schedule==='function'){
@@ -518,6 +524,19 @@
     );
     Array.prototype.forEach.call(buttons,function(button){
       button.disabled=busy;
+    });
+    var startupAuthButtons=global.document.querySelectorAll(
+      '#startupAccessGate .startup-auth-submit'
+    );
+    Array.prototype.forEach.call(startupAuthButtons,function(button){
+      button.disabled=busy;
+      if(busy){
+        button.setAttribute('aria-busy','true');
+        button.classList.add('is-loading');
+      }else{
+        button.removeAttribute('aria-busy');
+        button.classList.remove('is-loading');
+      }
     });
   }
 
@@ -751,6 +770,12 @@
 
   function signUpFields(){return {displayName:String(element('sync_signup_display_name')&&element('sync_signup_display_name').value||'').trim(),email:String(element('sync_signup_email')&&element('sync_signup_email').value||'').trim().toLowerCase(),password:String(element('sync_signup_password')&&element('sync_signup_password').value||''),confirmation:String(element('sync_signup_password_confirm')&&element('sync_signup_password_confirm').value||'')};}
   function validEmail(value){return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);}
+  function validateSignIn(fields){
+    if(!fields.email)return 'أدخل البريد الإلكتروني.';
+    if(!validEmail(fields.email))return 'أدخل بريدًا إلكترونيًا صحيحًا.';
+    if(!fields.password)return 'أدخل كلمة المرور.';
+    return '';
+  }
   function validateSignUp(fields){if(fields.displayName.length<2)return 'أدخل الاسم الظاهر بشكل صحيح.';if(!validEmail(fields.email))return 'أدخل بريدًا إلكترونيًا صحيحًا.';if(fields.password.length<8)return 'يجب ألا تقل كلمة المرور عن 8 أحرف.';if(fields.password!==fields.confirmation)return 'كلمتا المرور غير متطابقتين.';return '';}
 
   function safeAuthMessage(result,successText,action){
@@ -780,8 +805,10 @@
 
   function runAuth(action,successText){
     if(busy)return;
-    setBusy(true);
     var fields=authFields();
+    var validation=validateSignIn(fields);
+    if(validation){message('sync_auth_message',validation,true);return;}
+    setBusy(true);
     var passwordElement=element('sync_auth_password');
     prepareAuth().then(function(ready){
       if(!ready)return {success:false,error:{code:'SUPABASE_AUTH_UNAVAILABLE'}};
@@ -789,6 +816,7 @@
     }).then(function(result){
       if(passwordElement)passwordElement.value='';
       if(result&&result.success){
+        clearStartupAuthDraft();
         scheduleAuthChanged();
         rerender();
       }else{
@@ -823,12 +851,12 @@
         showSignUpDiagnostics(result&&result.diagnostics);
         return;
       }
+      clearStartupAuthDraft();
       showSignUpDiagnostics(null);
       var session=result.data&&result.data.session;
       if(session){
         scheduleAuthChanged();
         rerender();
-        message('sync_auth_message','تم إنشاء الحساب. الحساب الآن بانتظار اعتماد مسؤول النظام.',false);
         return;
       }
       message(
@@ -865,6 +893,7 @@
       return global.SupabaseAuth.signOut();
     }).then(function(result){
       if(result&&result.success){
+        clearStartupAuthDraft();
         scheduleAuthChanged();
         rerender();
       }
