@@ -6,6 +6,7 @@
   var state=createState();
   var flights=Object.create(null);
   var initializationFlight=null;
+  var STALE_PENDING_AGE_MS=5*60*1000;
 
   function createState(){return {organizations:[],organizationsStatus:'idle',access:null,members:[],candidate:null,lookupEmail:'',message:'',operations:[],lastRefreshAt:null,connectionState:'غير متصل',
     accessStatus:'idle',membersStatus:'idle',lookupStatus:'idle',
@@ -23,6 +24,7 @@
   function targetMutationPending(organizationId,targetUserId){var prefix=[organizationId,targetUserId,''].join('|');return Object.keys(state.pending).some(function(intentKey){return state.pending[intentKey]&&intentKey.indexOf(prefix)===0;});}
   function validEmail(value){return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);}
   function isCurrentOrganization(organizationId){return !!(context&&context.organizationId===organizationId);}
+  function stalePendingOperation(operation){var timestamp=new Date(operation&&operation.lastAttemptAt||operation&&operation.createdAt||'').getTime();return operation&&operation.state==='pending'&&Number.isFinite(timestamp)&&Date.now()-timestamp>STALE_PENDING_AGE_MS;}
   function roleLabel(role){return role==='organization_owner'?'مالك المؤسسة':role==='organization_admin'?'مدير المؤسسة':'عضو';}
   function paint(restoreLookupFocus){var host=element('organization_members_content'),lookupInput=element('organization_member_lookup_email');restoreLookupFocus=restoreLookupFocus===true||!!(lookupInput&&global.document&&global.document.activeElement===lookupInput);if(host){host.innerHTML=body();if(restoreLookupFocus){lookupInput=element('organization_member_lookup_email');if(lookupInput&&typeof lookupInput.focus==='function')lookupInput.focus();}}}
   function body(){
@@ -52,8 +54,9 @@
   function actionLabel(action){return action==='add_organization_member'?'إضافة عضو':action==='remove_organization_member'?'إزالة عضو':'تغيير الدور';}
   function operationsHtml(){var operations=state.operations.filter(function(operation){return operation.organizationId===context.organizationId;});if(!operations.length)return '';
     var html='<div class="sync-settings-panel organization-members-operations"><h3>عمليات تحتاج متابعة</h3>';
-    operations.forEach(function(operation){html+='<div class="sync-settings-message organization-members-operation" role="status" aria-live="polite" aria-atomic="true">'+escapeHtml(actionLabel(operation.action))+' — '+(operation.state==='unknown'?'النتيجة غير مؤكدة':'جارٍ التنفيذ');
+    operations.forEach(function(operation){var stalePending=stalePendingOperation(operation);html+='<div class="sync-settings-message organization-members-operation" role="status" aria-live="polite" aria-atomic="true">'+escapeHtml(actionLabel(operation.action))+' — '+(operation.state==='unknown'?'النتيجة غير مؤكدة':stalePending?'هذه العملية لم تُحسم محليًا بعد. قد تكون اكتملت بالفعل. تحقّق من حالة الأعضاء قبل إعادة المحاولة.':'جارٍ التنفيذ');
       if(operation.state==='unknown')html+=' <button type="button" class="btn btn-blue btn-sm" onclick="OrganizationMembersUI.retryOperation(\''+escapeHtml(operation.operationId)+'\')">إعادة المحاولة</button><button type="button" class="btn btn-gray btn-sm" onclick="OrganizationMembersUI.stopTracking(\''+escapeHtml(operation.operationId)+'\')">إيقاف تتبع العملية على هذا الجهاز</button>';
+      else if(stalePending)html+=' <button type="button" class="btn btn-blue btn-sm" onclick="OrganizationMembersUI.verifyPendingOperations()">تحديث والتحقق من الحالة</button>';
       html+='</div>';});return html+'</div>';
   }
   function membersHtml(){
@@ -109,6 +112,7 @@
   }
   function loadOperations(){var service=api();if(!service||typeof service.listPendingOperations!=='function')return Promise.resolve({ok:false,status:'unavailable'});
     return service.listPendingOperations().then(function(result){state.operations=result&&result.ok?result.data.operations:[];return result;});}
+  function verifyPendingOperations(){var organizationId=context&&context.organizationId||'';return refreshUi().then(function(result){return loadOperations().then(function(){if(isCurrentOrganization(organizationId))paint();return result;});});}
   function lookup(){
     if(!canManage())return Promise.resolve({ok:false,status:'access_denied'});
     var input=element('organization_member_lookup_email'),email=String(input&&input.value||'').trim(),organizationId=context&&context.organizationId||'';state.lookupEmail=email;
@@ -154,5 +158,5 @@
   function stopTracking(operationId){var warning='قد تكون العملية اكتملت بالفعل على الخادم. هذا الإجراء يزيل التتبع المحلي على هذا الجهاز فقط ولا يلغي أو يتراجع عن بيانات الخادم.';
     if(!global.confirm||!global.confirm(warning))return Promise.resolve({ok:false,status:'abandonment_cancelled'});
     var organizationId=context&&context.organizationId||'';return api().abandonUnknownOperation(String(operationId||'')).then(function(result){return loadOperations().then(function(){if(isCurrentOrganization(organizationId)){if(result&&result.data&&result.data.refresh){state.access=result.data.refresh.access;state.members=result.data.refresh.members||[];state.lastRefreshAt=new Date().toLocaleString('ar');}state.message=result&&result.ok?'تم إيقاف تتبع العملية على هذا الجهاز.':result&&result.status==='refresh_failed'?'تعذر تحديث بيانات الخادم؛ تم الاحتفاظ بتتبع العملية.':'تعذر إيقاف تتبع العملية.';}paint();return result;});});}
-  global.OrganizationMembersUI=Object.freeze({renderSection:renderSection,initialize:initialize,initializeAndSelect:initializeAndSelect,selectOrganization:selectOrganization,refresh:refreshUi,lookup:lookup,addMember:addMember,removeMember:removeMember,changeRole:changeRole,retryOperation:retryOperation,stopTracking:stopTracking});
+  global.OrganizationMembersUI=Object.freeze({renderSection:renderSection,initialize:initialize,initializeAndSelect:initializeAndSelect,selectOrganization:selectOrganization,refresh:refreshUi,verifyPendingOperations:verifyPendingOperations,lookup:lookup,addMember:addMember,removeMember:removeMember,changeRole:changeRole,retryOperation:retryOperation,stopTracking:stopTracking});
 })(window);
