@@ -8607,7 +8607,7 @@ function openTemplateRoomModal(houseId, floorId, roomId) {
   ge('tr_room_notes').value = room ? (room.notes || '') : '';
   ge('tr_room_closed').checked = !!(room && room.closed);
   ge('tr_room_closed_day').value = room && room.closedDay !== undefined && room.closedDay !== null ? room.closedDay : '';
-  ge('tr_room_closed_row').style.display = ge('tr_room_closed').checked ? 'flex' : 'none';
+  ge('tr_room_closed_day').parentNode.style.display = ge('tr_room_closed').checked ? '' : 'none';
   ge('tr_house').value = houseId || '';
   ge('tr_house').setAttribute('data-original-house-id', room ? houseId : '');
   renderTemplateRoomModal();
