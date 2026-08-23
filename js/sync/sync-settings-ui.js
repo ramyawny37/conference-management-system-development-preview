@@ -336,7 +336,8 @@
       html+='<div class="sync-settings-actions">';
       html+='<button class="btn btn-gray btn-sm" onclick="SyncSettingsUI.refreshAuthState()">قراءة حالة الحساب</button></div>';
     }
-    html+='<div id="sync_auth_message" class="sync-settings-message"></div>';
+    html+='<div id="sync_auth_message" class="sync-settings-message" '+
+      'aria-live="polite" aria-atomic="true"></div>';
     html+='<pre id="sync_signup_diagnostics" class="sync-settings-message" '+
       'dir="ltr" style="display:none;white-space:pre-wrap"></pre></div>';
     html+='<div class="sync-settings-panel"><h3>هذا الجهاز</h3>';
@@ -464,8 +465,30 @@
     return global.document?global.document.getElementById(id):null;
   }
 
+  function authMessageTarget(){
+    var gateState=global.StartupAccessGate&&
+      typeof global.StartupAccessGate.getState==='function'
+      ?global.StartupAccessGate.getState():null;
+    var gate=element('startupAccessGate');
+    var target=null;
+    if(gateState&&gateState.gateState==='auth'&&gate&&
+      typeof gate.querySelector==='function'){
+      target=gate.querySelector('#sync_auth_message');
+      if(target)return target;
+    }
+    var settings=element('tab6');
+    var settingsSection=settings&&
+      typeof settings.querySelector==='function'
+      ?settings.querySelector('.sync-settings-section'):null;
+    if(settingsSection&&typeof settingsSection.querySelector==='function'){
+      target=settingsSection.querySelector('#sync_auth_message');
+      if(target)return target;
+    }
+    return element('sync_auth_message');
+  }
+
   function message(id,text,isError){
-    var target=element(id);
+    var target=id==='sync_auth_message'?authMessageTarget():element(id);
     if(!target)return;
     target.textContent=text||'';
     target.className='sync-settings-message'+
@@ -515,16 +538,9 @@
     }
   }
 
-  function setBusy(value){
-    busy=!!value;
+  function applyStartupAuthBusyState(){
     if(!global.document||
       typeof global.document.querySelectorAll!=='function')return;
-    var buttons=global.document.querySelectorAll(
-      '.sync-settings-section button'
-    );
-    Array.prototype.forEach.call(buttons,function(button){
-      button.disabled=busy;
-    });
     var startupAuthButtons=global.document.querySelectorAll(
       '#startupAccessGate .startup-auth-submit'
     );
@@ -538,6 +554,25 @@
         button.classList.remove('is-loading');
       }
     });
+    var startupAuthNavigation=global.document.querySelectorAll(
+      '#startupAccessGate .startup-auth-navigation'
+    );
+    Array.prototype.forEach.call(startupAuthNavigation,function(button){
+      button.disabled=busy;
+    });
+  }
+
+  function setBusy(value){
+    busy=!!value;
+    if(!global.document||
+      typeof global.document.querySelectorAll!=='function')return;
+    var buttons=global.document.querySelectorAll(
+      '.sync-settings-section button'
+    );
+    Array.prototype.forEach.call(buttons,function(button){
+      button.disabled=busy;
+    });
+    applyStartupAuthBusyState();
   }
 
   function removeOrphanedConference(){
@@ -838,6 +873,8 @@
     setBusy(true);
     var fields=signUpFields(),validation=validateSignUp(fields);
     if(validation){message('sync_auth_message',validation,true);setBusy(false);return;}
+    var displayNameElement=element('sync_signup_display_name');
+    var emailElement=element('sync_signup_email');
     var passwordElement=element('sync_signup_password');
     var confirmationElement=element('sync_signup_password_confirm');
     prepareAuth().then(function(ready){
@@ -859,6 +896,8 @@
         rerender();
         return;
       }
+      if(displayNameElement)displayNameElement.value='';
+      if(emailElement)emailElement.value='';
       message(
         'sync_auth_message',
         'تم إنشاء الحساب بنجاح. راجع بريدك لتأكيده، ثم سجل الدخول وانتظر اعتماد مسؤول النظام.',
@@ -992,6 +1031,7 @@
     cleanupTestHouseTemplates:cleanupTestHouseTemplates,
     saveAutomaticSyncPreferences:saveAutomaticSyncPreferences,
     setConnectivity:setConnectivity,
+    applyStartupAuthBusyState:applyStartupAuthBusyState,
     getState:getState
   });
 })(window);
