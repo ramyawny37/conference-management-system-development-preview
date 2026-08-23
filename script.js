@@ -1455,7 +1455,15 @@ function openOrganizationMembersFromManagement(organizationId){
   if(!ui||typeof ui.initializeAndSelect!=='function')return false;
   settingsTab='general';
   if(!openSettingsFromHome())return false;
-  return ui.initializeAndSelect(String(organizationId||''));
+  return ui.initializeAndSelect(String(organizationId||'')).then(function(result){
+    var content=ge('organization_members_content');
+    var section=content&&typeof content.closest==='function'
+      ?content.closest('.settings-section'):content;
+    if(section&&typeof section.scrollIntoView==='function'){
+      section.scrollIntoView({block:'start',behavior:'auto'});
+    }
+    return result;
+  });
 }
 
 function showHomePage(){
