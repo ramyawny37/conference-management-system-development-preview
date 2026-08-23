@@ -1324,6 +1324,9 @@ var LAST_APPLICATION_TAB_KEY = browserStorageNamespace.key(
 var APPLICATION_VIEW_KEY = browserStorageNamespace.key(
   'conference_manager_view'
 );
+var SETTINGS_INTERNAL_VIEW_KEY = browserStorageNamespace.key(
+  'conference_manager_settings_internal_view'
+);
 var currentApplicationView = 'application';
 
 function getValidApplicationTabIds(){
@@ -1389,11 +1392,33 @@ function saveApplicationView(view){
   }catch(e){}
 }
 
+function getStoredSettingsInternalView(){
+  try{
+    return localStorage.getItem(SETTINGS_INTERNAL_VIEW_KEY)==='organization-members'
+      ?'organization-members':'';
+  }catch(e){return '';}
+}
+
+function saveSettingsInternalView(view){
+  try{
+    if(view==='organization-members')localStorage.setItem(SETTINGS_INTERNAL_VIEW_KEY,view);
+    else localStorage.removeItem(SETTINGS_INTERNAL_VIEW_KEY);
+  }catch(e){}
+}
+
 function restoreLastApplicationTab(){
   var storedTab = getStoredLastTab();
   var restoredTab=storedTab===null?0:storedTab;
-  if (!switchTab(restoredTab)) switchTab(0);
-  if(restoredTab===getApplicationTabIdByName('settings'))resetAdministrativeViewScroll();
+  var settingsTabId=getApplicationTabIdByName('settings');
+  if(restoredTab===settingsTabId){
+    settingsTab=getStoredSettingsInternalView()||'general';
+  }
+  var restored=switchTab(restoredTab);
+  if(!restored)switchTab(0);
+  if(restored&&restoredTab===settingsTabId){
+    resetAdministrativeViewScroll();
+    if(settingsTab==='organization-members')refreshOrganizationMembersSection();
+  }
 }
 
 function resetAdministrativeViewScroll(){
@@ -1455,11 +1480,13 @@ function openOrganizationMembersFromManagement(organizationId){
   if(!ui||typeof ui.initializeAndSelect!=='function')return false;
   settingsTab='organization-members';
   if(!openSettingsFromHome())return false;
+  saveSettingsInternalView('organization-members');
   return ui.initializeAndSelect(String(organizationId||''));
 }
 
 function returnToOrganizationManagementFromMembers(){
   settingsTab='general';
+  saveSettingsInternalView('');
   return window.OrganizationManagementUI&&
     typeof window.OrganizationManagementUI.open==='function'
     ?window.OrganizationManagementUI.open({returnView:'settings'}):false;
