@@ -44,7 +44,7 @@
       message:'The organization request failed.'};
   }
   function diagnostic(stage,rpc,ctx,input,error){var device=global.CurrentDeviceAuthorizationService&&global.CurrentDeviceAuthorizationService.getState?global.CurrentDeviceAuthorizationService.getState():{};lastDiagnostic={stage:String(stage),rpc:String(rpc||''),errorCode:String(error&&error.code||''),sqlstate:error&&error.sqlstate||null,sanitizedMessage:String(error&&error.message||''),actorDevicePresent:!!(ctx&&ctx.actorDeviceId),actorDeviceApproved:device.currentDeviceAccessStatus==='approved',targetAccountApproved:input&&input.targetAccountApproved===true,organizationIdPresent:!!(input&&input.organizationId),timestamp:new Date().toISOString()};}
-  function guardedRpc(ctx,name,args){var guarded={list_my_organizations:'device_guarded_list_my_organizations',get_my_organization_access:'device_guarded_get_my_organization_access',list_organization_members:'device_guarded_list_organization_members',lookup_organization_candidate_by_email:'device_guarded_lookup_organization_candidate_by_email',add_organization_member:'device_guarded_add_organization_member',remove_organization_member:'device_guarded_remove_organization_member',change_organization_role:'device_guarded_change_organization_role'};return {name:guarded[name]||name,args:Object.assign({p_actor_device_id:ctx.actorDeviceId},args)};}
+  function guardedRpc(ctx,name,args){var guarded={list_my_organizations:'device_guarded_list_my_organizations',get_my_organization_access:'device_guarded_get_my_organization_access',list_organization_members:'device_guarded_list_organization_members',lookup_organization_candidate_by_email:'device_guarded_lookup_organization_candidate_by_email',get_organization_membership_operation:'device_guarded_get_organization_membership_operation',add_organization_member:'device_guarded_add_organization_member',remove_organization_member:'device_guarded_remove_organization_member',change_organization_role:'device_guarded_change_organization_role'};return {name:guarded[name]||name,args:Object.assign({p_actor_device_id:ctx.actorDeviceId},args)};}
   function invoke(ctx,name,args){var request=guardedRpc(ctx,name,args);return Promise.resolve().then(function(){return ctx.client.rpc(request.name,request.args);}).then(function(response){
     if(response&&response.error)return outcome(false,'rpc_error',null,rpcError(response.error));
     return outcome(true,'received',response&&response.data);
@@ -194,6 +194,30 @@
       return found.ok?outcome(true,'found',{operation:found.data}):found;
     });
   }
+  function reconcileMembershipOperation(operationId,options){
+    var ctx=context(options);if(ctx.error)return Promise.resolve(outcome(false,'unavailable',null,ctx.error));
+    return getStoredOperation(ctx,operationId,options).then(function(found){
+      if(!found.ok)return found;var record=found.data.operation;
+      return invoke(ctx,'get_organization_membership_operation',{p_organization_id:record.organizationId,p_operation_id:record.operationId}).then(function(response){
+        if(!response.ok)return outcome(false,'reconciliation_failed',{operation:record},response.error);
+        var server=response.data||{};
+        if(server.status==='not_found')return outcome(false,'not_found',{operation:record});
+        var requestedRole=server.requestedRole==null?'':String(server.requestedRole),storedResult=server.storedResult;
+        if(server.status!=='terminal'||['applied','unchanged','denied','invalid_request'].indexOf(String(server.outcome||''))<0||
+          String(server.organizationId||'')!==record.organizationId||String(server.operationId||'')!==record.operationId||
+          String(server.targetUserId||'')!==record.targetUserId||String(server.action||'')!==record.action||
+          requestedRole!==String(record.requestedRole||'')||!storedResult||typeof storedResult!=='object'||Array.isArray(storedResult)||
+          String(storedResult.status||'')!==String(server.outcome||''))return outcome(false,'operation_mismatch',{operation:record});
+        return refresh({organizationId:record.organizationId},options).then(function(refreshed){
+          if(!refreshed.ok)return outcome(false,'terminal_refresh_failed',{operation:record,terminalStatus:server.outcome,serverResult:storedResult});
+          return ctx.repository.remove(record.authenticatedUserId,record.operationId).then(function(removed){
+            if(!removed.ok)return outcome(false,'tracking_remove_failed',{operation:record,terminalStatus:server.outcome,serverResult:storedResult,refresh:refreshed.data});
+            return outcome(server.outcome==='applied'||server.outcome==='unchanged',server.outcome,{operation:record,serverResult:storedResult,refresh:refreshed.data});
+          });
+        });
+      });
+    });
+  }
   function retryUnknownOperation(operationId,options){
     var ctx=context(options);if(ctx.error)return Promise.resolve(outcome(false,'unavailable',null,ctx.error));
     return getStoredOperation(ctx,operationId,options).then(function(found){
@@ -221,6 +245,6 @@
     addMember:function(input,options){return mutate(Object.assign({},input,{action:'add_organization_member',requestedRole:null}),options);},
     removeMember:function(input,options){return mutate(Object.assign({},input,{action:'remove_organization_member',requestedRole:null}),options);},
     changeRole:function(input,options){return mutate(Object.assign({},input,{action:'change_organization_role'}),options);},
-    listPendingOperations:listPendingOperations,retryUnknownOperation:retryUnknownOperation,
+    listPendingOperations:listPendingOperations,reconcileMembershipOperation:reconcileMembershipOperation,retryUnknownOperation:retryUnknownOperation,
     abandonUnknownOperation:abandonUnknownOperation,getLastDiagnostic:function(){return lastDiagnostic&&JSON.parse(JSON.stringify(lastDiagnostic));}});
 })(window);
