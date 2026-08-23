@@ -74,22 +74,29 @@
     html+='</div></div>';return html;
   }
   function renderSection(options){var next={organizationId:String(options&&options.organizationId||'')};if(!context||(next.organizationId&&next.organizationId!==context.organizationId)){context=next;state=createState();}return '<section class="settings-section sync-settings-section organization-members-section" aria-labelledby="organization_members_title"><h2 id="organization_members_title" class="settings-section-title">إدارة أعضاء المؤسسة</h2><div id="organization_members_content">'+body()+'</div></section>';}
-  function initialize(){
+  function initialize(options){
     if(initializationFlight)return initializationFlight;
+    var requestedOrganizationId=String(options&&options.organizationId||'');
     var service=api();if(!service||typeof service.listMyOrganizations!=='function')return Promise.resolve({ok:false,status:'unavailable'});
     state.operations=[];state.access=null;state.members=[];state.organizationsStatus='loading';paint();initializationFlight=service.listMyOrganizations().then(function(result){
       state.organizationsStatus=result&&result.ok?'loaded':'error';state.organizations=result&&result.ok?result.data.organizations:[];
       if(state.organizations.length){
-        var userId=authenticatedUserId(),currentId=contextUserId===userId?availableOrganizationId(context&&context.organizationId):'',storedSelection=readStoredSelection(),storedId=availableOrganizationId(storedSelection),organizationId=currentId||storedId||state.organizations[0].organizationId;
+        var userId=authenticatedUserId(),requestedId=availableOrganizationId(requestedOrganizationId),currentId=contextUserId===userId?availableOrganizationId(context&&context.organizationId):'',storedSelection=readStoredSelection(),storedId=availableOrganizationId(storedSelection),organizationId=requestedId||currentId||storedId||state.organizations[0].organizationId,selectionChanged=!context||context.organizationId!==organizationId||contextUserId!==userId;
         context={organizationId:organizationId};
         contextUserId=userId;
         if(storedSelection&&!storedId)storeSelection('');
+        if(requestedOrganizationId&&selectionChanged)state.candidate=null;
+        if(requestedId)storeSelection(requestedId);
         return loadOperations().then(function(){return refreshUi();});
       }
       contextUserId=authenticatedUserId();storeSelection('');paint();return result;
     }).finally(function(){initializationFlight=null;});return initializationFlight;
   }
-  function initializeAndSelect(organizationId){organizationId=String(organizationId||'');return initialize().then(function(result){return result&&result.ok?selectOrganization(organizationId):result;});}
+  function initializeAndSelect(organizationId){organizationId=String(organizationId||'');return initialize({organizationId:organizationId}).then(function(result){
+    if(!result||!result.ok)return result;
+    var requestedId=availableOrganizationId(organizationId);
+    return !requestedId||context&&context.organizationId===requestedId?result:selectOrganization(organizationId);
+  });}
   function selectOrganization(organizationId){organizationId=availableOrganizationId(organizationId);context={organizationId:organizationId};contextUserId=authenticatedUserId();storeSelection(organizationId);state.access=null;state.members=[];state.candidate=null;return refreshUi();}
   function refreshUi(){
     if(!context||!context.organizationId)return Promise.resolve({ok:false,status:'invalid_input'});
