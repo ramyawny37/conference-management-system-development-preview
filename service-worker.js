@@ -6,7 +6,7 @@ const CACHE_NAMESPACE = IS_DEVELOPMENT
   ? 'cms:development:' + DEVELOPMENT_PROJECT_REF + ':'
   : '';
 const CACHE_PREFIX = CACHE_NAMESPACE + 'conference-manager-core-';
-const CACHE_REVISION = 'organization-members-candidate-ux-v1';
+const CACHE_REVISION = 'organization-members-remove-confirm-v1';
 const CACHE_NAME = CACHE_PREFIX + 'v' + APP_VERSION + '-' + CACHE_REVISION;
 const CORE_ASSETS = [
   './',
@@ -33,7 +33,7 @@ const CORE_ASSETS = [
   './js/sync/access-diagnostics-ui.js?rev=organization-membership-operation-key-v1',
   './js/sync/organization-membership-operation-repository.js?rev=organization-membership-operation-key-v1',
   './js/supabase/organization-administration-service.js?rev=legacy-rpc-hardening-v1',
-  './js/sync/organization-members-ui.js?rev=organization-members-candidate-ux-v1',
+  './js/sync/organization-members-ui.js?rev=organization-members-remove-confirm-v1',
   './js/sync/organization-management-attempt-store.js?rev=organization-management-v1',
   './js/supabase/organization-management-service.js?rev=organization-archive-restore-v1',
   './js/sync/organization-management-ui.js?rev=startup-device-admin-lifecycle-v1',

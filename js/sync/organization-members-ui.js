@@ -141,7 +141,14 @@
     }).finally(function(){delete flights[intentKey];});flights[intentKey]=flight;return flight;
   }
   function addMember(){if(!state.candidate)return Promise.resolve({ok:false,status:'invalid_input'});return run({organizationId:context.organizationId,targetUserId:state.candidate.targetUserId,action:'add_organization_member',requestedRole:null});}
-  function removeMember(targetUserId){return run({organizationId:context.organizationId,targetUserId:String(targetUserId||''),action:'remove_organization_member',requestedRole:null});}
+  function removeMember(targetUserId){
+    targetUserId=String(targetUserId||'');var organizationId=context&&context.organizationId||'',member=state.members.find(function(item){return item.userId===targetUserId;}),organization=state.organizations.find(function(item){return item.organizationId===organizationId;}),input={organizationId:organizationId,targetUserId:targetUserId,action:'remove_organization_member',requestedRole:null};
+    if(!member||!organization||!canManage()||member.isCurrentUser||!(member.role==='member'||(member.role==='organization_admin'&&state.access.canManageAdmins)))return Promise.resolve({ok:false,status:'invalid_input'});
+    if(targetMutationPending(organizationId,targetUserId))return flights[key(input)]||Promise.resolve({ok:false,status:'unavailable'});
+    var warning='هل تريد إزالة «'+String(member.displayName||'مستخدم بدون اسم')+'» من مؤسسة «'+String(organization.displayName||'')+'»؟ ستتم إزالة عضويته من هذه المؤسسة.';
+    if(!global.confirm||!global.confirm(warning))return Promise.resolve({ok:false,status:'cancelled'});
+    return run(input);
+  }
   function changeRole(targetUserId,requestedRole){return run({organizationId:context.organizationId,targetUserId:String(targetUserId||''),action:'change_organization_role',requestedRole:String(requestedRole||'')});}
   function retryOperation(operationId){var organizationId=context&&context.organizationId||'';return api().retryUnknownOperation(String(operationId||'')).then(function(result){return loadOperations().then(function(){if(isCurrentOrganization(organizationId)){var messages={unknown:'النتيجة غير مؤكدة وتتطلب متابعة صريحة.',applied:'تم تنفيذ العملية وتحديث البيانات من الخادم.',unchanged:'لم تتغير البيانات على الخادم.',denied:'رُفضت العملية من الخادم.',invalid_request:'تعذر تنفيذ الطلب لعدم صلاحيته.',operation_mismatch:'تطابق العملية غير صالح؛ يلزم طلب جديد.',terminal_refresh_failed:'تعذر تحديث بيانات الخادم؛ تم الاحتفاظ بتتبع العملية.'};if(result&&result.data&&result.data.refresh){state.access=result.data.refresh.access;state.members=result.data.refresh.members||[];state.lastRefreshAt=new Date().toLocaleString('ar');}state.message=messages[result&&result.status]||'تعذر إعادة المحاولة.';}paint();return result;});});}
   function stopTracking(operationId){var warning='قد تكون العملية اكتملت بالفعل على الخادم. هذا الإجراء يزيل التتبع المحلي على هذا الجهاز فقط ولا يلغي أو يتراجع عن بيانات الخادم.';
