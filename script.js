@@ -1453,17 +1453,16 @@ function openSettingsFromHome(){
 function openOrganizationMembersFromManagement(organizationId){
   var ui=window.OrganizationMembersUI;
   if(!ui||typeof ui.initializeAndSelect!=='function')return false;
-  settingsTab='general';
+  settingsTab='organization-members';
   if(!openSettingsFromHome())return false;
-  return ui.initializeAndSelect(String(organizationId||'')).then(function(result){
-    var content=ge('organization_members_content');
-    var section=content&&typeof content.closest==='function'
-      ?content.closest('.settings-section'):content;
-    if(section&&typeof section.scrollIntoView==='function'){
-      section.scrollIntoView({block:'start',behavior:'auto'});
-    }
-    return result;
-  });
+  return ui.initializeAndSelect(String(organizationId||''));
+}
+
+function returnToOrganizationManagementFromMembers(){
+  settingsTab='general';
+  return window.OrganizationManagementUI&&
+    typeof window.OrganizationManagementUI.open==='function'
+    ?window.OrganizationManagementUI.open({returnView:'settings'}):false;
 }
 
 function showHomePage(){
@@ -7949,6 +7948,18 @@ function renderSettings(){
   var activeSettingsTab = settingsTab || 'general';
   ensureUserManagementAccess();
   ensureOrganizationManagementAccess();
+  if(activeSettingsTab==='organization-members'){
+    var organizationMembersUi=window.OrganizationMembersUI;
+    var organizationMembersHtml='<div class="settings-dashboard" dir="rtl">';
+    organizationMembersHtml+='<div class="settings-nav"><button class="btn btn-gray btn-sm" onclick="returnToOrganizationManagementFromMembers()">← العودة إلى إدارة المؤسسات</button></div>';
+    organizationMembersHtml+=organizationMembersUi&&
+      typeof organizationMembersUi.renderSection==='function'
+      ?organizationMembersUi.renderSection({})
+      :'<div class="settings-empty-state">تعذر تحميل إدارة أعضاء المؤسسة.</div>';
+    organizationMembersHtml+='</div>';
+    ge('tab6').innerHTML=organizationMembersHtml;
+    return;
+  }
   var canOpenUserManagement=userManagementAccessState.status==='loaded'&&
     userManagementAccessState.capabilities&&
     userManagementAccessState.capabilities.canOpenUserManagement===true;
