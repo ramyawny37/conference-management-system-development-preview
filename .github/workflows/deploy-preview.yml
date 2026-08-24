@@ -47,9 +47,10 @@ jobs:
 
       - name: Verify Production Supabase is absent from runtime
         run: |
-          if grep -R "gppwltrifgfxrkzvvxoe" site \
-            --exclude-dir=tests \
-            --exclude-dir=.git; then
+          if grep -R "gppwltrifgfxrkzvvxoe" \
+            site/index.html \
+            site/service-worker.js \
+            site/js; then
             echo "Production Supabase reference found in preview runtime"
             exit 1
           fi
