@@ -269,11 +269,12 @@
     var auth=getAuthState();
     var device=getDevice();
     var preferences=getAutomaticSyncPreferences();
-    var authUser=auth.user||{};
-    var email=auth.user&&auth.user.email?auth.user.email:'';
-    var displayName=authUser.user_metadata&&authUser.user_metadata.display_name
-      ?String(authUser.user_metadata.display_name).trim():'';
-    var accountName=displayName||email;
+    var identity=global.SupabaseAuth&&
+      typeof global.SupabaseAuth.getAccountIdentity==='function'
+      ?global.SupabaseAuth.getAccountIdentity()
+      :{authenticated:false,displayName:'',email:'',label:''};
+    var email=identity.email;
+    var accountName=identity.label;
     var html=renderTemplateDiagnosticExport();
     html+=renderMemberRuntimeDiagnostics();
     html+=renderOrphanedCleanup();
@@ -287,8 +288,8 @@
     html+=statusBadge('الوضع المحلي متاح دائمًا',true);
     html+=statusBadge(config.configured?'Supabase مهيأ':'Supabase غير مهيأ',
       config.configured);
-    html+=statusBadge(auth.authenticated?'تم تسجيل الدخول':'غير مسجل',
-      auth.authenticated);
+    html+=statusBadge(identity.authenticated?'تم تسجيل الدخول':'غير مسجل',
+      identity.authenticated);
     html+=statusBadge(
       explicitConnectivity==='online'?'متصل بالإنترنت':
       explicitConnectivity==='offline'?'غير متصل بالإنترنت':
@@ -311,8 +312,8 @@
     html+='<div class="sync-settings-actions"><button class="btn btn-green btn-sm" onclick="SyncSettingsUI.saveRuntimeConfig()">حفظ الإعداد</button>';
     html+='<button class="btn btn-gray btn-sm" onclick="SyncSettingsUI.clearRuntimeConfig()">إزالة الإعداد</button></div>';
     html+='<div id="sync_config_message" class="sync-settings-message"></div></div>';
-    html+='<div class="sync-settings-panel"><h3>الحساب</h3>';
-    if(auth.authenticated){
+    html+='<div id="sync_account_panel" class="sync-settings-panel"><h3>الحساب</h3>';
+    if(identity.authenticated){
       html+='<div class="sync-settings-user sync-settings-account-identity">'+
         '<div class="sync-settings-account-name">'+escapeHtml(accountName)+'</div>'+
         (email&&email!==accountName
@@ -524,6 +525,10 @@
 
   function rerender(){
     if(typeof global.renderSettings==='function')global.renderSettings();
+  }
+
+  function refreshAccountIdentity(){
+    if(element('sync_account_panel'))rerender();
   }
   function clearStartupAuthDraft(){
     if(global.StartupAccessGate&&
@@ -816,6 +821,9 @@
   function safeAuthMessage(result,successText,action){
     if(result&&result.success)return successText;
     var code=result&&result.error&&result.error.code;
+    if(code==='ACTIVE_AUTH_SESSION'){
+      return 'يجب تسجيل الخروج أولًا قبل تبديل الحساب.';
+    }
     if(code==='SUPABASE_AUTH_UNAVAILABLE'){
       return 'خدمة تسجيل الدخول غير مهيأة.';
     }
@@ -838,6 +846,12 @@
     return global.SupabaseAuth.initialize().then(function(){return true;});
   }
 
+  function authenticationAllowedAfterInitialization(){
+    var auth=global.SupabaseAuth;
+    return !(auth&&typeof auth.getAccountIdentity==='function'&&
+      auth.getAccountIdentity().authenticated);
+  }
+
   function runAuth(action,successText){
     if(busy)return;
     var fields=authFields();
@@ -847,6 +861,9 @@
     var passwordElement=element('sync_auth_password');
     prepareAuth().then(function(ready){
       if(!ready)return {success:false,error:{code:'SUPABASE_AUTH_UNAVAILABLE'}};
+      if(!authenticationAllowedAfterInitialization()){
+        return {success:false,error:{code:'ACTIVE_AUTH_SESSION'}};
+      }
       return action(fields.email,fields.password);
     }).then(function(result){
       if(passwordElement)passwordElement.value='';
@@ -879,6 +896,9 @@
     var confirmationElement=element('sync_signup_password_confirm');
     prepareAuth().then(function(ready){
       if(!ready)return {success:false,error:{code:'SUPABASE_AUTH_UNAVAILABLE'}};
+      if(!authenticationAllowedAfterInitialization()){
+        return {success:false,error:{code:'ACTIVE_AUTH_SESSION'}};
+      }
       return global.SupabaseAuth.signUp(fields.email,fields.password,{display_name:fields.displayName});
     }).then(function(result){
       if(passwordElement)passwordElement.value='';
@@ -1013,6 +1033,7 @@
 
   global.SyncSettingsUI=Object.freeze({
     renderSection:renderSection,
+    refreshAccountIdentity:refreshAccountIdentity,
     saveRuntimeConfig:saveRuntimeConfig,
     clearRuntimeConfig:clearRuntimeConfig,
     signIn:signIn,

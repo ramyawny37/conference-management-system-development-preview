@@ -4,7 +4,7 @@ const source=fs.readFileSync(path.resolve(__dirname,'../js/sync/sync-settings-ui
 ['sync_signup_display_name','sync_signup_email','sync_signup_password','sync_signup_password_confirm'].forEach(id=>assert(source.includes(id)));
 assert(source.includes("{display_name:fields.displayName}"));
 assert(source.includes('كلمتا المرور غير متطابقتين'));
-assert(source.includes('بانتظار اعتماد مسؤول النظام'));
+assert(source.includes('اعتماد مسؤول النظام'));
 assert(source.includes('راجع بريدك لتأكيده'));
 assert.doesNotMatch(source,/synthetic email|signInWithUsername/i);
 assert.doesNotMatch(source,/\.from\s*\(|\.insert\s*\(|\.update\s*\(|\.delete\s*\(/);

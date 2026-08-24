@@ -13,6 +13,9 @@ const previous='exclusive-edit-lock-v1';
 const next='organization-membership-operation-key-v1';
 const mobileRoomInputRevision='anchored-glass-person-picker-v5';
 const shellRevision='shared-template-copy-guard-v1';
+const cacheRevision='organization-membership-retention-safe-v1';
+const accountIdentityRevision='account-session-identity-v1';
+const stateAssetRevision='accommodation-visual-match-v6';
 const testTemplateCleanupRevision='test-house-template-cleanup-v1';
 const templateDiagnosticRevision='template-diagnostic-export-v1';
 const partialTemplateCleanupRevision='partial-template-state-cleanup-v1';
@@ -23,7 +26,7 @@ const memberDiagnosticsRevision='repository-rejection-diagnostics-v1';
 const legacyConferenceRevision='legacy-conference-preflight-v2';
 const privacyRevision='diagnostics-privacy-hardening-v1';
 const templateIsolationRevision='template-sync-isolation-v1';
-const startupRevision=next;
+const startupRevision=accountIdentityRevision;
 const deviceOnboardingRevision=next;
 const organizationTemplateRevision='shared-template-library-v1';
 const legacyTemplateAuthorizationRevision='legacy-template-adoption-authorization-v1';
@@ -31,17 +34,17 @@ const officialTemplateSharingRevision='official-house-template-sharing-v1';
 const sharedTemplateReadOnlyRevision='shared-house-template-read-only-v1';
 const bootstrapRevision='first-owner-bootstrap-hardening-v1';
 const userManagementUiRevision=next;
-const userManagementStyleRevision=mobileRoomInputRevision;
+const userManagementStyleRevision=accountIdentityRevision;
 const userManagementReadRevision='organization-archive-restore-v1';
 const conferenceRoleRevision=privacyRevision;
 const houseTemplateRevision='template-floor-conference-sync-v1';
 const pwaAssetRevision=next;
 const appAssetRevision='section-accommodation-edit-lock-v1';
 const snapshotGuardRevision='conference-snapshot-device-guard-v1';
-const priorFrontendRevision=sharedTemplateCopyGuardRevision;
+const priorFrontendRevision=accountIdentityRevision;
 const conferenceSyncRevision='conference-organization-context-v1';
-const organizationMembersRevision='admin-xlsx-template-room-fixes-v1';
-assert(worker.includes("CACHE_REVISION = '"+shellRevision+"'"));
+const organizationMembersRevision='organization-membership-manual-retry-v1';
+assert(worker.includes("CACHE_REVISION = '"+cacheRevision+"'"));
 assert(index.includes("window.APP_SHELL_REVISION='"+shellRevision+"'"));
 const brandingIcons=[
   'icons/icon-96x96-v3.png',
@@ -63,7 +66,7 @@ brandingIcons.forEach(asset=>{
 });
 assert(index.includes('pwa.js?rev='+pwaAssetRevision));
 ['js/supabase/auth.js'].forEach(asset=>{
-  const versioned=asset+'?rev='+next;
+  const versioned=asset+'?rev='+accountIdentityRevision;
   assert(index.includes(versioned),'index missing '+versioned);
   assert(worker.includes("'./"+versioned+"'"),'app shell missing '+versioned);
 });
@@ -97,8 +100,7 @@ assert(worker.includes("'./"+cleanupAsset+"'"));
   assert(worker.includes("'./"+versioned+"'"),'app shell missing '+versioned);
 });
 [
-  'js/sync/local-template-copy-cleanup.js',
-  'js/sync/sync-settings-ui.js'
+  'js/sync/local-template-copy-cleanup.js'
 ].forEach(asset=>{
   const versioned=asset+'?rev='+sharedTemplateCopyGuardRevision;
   assert(index.includes(versioned),'index missing '+versioned);
@@ -107,7 +109,6 @@ assert(worker.includes("'./"+cleanupAsset+"'"));
 assert(index.includes('js/sync/orphaned-conference-cleanup.js?rev=orphaned-local-cleanup-v2'));
 assert(worker.includes("'./js/sync/orphaned-conference-cleanup.js?rev=orphaned-local-cleanup-v2'"));
 [
-  'js/supabase/organization-administration-service.js',
   'js/sync/conference-members-service.js',
   'js/sync/realtime-locks-ui.js'
 ].forEach(asset=>{
@@ -115,6 +116,18 @@ assert(worker.includes("'./js/sync/orphaned-conference-cleanup.js?rev=orphaned-l
   assert(index.includes(versioned),'index missing '+versioned);
   assert(worker.includes("'./"+versioned+"'"),'app shell missing '+versioned);
 });
+{
+  const versioned='js/supabase/organization-administration-service.js?rev='+
+    'organization-membership-manual-retry-v1';
+  assert(index.includes(versioned),'index missing '+versioned);
+  assert(worker.includes("'./"+versioned+"'"),'app shell missing '+versioned);
+}
+{
+  const versioned='js/sync/sync-settings-ui.js?rev='+
+    accountIdentityRevision;
+  assert(index.includes(versioned),'index missing '+versioned);
+  assert(worker.includes("'./"+versioned+"'"),'app shell missing '+versioned);
+}
 const memberDiagnostics='js/sync/member-runtime-diagnostics.js?rev='+memberDiagnosticsRevision;
 assert(index.includes(memberDiagnostics));
 assert(worker.includes("'./"+memberDiagnostics+"'"));
@@ -128,7 +141,7 @@ assert(worker.includes("'./js/supabase/first-system-bootstrap-service.js?rev="+b
 assert(index.includes('js/sync/startup-access-gate.js?rev='+startupRevision));
 assert(worker.includes("'./js/sync/startup-access-gate.js?rev="+
   startupRevision+"'"));
-const organizationMembershipRepository='js/sync/organization-membership-operation-repository.js?rev='+next;
+const organizationMembershipRepository='js/sync/organization-membership-operation-repository.js?rev=organization-membership-retention-safe-v1';
 assert(index.includes(organizationMembershipRepository));
 assert(worker.includes("'./"+organizationMembershipRepository+"'"));
 ['houses.js'].forEach(asset=>{
@@ -139,7 +152,7 @@ assert(worker.includes("'./"+organizationMembershipRepository+"'"));
 const isolatedHouseTemplates='houseTemplates.js?rev='+sharedTemplateReadOnlyRevision;
 assert(index.includes(isolatedHouseTemplates));
 assert(worker.includes("'./"+isolatedHouseTemplates+"'"));
-const isolatedState='state.js?rev='+sharedTemplateReadOnlyRevision;
+const isolatedState='state.js?rev='+stateAssetRevision;
 assert(index.includes(isolatedState));
 assert(worker.includes("'./"+isolatedState+"'"));
 const conferenceMembersUi='js/sync/conference-members-ui.js?rev='+conferenceRoleRevision;
@@ -190,7 +203,7 @@ assert(worker.includes("'./"+organizationMembersAsset+"'"),'app shell missing de
   assert(index.includes(versioned),'index missing '+versioned);
   assert(worker.includes("'./"+versioned+"'"),'app shell missing '+versioned);
 });
-[/* state.js uses sharedTemplateReadOnlyRevision */
+[/* state.js uses stateAssetRevision */
   'js/sync/automatic-queue-runner.js',
   'js/sync/conference-realtime-manager.js'
 ].forEach(asset=>{

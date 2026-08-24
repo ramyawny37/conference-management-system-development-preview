@@ -1085,19 +1085,21 @@ function loadFromFile(e){
 function updateLogoText() {
   var logoEl = ge('logo-text');
   var accountLabel = logoEl && logoEl.querySelector('.application-account-label');
-  var authState = window.SupabaseAuth &&
-    typeof window.SupabaseAuth.getState === 'function'
-    ? window.SupabaseAuth.getState()
-    : null;
-  var authUser = authState && authState.user ? authState.user : null;
-  var displayName = authUser && authUser.user_metadata &&
-    authUser.user_metadata.display_name
-    ? String(authUser.user_metadata.display_name).trim()
-    : '';
-  var email = authUser && authUser.email
-    ? String(authUser.email).trim()
-    : '';
-  if (accountLabel) accountLabel.textContent = displayName || email || 'صاحب الحساب';
+  var identity = window.SupabaseAuth &&
+    typeof window.SupabaseAuth.getAccountIdentity === 'function'
+    ? window.SupabaseAuth.getAccountIdentity()
+    : {authenticated:false,label:''};
+  var startupActions = ge('startupAuthActions');
+  var signedOut = startupActions &&
+    startupActions.querySelector('[data-startup-auth-signed-out]');
+  var signedIn = startupActions &&
+    startupActions.querySelector('[data-startup-auth-signed-in]');
+  var startupName = startupActions &&
+    startupActions.querySelector('[data-startup-auth-account-name]');
+  if (accountLabel) accountLabel.textContent = identity.label;
+  if (signedOut) signedOut.style.display = identity.authenticated ? 'none' : '';
+  if (signedIn) signedIn.style.display = identity.authenticated ? '' : 'none';
+  if (startupName) startupName.textContent = identity.label;
   renderGlobalConferenceHeader();
 }
 

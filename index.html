@@ -10,7 +10,7 @@
 <link rel="apple-touch-icon" sizes="180x180" href="./icons/apple-touch-icon-180x180-v3.png">
 
 <title>إرسالية اصنع فرق</title>
-<link rel="stylesheet" href="style.css?rev=organization-members-refresh-v1">
+<link rel="stylesheet" href="style.css?rev=account-session-identity-v1">
 </head>
 <body>
 
@@ -67,9 +67,15 @@
         <div class="startup-date-copy"><strong id="startupDayName">—</strong><small id="startupDateText">—</small></div>
         <div class="startup-time"><strong id="startupTimeText">—</strong></div>
       </div>
-      <div class="startup-auth-actions">
-        <button type="button" class="startup-auth-create" onclick="StartupAccessGate.showAuthView('signup')">إنشاء حساب</button>
-        <button type="button" class="startup-auth-login" onclick="StartupAccessGate.showAuthView('login')">تسجيل الدخول</button>
+      <div class="startup-auth-actions" id="startupAuthActions">
+        <div class="startup-auth-signed-out" data-startup-auth-signed-out>
+          <button type="button" class="startup-auth-create" onclick="StartupAccessGate.showAuthView('signup')">إنشاء حساب</button>
+          <button type="button" class="startup-auth-login" onclick="StartupAccessGate.showAuthView('login')">تسجيل الدخول</button>
+        </div>
+        <div class="startup-auth-signed-in" data-startup-auth-signed-in style="display:none">
+          <span class="startup-auth-account-name" data-startup-auth-account-name></span>
+          <button type="button" class="startup-auth-create" onclick="SyncSettingsUI.signOut()">تسجيل الخروج</button>
+        </div>
         <button id="install-app-btn" type="button" class="startup-auth-create" style="display:none;">تثبيت البرنامج</button>
       </div>
     </header>
@@ -493,7 +499,7 @@
 <script src="js/supabase/public-config.js"></script>
 <script src="js/supabase/runtime-config.js"></script>
 <script src="js/supabase/client.js"></script>
-<script src="js/supabase/auth.js?rev=organization-membership-operation-key-v1"></script>
+<script src="js/supabase/auth.js?rev=account-session-identity-v1"></script>
 <script src="js/supabase/system-access-service.js?rev=conference-create-authorization-v1"></script>
 <script src="js/sync/diagnostics-privacy-policy.js?rev=diagnostics-privacy-hardening-v1"></script>
 <script src="js/supabase/first-system-bootstrap-service.js?rev=first-owner-bootstrap-hardening-v1"></script>
@@ -531,8 +537,8 @@
 <script src="js/sync/offline-first-integration.js?rev=revision-publish-1"></script>
 <script src="js/sync/device-rescue-export.js?rev=diagnostics-privacy-hardening-v1"></script>
 <script src="js/sync/template-diagnostic-export.js?rev=template-diagnostic-export-v1"></script>
-<script src="js/sync/sync-settings-ui.js?rev=shared-template-copy-guard-v1"></script>
-<script src="js/sync/startup-access-gate.js?rev=auth-approval-ux-v1"></script>
+<script src="js/sync/sync-settings-ui.js?rev=account-session-identity-v1"></script>
+<script src="js/sync/startup-access-gate.js?rev=account-session-identity-v1"></script>
 <script src="js/sync/link-status-diagnostic-store.js"></script>
 <script src="js/sync/conference-link-store.js"></script>
 <script src="js/sync/conference-membership-attempt-store.js"></script>
@@ -584,7 +590,7 @@
 <script src="libs/html2canvas.min.js"></script>
 <script src="libs/xlsx.full.min.js"></script>
 <script src="js/ui-icons.js?rev=accommodation-visual-match-v6"></script>
-<script src="script.js?rev=organization-members-refresh-v1"></script>
+<script src="script.js?rev=account-session-identity-v1"></script>
 <script src="version.js"></script>
 <script>
   document.addEventListener('DOMContentLoaded', function() {
