@@ -83,22 +83,24 @@ async function run(){
   for(var lookupIndex=0;lookupIndex<lookupCases.length;lookupIndex++){
     assert.deepStrictEqual(JSON.parse(JSON.stringify(await lookupCases[lookupIndex])),unavailableExpected);
   }
-  function uiUnavailableMessage(email,rpc){
+  function uiLookupMessage(email,rpc){
     var view=runtime({rpc:rpc});view.elements.organization_members_content.innerHTML=view.ui.renderSection({organizationId:ids.organization});
     return view.ui.refresh().then(function(){view.elements.organization_member_lookup_email.value=email;return view.ui.lookup();}).then(function(){
-      return (view.elements.organization_members_content.innerHTML.match(/لا يتوفر مرشح بهذا البريد\./)||[])[0]||'';
+      var html=view.elements.organization_members_content.innerHTML;
+      return ['أدخل البريد الإلكتروني.','لا يتوفر مرشح بهذا البريد.'].filter(function(message){return html.indexOf(message)>=0;})[0]||'';
     });
   }
-  var invalidMessage=await uiUnavailableMessage('',function(name){
+  var invalidMessage=await uiLookupMessage('',function(name){
     if(name==='get_my_organization_access')return Promise.resolve({data:access('organization_owner'),error:null});
     if(name==='list_organization_members')return Promise.resolve({data:[],error:null});
   });
-  var malformedMessage=await uiUnavailableMessage('target@example.test',function(name){
+  var malformedMessage=await uiLookupMessage('target@example.test',function(name){
     if(name==='get_my_organization_access')return Promise.resolve({data:access('organization_owner'),error:null});
     if(name==='list_organization_members')return Promise.resolve({data:[],error:null});
     return Promise.resolve({data:{status:'candidate',organization_id:'wrong',target_user_id:'bad',membership_status:'bad'},error:null});
   });
-  assert.strictEqual(invalidMessage,malformedMessage);
+  assert.strictEqual(invalidMessage,'أدخل البريد الإلكتروني.');
+  assert.strictEqual(malformedMessage,'لا يتوفر مرشح بهذا البريد.');
   var attempts=0;var pending=runtime({rpc:function(name,args){attempts++;if(name==='get_my_organization_access')return Promise.resolve({data:access('organization_owner'),error:null});if(name==='list_organization_members')return Promise.resolve({data:[],error:null});if(attempts===1)return Promise.reject(new Error('network failed'));return Promise.resolve({data:{status:'applied'},error:null});}});
   var first=await pending.service.addMember({organizationId:ids.organization,targetUserId:ids.target},pending.options);assert.strictEqual(first.status,'unknown');var stored=Object.keys(pending.records).map(function(k){return pending.records[k];})[0];assert.strictEqual(stored.state,'unknown');assert.strictEqual(stored.attemptCount,1);var listed=await pending.service.listPendingOperations(pending.options);assert.strictEqual(listed.data.operations.length,1);assert.strictEqual(pending.calls.filter(function(c){return c.name==='add_organization_member';}).length,1);var retried=await pending.service.retryUnknownOperation(ids.operation,pending.options);assert.strictEqual(retried.status,'applied');assert.strictEqual(pending.calls.filter(function(c){return c.name==='add_organization_member';})[1].args.p_operation_id,ids.operation);
   var noReplay=runtime({rpc:function(name){if(name==='list_my_organizations')return Promise.resolve({data:[{id:ids.organization,organization_key:'main',display_name:'المؤسسة الرئيسية',is_default:true}],error:null});if(name==='get_my_organization_access')return Promise.resolve({data:access('organization_owner'),error:null});if(name==='list_organization_members')return Promise.resolve({data:[],error:null});}});
@@ -135,11 +137,12 @@ async function run(){
   assert.ok(applicationSource.indexOf('refreshOrganizationMembersSection();')>=0);
   assert.ok(uiSource.indexOf("action:'change_organization_role'")>=0);
   var controls=runtime({rpc:function(name){
+    if(name==='list_my_organizations')return Promise.resolve({data:[{id:ids.organization,organization_key:'main',display_name:'المؤسسة الرئيسية',is_default:true}],error:null});
     if(name==='get_my_organization_access')return Promise.resolve({data:access('organization_owner'),error:null});
     if(name==='list_organization_members')return Promise.resolve({data:[{user_id:ids.target,display_name:'Target',role:'member',is_current_user:false}],error:null});
     if(name==='remove_organization_member'||name==='change_organization_role')return Promise.resolve({data:{status:'applied'},error:null});
   }});
-  controls.elements.organization_members_content.innerHTML=controls.ui.renderSection({organizationId:ids.organization});await controls.ui.refresh();
+  controls.elements.organization_members_content.innerHTML=controls.ui.renderSection({});await controls.ui.initialize({organizationId:ids.organization});
   await controls.ui.removeMember(ids.target);await controls.ui.changeRole(ids.target,'organization_admin');
   assert.ok(controls.calls.some(function(call){return call.name==='remove_organization_member';}));
   assert.ok(controls.calls.some(function(call){return call.name==='change_organization_role';}));
