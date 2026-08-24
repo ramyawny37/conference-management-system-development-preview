@@ -23,14 +23,12 @@
         ?ROLES.indexOf(input.requestedRole)>=0
         :(input.requestedRole==null||input.requestedRole===''));
   }
-  function validRecord(record,now){
+  function structurallyValidRecord(record){
     var created=date(record&&record.createdAt),attempted=date(record&&record.lastAttemptAt);
     return validRequest(record)&&isUuid(String(record.operationId||''))&&
       ['pending','unknown'].indexOf(record.state)>=0&&
       Number.isInteger(record.attemptCount)&&record.attemptCount>=0&&created&&
-      (!record.lastAttemptAt||attempted)&&
-      created.getTime()<=now.getTime()+FUTURE_TOLERANCE_MS&&
-      now.getTime()-created.getTime()<RETENTION_MS;
+      (!record.lastAttemptAt||attempted);
   }
   function db(){return global.AppIndexedDB||null;}
   function requestPromise(request){return new Promise(function(resolve,reject){request.onsuccess=function(){resolve(request.result);};request.onerror=function(){reject(request.error);};});}
@@ -39,15 +37,11 @@
     if(!isUuid(String(authenticatedUserId||''))||!isUuid(String(operationId||''))||!database)return Promise.resolve(result(false,'invalid_input'));
     return database.getRecord(STORE_NAME,[authenticatedUserId,operationId]).then(function(record){
       if(!record)return result(false,'not_found');
-      if(!validRecord(record,new Date()))return removeCorrupt(record).then(function(){return result(false,'manual_retry_required');});
+      if(!structurallyValidRecord(record))return result(false,'manual_retry_required',{
+        operation:copy(record),reason:'malformed_record'
+      });
       return result(true,'found',copy(record));
     }).catch(function(){return result(false,'storage_error');});
-  }
-  function removeCorrupt(record){
-    var database=db();
-    if(!database||!record)return Promise.resolve(false);
-    return database.deleteRecord(STORE_NAME,[record.authenticatedUserId,record.operationId])
-      .then(function(){return true;},function(){return false;});
   }
   function prepare(input,operationId,options){
     options=options||{};var now=date(options.now||new Date());var database=db();
@@ -55,8 +49,7 @@
     return database.runTransaction(STORE_NAME,'readwrite',function(stores){
       var store=stores[STORE_NAME];return requestPromise(store.index('by_user_intent').getAll(intentKey(input))).then(function(records){
         var existing=records[0];
-        if(existing&&validRecord(existing,now))return existing;
-        if(existing)return requestPromise(store.delete([existing.authenticatedUserId,existing.operationId])).then(function(){return null;});
+        if(existing)return existing;
         return null;
       }).then(function(existing){
         if(existing)return existing;
@@ -68,7 +61,9 @@
         return requestPromise(store.put(record)).then(function(){return record;});
       });
     }).then(function(record){
-      if(!validRecord(record,now))return result(false,'manual_retry_required');
+      if(!structurallyValidRecord(record))return result(false,'manual_retry_required',{
+        operation:copy(record),reason:'malformed_record'
+      });
       return result(true,'prepared',copy(record));
     }).catch(function(){return result(false,'storage_error');});
   }
@@ -78,13 +73,13 @@
     return database.runTransaction(STORE_NAME,'readwrite',function(stores){
       var store=stores[STORE_NAME];return requestPromise(store.get([authenticatedUserId,operationId])).then(function(record){
         if(!record)throw new Error('NOT_FOUND');
-        if(!validRecord(record,now))return requestPromise(store.delete([authenticatedUserId,operationId])).then(function(){throw new Error('CORRUPT');});
+        if(!structurallyValidRecord(record))throw new Error('MALFORMED');
         if(state==='attempt'){record.lastAttemptAt=now.toISOString();record.attemptCount++;}
         else record.state=state;
         return requestPromise(store.put(record)).then(function(){return record;});
       });
     }).then(function(record){return result(true,state==='attempt'?'attempt_recorded':state,copy(record));})
-      .catch(function(error){return result(false,error&&error.message==='CORRUPT'?'manual_retry_required':'storage_error');});
+      .catch(function(error){return result(false,error&&error.message==='MALFORMED'?'manual_retry_required':'storage_error');});
   }
   function markAttempt(authenticatedUserId,operationId,options){return updateState(authenticatedUserId,operationId,'attempt',options);}
   function markUnknown(authenticatedUserId,operationId,options){return updateState(authenticatedUserId,operationId,'unknown',options);}
@@ -99,12 +94,12 @@
     return database.runTransaction(STORE_NAME,'readwrite',function(stores){
       var store=stores[STORE_NAME];return requestPromise(store.get([authenticatedUserId,operationId])).then(function(record){
         if(!record)throw new Error('NOT_FOUND');
-        if(!validRecord(record,now))return requestPromise(store.delete([authenticatedUserId,operationId])).then(function(){throw new Error('CORRUPT');});
+        if(!structurallyValidRecord(record))throw new Error('MALFORMED');
         if(record.state!=='unknown')throw new Error('NOT_UNKNOWN');
         return requestPromise(store.delete([authenticatedUserId,operationId]));
       });
     }).then(function(){return result(true,'tracking_stopped');}).catch(function(error){
-      var status=error&&error.message==='NOT_UNKNOWN'?'not_unknown':error&&error.message==='CORRUPT'?'manual_retry_required':error&&error.message==='NOT_FOUND'?'not_found':'storage_error';
+      var status=error&&error.message==='NOT_UNKNOWN'?'not_unknown':error&&error.message==='MALFORMED'?'manual_retry_required':error&&error.message==='NOT_FOUND'?'not_found':'storage_error';
       return result(false,status);
     });
   }
@@ -113,12 +108,15 @@
     if(!isUuid(String(authenticatedUserId||''))||!now||!database)return Promise.resolve(result(false,'invalid_input'));
     return database.runTransaction(STORE_NAME,'readwrite',function(stores){
       var store=stores[STORE_NAME];return requestPromise(store.index('by_authenticated_user').getAll(authenticatedUserId)).then(function(records){
-        var valid=[];return Promise.all(records.map(function(record){
-          if(validRecord(record,now)){valid.push(record);return null;}
-          return requestPromise(store.delete([record.authenticatedUserId,record.operationId]));
-        })).then(function(){return valid;});
+        var valid=[],diagnostics=[];records.forEach(function(record){
+          if(structurallyValidRecord(record))valid.push(record);
+          else diagnostics.push({status:'manual_retry_required',reason:'malformed_record',
+            operationId:String(record&&record.operationId||'')});
+        });
+        return {records:valid,diagnostics:diagnostics};
       });
-    }).then(function(records){return result(true,'listed',{operations:copy(records)});})
+    }).then(function(listed){return result(true,'listed',{operations:copy(listed.records),
+      diagnostics:copy(listed.diagnostics)});})
       .catch(function(){return result(false,'storage_error');});
   }
   global.OrganizationMembershipOperationRepository=Object.freeze({
