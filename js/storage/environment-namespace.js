@@ -1,7 +1,7 @@
 (function(global){
   'use strict';
 
-  var DEVELOPMENT_PROJECT_REF='gppwltrifgfxrkzvvxoe';
+  var DEVELOPMENT_PROJECT_REF='mpezfbvcdfxpgflehuot';
   var DEVELOPMENT_PATH='/conference-management-system-development-preview/';
   var pathname=String(global.location&&global.location.pathname||'/');
   var isDevelopment=pathname.indexOf(DEVELOPMENT_PATH)===0;

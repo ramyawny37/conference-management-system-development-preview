@@ -34,9 +34,9 @@ assert.strictEqual(production.databaseName('conference_manager_v3'),
 const development=namespaceFor(
   '/conference-management-system-development-preview/'
 );
-const prefix='cms:development:gppwltrifgfxrkzvvxoe:';
+const prefix='cms:development:mpezfbvcdfxpgflehuot:';
 assert.strictEqual(development.environment,'development');
-assert.strictEqual(development.projectRef,'gppwltrifgfxrkzvvxoe');
+assert.strictEqual(development.projectRef,'mpezfbvcdfxpgflehuot');
 assert.strictEqual(development.key('conf_v5'),prefix+'conf_v5');
 assert.strictEqual(development.databaseName('conference_manager_v3'),
   prefix+'conference_manager_v3');
