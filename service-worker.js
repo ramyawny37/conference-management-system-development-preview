@@ -1,4 +1,4 @@
-const APP_VERSION = '3.1.1';
+const APP_VERSION = '3.2.0';
 const DEVELOPMENT_PROJECT_REF = 'gppwltrifgfxrkzvvxoe';
 const DEVELOPMENT_PATH = '/conference-management-system-development-preview/';
 const IS_DEVELOPMENT = self.location.pathname.indexOf(DEVELOPMENT_PATH) === 0;
@@ -6,15 +6,15 @@ const CACHE_NAMESPACE = IS_DEVELOPMENT
   ? 'cms:development:' + DEVELOPMENT_PROJECT_REF + ':'
   : '';
 const CACHE_PREFIX = CACHE_NAMESPACE + 'conference-manager-core-';
-const CACHE_REVISION = 'organization-membership-retention-safe-v1';
+const CACHE_REVISION = 'production-baseline-af6b910-v1';
 const CACHE_NAME = CACHE_PREFIX + 'v' + APP_VERSION + '-' + CACHE_REVISION;
 const CORE_ASSETS = [
   './',
   './index.html',
   './style.css?rev=organization-members-refresh-v1',
   './js/storage/environment-namespace.js',
-  './js/storage/indexeddb.js?rev=shared-template-library-v1',
-  './js/storage/storage-repository.js?rev=organization-template-sync-v1',
+  './js/storage/indexeddb.js?rev=production-baseline-af6b910-v1',
+  './js/storage/storage-repository.js?rev=production-baseline-af6b910-v1',
   './js/storage/conference-repository.js',
   './js/storage/conference-publishing-engine.js?rev=organization-membership-operation-key-v1',
   './js/storage/conference-publish-recovery.js?rev=organization-membership-operation-key-v1',
@@ -99,7 +99,7 @@ const CORE_ASSETS = [
   './js/sync/automatic-queue-runner.js?rev=template-sync-isolation-v1',
   './js/sync/automatic-conference-linking.js?rev=realtime-refresh-completion-v1',
   './js/sync/discovered-conference-open-service.js?rev=repository-rejection-diagnostics-v1',
-  './js/sync/member-runtime-diagnostics.js?rev=repository-rejection-diagnostics-v1',
+  './js/sync/member-runtime-diagnostics.js?rev=production-baseline-af6b910-v1',
   './js/sync/automatic-sync-orchestrator.js?rev=realtime-reconnect-catchup-v1',
   './js/sync/wrong-remote-binding-repair-store.js?rev=wrong-remote-binding-repair-v1',
   './js/sync/wrong-remote-binding-repair-service.js?rev=wrong-remote-binding-repair-v1',
@@ -110,7 +110,7 @@ const CORE_ASSETS = [
   './houses.js?rev=template-floor-conference-sync-v1',
   './transport.js',
   './houseTemplates.js?rev=shared-house-template-read-only-v1',
-  './state.js?rev=accommodation-visual-match-v6',
+  './state.js?rev=production-baseline-af6b910-v1',
   './js/conference/accounts.js',
   './js/conference-template-houses-editor.js',
   './cards.js',

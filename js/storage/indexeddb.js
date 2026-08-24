@@ -238,7 +238,8 @@
     });
   }
 
-  function saveAppSnapshot(appData){
+  function saveAppSnapshot(appData,options){
+    options=options&&typeof options==='object'?options:{};
     var storedData;
     try{
       storedData = JSON.parse(JSON.stringify(appData));
@@ -250,6 +251,12 @@
       data: storedData,
       schemaVersion: storedData&&storedData.version?storedData.version:'',
       appVersion: global.APP_RELEASE&&global.APP_RELEASE.version?global.APP_RELEASE.version:'',
+      persistenceVersion:Number.isInteger(options.persistenceVersion)
+        ?options.persistenceVersion:null,
+      persistenceGeneration:Number.isInteger(options.persistenceGeneration)
+        ?options.persistenceGeneration:null,
+      persistenceFingerprint:typeof options.persistenceFingerprint==='string'
+        ?options.persistenceFingerprint:'',
       savedAt: new Date().toISOString(),
       source: 'dual-write'
     });

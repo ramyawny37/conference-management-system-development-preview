@@ -50,7 +50,7 @@ async function run(){
   assert.ok(!uiSource.includes('recoverTargetedStuckOperation:recoverTargetedStuckOperation'));
   assert.ok(!indexSource.includes('js/sync/targeted-stuck-operation-recovery.js'));
   assert.ok(!workerSource.includes("'./js/sync/targeted-stuck-operation-recovery.js'"));
-  assert.match(workerSource,/CACHE_REVISION = 'legacy-conference-preflight-v2'/);
+  assert.match(workerSource,/CACHE_REVISION = 'production-baseline-af6b910-v1'/);
   var ok=environment();var recovered=await ok.api.recover(ok.options);
   assert.strictEqual(recovered.ok,true);assert.strictEqual(recovered.status,'recovered');
   assert.strictEqual(ok.operation().status,'applied');assert.strictEqual(ok.operation().result.revision,18);

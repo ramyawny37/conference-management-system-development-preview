@@ -42,7 +42,8 @@ var applicationStorageState = {
   loadedSource: null,
   lastLocalSaveAt: null,
   lastIndexedDbSaveAt: null,
-  lastStorageError: null
+  lastStorageError: null,
+  arbitrationStatus: null
 };
 var storageInitializationPromise = null;
 var applicationSelectionRestored = false;
@@ -176,41 +177,16 @@ function initializeApplicationStorage(){
 
   var defaults=cloneApplicationStorageData(appData);
   var repository=window.StorageRepository;
-  var indexedDbApi=window.AppIndexedDB;
   var deviceApproval=window.DeviceReauthorizationFlow&&
     typeof window.DeviceReauthorizationFlow.waitUntilApproved==='function'
     ?window.DeviceReauthorizationFlow.waitUntilApproved()
     :Promise.resolve();
   storageInitializationPromise=Promise.resolve(deviceApproval)
     .then(function(){
-      if(!repository||typeof repository.getAppSnapshot!=='function'){
+      if(!repository||typeof repository.resolveAppSnapshot!=='function'){
         throw new Error('INDEXEDDB_REPOSITORY_UNAVAILABLE');
       }
-      return repository.getAppSnapshot();
-    })
-    .then(function(snapshot){
-      var validation=indexedDbApi&&typeof indexedDbApi.validateAppSnapshot==='function'
-        ?indexedDbApi.validateAppSnapshot(snapshot)
-        :{valid:false,reason:'SNAPSHOT_VALIDATOR_UNAVAILABLE'};
-      return validation.valid
-        ?{source:'indexeddb',data:snapshot.data,savedAt:snapshot.savedAt||null}
-        :null;
-    })
-    .catch(function(error){
-      applicationStorageState.lastStorageError=error;
-      console.warn('تعذر قراءة بيانات IndexedDB:',error);
-      return null;
-    })
-    .then(function(selection){
-      if(selection)return selection;
-      try{
-        var localData=readLocalStorageAppData();
-        if(localData)return {source:'localStorage',data:localData};
-      }catch(error){
-        applicationStorageState.lastStorageError=error;
-        console.warn('تعذر قراءة بيانات localStorage:',error);
-      }
-      return {source:'defaults',data:defaults};
+      return repository.resolveAppSnapshot({defaults:defaults});
     })
     .then(function(selection){
       appData=cloneApplicationStorageData(selection.data);
@@ -221,37 +197,18 @@ function initializeApplicationStorage(){
       var current=getCurrentConference();
       if(current)setCurrentConference(current);
 
-      try{
-        localStorage.setItem(SK,JSON.stringify(appData));
-        applicationStorageState.lastLocalSaveAt=new Date().toISOString();
-      }catch(error){
-        applicationStorageState.lastStorageError=error;
-        console.warn('تعذر تحديث بيانات localStorage:',error);
-      }
-
-      if(selection.source==='indexeddb'&&!applicationSelectionRestored||
-        !repository||
-        typeof repository.saveAppSnapshot!=='function'){
-        return selection;
-      }
-      return repository.saveAppSnapshot(appData,{skipSyncQueue:true})
-        .then(function(){
-          applicationStorageState.lastIndexedDbSaveAt=new Date().toISOString();
-          return selection;
-        })
-        .catch(function(error){
-          applicationStorageState.lastStorageError=error;
-          console.warn('تعذر حفظ Snapshot في IndexedDB:',error);
-          return selection;
-        });
+      return selection;
     })
     .then(function(selection){
       applicationStorageState.storageReady=true;
       applicationStorageState.loadedSource=selection.source;
-      if(selection.source==='indexeddb'&&selection.savedAt){
-        applicationStorageState.lastIndexedDbSaveAt=selection.savedAt;
-      }
+      applicationStorageState.arbitrationStatus=selection.status||null;
       return appData;
+    }).catch(function(error){
+      applicationStorageState.lastStorageError=error;
+      applicationStorageState.arbitrationStatus=error&&error.code||
+        'LOCAL_PERSISTENCE_FAILED';
+      throw error;
     });
 
   return storageInitializationPromise;
