@@ -29,42 +29,102 @@ jobs:
           path: controller
 
       - name: Checkout develop source
-        id: source
         uses: actions/checkout@v4
         with:
           repository: ramyawny37/conference-management-system-v1
           ref: develop
-          path: site
+          path: source
           fetch-depth: 0
 
-      - name: Mirror develop source revision for Pages
+      - name: Capture deployed source SHA
+        id: source_meta
+        run: echo "sha=$(git -C source rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Validate Development source contracts
+        run: |
+          node --check source/js/storage/environment-namespace.js
+          node --check source/service-worker.js
+          node source/tests/browser-storage-isolation.test.js
+          node source/tests/pwa-deterministic-update.test.js
+
+      - name: Prepare isolated preview artifact
+        run: |
+          mkdir site
+          rsync -a source/ site/ \
+            --exclude='/.git/' \
+            --exclude='/.github/' \
+            --exclude='/.audit/' \
+            --exclude='/docs/' \
+            --exclude='/node_modules/' \
+            --exclude='/supabase/' \
+            --exclude='/tests/' \
+            --exclude='/tools/' \
+            --exclude='/package.json' \
+            --exclude='/package-lock.json'
+
+      - name: Generate Development Supabase public config in artifact
+        env:
+          SUPABASE_URL_DEV: ${{ secrets.SUPABASE_URL_DEV }}
+          SUPABASE_ANON_KEY_DEV: ${{ secrets.SUPABASE_ANON_KEY_DEV }}
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+
+          const expectedRef = 'gppwltrifgfxrkzvvxoe';
+          const productionRef = 'mpezfbvcdfxpgflehuot';
+          const expectedUrl = `https://${expectedRef}.supabase.co`;
+          const url = String(process.env.SUPABASE_URL_DEV || '').replace(/\/$/, '');
+          const key = String(process.env.SUPABASE_ANON_KEY_DEV || '');
+
+          if (url !== expectedUrl) {
+            throw new Error('Preview Supabase project ref is not the approved Development ref');
+          }
+          if (!key || key.includes(productionRef)) {
+            throw new Error('Preview Supabase publishable key is missing or rejected');
+          }
+
+          const content =
+            "(function(global){\n" +
+            "  'use strict';\n\n" +
+            "  global.SUPABASE_RUNTIME_CONFIG=Object.freeze({\n" +
+            "    url:" + JSON.stringify(url) + ",\n" +
+            "    publishableKey:" + JSON.stringify(key) + "\n" +
+            "  });\n" +
+            "})(window);\n";
+
+          fs.writeFileSync('site/js/supabase/public-config.js', content, 'utf8');
+          NODE
+
+      - name: Fail-closed Preview artifact target guard
+        run: |
+          if grep -R "mpezfbvcdfxpgflehuot" site; then
+            echo "Production Supabase reference found in Preview artifact"
+            exit 1
+          fi
+          grep -Fq "https://gppwltrifgfxrkzvvxoe.supabase.co" site/js/supabase/public-config.js
+          grep -Fq "DEVELOPMENT_PROJECT_REF = 'gppwltrifgfxrkzvvxoe'" site/service-worker.js
+          grep -Fq "DEVELOPMENT_PROJECT_REF='gppwltrifgfxrkzvvxoe'" site/js/storage/environment-namespace.js
+          grep -Fq "cms:development:' + DEVELOPMENT_PROJECT_REF + ':'" site/service-worker.js
+          grep -Fq "'cms:development:'+DEVELOPMENT_PROJECT_REF+':'" site/js/storage/environment-namespace.js
+          grep -Fq "development-target-gpp-v1" site/service-worker.js
+          node --check site/js/supabase/public-config.js
+          node --check site/js/storage/environment-namespace.js
+          node --check site/service-worker.js
+
+      - name: Mirror validated develop source revision for Pages
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          git -C site push --force \
+          git -C source push --force \
             "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" \
             HEAD:refs/heads/development-preview-source
-
-      - name: Verify Production Supabase is absent from runtime
-        run: |
-          if grep -R "gppwltrifgfxrkzvvxoe" \
-            site/index.html \
-            site/service-worker.js \
-            site/js; then
-            echo "Production Supabase reference found in preview runtime"
-            exit 1
-          fi
-
-      - name: Verify Development Supabase target
-        run: |
-          grep -q "mpezfbvcdfxpgflehuot.supabase.co" site/js/supabase/public-config.js
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
 
       - name: Upload preview artifact
         id: artifact
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v4
         with:
           path: site
 
@@ -72,7 +132,7 @@ jobs:
         id: deployment
         env:
           ARTIFACT_ID: ${{ steps.artifact.outputs.artifact_id }}
-          BUILD_VERSION: ${{ steps.source.outputs.commit }}
+          BUILD_VERSION: ${{ steps.source_meta.outputs.sha }}
           GH_TOKEN: ${{ github.token }}
           REPOSITORY: ${{ github.repository }}
         run: |
