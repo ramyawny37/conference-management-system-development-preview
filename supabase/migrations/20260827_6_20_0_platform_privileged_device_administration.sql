@@ -121,7 +121,7 @@ begin
     environment,target_user_id,target_user_id_snapshot,target_device_id,action,operation_id,result,
     origin,rp_id,user_verified,backup_eligible,backup_state,security_context)
   values(p_operator_user_id,p_operator_user_id,p_operator_device_id,null,
-    digest('bootstrap-issuance:'||p_authorization_hash::text,'sha256'),null,null,null,p_environment,
+    extensions.digest('bootstrap-issuance:'||p_authorization_hash::text,'sha256'),null,null,null,p_environment,
     p_intended_user_id,p_intended_user_id,p_intended_device_id,
     'credential_bootstrap_authorization_issued',null,'issued',lower(p_origin),lower(p_rp_id),
     false,false,false,jsonb_build_object('reason',btrim(p_reason))) returning id into audit_id;
@@ -219,7 +219,7 @@ begin
     target_device_id,action,operation_id,result,origin,rp_id,user_verified,
     backup_eligible,backup_state,security_context)
   values(p_actor_user_id,p_actor_user_id,p_actor_device_id,null,
-    digest(p_session_id::text,'sha256'),p_session_id,p_challenge_id,
+    extensions.digest(p_session_id::text,'sha256'),p_session_id,p_challenge_id,
     'SYSTEM_OWNER_CREDENTIAL_ENROLLMENT',p_environment,p_actor_user_id,p_actor_user_id,
     p_actor_device_id,'credential_enrolled',p_operation_id,'applied',lower(p_origin),lower(p_rp_id),
     true,false,false,p_verification_context) returning id into audit_id;
@@ -329,7 +329,7 @@ begin
     actor_device_id,actor_credential_id,session_id_hash,session_id,challenge_id,challenge_purpose,
     environment,action,result,origin,rp_id,user_verified,backup_eligible,backup_state,security_context)
   values(p_actor_user_id,p_actor_user_id,p_actor_device_id,p_credential_id,
-    digest(p_session_id::text,'sha256'),p_session_id,p_challenge_id,
+    extensions.digest(p_session_id::text,'sha256'),p_session_id,p_challenge_id,
     'SYSTEM_OWNER_PENDING_DEVICE_LIST',p_environment,'pending_device_listed','verified',
     lower(p_origin),lower(p_rp_id),true,false,false,p_verification_context);
   update public.device_possession_challenges set consumed_at=statement_timestamp() where id=p_challenge_id;
@@ -506,7 +506,7 @@ begin
     challenge_target_device_id,action,operation_id,result,origin,rp_id,user_verified,
     backup_eligible,backup_state,security_context)
   values(p_actor_user_id,p_actor_user_id,p_actor_device_id,p_credential_id,
-    digest(p_session_id::text,'sha256'),p_session_id,p_challenge_id,purpose,p_environment,
+    extensions.digest(p_session_id::text,'sha256'),p_session_id,p_challenge_id,purpose,p_environment,
     p_target_user_id,p_target_user_id,p_target_device_id,p_target_user_id,p_target_device_id,
     audit_action,p_operation_id,'applied',lower(p_origin),lower(p_rp_id),true,false,false,p_verification_context);
   update public.device_possession_challenges set consumed_at=statement_timestamp() where id=p_challenge_id;
