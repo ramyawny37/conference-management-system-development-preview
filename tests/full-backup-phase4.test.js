@@ -112,6 +112,7 @@ function environment(fix,settings){
     conf_v5:JSON.stringify(fix.previous)
   };
   var applied=fix.previous;
+  var templateSyncCalls=0;
   var repository={
     createLocalBackup:function(snapshot,reason){
       events.push('safety');
@@ -137,6 +138,10 @@ function environment(fix,settings){
       saveCount++;
       events.push(saveCount===1?'candidateIndexedDb':'rollbackIndexedDb');
       assert.strictEqual(options.skipSyncQueue,true);
+      if(saveCount===1){
+        if(options.skipTemplateSync!==true)templateSyncCalls++;
+        assert.strictEqual(options.skipTemplateSync,true);
+      }
       assert.strictEqual(
         options.source,
         saveCount===1?'full_restore':'full_restore_rollback'
@@ -216,6 +221,7 @@ function environment(fix,settings){
     getIndexed:function(){return indexedData;},
     getLocal:function(key){return localValues[key];},
     getApplied:function(){return applied;},
+    getTemplateSyncCalls:function(){return templateSyncCalls;},
     getSafetyBackup:function(){
       return safetyBackupRecord
         ?localBackupStore[safetyBackupRecord.backupId]
@@ -276,6 +282,7 @@ async function testSuccessfulRestore(api){
   );
   assert.strictEqual(JSON.stringify(fix.input),inputBefore);
   assert.strictEqual(JSON.stringify(fix.previous),previousBefore);
+  assert.strictEqual(env.getTemplateSyncCalls(),0);
   assert.strictEqual(api.isFullRestoreInProgress(),false);
 }
 

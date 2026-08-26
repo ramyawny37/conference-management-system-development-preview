@@ -1948,6 +1948,7 @@
     return Promise.resolve().then(function(){
       return dependencies.repository.saveAppSnapshot(candidate,{
         skipSyncQueue:true,
+        skipTemplateSync:true,
         source:'full_restore'
       });
     }).then(function(){
