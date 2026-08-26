@@ -239,19 +239,45 @@
   }
 
   function saveAppSnapshot(appData){
-    var storedData;
-    try{
-      storedData = JSON.parse(JSON.stringify(appData));
-    }catch(error){
-      return Promise.reject(error);
+    var diagnostics=global.SnapshotPayloadDiagnostics;
+    var inspected;
+    if(diagnostics&&typeof diagnostics.inspect==='function'){
+      inspected=diagnostics.inspect(appData);
+    }else{
+      try{
+        var serialized=JSON.stringify(appData);
+        if(typeof serialized!=='string')throw new Error('NOT_SERIALIZABLE');
+        inspected={ok:true,snapshot:JSON.parse(serialized),sizeBytes:null};
+      }catch(error){
+        inspected={ok:false};
+      }
+    }
+    if(!inspected.ok){
+      var serializationError=new Error(
+        'The snapshot payload could not be serialized.'
+      );
+      serializationError.code='SNAPSHOT_SERIALIZATION_FAILED';
+      return Promise.reject(serializationError);
     }
     return putRecord(STORE_NAMES.conferences,{
       conferenceId: '**app_snapshot**',
-      data: storedData,
-      schemaVersion: storedData&&storedData.version?storedData.version:'',
+      data: inspected.snapshot,
+      schemaVersion: inspected.snapshot&&inspected.snapshot.version
+        ?inspected.snapshot.version:'',
       appVersion: global.APP_RELEASE&&global.APP_RELEASE.version?global.APP_RELEASE.version:'',
       savedAt: new Date().toISOString(),
-      source: 'dual-write'
+      source: 'dual-write',
+      sizeBytes: inspected.sizeBytes
+    }).catch(function(error){
+      if(diagnostics&&diagnostics.isQuotaExceededError(error)){
+        var quotaError=new Error(
+          'Local storage quota prevented saving the snapshot.'
+        );
+        quotaError.code='LOCAL_STORAGE_QUOTA_EXCEEDED';
+        quotaError.sizeBytes=inspected.sizeBytes;
+        throw quotaError;
+      }
+      throw error;
     });
   }
 

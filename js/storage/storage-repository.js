@@ -10,18 +10,53 @@
     return JSON.parse(JSON.stringify(appData));
   }
 
+  function inspectSnapshot(appData){
+    var diagnostics=global.SnapshotPayloadDiagnostics;
+    if(diagnostics&&typeof diagnostics.inspect==='function'){
+      return diagnostics.inspect(appData);
+    }
+    try{
+      var serialized=JSON.stringify(appData);
+      if(typeof serialized!=='string')throw new Error('NOT_SERIALIZABLE');
+      return {ok:true,snapshot:JSON.parse(serialized),sizeBytes:null};
+    }catch(error){
+      return {ok:false,error:{code:'SNAPSHOT_SERIALIZATION_FAILED'}};
+    }
+  }
+
   function saveAppSnapshot(appData,options){
     options=options&&typeof options==='object'?options:{};
-    var queuedSnapshot;
-    try{
-      queuedSnapshot = cloneSnapshotData(appData);
-    }catch(error){
-      return Promise.reject(error);
+    var inspected=inspectSnapshot(appData);
+    if(!inspected.ok){
+      var serializationError=new Error(
+        'The snapshot payload could not be serialized.'
+      );
+      serializationError.code='SNAPSHOT_SERIALIZATION_FAILED';
+      return Promise.reject(serializationError);
     }
+    var queuedSnapshot=cloneSnapshotData(inspected.snapshot);
     var localSaveResult=null;
+    var previousSnapshotRecord=null;
+    function restorePreviousSnapshot(){
+      if(previousSnapshotRecord){
+        return global.AppIndexedDB.putRecord(
+          global.AppIndexedDB.stores.conferences,
+          previousSnapshotRecord
+        );
+      }
+      if(typeof global.AppIndexedDB.deleteAppSnapshot==='function'){
+        return global.AppIndexedDB.deleteAppSnapshot();
+      }
+      return Promise.resolve();
+    }
     var writeOperation = snapshotWriteQueue
       .catch(function(){})
       .then(function(){
+        if(typeof global.AppIndexedDB.getAppSnapshot!=='function')return null;
+        return global.AppIndexedDB.getAppSnapshot();
+      })
+      .then(function(previous){
+        previousSnapshotRecord=previous||null;
         return global.AppIndexedDB.saveAppSnapshot(queuedSnapshot);
       })
       .then(function(saveResult){
@@ -36,13 +71,33 @@
           .then(function(){
             return integration.handleLocalSave(queuedSnapshot);
           })
-          .catch(function(){ return null; })
+          .catch(function(error){
+            return {ok:false,status:'error',error:{
+              code:error&&error.code||'SYNC_QUEUE_ENQUEUE_FAILED',
+              message:'The local sync operation could not be queued.'
+            }};
+          })
           .then(function(result){
             localSaveResult=result;
             return saveResult;
           });
       })
       .then(function(saveResult){
+        if(localSaveResult&&(
+          localSaveResult.ok===false||
+          localSaveResult.data&&
+          localSaveResult.data.reason==='QUEUE_ENQUEUE_FAILED'
+        )){
+          return Promise.resolve(restorePreviousSnapshot()).then(function(){
+            var queueError=new Error(
+              'The local sync operation could not be queued.'
+            );
+            queueError.code=localSaveResult.error&&localSaveResult.error.code||
+              'SYNC_QUEUE_ENQUEUE_FAILED';
+            queueError.sizeBytes=inspected.sizeBytes;
+            throw queueError;
+          });
+        }
         var templateSync=options.skipTemplateSync
           ?null:global.OrganizationTemplateSync;
         if(templateSync&&typeof templateSync.captureLocalSave==='function'){

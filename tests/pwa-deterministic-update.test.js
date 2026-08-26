@@ -44,6 +44,9 @@ const snapshotGuardRevision='conference-snapshot-device-guard-v1';
 const priorFrontendRevision=accountIdentityRevision;
 const conferenceSyncRevision='conference-organization-context-v1';
 const organizationMembersRevision='organization-membership-manual-retry-v1';
+const snapshotPayloadDiagnosticsRevision='snapshot-payload-diagnostics-v1';
+const postRestoreQueueReviewRevision='post-restore-queue-review-v1';
+const postRestoreProofBoundaryRevision='post-restore-proof-boundary-v1';
 assert(worker.includes("CACHE_REVISION = '"+cacheRevision+"'"));
 assert(index.includes("window.APP_SHELL_REVISION='"+shellRevision+"'"));
 const brandingIcons=[
@@ -187,12 +190,12 @@ const readAsset='js/sync/user-management-read-service.js?rev='+
   userManagementReadRevision;
 assert(index.includes(readAsset));
 assert(worker.includes("'./"+readAsset+"'"));
-assert(index.includes('script.js?rev='+priorFrontendRevision));
-assert(worker.includes("'./script.js?rev="+priorFrontendRevision+"'"));
+assert(index.includes('script.js?rev='+postRestoreQueueReviewRevision));
+assert(worker.includes("'./script.js?rev="+postRestoreQueueReviewRevision+"'"));
 const xlsxAsset='libs/xlsx.full.min.js';
 assert(fs.existsSync(path.join(root,xlsxAsset)),'local XLSX runtime asset missing');
 assert(index.includes('<script src="'+xlsxAsset+'"></script>'),'index missing local XLSX runtime');
-assert(index.indexOf(xlsxAsset)<index.indexOf('script.js?rev='+priorFrontendRevision),'XLSX runtime must load before import logic');
+assert(index.indexOf(xlsxAsset)<index.indexOf('script.js?rev='+postRestoreQueueReviewRevision),'XLSX runtime must load before import logic');
 assert(worker.includes("'./"+xlsxAsset+"'"),'app shell missing local XLSX runtime');
 assert(!/https?:[^"']*(sheetjs|xlsx)/i.test(index),'XLSX must not depend on a CDN');
 const organizationMembersAsset='js/sync/organization-members-ui.js?rev='+organizationMembersRevision;
@@ -212,8 +215,12 @@ assert(worker.includes("'./"+organizationMembersAsset+"'"),'app shell missing de
   assert(worker.includes("'./"+versioned+"'"),'app shell missing '+versioned);
 });
 [
-  ['js/storage/indexeddb.js',organizationTemplateRevision],
-  ['js/storage/storage-repository.js','organization-template-sync-v1']
+  ['js/storage/snapshot-payload-diagnostics.js',snapshotPayloadDiagnosticsRevision],
+  ['js/storage/indexeddb.js',snapshotPayloadDiagnosticsRevision],
+  ['js/storage/storage-repository.js',snapshotPayloadDiagnosticsRevision],
+  ['js/sync/sync-queue.js',postRestoreProofBoundaryRevision],
+  ['js/sync/startup-queue-recovery.js',postRestoreProofBoundaryRevision],
+  ['js/storage/full-backup.js',postRestoreProofBoundaryRevision]
 ].forEach(([asset,revision])=>{
   const versioned=asset+'?rev='+revision;
   assert(index.includes(versioned),'index missing '+versioned);

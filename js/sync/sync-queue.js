@@ -75,6 +75,23 @@
     return JSON.parse(JSON.stringify(value));
   }
 
+  function inspectSnapshot(value){
+    var diagnostics=global.SnapshotPayloadDiagnostics;
+    if(diagnostics&&typeof diagnostics.inspect==='function'){
+      return diagnostics.inspect(value);
+    }
+    try{
+      var serialized=JSON.stringify(value);
+      if(typeof serialized!=='string')throw new Error('NOT_SERIALIZABLE');
+      return {ok:true,snapshot:JSON.parse(serialized),sizeBytes:null};
+    }catch(error){
+      return {ok:false,error:safeError(
+        'SNAPSHOT_SERIALIZATION_FAILED',
+        'The snapshot payload could not be serialized.'
+      )};
+    }
+  }
+
   function isUuid(value){
     return typeof value==='string'&&
       /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
@@ -126,6 +143,13 @@
   }
 
   function normalizeStorageError(error){
+    var diagnostics=global.SnapshotPayloadDiagnostics;
+    if(diagnostics&&diagnostics.isQuotaExceededError(error)){
+      return safeError(
+        'SYNC_QUEUE_QUOTA_EXCEEDED',
+        'Local storage quota prevented saving the sync operation.'
+      );
+    }
     var name = error&&typeof error.name==='string'?error.name:'';
     if(name==='ConstraintError'){
       return safeError(
@@ -243,13 +267,16 @@
       )));
     }
     var operationId;
-    var snapshot;
+    var inspected;
     var now;
     try{
       operationId = input.operationId
         ?String(input.operationId)
         :createUuid();
-      snapshot = cloneValue(input.snapshot);
+      inspected=inspectSnapshot(input.snapshot);
+      if(!inspected.ok){
+        return Promise.resolve(result(false,'error',null,inspected.error));
+      }
       now = resolveNow(options).toISOString();
     }catch(error){
       return Promise.resolve(result(false,'error',null,safeError(
@@ -275,7 +302,8 @@
         ?String(input.idempotencyKey):null,
       deviceId:String(input.deviceId),
       baseRevision:input.baseRevision,
-      snapshot:snapshot,
+      snapshot:inspected.snapshot,
+      payloadSizeBytes:inspected.sizeBytes,
       schemaVersion:String(input.schemaVersion).trim(),
       appVersion:String(input.appVersion).trim(),
       status:'pending',
@@ -310,10 +338,13 @@
         'The sync queue is unavailable.'
       )));
     }
-    var snapshot;
+    var inspected;
     var now;
     try{
-      snapshot = cloneValue(input.snapshot);
+      inspected=inspectSnapshot(input.snapshot);
+      if(!inspected.ok){
+        return Promise.resolve(result(false,'error',null,inspected.error));
+      }
       now = resolveNow(options).toISOString();
     }catch(error){
       return Promise.resolve(result(false,'error',null,safeError(
@@ -364,7 +395,8 @@
               ?String(input.idempotencyKey):null,
             deviceId:String(input.deviceId),
             baseRevision:input.baseRevision,
-            snapshot:snapshot,
+            snapshot:inspected.snapshot,
+            payloadSizeBytes:inspected.sizeBytes,
             schemaVersion:String(input.schemaVersion).trim(),
             appVersion:String(input.appVersion).trim(),
             status:'pending',
@@ -382,7 +414,8 @@
         wasCoalesced=true;
         storedOperation=candidates[0];
         storedOperation.baseRevision=input.baseRevision;
-        storedOperation.snapshot=snapshot;
+        storedOperation.snapshot=inspected.snapshot;
+        storedOperation.payloadSizeBytes=inspected.sizeBytes;
         storedOperation.queueSchemaVersion=1;
         storedOperation.localConferenceId=
           input.localConferenceId===undefined
