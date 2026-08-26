@@ -41,7 +41,7 @@ const CORE_ASSETS = [
   './js/supabase/device-identity.js?rev=organization-membership-operation-key-v1',
   './js/sync/device-authorization-operation-repository.js',
   './js/supabase/current-device-authorization-service.js?rev=organization-membership-operation-key-v1',
-  './js/supabase/device-authorization-administration-service.js?rev=webauthn-privileged-admin-disabled-v1',
+  './js/supabase/device-authorization-administration-service.js?rev=platform-privileged-device-admin-v1',
   './js/sync/current-device-authorization-ui.js?rev=organization-membership-operation-key-v1',
   './js/sync/device-reauthorization-flow.js?rev=device-reauthorization-flow-v1',
   './js/sync/device-authorization-administration-ui.js?rev=startup-device-admin-lifecycle-v1',

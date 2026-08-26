@@ -176,7 +176,7 @@ assert.match(verification,/authorization_initial_columns/i);
 assert.match(verification,/privileges\.grantee=0/i);
 assert.doesNotMatch(verification,/has_(?:table|function)_privilege\('public'/i);
 assert.ok(verification.includes('Future Phase B/D transaction tests must exercise concurrent activation/revocation and atomic challenge consumption.'),'future runtime coverage classification missing');
-assert.match(administrationService,/WEBAUTHN_PRIVILEGED_DEVICE_PHASE_A_ENABLED=false/);
+assert.match(administrationService,/WEBAUTHN_PRIVILEGED_DEVICE_ENABLED=true/);
 assert.doesNotMatch(administrationService,/\.rpc\('(?:list_system_owner_pending_device_authorizations|approve_system_owner_pending_device|reject_system_owner_pending_device)'/i,'stale UUID-only client RPC must be unreachable and absent');
 
 ['require_device_authorization_manager','list_member_device_authorizations','approve_member_device','reject_member_pending_device','revoke_member_device','replace_member_active_device'].forEach(function(name){assert.ok(organizationMigration.includes('public.'+name+'('),name+' historical organization path missing');assert.ok(!migration.includes('create or replace function public.'+name+'('),name+' must remain untouched');});
