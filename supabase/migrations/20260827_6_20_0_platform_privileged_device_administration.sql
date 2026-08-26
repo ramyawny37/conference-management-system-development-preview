@@ -259,8 +259,8 @@ begin
       if existing.actor_user_id_snapshot=p_actor_user_id and existing.actor_device_id=p_actor_device_id
         and existing.target_user_id_snapshot=p_target_user_id
         and existing.target_device_id=p_target_device_id and existing.environment=p_environment
-        and existing.action=case p_purpose when 'SYSTEM_OWNER_PENDING_DEVICE_APPROVE'
-          then 'approve_system_owner_pending_device' else 'reject_system_owner_pending_device' end then
+        and existing.action=(case p_purpose when 'SYSTEM_OWNER_PENDING_DEVICE_APPROVE'
+          then 'approve_system_owner_pending_device' else 'reject_system_owner_pending_device' end) then
         return jsonb_build_object('status','completed','result',existing.stored_result);
       end if;
       raise exception 'PLATFORM_DEVICE_OPERATION_MISMATCH' using errcode='22023';
