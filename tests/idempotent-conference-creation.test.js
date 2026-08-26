@@ -61,7 +61,7 @@ async function run(){
     return Promise.resolve({data:null,error:null});
   });
   assert.strictEqual(networkCalls,0);
-  assert.strictEqual(typeof unloaded.api.createConference,'function');
+  assert.strictEqual(unloaded.api.createConference,undefined);
   assert.strictEqual(
     typeof unloaded.api.verifyOwnerMembership,'function'
   );
