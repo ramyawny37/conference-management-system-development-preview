@@ -31,9 +31,9 @@ begin
     or not public.is_system_owner(p_actor_user_id) then
     raise exception 'APPROVED_SYSTEM_OWNER_REQUIRED' using errcode='42501';
   end if;
-  if not exists(select 1 from public.user_device_authorizations authorization
-    where authorization.user_id=p_actor_user_id and authorization.device_id=p_actor_device_id
-      and authorization.authorization_status='approved' and authorization.revoked_at is null) then
+  if not exists(select 1 from public.user_device_authorizations uda
+    where uda.user_id=p_actor_user_id and uda.device_id=p_actor_device_id
+      and uda.authorization_status='approved' and uda.revoked_at is null) then
     raise exception 'APPROVED_ACTOR_DEVICE_REQUIRED' using errcode='42501';
   end if;
   select * into credential from public.device_security_credentials credentials
@@ -55,7 +55,7 @@ create or replace function public.begin_system_owner_credential_enrollment(
   p_challenge_hash bytea,p_operation_id uuid,p_bootstrap_hash bytea
 ) returns jsonb language plpgsql security definer
 set search_path=pg_catalog, public as $$
-declare authorization public.system_owner_credential_bootstrap_authorizations%rowtype;
+declare bootstrap_authorization public.system_owner_credential_bootstrap_authorizations%rowtype;
   challenge_id uuid;
 begin
   perform public.require_platform_device_backend();
@@ -65,12 +65,12 @@ begin
   end if;
   if not exists(select 1 from public.system_user_access access where access.user_id=p_actor_user_id
       and access.account_status='approved') or not public.is_system_owner(p_actor_user_id)
-    or not exists(select 1 from public.user_device_authorizations authorization
-      where authorization.user_id=p_actor_user_id and authorization.device_id=p_actor_device_id
-        and authorization.authorization_status='approved' and authorization.revoked_at is null) then
+    or not exists(select 1 from public.user_device_authorizations uda
+      where uda.user_id=p_actor_user_id and uda.device_id=p_actor_device_id
+        and uda.authorization_status='approved' and uda.revoked_at is null) then
     raise exception 'APPROVED_SYSTEM_OWNER_DEVICE_REQUIRED' using errcode='42501';
   end if;
-  select * into authorization from public.system_owner_credential_bootstrap_authorizations bootstrap
+  select * into bootstrap_authorization from public.system_owner_credential_bootstrap_authorizations bootstrap
     where bootstrap.authorization_hash=p_bootstrap_hash
       and bootstrap.intended_user_id=p_actor_user_id
       and bootstrap.intended_device_id=p_actor_device_id
@@ -86,7 +86,7 @@ begin
     lower(p_expected_rp_id),p_environment,statement_timestamp()+interval '2 minutes')
   returning id into challenge_id;
   return jsonb_build_object('status','challenge_created','challengeId',challenge_id,
-    'bootstrapAuthorizationId',authorization.id,'operationId',p_operation_id);
+    'bootstrapAuthorizationId',bootstrap_authorization.id,'operationId',p_operation_id);
 end;
 $$;
 
@@ -105,15 +105,15 @@ begin
   if not public.is_system_owner(p_operator_user_id)
     or not exists(select 1 from public.system_user_access access where access.user_id=p_operator_user_id
       and access.account_status='approved')
-    or not exists(select 1 from public.user_device_authorizations authorization
-      where authorization.user_id=p_operator_user_id and authorization.device_id=p_operator_device_id
-        and authorization.authorization_status='approved' and authorization.revoked_at is null)
+    or not exists(select 1 from public.user_device_authorizations uda
+      where uda.user_id=p_operator_user_id and uda.device_id=p_operator_device_id
+        and uda.authorization_status='approved' and uda.revoked_at is null)
     or not public.is_system_owner(p_intended_user_id)
     or not exists(select 1 from public.system_user_access access where access.user_id=p_intended_user_id
       and access.account_status='approved')
-    or not exists(select 1 from public.user_device_authorizations authorization
-      where authorization.user_id=p_intended_user_id and authorization.device_id=p_intended_device_id
-        and authorization.authorization_status='approved' and authorization.revoked_at is null) then
+    or not exists(select 1 from public.user_device_authorizations uda
+      where uda.user_id=p_intended_user_id and uda.device_id=p_intended_device_id
+        and uda.authorization_status='approved' and uda.revoked_at is null) then
     raise exception 'CREDENTIAL_BOOTSTRAP_APPROVED_SYSTEM_OWNER_DEVICE_REQUIRED' using errcode='42501';
   end if;
   insert into public.privileged_device_authorization_audit_log(actor_user_id,actor_user_id_snapshot,
@@ -145,9 +145,9 @@ begin
   perform public.require_platform_device_backend();
   if not exists(select 1 from public.system_user_access access where access.user_id=p_actor_user_id
       and access.account_status='approved') or not public.is_system_owner(p_actor_user_id)
-    or not exists(select 1 from public.user_device_authorizations authorization
-      where authorization.user_id=p_actor_user_id and authorization.device_id=p_actor_device_id
-        and authorization.authorization_status='approved' and authorization.revoked_at is null) then
+    or not exists(select 1 from public.user_device_authorizations uda
+      where uda.user_id=p_actor_user_id and uda.device_id=p_actor_device_id
+        and uda.authorization_status='approved' and uda.revoked_at is null) then
     raise exception 'APPROVED_SYSTEM_OWNER_DEVICE_REQUIRED' using errcode='42501';
   end if;
   select * into credential from public.device_security_credentials credentials
@@ -265,11 +265,11 @@ begin
       end if;
       raise exception 'PLATFORM_DEVICE_OPERATION_MISMATCH' using errcode='22023';
     end if;
-    if not exists(select 1 from public.user_device_authorizations authorization
-      join public.devices devices on devices.id=authorization.device_id and devices.user_id=authorization.user_id
-      join public.system_user_access access on access.user_id=authorization.user_id
-      where authorization.user_id=p_target_user_id and authorization.device_id=p_target_device_id
-        and authorization.authorization_status='pending' and authorization.revoked_at is null
+    if not exists(select 1 from public.user_device_authorizations uda
+      join public.devices devices on devices.id=uda.device_id and devices.user_id=uda.user_id
+      join public.system_user_access access on access.user_id=uda.user_id
+      where uda.user_id=p_target_user_id and uda.device_id=p_target_device_id
+        and uda.authorization_status='pending' and uda.revoked_at is null
         and access.account_status='approved') then
       raise exception 'PENDING_APPROVED_ACCOUNT_DEVICE_REQUIRED' using errcode='42501';
     end if;
@@ -403,23 +403,23 @@ begin
       and sessions.revoked_at is null and sessions.expires_at>statement_timestamp())
     or not exists(select 1 from public.system_user_access access where access.user_id=p_actor_user_id
       and access.account_status='approved') or not public.is_system_owner(p_actor_user_id)
-    or not exists(select 1 from public.user_device_authorizations authorization
-      where authorization.user_id=p_actor_user_id and authorization.device_id=p_actor_device_id
-        and authorization.authorization_status='approved' and authorization.revoked_at is null) then
+    or not exists(select 1 from public.user_device_authorizations uda
+      where uda.user_id=p_actor_user_id and uda.device_id=p_actor_device_id
+        and uda.authorization_status='approved' and uda.revoked_at is null) then
     raise exception 'PRIVILEGED_LISTING_SESSION_INVALID' using errcode='42501';
   end if;
   return jsonb_build_object('status','success','devices',coalesce((select jsonb_agg(jsonb_build_object(
-    'targetUserId',authorization.user_id,'deviceId',authorization.device_id,
+    'targetUserId',uda.user_id,'deviceId',uda.device_id,
     'deviceName',devices.device_name,'platform',devices.platform,
-    'authorizationStatus',authorization.authorization_status,'requestedAt',authorization.requested_at,
-    'lastRegisteredAt',authorization.last_registered_at,'displayName',profiles.display_name,
-    'email',users.email) order by authorization.requested_at,authorization.device_id)
-    from public.user_device_authorizations authorization
-    join public.devices devices on devices.id=authorization.device_id and devices.user_id=authorization.user_id
-    join public.system_user_access access on access.user_id=authorization.user_id and access.account_status='approved'
-    join auth.users users on users.id=authorization.user_id
-    left join public.profiles profiles on profiles.id=authorization.user_id
-    where authorization.authorization_status='pending' and authorization.revoked_at is null),'[]'::jsonb));
+    'authorizationStatus',uda.authorization_status,'requestedAt',uda.requested_at,
+    'lastRegisteredAt',uda.last_registered_at,'displayName',profiles.display_name,
+    'email',users.email) order by uda.requested_at,uda.device_id)
+    from public.user_device_authorizations uda
+    join public.devices devices on devices.id=uda.device_id and devices.user_id=uda.user_id
+    join public.system_user_access access on access.user_id=uda.user_id and access.account_status='approved'
+    join auth.users users on users.id=uda.user_id
+    left join public.profiles profiles on profiles.id=uda.user_id
+    where uda.authorization_status='pending' and uda.revoked_at is null),'[]'::jsonb));
 end;
 $$;
 
@@ -467,12 +467,12 @@ begin
     or coalesce((p_verification_context->>'backupState')::boolean,true)<>false then
     raise exception 'PLATFORM_DEVICE_OPERATION_VERIFICATION_INVALID' using errcode='42501';
   end if;
-  perform 1 from public.user_device_authorizations authorization
-    join public.devices devices on devices.id=authorization.device_id and devices.user_id=authorization.user_id
-    join public.system_user_access access on access.user_id=authorization.user_id
-    where authorization.user_id=p_target_user_id and authorization.device_id=p_target_device_id
-      and authorization.authorization_status='pending' and authorization.revoked_at is null
-      and access.account_status='approved' for update of authorization;
+  perform 1 from public.user_device_authorizations uda
+    join public.devices devices on devices.id=uda.device_id and devices.user_id=uda.user_id
+    join public.system_user_access access on access.user_id=uda.user_id
+    where uda.user_id=p_target_user_id and uda.device_id=p_target_device_id
+      and uda.authorization_status='pending' and uda.revoked_at is null
+      and access.account_status='approved' for update of uda;
   if not found then raise exception 'PENDING_APPROVED_ACCOUNT_DEVICE_REQUIRED' using errcode='42501'; end if;
   update public.device_possession_challenges set verified_at=statement_timestamp(),
     verification_context=p_verification_context where id=p_challenge_id;
@@ -524,9 +524,9 @@ begin
   perform public.require_platform_device_backend();
   if not exists(select 1 from public.system_user_access access where access.user_id=p_actor_user_id
       and access.account_status='approved') or not public.is_system_owner(p_actor_user_id)
-    or not exists(select 1 from public.user_device_authorizations authorization
-      where authorization.user_id=p_actor_user_id and authorization.device_id=p_actor_device_id
-        and authorization.authorization_status='approved' and authorization.revoked_at is null) then
+    or not exists(select 1 from public.user_device_authorizations uda
+      where uda.user_id=p_actor_user_id and uda.device_id=p_actor_device_id
+        and uda.authorization_status='approved' and uda.revoked_at is null) then
     raise exception 'APPROVED_SYSTEM_OWNER_DEVICE_REQUIRED' using errcode='42501';
   end if;
   select * into stored from public.system_owner_device_authorization_operations operations
