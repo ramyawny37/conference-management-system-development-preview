@@ -1178,6 +1178,40 @@
     return FINAL_QUEUE_STATUSES.indexOf(operation.status)<0;
   }
 
+  function classifyPostRestoreQueueOperations(operations,remoteIds){
+    var review={safeToIsolate:[],requiresInspection:[],alreadyRecovered:[],
+      unresolved:[]};
+    operations.filter(function(operation){
+      return remoteIds.indexOf(operation.conferenceId)>=0;
+    }).forEach(function(operation){
+      var item={operationId:operation.operationId,status:operation.status};
+      if(FINAL_QUEUE_STATUSES.indexOf(operation.status)>=0){
+        review.alreadyRecovered.push(item);
+      }else if((operation.status==='pending'||operation.status==='failed')&&
+        operation.attempts===0){
+        review.safeToIsolate.push(item);
+      }else if(['processing','verifying_server','server_applied',
+        'requires_reconciliation'].indexOf(operation.status)>=0){
+        review.requiresInspection.push(operation);
+      }else{
+        review.unresolved.push(item);
+      }
+    });
+    return review;
+  }
+
+  function publicQueueReview(review){
+    function items(values){return (values||[]).map(function(value){
+      return {operationId:value.operationId,status:value.status};
+    });}
+    return {
+      safeToIsolate:items(review.safeToIsolate),
+      requiresInspection:items(review.requiresInspection),
+      alreadyRecovered:items(review.alreadyRecovered),
+      unresolved:items(review.unresolved)
+    };
+  }
+
   function isSafePendingRemoteApplicationResult(result,localConferenceId){
     if(!result||typeof result!=='object')return false;
     if(result.ok===false&&result.status==='not_found')return true;
@@ -1362,12 +1396,15 @@
       global.AutomaticConferenceLinking;
     var orchestrator=options.orchestrator||
       global.AutomaticSyncOrchestrator;
+    var recovery=options.recovery||global.StartupQueueRecovery;
     var snapshots={};
     var review;
     var removed=[];
     var rollbackNeeded=false;
     var linkWriteRollback=null;
     var runtimeIsolationStarted=false;
+    var queueOperationsHandled=0;
+    var queueReview=null;
     function rollback(){
       var errors=[];
       function restorePart(name,key,raw,validator){
@@ -1498,7 +1535,8 @@
       var affectedRemoteIds=review.affectedLinks.map(function(link){
         return link.remoteConferenceId;
       });
-      if(!queue||typeof queue.getAllOperations!=='function'){
+      if(!queue||typeof queue.getAllOperations!=='function'||
+        typeof queue.isolatePostRestoreOperations!=='function'){
         throw codedError('FULL_RESTORE_QUEUE_REVIEW_UNAVAILABLE');
       }
       return queue.getAllOperations().then(function(result){
@@ -1512,15 +1550,60 @@
           })){
           throw codedError('FULL_RESTORE_QUEUE_OPERATION_INVALID');
         }
-        var active=operations.filter(function(operation){
-          return affectedRemoteIds.indexOf(operation.conferenceId)>=0&&
-            isActiveQueueOperation(operation);
+        queueReview=classifyPostRestoreQueueOperations(
+          operations,affectedRemoteIds
+        );
+        var safeIds=queueReview.safeToIsolate.map(function(operation){
+          return operation.operationId;
         });
-        if(active.length){
-          var blocked=codedError('FULL_RESTORE_QUEUE_REVIEW_REQUIRED');
-          blocked.operationCount=active.length;
-          throw blocked;
-        }
+        var isolate=safeIds.length
+          ?queue.isolatePostRestoreOperations({operationIds:safeIds})
+          :Promise.resolve({ok:true,data:{count:0}});
+        return Promise.resolve(isolate).then(function(isolated){
+          if(!isolated||!isolated.ok){
+            throw codedError('FULL_RESTORE_QUEUE_ISOLATION_FAILED');
+          }
+          queueOperationsHandled+=Number(isolated.data&&isolated.data.count||0);
+          if(!queueReview.requiresInspection.length)return null;
+          if(!recovery||
+            typeof recovery.reviewPostRestoreOperations!=='function'){
+            throw codedError('FULL_RESTORE_QUEUE_RECOVERY_UNAVAILABLE');
+          }
+          return recovery.reviewPostRestoreOperations(
+            queueReview.requiresInspection
+          );
+        }).then(function(recovered){
+          if(recovered&&recovered.ok===false){
+            throw codedError('FULL_RESTORE_QUEUE_RECOVERY_FAILED');
+          }
+          var isolatedCount=recovered&&recovered.data&&
+            Array.isArray(recovered.data.outcomes)
+            ?recovered.data.outcomes.filter(function(outcome){
+              return outcome&&outcome.status==='isolated';
+            }).length:0;
+          queueOperationsHandled+=isolatedCount;
+        }).then(function(){
+          return queue.getAllOperations();
+        }).then(function(finalRead){
+          if(!finalRead||!finalRead.ok||!finalRead.data||
+            !Array.isArray(finalRead.data.operations)){
+            throw codedError('FULL_RESTORE_QUEUE_REVIEW_FAILED');
+          }
+          var finalOperations=finalRead.data.operations;
+          if(finalOperations.some(function(operation){
+            return !isValidQueueOperation(operation);
+          }))throw codedError('FULL_RESTORE_QUEUE_OPERATION_INVALID');
+          queueReview=classifyPostRestoreQueueOperations(
+            finalOperations,affectedRemoteIds
+          );
+          if(queueReview.requiresInspection.length||
+            queueReview.safeToIsolate.length||queueReview.unresolved.length){
+            var blocked=codedError('FULL_RESTORE_QUEUE_REVIEW_REQUIRED');
+            blocked.queueReview=publicQueueReview(queueReview);
+            throw blocked;
+          }
+        });
+      }).then(function(){
         if(!pendingStore||typeof pendingStore.get!=='function'){
           throw codedError(
             'FULL_RESTORE_PENDING_REMOTE_APPLICATION_REVIEW_UNAVAILABLE'
@@ -1702,7 +1785,7 @@
             removedConferenceIds:removed,
             unaffectedLinkCount:review.unaffectedLinks.length,
             malformedLinkCount:review.malformedLinks.length,
-            queueOperationsHandled:0,
+            queueOperationsHandled:queueOperationsHandled,
             markerCleared:true,
             syncRestarted:true,
             requiresManualRelinking:removed.length>0
@@ -1806,6 +1889,7 @@
         rollbackResult,
         failSafe
       );
+      if(error&&error.queueReview)failure.queueReview=error.queueReview;
       if(failSafe&&!failSafe.success){
         failure.originalErrorCode=failure.errorCode;
         failure.errorCode='FULL_RESTORE_FAIL_SAFE_FAILED';

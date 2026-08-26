@@ -1110,6 +1110,74 @@
       .catch(function(error){return result(false,'error',null,normalizeStorageError(error));});
   }
 
+  function isolatePostRestoreOperations(input,options){
+    input=input&&typeof input==='object'?input:{};
+    var requested=Array.isArray(input.operationIds)
+      ?input.operationIds.map(String):[];
+    if(!requested.length||requested.some(function(id){return !isUuid(id);})){
+      return Promise.resolve(result(false,'error',null,safeError(
+        'INVALID_OPERATION_IDS','Valid operation IDs are required.'
+      )));
+    }
+    var repository=getRepository();
+    if(!repository)return Promise.resolve(result(false,'error',null,safeError(
+      'SYNC_QUEUE_UNAVAILABLE','The sync queue is unavailable.'
+    )));
+    var now;
+    try{now=resolveNow(options).toISOString();}
+    catch(error){return Promise.resolve(result(false,'error',null,safeError(
+      'INVALID_DATE','A valid current time is required.'
+    )));}
+    var isolated=[];
+    return repository.runTransaction(STORE_NAME,'readwrite',function(stores){
+      var store=stores[STORE_NAME];
+      return requestToPromise(store.getAll()).then(function(operations){
+        var byId=Object.create(null);
+        operations.forEach(function(operation){
+          byId[String(operation.operationId||'')]=operation;
+        });
+        var targets=requested.map(function(id){
+          var operation=byId[id];
+          if(!operation)throw new Error('OPERATION_NOT_FOUND');
+          if(operation.status==='discarded'&&operation.postRestoreIsolation){
+            return null;
+          }
+          var neverAttempted=(operation.status==='pending'||
+            operation.status==='failed')&&operation.attempts===0;
+          if(!neverAttempted){
+            throw new Error('OPERATION_NOT_PROVEN_UNEXECUTED');
+          }
+          return {operation:operation,proof:'never_attempted'};
+        }).filter(Boolean);
+        return Promise.all(targets.map(function(target){
+          var operation=target.operation;
+          var previousStatus=operation.status;
+          operation.status='discarded';
+          operation.updatedAt=now;
+          operation.nextAttemptAt=null;
+          operation.postRestoreIsolation={
+            operationId:operation.operationId,
+            reason:'restored_snapshot_old_cloud_link',
+            proof:target.proof,
+            previousStatus:previousStatus,
+            isolatedAt:now
+          };
+          isolated.push({operationId:operation.operationId,
+            proof:target.proof,previousStatus:previousStatus});
+          return requestToPromise(store.put(operation));
+        }));
+      });
+    }).then(function(){
+      return result(true,'isolated',{operations:isolated,
+        count:isolated.length},null);
+    }).catch(function(error){
+      return result(false,'error',null,safeError(
+        error&&error.message||'POST_RESTORE_ISOLATION_FAILED',
+        'The post-restore queue operation could not be isolated.'
+      ));
+    });
+  }
+
   global.OfflineSyncQueue = Object.freeze({
     statuses:STATUSES,
     enqueueSnapshotOperation:enqueueSnapshotOperation,
@@ -1136,6 +1204,7 @@
     deleteAppliedOperation:deleteAppliedOperation,
     deleteAppliedBefore:deleteAppliedBefore,
     discardConferenceOperations:discardConferenceOperations,
+    isolatePostRestoreOperations:isolatePostRestoreOperations,
     calculateBackoffDelay:calculateBackoffDelay
   });
 })(window);

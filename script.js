@@ -784,13 +784,13 @@ function showPostRestoreCloudReviewModal(){
       '<div><strong>الروابط غير الصالحة:</strong> '+review.malformedLinks.length+'</div>'+
       (names.length?'<div><strong>المؤتمرات المتأثرة:</strong> '+esc(names.join('، '))+'</div>':'')+
       '</div><div class="sync-settings-message">'+
-      'سيتم إلغاء الربط المحلي للمؤتمرات المستعادة فقط. لن تُحذف أي بيانات من Supabase، ويمكنك إعادة ربطها يدويًا لاحقًا.</div>';
+      'ستتم مراجعة عمليات المزامنة المحلية القديمة أولًا. لن تُعزل إلا العمليات التي يثبت أنها لم تُنفذ، وستبقى المزامنة متوقفة إذا تعذر إثبات حالة أي عملية. لن تُحذف أي بيانات من Supabase.</div>';
   }
   html+='<div id="postRestoreCloudReviewStatus" class="sync-settings-message" style="display:none"></div>'+
     '<div class="row" style="margin-top:12px">'+
     '<button id="completePostRestoreCloudReviewButton" class="btn btn-orange" '+
     (readError?'disabled':'onclick="completePostRestoreCloudReviewFromUI()"')+
-    '>إلغاء الروابط القديمة واستكمال التشغيل</button>'+
+    '>مراجعة العمليات وإلغاء الروابط القديمة</button>'+
     '<button class="btn btn-gray" onclick="closePostRestoreCloudReviewModal()">المراجعة لاحقًا</button>'+
     '</div></div></div>';
   modal.innerHTML=html;
@@ -812,10 +812,17 @@ function completePostRestoreCloudReviewFromUI(){
       if(button)button.disabled=false;
       if(status){
         status.classList.add('sync-settings-error');
-        status.textContent=result.errorCode===
-          'FULL_RESTORE_QUEUE_REVIEW_REQUIRED'
-          ?'توجد عمليات مزامنة معلقة ولا توجد API آمنة لإلغائها. بقيت المزامنة متوقفة للمراجعة التقنية.'
-          :'تعذر إكمال مراجعة الروابط بأمان: '+result.errorCode;
+        if(result.errorCode==='FULL_RESTORE_QUEUE_REVIEW_REQUIRED'){
+          var queueReview=result.queueReview||{};
+          var inspectionCount=(queueReview.requiresInspection||[]).length;
+          var unresolvedCount=(queueReview.unresolved||[]).length;
+          status.textContent='بقيت المزامنة متوقفة بأمان. توجد '+
+            (inspectionCount+unresolvedCount)+
+            ' عملية لم يمكن إثبات حالتها بعد؛ أعد المحاولة بعد استعادة الاتصال والجلسة المعتمدة.';
+        }else{
+          status.textContent='تعذر إكمال مراجعة الروابط بأمان: '+
+            result.errorCode;
+        }
       }
       return;
     }

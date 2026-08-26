@@ -223,6 +223,30 @@ async function run(){
     'only one verification timer may exist per operation');
   retry.recovery.stop();
   assert.strictEqual(retry.calls.cleared.length,1);
+
+  var review=environment();
+  var reviewed=await review.recovery.reviewOperations([
+    review.operation()
+  ],review.options);
+  assert.strictEqual(reviewed.ok,true);
+  assert.strictEqual(reviewed.data.outcomes[0].status,'recovered');
+  assert.strictEqual(review.operation().operationId,OP);
+  assert.strictEqual(review.operation().status,'applied');
+  assert.strictEqual(review.calls.inspect,1);
+  assert.strictEqual(review.calls.upload,0);
+  assert.strictEqual(review.calls.schedule,0,
+    'post-restore review must not wake remote orchestration');
+  var unavailableReview=environment({inspection:{ok:false,status:'error',
+    error:{code:'NETWORK_ERROR'}}});
+  var unavailableResult=await unavailableReview.recovery.reviewOperations([
+    unavailableReview.operation()
+  ],unavailableReview.options);
+  assert.strictEqual(unavailableResult.data.outcomes[0].status,
+    'requires_reconciliation');
+  assert.strictEqual(unavailableReview.calls.timers.length,0,
+    'post-restore review must remain paused without retry timers');
+  assert.strictEqual(unavailableReview.calls.upload,0);
+  assert.strictEqual(unavailableReview.calls.schedule,0);
   console.log('startup queue recovery tests passed');
 }
 
