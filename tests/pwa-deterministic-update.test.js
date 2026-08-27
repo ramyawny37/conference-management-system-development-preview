@@ -12,10 +12,13 @@ const manager=fs.readFileSync(path.join(root,'js/sync/conference-edit-lock-manag
 const previous='exclusive-edit-lock-v1';
 const next='organization-membership-operation-key-v1';
 const mobileRoomInputRevision='anchored-glass-person-picker-v5';
-const shellRevision='shared-template-copy-guard-v1';
-const cacheRevision='runtime-authorization-phase1-v1';
+const shellRevision='runtime-authorization-phase2b-v1';
+const cacheRevision='runtime-authorization-phase2b-v1';
+const priorAuthorizationCacheRevision='runtime-authorization-phase1-v1';
+const productionCacheRevision='development-target-gpp-v1';
 const accountIdentityRevision='account-session-identity-v1';
 const stateAssetRevision='accommodation-visual-match-v6';
+const permissionRuntimeRevision='runtime-authorization-phase2b-v1';
 const testTemplateCleanupRevision='test-house-template-cleanup-v1';
 const templateDiagnosticRevision='template-diagnostic-export-v1';
 const partialTemplateCleanupRevision='partial-template-state-cleanup-v1';
@@ -45,9 +48,10 @@ const priorFrontendRevision=accountIdentityRevision;
 const conferenceSyncRevision='conference-organization-context-v1';
 const organizationMembersRevision='organization-membership-manual-retry-v1';
 const snapshotPayloadDiagnosticsRevision='snapshot-payload-diagnostics-v1';
-const postRestoreQueueReviewRevision='post-restore-queue-review-v1';
 const postRestoreProofBoundaryRevision='post-restore-proof-boundary-v1';
 assert(worker.includes("? '"+cacheRevision+"'"));
+assert(!worker.includes("? '"+priorAuthorizationCacheRevision+"'"));
+assert(worker.includes(": '"+productionCacheRevision+"'"));
 assert(index.includes("window.APP_SHELL_REVISION='"+shellRevision+"'"));
 const brandingIcons=[
   'icons/icon-96x96-v3.png',
@@ -190,12 +194,21 @@ const readAsset='js/sync/user-management-read-service.js?rev='+
   userManagementReadRevision;
 assert(index.includes(readAsset));
 assert(worker.includes("'./"+readAsset+"'"));
-assert(index.includes('script.js?rev='+postRestoreQueueReviewRevision));
-assert(worker.includes("'./script.js?rev="+postRestoreQueueReviewRevision+"'"));
+assert(index.includes('script.js?rev='+permissionRuntimeRevision));
+assert(worker.includes("'./script.js?rev="+permissionRuntimeRevision+"'"));
+[
+  'js/sync/conference-permission-resolver.js',
+  'core.js',
+  'js/conference/accounts.js'
+].forEach(asset=>{
+  const versioned=asset+'?rev='+permissionRuntimeRevision;
+  assert(index.includes(versioned),'index missing Phase 2B runtime asset '+versioned);
+  assert(worker.includes("'./"+versioned+"'"),'app shell missing Phase 2B runtime asset '+versioned);
+});
 const xlsxAsset='libs/xlsx.full.min.js';
 assert(fs.existsSync(path.join(root,xlsxAsset)),'local XLSX runtime asset missing');
 assert(index.includes('<script src="'+xlsxAsset+'"></script>'),'index missing local XLSX runtime');
-assert(index.indexOf(xlsxAsset)<index.indexOf('script.js?rev='+postRestoreQueueReviewRevision),'XLSX runtime must load before import logic');
+assert(index.indexOf(xlsxAsset)<index.indexOf('script.js?rev='+permissionRuntimeRevision),'XLSX runtime must load before import logic');
 assert(worker.includes("'./"+xlsxAsset+"'"),'app shell missing local XLSX runtime');
 assert(!/https?:[^"']*(sheetjs|xlsx)/i.test(index),'XLSX must not depend on a CDN');
 const organizationMembersAsset='js/sync/organization-members-ui.js?rev='+organizationMembersRevision;
@@ -273,6 +286,8 @@ assert(navigation.indexOf("fetch(request,{cache:'no-store'})")>=0,'navigation mu
 assert(navigation.indexOf('fetch(request')<navigation.indexOf('cache.match'),'navigation must be network-first');
 assert(worker.includes("event.data.action === 'skipWaiting'"));
 assert(worker.includes('event.waitUntil(self.skipWaiting())'));
+assert(worker.includes('cacheName.startsWith(CACHE_PREFIX) && cacheName !== CACHE_NAME'));
+assert(worker.includes('caches.delete(cacheName)'));
 assert(pwa.includes("postMessage({ action: 'skipWaiting' })"),'update button and worker message must match');
 assert(pwa.includes("updateViaCache:'none'"),'worker update must bypass HTTP cache');
 assert(pwa.includes("addEventListener('controllerchange'"));

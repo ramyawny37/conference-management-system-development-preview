@@ -71,6 +71,7 @@ function openHouseModal(id){
 }
 function closeHouseModal(){ge('houseModal').style.display='none';}
 function saveHouse() {
+  if(window.ConferencePermissionShadowGate&&!window.ConferencePermissionShadowGate('saveHouse',editHouseId?'update':'create'))return false;
   if(!requireAccommodationMutation())return false;
   var current = getCurrentConference();
   if(!current) return;
@@ -104,6 +105,7 @@ function saveHouse() {
   return true;
 }
 function deleteHouse(){
+  if(window.ConferencePermissionShadowGate&&!window.ConferencePermissionShadowGate('deleteHouse',null))return false;
   if(!requireAccommodationMutation())return false;
   var current = getCurrentConference(); if(!current) return;
   if(!editHouseId) return;
@@ -149,6 +151,7 @@ function setCurrentConference(confObj){
   DAYS = conf.days || 1;
 }
 function saveTemplate(){
+  if(window.ConferencePermissionShadowGate&&!window.ConferencePermissionShadowGate('saveTemplate',null))return false;
   var name = prompt('أدخل اسم القالب:','قالب '+new Date().toISOString().slice(0,10));
   if(!name) return;
   updateCurrentConferenceData();
@@ -163,6 +166,7 @@ function saveTemplate(){
   return true;
 }
 function restoreBackup(id){
+  if(window.ConferencePermissionShadowGate&&!window.ConferencePermissionShadowGate('restoreBackup',null))return false;
   var backup = null;
   var backups = appData.backups || [];
   for (var i = 0; i < backups.length; i++) {
@@ -190,6 +194,7 @@ function restoreBackup(id){
   return true;
 }
 function restoreArchive(id){
+  if(window.ConferencePermissionShadowGate&&!window.ConferencePermissionShadowGate('restoreArchive',null))return false;
   var archive = null;
   var archives = appData.archives || [];
   for (var i = 0; i < archives.length; i++) {
@@ -280,6 +285,7 @@ function setCurrentConferenceById(id, options){
 }
 
 function completeCurrentConference(){
+  if(window.ConferencePermissionShadowGate&&!window.ConferencePermissionShadowGate('completeCurrentConference',null))return false;
   var conference = getCurrentConference();
   if(!conference) return;
   conference.status = 'completed';
@@ -291,6 +297,7 @@ function completeCurrentConference(){
 }
 
 function deleteCurrentConference(){
+  if(window.ConferencePermissionShadowGate&&!window.ConferencePermissionShadowGate('deleteCurrentConference',null))return false;
   updateCurrentConferenceData();
   var current = getCurrentConference();
   if(!current) return;
@@ -324,6 +331,7 @@ function deleteCurrentConference(){
 }
 
 function moveTemplateToTrash(id){
+  if(window.ConferencePermissionShadowGate&&!window.ConferencePermissionShadowGate('moveTemplateToTrash',null))return false;
   var target = null;
   (appData.templates || []).forEach(function(t){ if (!target && t.id === id) target = t; });
   if (!target) return;
@@ -416,6 +424,7 @@ function purgeTrashItem(type, trashId){
 // PERSIST
 // ═══════════════════════════════════════════════════════
 function exportJsonFile(){
+  if(window.ConferencePermissionShadowGate&&!window.ConferencePermissionShadowGate('exportJsonFile',null))return false;
   if(window.StartupAccessGate&&!window.StartupAccessGate.isAllowed())return false;
   updateCurrentConferenceData();
   var data=JSON.stringify(appData,null,2);
@@ -520,6 +529,7 @@ function activatePersistedConferenceById(id,options){
   return true;
 }
 function downloadFullApplicationBackup(){
+  if(window.ConferencePermissionShadowGate&&!window.ConferencePermissionShadowGate('downloadFullApplicationBackup',null))return false;
   try{
     if(!window.FullBackupService||
       typeof window.FullBackupService.createAndDownloadFullBackup!=='function'){
@@ -683,6 +693,7 @@ function renderFullRestoreFailure(result){
   return message;
 }
 function executeConfirmedFullRestore(){
+  if(window.ConferencePermissionShadowGate&&!window.ConferencePermissionShadowGate('executeConfirmedFullRestore',null))return false;
   var state=fullRestorePreflightState;
   if(!state||state.running)return;
   closeFullRestoreConfirmation();
@@ -1169,6 +1180,7 @@ function renderGlobalConferenceHeader(){
 }
 
 function saveToFile(){
+  if(window.ConferencePermissionShadowGate&&!window.ConferencePermissionShadowGate('saveToFile',null))return false;
   if(window.StartupAccessGate&&!window.StartupAccessGate.isAllowed())return false;
   updateCurrentConferenceData();
   var data = JSON.stringify({appData: appData}, null, 2);
@@ -1762,6 +1774,7 @@ function openV3ReportsPrintWindow(title){
 }
 
 function printV3Reports(){
+  if(window.ConferencePermissionShadowGate&&!window.ConferencePermissionShadowGate('printV3Reports',null))return false;
   var printWindow=openV3ReportsPrintWindow('تقارير الحسابات');
   if(!printWindow)return false;
   printWindow.focus();
@@ -2031,6 +2044,7 @@ function downloadV3ReportsPdfBlob(blob,fileName){
 }
 
 function saveV3ReportsPdf(){
+  if(window.ConferencePermissionShadowGate&&!window.ConferencePermissionShadowGate('saveV3ReportsPdf',null))return false;
   if(typeof html2canvas!=='function'){
     showToast('تعذر إنشاء ملف PDF لأن مكتبة html2canvas غير متاحة محليًا.','#E74C3C');
     return false;
@@ -2146,6 +2160,7 @@ function buildV3RestaurantSheet(context){
 }
 
 function exportV3ReportsExcel(){
+  if(window.ConferencePermissionShadowGate&&!window.ConferencePermissionShadowGate('exportV3ReportsExcel',null))return false;
   if(typeof XLSX==='undefined'||!XLSX.utils){
     showToast('مكتبة تصدير Excel غير متاحة محليًا.','#E74C3C');
     return false;
@@ -2443,6 +2458,7 @@ function toggleAccommodationFloor(houseId,floorId){
 }
 
 function setAccommodationPersonArrival(houseId,floorId,roomId,personId,arrived){
+  if(window.ConferencePermissionShadowGate&&!window.ConferencePermissionShadowGate('setAccommodationPersonArrival',null))return false;
   if(!requireAccommodationMutation())return false;
   var result=findRoomInHouses((getCurrentConference()||{}).houses||[],houseId,floorId,roomId);
   if(!result||!result.room)return false;
@@ -2455,6 +2471,7 @@ function setAccommodationPersonArrival(houseId,floorId,roomId,personId,arrived){
 }
 
 function setAccommodationRoomKeyHolder(houseId,floorId,roomId,personId){
+  if(window.ConferencePermissionShadowGate&&!window.ConferencePermissionShadowGate('setAccommodationRoomKeyHolder',null))return false;
   if(!requireAccommodationMutation())return false;
   var result=findRoomInHouses((getCurrentConference()||{}).houses||[],houseId,floorId,roomId);
   if(!result||!result.room)return false;
@@ -2912,6 +2929,7 @@ function openAssignConferenceHouseSelector(){
 }
 
 function removeConferenceHouseFromAccommodation(houseId){
+  if(window.ConferencePermissionShadowGate&&!window.ConferencePermissionShadowGate('removeConferenceHouseFromAccommodation',null))return false;
   if(!requireAccommodationMutation())return false;
   var current = getCurrentConference();
   if(!current || !current.houses) return;
@@ -3066,6 +3084,7 @@ function renderActiveRoomsManager(){
 }
 
 function addAvailableTemplateRoom(templateRoomId){
+  if(window.ConferencePermissionShadowGate&&!window.ConferencePermissionShadowGate('addAvailableTemplateRoom',null))return false;
   if(!requireAccommodationMutation())return false;
   var current = getCurrentConference();
   var house = getHouseById(activeRoomsManager.houseId);
@@ -3098,6 +3117,7 @@ function addAvailableTemplateRoom(templateRoomId){
 }
 
 function toggleActiveRoom(roomId, checked){
+  if(window.ConferencePermissionShadowGate&&!window.ConferencePermissionShadowGate('toggleActiveRoom',null))return false;
   if(!requireAccommodationMutation())return false;
   var current = getCurrentConference();
   if(!current) return;
@@ -3126,6 +3146,7 @@ function toggleActiveRoom(roomId, checked){
 }
 
 function setAllActiveRoomsForFloor(houseId, floorId, checked){
+  if(window.ConferencePermissionShadowGate&&!window.ConferencePermissionShadowGate('setAllActiveRoomsForFloor',null))return false;
   if(!requireAccommodationMutation())return false;
   var current = getCurrentConference();
   var house = getHouseById(houseId);
@@ -3155,6 +3176,7 @@ function setAllActiveRoomsForFloor(houseId, floorId, checked){
 }
 
 function setAllActiveRoomsForHouse(checked){
+  if(window.ConferencePermissionShadowGate&&!window.ConferencePermissionShadowGate('setAllActiveRoomsForHouse',null))return false;
   if(!requireAccommodationMutation())return false;
   var current = getCurrentConference();
   var house = getHouseById(activeRoomsManager.houseId);
@@ -4391,6 +4413,7 @@ function cleanupAutoExtraBeds(room){
 }
 
 function partialTransferGuest(guestId){
+  if(window.ConferencePermissionShadowGate&&!window.ConferencePermissionShadowGate('partialTransferGuest',null))return false;
   if(!requireAccommodationMutation())return false;
   var state = partialTransferState;
   if(!state || !state.sourceRoom || !state.targetRoom) return;
@@ -4451,6 +4474,7 @@ function addCI(name,guardian,leftDay,personId,guardianPersonId,childId,arrivalDa
 }
 
 function saveRoomData(options){
+  if(window.ConferencePermissionShadowGate&&!window.ConferencePermissionShadowGate('saveRoomData',null))return false;
   if(!requireAccommodationMutation())return false;
   options = options || {};
   if(!editRoomData || !editRoomData.draftHouses) return false;
@@ -4476,6 +4500,7 @@ function saveRoomData(options){
 }
 
 function clearConferenceRoom(houseId, floorId, roomId) {
+  if(window.ConferencePermissionShadowGate&&!window.ConferencePermissionShadowGate('clearConferenceRoom',null))return false;
   if(!requireAccommodationMutation())return false;
   var result = getRoomByContext(houseId, floorId, roomId) || getRoomById(roomId);
   if (!result) return;
@@ -4496,6 +4521,7 @@ function clearConferenceRoom(houseId, floorId, roomId) {
 }
 
 function toggleConferenceRoomClosed(houseId, floorId, roomId) {
+  if(window.ConferencePermissionShadowGate&&!window.ConferencePermissionShadowGate('toggleConferenceRoomClosed',null))return false;
   if(!requireAccommodationMutation())return false;
   var result = getRoomByContext(houseId, floorId, roomId) || getRoomById(roomId);
   if (!result) return;
@@ -4507,6 +4533,7 @@ function toggleConferenceRoomClosed(houseId, floorId, roomId) {
 }
 
 function deleteConferenceRoom(houseId, floorId, roomId) {
+  if(window.ConferencePermissionShadowGate&&!window.ConferencePermissionShadowGate('deleteConferenceRoom',null))return false;
   if(!requireAccommodationMutation())return false;
   var result = getRoomByContext(houseId, floorId, roomId) || getRoomById(roomId);
   if (!result) return;
@@ -4655,6 +4682,7 @@ function openTM(id){
 }
 function closeTM(){ge('transportModal').style.display='none'}
 function saveTransport(){
+  if(window.ConferencePermissionShadowGate&&!window.ConferencePermissionShadowGate('saveTransport',editTransportId?'update':'create'))return false;
   var current = getCurrentConference();
   var transports = current.transports || [];
   var name=ge('t_name').value.trim();var icon=ge('t_icon').value;var cap=parseInt(ge('t_cap').value);
@@ -4695,6 +4723,7 @@ function saveTransport(){
   return true;
 }
 function deleteTransport(){
+  if(window.ConferencePermissionShadowGate&&!window.ConferencePermissionShadowGate('deleteTransport',null))return false;
   var current = getCurrentConference();
   var transports = current.transports || [];
   var t = null, tIndex = -1;
@@ -5254,6 +5283,7 @@ function saveAdultSeatAssignments(transport,adultSeat,name,room,personId,note){
 }
 
 function saveSeat(){
+  if(window.ConferencePermissionShadowGate&&!window.ConferencePermissionShadowGate('saveSeat',null))return false;
   var current = getCurrentConference();
   var transports = current.transports || [];
   var name=ge('s_name').value.trim();var room=ge('s_room').value.trim();var type=ge('s_type').value;var note=ge('s_note').value.trim();var personId=ge('s_person_id').value||getSeatEditorPersonId(name);
@@ -5339,6 +5369,7 @@ function saveSeat(){
 }
 
 function removeTransportSeatRider(transportId,seatNumber,riderIndex){
+  if(window.ConferencePermissionShadowGate&&!window.ConferencePermissionShadowGate('removeTransportSeatRider',null))return false;
   var current=getCurrentConference();
   var transport=null;
   ((current&&current.transports)||[]).forEach(function(item){if(item.id===transportId)transport=item;});
@@ -5380,6 +5411,7 @@ function removeTransportSeatRider(transportId,seatNumber,riderIndex){
   return true;
 }
 function clearSeat(){
+  if(window.ConferencePermissionShadowGate&&!window.ConferencePermissionShadowGate('clearSeat',null))return false;
   if(removeTransportSeatRider(editSeatTransId,editSeatNum,null))closeSM();
 }
 
@@ -5427,6 +5459,7 @@ function restaurantExceptionHandlerKey(value){
 }
 
 function setRestaurantV3MealBoundary(field,value){
+  if(window.ConferencePermissionShadowGate&&!window.ConferencePermissionShadowGate('setRestaurantV3MealBoundary',null))return false;
   if(field!=='firstMeal'&&field!=='lastMeal')return false;
   if(MKEYS.indexOf(value)===-1)return false;
   var current=getCurrentConference();
@@ -5438,6 +5471,7 @@ function setRestaurantV3MealBoundary(field,value){
 }
 
 function setRestaurantV3BasePrice(mealKey,value){
+  if(window.ConferencePermissionShadowGate&&!window.ConferencePermissionShadowGate('setRestaurantV3BasePrice',null))return false;
   if(MKEYS.indexOf(mealKey)===-1)return false;
   var current=getCurrentConference();
   if(!current)return false;
@@ -5488,6 +5522,7 @@ function saveRestaurantV3PriceOverride(){
   }
   var list=getConferenceMealPlan(current).mealPriceOverrides;
   var existing=list.filter(function(item){return Number(item.day)===day&&item.meal===meal})[0];
+  if(window.ConferencePermissionShadowGate&&!window.ConferencePermissionShadowGate('saveRestaurantV3PriceOverride',existing?'update':'create'))return false;
   if(existing){
     existing.price=price;
   }else{
@@ -5508,6 +5543,7 @@ function editRestaurantV3PriceOverride(day,meal){
 }
 
 function deleteRestaurantV3PriceOverride(day,meal){
+  if(window.ConferencePermissionShadowGate&&!window.ConferencePermissionShadowGate('deleteRestaurantV3PriceOverride',null))return false;
   var plan=getConferenceMealPlan();
   plan.mealPriceOverrides=plan.mealPriceOverrides.filter(function(item){
     return !(Number(item.day)===Number(day)&&item.meal===meal);
@@ -5540,6 +5576,7 @@ function saveRestaurantV3CountOverride(){
   }
   var list=getConferenceMealPlan(current).mealCountOverrides;
   var existing=list.filter(function(item){return Number(item.day)===day&&item.meal===meal})[0];
+  if(window.ConferencePermissionShadowGate&&!window.ConferencePermissionShadowGate('saveRestaurantV3CountOverride',existing?'update':'create'))return false;
   var value={day:day,meal:meal,extra:extra,deduction:deduction};
   if(note)value.note=note;
   if(existing){
@@ -5567,6 +5604,7 @@ function editRestaurantV3CountOverride(day,meal){
 }
 
 function deleteRestaurantV3CountOverride(day,meal){
+  if(window.ConferencePermissionShadowGate&&!window.ConferencePermissionShadowGate('deleteRestaurantV3CountOverride',null))return false;
   var plan=getConferenceMealPlan();
   plan.mealCountOverrides=plan.mealCountOverrides.filter(function(item){
     return !(Number(item.day)===Number(day)&&item.meal===meal);
@@ -5633,6 +5671,7 @@ function saveRestaurantV3PersonOverride(){
   var existing=list.filter(function(item){
     return String(item.personId)===personId&&Number(item.day)===day&&item.meal===meal;
   })[0];
+  if(window.ConferencePermissionShadowGate&&!window.ConferencePermissionShadowGate('saveRestaurantV3PersonOverride',existing?'update':'create'))return false;
   if(existing){
     existing.included=included;
     if(note)existing.note=note;
@@ -5655,6 +5694,7 @@ function editRestaurantV3PersonOverride(personId,day,meal){
 }
 
 function deleteRestaurantV3PersonOverride(personId,day,meal){
+  if(window.ConferencePermissionShadowGate&&!window.ConferencePermissionShadowGate('deleteRestaurantV3PersonOverride',null))return false;
   var plan=getConferenceMealPlan();
   plan.personOverrides=plan.personOverrides.filter(function(item){
     return !(String(item.personId)===String(personId)&&Number(item.day)===Number(day)&&item.meal===meal);
@@ -6436,6 +6476,7 @@ function downloadCardPngFile(file){
   setTimeout(function(){URL.revokeObjectURL(url)},1000);
 }
 function downloadCardPng(key,button){
+  if(window.ConferencePermissionShadowGate&&!window.ConferencePermissionShadowGate('downloadCardPng',null))return false;
   if(cardPngDownloads[key])return;
   cardPngDownloads[key]=true;
   var oldText=button?button.textContent:'';
@@ -6536,6 +6577,7 @@ function shareSelectedCards(){
   createSelectedCardsShareOverlay('مركز مشاركة الكروت',content);
 }
 function downloadSelectedCards(){
+  if(window.ConferencePermissionShadowGate&&!window.ConferencePermissionShadowGate('downloadSelectedCards',null))return false;
   var keys=getSelectedCardKeys();
   if(!keys.length){showToast('اختر كارتًا واحدًا على الأقل.','#E67E22');return}
   if(keys.length===1){downloadCardPng(keys[0],null);return}
@@ -6725,6 +6767,7 @@ function openShareCenterWhatsApp(button){
   }).then(function(){setShareCenterButtonBusy(button,false,'')});
 }
 function printOne(k){
+  if(window.ConferencePermissionShadowGate&&!window.ConferencePermissionShadowGate('printOne',null))return false;
   addActivityLog('card_printed','تمت طباعة كارت واحد',{section:'cards',entityType:'card',entityId:k});
   document.body.classList.add('print-single-card');
   document.body.classList.remove('print-multiple-cards');
@@ -6733,7 +6776,7 @@ function printOne(k){
     el.style.display = el.dataset.key === k ? '' : 'none';
   });
   window.print();setTimeout(function(){document.querySelectorAll('.guest-card').forEach(function(el){el.style.display=''});document.body.classList.remove('print-single-card')},500)}
-function printSel(){var ks=Object.keys(selectedCards).filter(function(k){return selectedCards[k]});if(!ks.length){alert('اختر كارت واحد على الأقل');return}addActivityLog('cards_printed','تمت طباعة مجموعة كروت',{details:'عدد الكروت: '+ks.length,section:'cards',entityType:'card_selection',entityId:''});document.body.classList.remove('print-single-card');document.body.classList.add('print-multiple-cards');var printedCount=0;document.querySelectorAll('.guest-card').forEach(function(el){var isPrinted=!!selectedCards[el.dataset.key];el.style.display=isPrinted?'':'none';el.classList.remove('print-page-break');if(isPrinted){printedCount++;if(printedCount%8===0)el.classList.add('print-page-break')}});window.print();setTimeout(function(){document.querySelectorAll('.guest-card').forEach(function(el){el.style.display='';el.classList.remove('print-page-break')});document.body.classList.remove('print-multiple-cards')},500)}
+function printSel(){if(window.ConferencePermissionShadowGate&&!window.ConferencePermissionShadowGate('printSel',null))return false;var ks=Object.keys(selectedCards).filter(function(k){return selectedCards[k]});if(!ks.length){alert('اختر كارت واحد على الأقل');return}addActivityLog('cards_printed','تمت طباعة مجموعة كروت',{details:'عدد الكروت: '+ks.length,section:'cards',entityType:'card_selection',entityId:''});document.body.classList.remove('print-single-card');document.body.classList.add('print-multiple-cards');var printedCount=0;document.querySelectorAll('.guest-card').forEach(function(el){var isPrinted=!!selectedCards[el.dataset.key];el.style.display=isPrinted?'':'none';el.classList.remove('print-page-break');if(isPrinted){printedCount++;if(printedCount%8===0)el.classList.add('print-page-break')}});window.print();setTimeout(function(){document.querySelectorAll('.guest-card').forEach(function(el){el.style.display='';el.classList.remove('print-page-break')});document.body.classList.remove('print-multiple-cards')},500)}
 
 // ═══════════════════════════════════════════════════════
 // TAB 5: SETTINGS
@@ -7729,6 +7772,7 @@ function renderAccommodationV3Settings(conference){
 }
 
 function updateAirConditioningV3Setting(field,value){
+  if(window.ConferencePermissionShadowGate&&!window.ConferencePermissionShadowGate('updateAirConditioningV3Setting',null))return false;
   var current=getCurrentConference();
   if(!current)return false;
   var plan=getConferenceAirConditioningPlan(current);
@@ -8266,6 +8310,7 @@ function renderPeopleDatabaseSection(){
 }
 
 function importPeopleExcelFile(e){
+  if(window.ConferencePermissionShadowGate&&!window.ConferencePermissionShadowGate('importPeopleExcelFile',null))return false;
   var f = e.target.files && e.target.files[0];
   if(!f) return;
   if(typeof XLSX === 'undefined'){
@@ -8330,6 +8375,7 @@ function closePersonDialog(){
 }
 
 function deletePersonFromDatabase(personId){
+  if(window.ConferencePermissionShadowGate&&!window.ConferencePermissionShadowGate('deletePersonFromDatabase',null))return false;
   var person = getPersonById(personId);
   if(!person) return;
   var displayName = esc(person.fullName || 'الشخص');
@@ -8383,6 +8429,7 @@ function deletePersonFromDatabase(personId){
 
 function savePersonDialog(){
   var personId = ge('personDialogId').value;
+  if(window.ConferencePermissionShadowGate&&!window.ConferencePermissionShadowGate('savePersonDialog',personId?'update':'create'))return false;
   var fullName = ge('person_full_name').value.trim();
   if(!fullName){ alert('الاسم الكامل مطلوب.'); return; }
   var personData = {
@@ -8839,6 +8886,7 @@ function saveSettings(){
 }
 
 function applyConferenceHouseTemplate(){
+  if(window.ConferencePermissionShadowGate&&!window.ConferencePermissionShadowGate('applyConferenceHouseTemplate',null))return false;
   if(!requireAccommodationMutation())return false;
   var current = getCurrentConference();
   if (!current) return;
@@ -8879,6 +8927,7 @@ function applyConferenceHouseTemplate(){
 }
 
 function saveHouseTemplate() {
+  if(window.ConferencePermissionShadowGate&&!window.ConferencePermissionShadowGate('saveHouseTemplate',editHouseTemplateId?'update':'create'))return false;
   if(editHouseTemplateId&&
     !window.HouseTemplateContentAuthorization.requireEdit(editHouseTemplateId))return false;
   if (!editHouseTemplateId && !confirm('سيتم إنشاء خريطة بيت جديدة. متابعة؟')) return;
@@ -8967,6 +9016,7 @@ function saveHouseTemplate() {
 }
 
 function deleteHouseTemplate(id) {
+  if(window.ConferencePermissionShadowGate&&!window.ConferencePermissionShadowGate('deleteHouseTemplate',null))return false;
   if(!window.HouseTemplateContentAuthorization.requireEdit(id))return false;
   var target = null;
   (appData.houseTemplates || []).forEach(function(ht){ if (!target && ht.id === id) target = ht; });
@@ -8991,6 +9041,7 @@ function deleteHouseTemplate(id) {
 }
 
 function duplicateHouseTemplate(id) {
+  if(window.ConferencePermissionShadowGate&&!window.ConferencePermissionShadowGate('duplicateHouseTemplate',null))return false;
   if(!window.HouseTemplateContentAuthorization||
     typeof window.HouseTemplateContentAuthorization.requireCopy!=='function'||
     !window.HouseTemplateContentAuthorization.requireCopy(id))return false;
@@ -9367,6 +9418,7 @@ function closeNewConferenceModal(){
 }
 
 function editCurrentConference(){
+  if(window.ConferencePermissionShadowGate&&!window.ConferencePermissionShadowGate('editCurrentConference',null))return false;
   openNewConferenceModal('edit');
 }
 
@@ -9561,6 +9613,7 @@ function closeImportHouseModal() {
 }
 
 function importHouseFromTemplate(templateId) {
+  if(window.ConferencePermissionShadowGate&&!window.ConferencePermissionShadowGate('importHouseFromTemplate',null))return false;
   if(!requireAccommodationMutation())return false;
   var template = null;
   var templates = appData.houseTemplates || [];
@@ -9683,6 +9736,7 @@ function updateBulkCount(){
 }
 
 function doBulkAssign(){
+  if(window.ConferencePermissionShadowGate&&!window.ConferencePermissionShadowGate('doBulkAssign',null))return false;
   var current = getCurrentConference();
   var transports = current.transports || [];
   var tid = ge('bulk_trans').value;
