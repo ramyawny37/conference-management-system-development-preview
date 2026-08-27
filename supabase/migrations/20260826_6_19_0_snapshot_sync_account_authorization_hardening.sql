@@ -62,13 +62,10 @@ declare
   legacy_function regprocedure;
   unexpected_mutator text;
 begin
-  select version, name, md5(array_to_string(statements, E'\n')) as content_md5
-    into latest
-    from supabase_migrations.schema_migrations
+  select version,name into latest from supabase_migrations.schema_migrations
    order by version desc limit 1;
-  if latest.name is distinct from 'conference_lifecycle_hardening_6_18_0'
-    or latest.content_md5 is distinct from
-      '699f1bf58271c8c75d6026ebc0436b28' then
+  if latest.version is distinct from '20260826113408'
+    or latest.name is distinct from 'conference_lifecycle_hardening_6_18_0' then
     raise exception 'EXPECTED_MIGRATION_6_18_0_IS_NOT_CURRENT';
   end if;
 

@@ -1,0 +1,184 @@
+{
+  "project": {
+    "name": "conference-management-system-development",
+    "ref": "gppwltrifgfxrkzvvxoe"
+  },
+  "baseline": {
+    "kind": "historical-established-schema",
+    "scope": "repository migrations through 6.15.0",
+    "migration_history_rows_fabricated": false,
+    "provenance": "supabase/migrations/provenance/development-established-pre-6-17.md"
+  },
+  "lineage": [
+    {
+      "live_version": "20260826110330",
+      "live_name": "conference_authorization_chain_hardening_6_17_0",
+      "live_content_md5": "ca136f8ef4e70b7a74f43b47142bdc14",
+      "repository_file": "supabase/migrations/20260826_6_17_0_conference_authorization_chain_hardening.sql",
+      "repository_sha256": "ed49a4f167ba38e0540fb6ed5ad270b6a2220593b23b1851423421bd0471f28d",
+      "repository_content_matches_live": true,
+      "applied_live": true,
+      "authoritative": true
+    },
+    {
+      "live_version": "20260826113408",
+      "live_name": "conference_lifecycle_hardening_6_18_0",
+      "live_content_md5": "699f1bf58271c8c75d6026ebc0436b28",
+      "repository_file": "supabase/migrations/20260826_6_18_0_conference_lifecycle_hardening.sql",
+      "repository_sha256": "0a536da609334cd0e23daa2fded07253fe4deb329996a4fa88bb8a93900eef3d",
+      "repository_content_matches_live": true,
+      "applied_live": true,
+      "authoritative": true
+    },
+    {
+      "live_version": "20260826115334",
+      "live_name": "snapshot_sync_account_authorization_hardening_6_19_0",
+      "live_content_md5": "3eaf058c2f2041587ed376aa93e3bc50",
+      "repository_file": "supabase/migrations/20260826_6_19_0_snapshot_sync_account_authorization_hardening.sql",
+      "repository_sha256": "0ab1da34fbbcb16fbef23c13a045e229276fc5722c05a1c5661dd746bc14ccc1",
+      "repository_content_matches_live": true,
+      "applied_live": true,
+      "authoritative": true,
+      "reconciliation_required": false,
+      "reconciliation_provenance": {
+        "previous_repository_content_md5": "b62936c7a81c6a743b206d3ef37ff0e2",
+        "previous_repository_sha256": "2288b72c86b354640c372d7225100c6ef081feb8e0ae3cf4e6d837f85754bc15",
+        "resolution": "Repository artifact replaced byte-for-byte with the authoritative SQL body stored in Development migration history. No live migration or history row was changed."
+      }
+    },
+    {
+      "live_version": "20260826224848",
+      "live_name": "webauthn_privileged_device_foundation_reconciliation_6_19_1",
+      "live_content_md5": "745435b0cd743ce25a2bb1ea12c322ec",
+      "repository_file": "supabase/migrations/20260826224848_webauthn_privileged_device_foundation_reconciliation_6_19_1.sql",
+      "repository_sha256": "89c2e1cb3efb6867b93638c0b77f19c598d56b9adbfdaeb4551f4a68a5c7eeb0",
+      "repository_content_matches_live": true,
+      "applied_live": true,
+      "authoritative": true,
+      "supersedes": "obsolete/20260824_6_16_0_webauthn_privileged_device_security_foundation.sql"
+    },
+    {
+      "live_version": "20260826231219",
+      "live_name": "platform_privileged_device_administration_6_20_0",
+      "live_content_md5": "9d5fc47f56168ed002f4f7b60b9bd551",
+      "repository_file": "supabase/migrations/20260827_6_20_0_platform_privileged_device_administration.sql",
+      "repository_sha256": "8c0324fd0f5c9fe9ad05a45ff99ba24819ca217ff8e6781f35499853bc73acb1",
+      "repository_content_matches_live": true,
+      "applied_live": true,
+      "authoritative": true
+    },
+    {
+      "live_version": "20260827111559",
+      "live_name": "20260827_6_20_1_credential_enrollment_challenge_expiry_reconciliation",
+      "live_content_md5": "2a227f43176466d219d12c06341b4f93",
+      "repository_file": "supabase/migrations/20260827111559_credential_enrollment_challenge_expiry_reconciliation_6_20_1.sql",
+      "repository_sha256": "f83e674dab796499faaac9fb15b5f29ebc4e09989d72f3c8613a899cbd736eeb",
+      "repository_content_matches_live": true,
+      "applied_live": true,
+      "authoritative": true
+    },
+    {
+      "live_version": "20260827112620",
+      "live_name": "20260827_6_20_2_credential_enrollment_expiry_default_alignment_reconciliation",
+      "live_content_md5": "e0e84ebdbea135fd1fb0a8626ff78431",
+      "repository_file": "supabase/migrations/20260827112620_credential_enrollment_expiry_default_alignment_reconciliation_6_20_2.sql",
+      "repository_sha256": "426f55319474ae4491bde59141d62ebe2b6df7c1c0b7709006abfc8dce6e908b",
+      "repository_content_matches_live": true,
+      "applied_live": true,
+      "authoritative": true
+    },
+    {
+      "live_version": "20260827121228",
+      "live_name": "20260827_6_20_3_system_owner_synced_passkey_policy_reconciliation",
+      "live_content_md5": "fd0a9264516d96835ff6ede9566838da",
+      "repository_file": "supabase/migrations/20260827121228_system_owner_synced_passkey_policy_reconciliation_6_20_3.sql",
+      "repository_sha256": "e3048a821fa08cef32e77bcc5266649aea9a7356181f6edfa373b280224a6f55",
+      "repository_content_matches_live": true,
+      "applied_live": true,
+      "authoritative": true
+    },
+    {
+      "live_version": "20260827125056",
+      "live_name": "20260827_6_20_4_system_owner_synced_passkey_policy_full_reconciliation",
+      "live_content_md5": "bc644d988de96a4c8e646c71afca0269",
+      "repository_file": "supabase/migrations/20260827125056_system_owner_synced_passkey_policy_full_reconciliation_6_20_4.sql",
+      "repository_sha256": "8aff93237bf07517fbf55579d5370aab17d42ba0141e70e5c1db273b22a07a2e",
+      "repository_content_matches_live": true,
+      "applied_live": true,
+      "authoritative": true
+    },
+    {
+      "live_version": "20260827130503",
+      "live_name": "20260827_6_20_5_webauthn_time_boundary_reconciliation",
+      "live_content_md5": "e6a9e5131eab09702e7665d5bb212a26",
+      "repository_file": "supabase/migrations/20260827130503_webauthn_time_boundary_reconciliation_6_20_5.sql",
+      "repository_sha256": "44014caad48d58a772aa75149943e0c0b5028681ccfc748e4c5cc371ba049e1a",
+      "repository_content_matches_live": true,
+      "applied_live": true,
+      "authoritative": true
+    },
+    {
+      "live_version": "20260827143343",
+      "live_name": "20260827_6_20_6_webauthn_verification_material_base64_reconciliation",
+      "live_content_md5": "dece6be8de2c94bbc59b1e768b881d70",
+      "repository_file": "supabase/migrations/20260827143343_webauthn_verification_material_base64_reconciliation_6_20_6.sql",
+      "repository_sha256": "8b8299cb46fd8822b4fe19cc4cda86d904c2556f849d91bdb7b9f8d82f92d25c",
+      "repository_content_matches_live": true,
+      "applied_live": true,
+      "authoritative": true
+    },
+    {
+      "live_version": "20260827144122",
+      "live_name": "20260827_6_20_7_pending_device_listing_source_purpose_reconciliation",
+      "live_content_md5": "664f6fec258b8917270d434b2047c8d9",
+      "repository_file": "supabase/migrations/20260827144122_pending_device_listing_source_purpose_reconciliation_6_20_7.sql",
+      "repository_sha256": "a3b72c10e0cf2a72037bfbe60a77aefefa2a96a816aabbbc52a2df21f1faa3cb",
+      "repository_content_matches_live": true,
+      "applied_live": true,
+      "authoritative": true
+    },
+    {
+      "live_version": "20260827145152",
+      "live_name": "20260827_6_20_8_pending_device_operation_purpose_qualification_reconciliation",
+      "live_content_md5": "572b6192cbc5d94ba4c47f4e3a513177",
+      "repository_file": "supabase/migrations/20260827145152_pending_device_operation_purpose_qualification_reconciliation_6_20_8.sql",
+      "repository_sha256": "8e47d38b0833474f3bd7539d05013c6be324048886e015a97186e13cf2e14cbe",
+      "repository_content_matches_live": true,
+      "applied_live": true,
+      "authoritative": true
+    },
+    {
+      "live_version": "20260827155527",
+      "live_name": "20260827_6_20_9_pending_device_operation_purpose_variable_reconciliation",
+      "live_content_md5": "00ed0ce8e92585b273eb89ac8c3fcd0c",
+      "repository_file": "supabase/migrations/20260827155527_pending_device_operation_purpose_variable_reconciliation_6_20_9.sql",
+      "repository_sha256": "7785a1e7694aa182fb80f8385a9a2a84d2fe82d2afff986ffc204a72dbd397b7",
+      "repository_content_matches_live": true,
+      "applied_live": true,
+      "authoritative": true
+    },
+    {
+      "live_version": "20260827225739",
+      "live_name": "platform_foundation_legacy_execute_grant_reconciliation",
+      "live_content_md5": "24ab398c7c6721b1196b54a826f6374f",
+      "repository_file": "supabase/migrations/20260828120000_platform_foundation_legacy_execute_grant_reconciliation.sql",
+      "repository_sha256": "bedc1e109639572d797ffc0ee049899d2ba1c04e9c07a6c79afd02aff8422f10",
+      "repository_content_matches_live": true,
+      "applied_live": true,
+      "authoritative": true,
+      "scope": "EXECUTE grants only",
+      "provenance_note": "The local filename timestamp 20260828120000 differs from the live migration version 20260827225739. The SQL bodies are byte-identical and the live migration is already applied exactly once; do not rename for replay or re-apply it."
+    }
+  ],
+  "obsolete": [
+    {
+      "source_version": "6.16.0",
+      "repository_file": "supabase/migrations/obsolete/20260824_6_16_0_webauthn_privileged_device_security_foundation.sql",
+      "repository_sha256": "1a78e5e29664cd3f7d5035316ac0a887e439ad8d0148b495ea3f8c78bb1f202a",
+      "applied_live": false,
+      "authoritative": false,
+      "status": "obsolete-non-applicable",
+      "superseded_by_live_version": "20260826224848"
+    }
+  ]
+}
