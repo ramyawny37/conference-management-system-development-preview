@@ -252,7 +252,7 @@ assert(worker.includes("'./"+adoptionUi+"'"));
   assert(index.includes(versioned),'index missing '+versioned);
   assert(worker.includes("'./"+versioned+"'"),'app shell missing '+versioned);
 });
-const platformDeviceAdministrationAsset='js/supabase/device-authorization-administration-service.js?rev=platform-privileged-device-admin-v1';
+const platformDeviceAdministrationAsset='js/supabase/device-authorization-administration-service.js?rev=platform-privileged-device-admin-diagnostics-v1';
 assert(index.includes(platformDeviceAdministrationAsset),'index missing '+platformDeviceAdministrationAsset);
 assert(worker.includes("'./"+platformDeviceAdministrationAsset+"'"),'app shell missing '+platformDeviceAdministrationAsset);
 const multiDeviceAsset='js/sync/device-authorization-administration-ui.js?rev=startup-device-admin-lifecycle-v1';
