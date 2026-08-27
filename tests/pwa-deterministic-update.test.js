@@ -13,7 +13,7 @@ const previous='exclusive-edit-lock-v1';
 const next='organization-membership-operation-key-v1';
 const mobileRoomInputRevision='anchored-glass-person-picker-v5';
 const shellRevision='shared-template-copy-guard-v1';
-const cacheRevision='development-target-gpp-v1';
+const cacheRevision='runtime-authorization-phase1-v1';
 const accountIdentityRevision='account-session-identity-v1';
 const stateAssetRevision='accommodation-visual-match-v6';
 const testTemplateCleanupRevision='test-house-template-cleanup-v1';
@@ -47,7 +47,7 @@ const organizationMembersRevision='organization-membership-manual-retry-v1';
 const snapshotPayloadDiagnosticsRevision='snapshot-payload-diagnostics-v1';
 const postRestoreQueueReviewRevision='post-restore-queue-review-v1';
 const postRestoreProofBoundaryRevision='post-restore-proof-boundary-v1';
-assert(worker.includes("CACHE_REVISION = '"+cacheRevision+"'"));
+assert(worker.includes("? '"+cacheRevision+"'"));
 assert(index.includes("window.APP_SHELL_REVISION='"+shellRevision+"'"));
 const brandingIcons=[
   'icons/icon-96x96-v3.png',

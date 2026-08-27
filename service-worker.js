@@ -6,7 +6,9 @@ const CACHE_NAMESPACE = IS_DEVELOPMENT
   ? 'cms:development:' + DEVELOPMENT_PROJECT_REF + ':'
   : '';
 const CACHE_PREFIX = CACHE_NAMESPACE + 'conference-manager-core-';
-const CACHE_REVISION = 'development-target-gpp-v1';
+const CACHE_REVISION = IS_DEVELOPMENT
+  ? 'runtime-authorization-phase1-v1'
+  : 'development-target-gpp-v1';
 const CACHE_NAME = CACHE_PREFIX + 'v' + APP_VERSION + '-' + CACHE_REVISION;
 const CORE_ASSETS = [
   './',
