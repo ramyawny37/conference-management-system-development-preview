@@ -128,33 +128,9 @@ function readLocalStorageAppData(){
 }
 
 function restoreSafeSingleCurrentConferenceSelection(target){
-  if(!target||!Array.isArray(target.conferences)||target.currentConferenceId){
-    return false;
-  }
-  var candidates=target.conferences.filter(function(conference){
-    return conference&&conference.status==='active'&&
-      !(typeof isConferenceImportRecoveryPending==='function'&&
-        isConferenceImportRecoveryPending(target,conference.id));
-  });
-  if(candidates.length!==1)return false;
-  var candidate=candidates[0];
-  var backup=window.FullBackupService;
-  try{
-    if(backup&&typeof backup.isFullRestoreCloudReviewPending==='function'&&
-      backup.isFullRestoreCloudReviewPending()===true)return false;
-    if(backup&&typeof backup.isManualRelinkRequired==='function'&&
-      backup.isManualRelinkRequired(candidate.id)===true)return false;
-  }catch(error){return false;}
-  var links=window.ConferenceLinkStore;
-  var link=links&&typeof links.get==='function'?links.get(candidate.id):null;
-  if(link&&(
-    ['needs_resolution','server_selected_pending_local_apply']
-      .indexOf(String(link.linkStatus||''))>=0||
-    link.pendingLocalApplication===true||link.conflictId||
-    link.syncState&&link.syncState.pendingRemoteApplication===true
-  ))return false;
-  target.currentConferenceId=candidate.id;
-  return true;
+  // A local record is not authorization. Sole-conference restoration remains
+  // deliberately inactive until the centralized runtime gate approves it.
+  return false;
 }
 
 function saveTemplateOnly(options){
@@ -213,7 +189,13 @@ function initializeApplicationStorage(){
       return {source:'defaults',data:defaults};
     })
     .then(function(selection){
+      var persistedCandidate=String(selection.data.currentConferenceId||'');
+      var activation=window.ConferenceActivationAuthorization;
+      if(activation&&typeof activation.capturePersistedCandidate==='function'){
+        activation.capturePersistedCandidate(persistedCandidate,selection.source);
+      }
       appData=cloneApplicationStorageData(selection.data);
+      appData.currentConferenceId=null;
       normalizeAppData();
       applicationSelectionRestored=
         restoreSafeSingleCurrentConferenceSelection(appData);
@@ -222,7 +204,9 @@ function initializeApplicationStorage(){
       if(current)setCurrentConference(current);
 
       try{
-        localStorage.setItem(SK,JSON.stringify(appData));
+        var persisted=activation&&typeof activation.preparePersistedAppData==='function'
+          ?activation.preparePersistedAppData(appData):appData;
+        localStorage.setItem(SK,JSON.stringify(persisted));
         applicationStorageState.lastLocalSaveAt=new Date().toISOString();
       }catch(error){
         applicationStorageState.lastStorageError=error;
@@ -234,7 +218,9 @@ function initializeApplicationStorage(){
         typeof repository.saveAppSnapshot!=='function'){
         return selection;
       }
-      return repository.saveAppSnapshot(appData,{skipSyncQueue:true})
+      var persistedSnapshot=activation&&typeof activation.preparePersistedAppData==='function'
+        ?activation.preparePersistedAppData(appData):appData;
+      return repository.saveAppSnapshot(persistedSnapshot,{skipSyncQueue:true})
         .then(function(){
           applicationStorageState.lastIndexedDbSaveAt=new Date().toISOString();
           return selection;
@@ -275,7 +261,10 @@ function save(options){
       );
       if(tracked&&tracked.ok)appData=tracked.data;
     }
-    json=JSON.stringify(appData);
+    var activation=window.ConferenceActivationAuthorization;
+    var persistedData=activation&&typeof activation.preparePersistedAppData==='function'
+      ?activation.preparePersistedAppData(appData):appData;
+    json=JSON.stringify(persistedData);
   }catch(e){
     console.error('تعذر حفظ بيانات التطبيق:',e);
     notifyPersistenceFailure('تعذر حفظ البيانات على الجهاز. قد تكون مساحة التخزين ممتلئة. لم يتم تأكيد حفظ آخر تعديل.');
@@ -284,7 +273,7 @@ function save(options){
   if(window.StorageRepository&&
     typeof window.StorageRepository.saveAppSnapshot==='function'){
     window.StorageRepository.saveAppSnapshot(
-      appData,
+      persistedData,
       options.skipSyncQueue===true?{skipSyncQueue:true}:undefined
     )
       .then(function(){
@@ -309,15 +298,18 @@ function save(options){
 
 function saveCurrentConferenceSelection(){
   var json;
+  var activation=window.ConferenceActivationAuthorization;
+  var persistedData=activation&&typeof activation.preparePersistedAppData==='function'
+    ?activation.preparePersistedAppData(appData):appData;
   try{
-    json=JSON.stringify(appData);
+    json=JSON.stringify(persistedData);
   }catch(e){
     applicationStorageState.lastStorageError=e;
     return false;
   }
   if(window.StorageRepository&&
     typeof window.StorageRepository.saveAppSnapshot==='function'){
-    window.StorageRepository.saveAppSnapshot(appData,{skipSyncQueue:true})
+    window.StorageRepository.saveAppSnapshot(persistedData,{skipSyncQueue:true})
       .then(function(){
         applicationStorageState.lastIndexedDbSaveAt=new Date().toISOString();
       })

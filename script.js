@@ -175,11 +175,17 @@ function restoreBackup(id){
   if(!confirm('استعادة النسخة الاحتياطية ستستبدل البيانات الحالية. متابعة؟')) return;
   appData = deepClone(backup.data);
   normalizeAppData();
-  var current = getCurrentConference();
-  if(current) setCurrentConference(current);
+  var restoredCandidate=String(appData.currentConferenceId||'');
+  var restoredAuthorization=window.ConferenceActivationAuthorization;
+  if(restoredAuthorization){
+    restoredAuthorization.capturePersistedCandidate(restoredCandidate,'backup');
+    restoredAuthorization.deactivate(restoredCandidate,
+      'unverified_legacy_unscoped','backup_authorization_unverified');
+  }
+  appData.currentConferenceId=null;
   if(!save())return false;
   renderSettings();
-  renderTab(currentTab);
+  showSelectConferenceModal();
   showToast('✅ تم استعادة النسخة الاحتياطية');
   return true;
 }
@@ -201,16 +207,28 @@ function restoreArchive(id){
   restored.updatedAt = restored.createdAt;
   appData.conferences.push(restored);
   normalizeConference(restored);
-  appData.currentConferenceId = restored.id;
-  setCurrentConference(restored);
+  if(window.ConferenceActivationAuthorization){
+    window.ConferenceActivationAuthorization.capturePersistedCandidate(
+      restored.id,'archive');
+    window.ConferenceActivationAuthorization.deactivate(restored.id,
+      'unverified_legacy_unscoped','archive_authorization_unverified');
+  }
+  appData.currentConferenceId = null;
   if(!save())return false;
   renderSettings();
-  renderTab(currentTab);
+  showSelectConferenceModal();
   showToast('✅ تم استعادة مؤتمر من الأرشيف');
   return true;
 }
 function setCurrentConferenceById(id, options){
   if(window.StartupAccessGate&&!window.StartupAccessGate.isAllowed())return false;
+  var activationAuthorization=window.ConferenceActivationAuthorization;
+  if(activationAuthorization&&
+    !activationAuthorization.canDisplay(String(id||''))){
+    activationAuthorization.authorizeLocalOnly(appData,String(id||''));
+  }
+  if(!activationAuthorization||
+    !activationAuthorization.canDisplay(String(id||'')))return false;
   options = options || {};
   if(window.ConferenceEditLockManager&&
     window.ConferenceEditLockManager.getState&&
@@ -438,6 +456,9 @@ function runMemberActivationStep(stage,callback){
 }
 function activatePersistedConferenceById(id,options){
   options=options||{};
+  var activationAuthorization=window.ConferenceActivationAuthorization;
+  if(!activationAuthorization||
+    !activationAuthorization.activate(String(id||'')))return false;
   if(options.accessRole){
     currentConferenceRuntimeAccessRoles[String(id)]=String(options.accessRole);
   }
@@ -1011,18 +1032,25 @@ function importSingleConferenceData(importedData){
     appData.conferences.push(importedConference);
   }
 
-  appData.currentConferenceId=importedConference.id;
+  if(window.ConferenceActivationAuthorization){
+    window.ConferenceActivationAuthorization.capturePersistedCandidate(
+      importedConference.id,'import');
+    window.ConferenceActivationAuthorization.deactivate(importedConference.id,
+      'unverified_legacy_unscoped','import_authorization_unverified');
+  }
+  appData.currentConferenceId=null;
   if(!save()){
     appData.conferences=previousConferences;
     appData.currentConferenceId=previousCurrentConferenceId;
+    if(window.ConferenceActivationAuthorization){
+      window.ConferenceActivationAuthorization.capturePersistedCandidate(
+        previousCurrentConferenceId,'import_rollback');
+    }
     showToast('تعذر حفظ المؤتمر المستورد، وتمت استعادة بيانات المؤتمرات السابقة.','#E74C3C');
     return false;
   }
 
-  setCurrentConference(importedConference);
-  syncCurrentConferenceRefs();
-  setApplicationMode('application');
-  restoreLastApplicationTab();
+  showSelectConferenceModal();
   showToast('✅ تم استيراد المؤتمر وإضافته إلى المؤتمرات المحفوظة');
   return true;
 }
@@ -2322,9 +2350,9 @@ function ensureUserManagementAccess(){
 }
 
 function canEditCurrentConferenceData(){
-  return currentConferenceRuntimeAccessRole===null||
-    currentConferenceRuntimeAccessRole==='owner'||
-    currentConferenceRuntimeAccessRole==='manager';
+  var current=getCurrentConference();
+  var authorization=window.ConferenceActivationAuthorization;
+  return !!(current&&authorization&&authorization.canEdit(current.id));
 }
 
 function canEditCurrentConferenceAccommodation(){
@@ -9728,6 +9756,14 @@ function completeApplicationStartup(){
 }
 function restoreAuthorizedApplicationView(){
   recordStartupStage('view_restore','started');
+  var authorization=window.ConferenceActivationAuthorization;
+  var current=getCurrentConference();
+  if(!current||!authorization||!authorization.canDisplay(current.id)){
+    appData.currentConferenceId=null;
+    showSelectConferenceModal();
+    recordStartupStage('view_restore','completed','NO_AUTHORIZED_CONFERENCE');
+    return true;
+  }
   syncCurrentConferenceRefs();
   if(!getCurrentConference()){
     showSelectConferenceModal();
@@ -9786,7 +9822,7 @@ function completeAuthorizedApplicationStartup(){
     recordStartupStage('discovery','started');
     var discovery=window.StartupConferenceDiscovery&&typeof window.StartupConferenceDiscovery.refresh==='function'
       ?window.StartupConferenceDiscovery.refresh():Promise.resolve({ok:true,status:'unavailable'});
-    return Promise.resolve(discovery).then(function(result){requireStartupResult('discovery',result);recordStartupStage('discovery','completed');}).catch(function(error){if(!(error&&error.startupStage))recordStartupStage('discovery','failed',error&&error.message||'DISCOVERY_FAILED');throw error;});
+    return Promise.resolve(discovery).then(function(result){requireStartupResult('discovery',result);recordStartupStage('discovery','completed');var authorization=window.ConferenceActivationAuthorization,openService=window.DiscoveredConferenceOpenService;return authorization.reconcileStartup({appData:appData,persistedCandidate:authorization.getPersistedCandidate(),discovered:result&&result.data&&result.data.conferences||[],links:window.ConferenceLinkStore,validateCloud:function(remoteId){return openService.validateAuthorization(remoteId);}}).then(function(decision){appData.currentConferenceId=decision&&decision.ok?decision.localConferenceId:null;return result;});}).catch(function(error){if(!(error&&error.startupStage))recordStartupStage('discovery','failed',error&&error.message||'DISCOVERY_FAILED');throw error;});
   }).then(function(){
     if(cloudReviewPending){recordStartupStage('linking','skipped','CLOUD_REVIEW_PENDING');return;}
     recordStartupStage('linking','started');

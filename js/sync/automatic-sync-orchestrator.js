@@ -669,6 +669,11 @@
     if(typeof getter!=='function')return null;
     try{
       var conference=getter();
+      var authorization=options&&options.activationAuthorization||
+        global.ConferenceActivationAuthorization;
+      if(conference&&authorization&&
+        typeof authorization.canSync==='function'&&
+        !authorization.canSync(String(conference.id||'')))return null;
       return conference&&conference.id
         ?String(conference.id)
         :null;
