@@ -30,6 +30,6 @@ function environment(status){
   assert.strictEqual(approved.window.DeviceReauthorizationFlow.getState().gateActive,false);
   assert.match(stateSource,/function initializeApplicationStorage[\s\S]*DeviceReauthorizationFlow\.waitUntilApproved/);
   assert.ok(index.indexOf('current-device-authorization-ui.js')<index.indexOf('device-reauthorization-flow.js'));
-  ['js/sync/current-device-authorization-ui.js?rev=organization-membership-operation-key-v1','js/sync/device-reauthorization-flow.js?rev=device-reauthorization-flow-v1','state.js?rev=template-sync-isolation-v1'].forEach(function(asset){assert.ok(index.includes(asset),asset);assert.ok(worker.includes('./'+asset),asset);});
+  ['js/sync/current-device-authorization-ui.js?rev=organization-membership-operation-key-v1','js/sync/device-reauthorization-flow.js?rev=device-reauthorization-flow-v1','state.js?rev=develop-cross-store-arbitration-v1'].forEach(function(asset){assert.ok(index.includes(asset),asset);assert.ok(worker.includes('./'+asset),asset);});
   console.log('device re-authorization flow tests: passed');
 })().catch(function(error){console.error(error);process.exitCode=1;});

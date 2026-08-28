@@ -58,6 +58,7 @@ function fixture(settings={}){
   }
   const rpcCalls=[];
   const saved=[];
+  const repositoryMirrorWrites=[];
   const forgotten=[];
   let operationSequence=0;
   const sandbox={window:null,Promise,JSON,Object,String,Number,Array,Date,console,
@@ -88,7 +89,14 @@ function fixture(settings={}){
     StorageRepository:{saveAppSnapshot(data,options){
       assert.strictEqual(options.skipSyncQueue,true);
       assert.strictEqual(options.skipTemplateSync,true);
-      saved.push(clone(data));return Promise.resolve();}},
+      const sanitized=clone(data);
+      sanitized.currentConferenceId='repository-sanitized-candidate';
+      const serialized=JSON.stringify(sanitized);
+      localStorage.setItem('conf_v5',serialized);
+      localStorage.setItem('conf_v5:local_persistence_metadata_v1',
+        JSON.stringify({payloadFingerprint:serialized}));
+      repositoryMirrorWrites.push(serialized);
+      saved.push(sanitized);return Promise.resolve();}},
     OrganizationTemplateSync:{forgetDeletedTemplates(items){forgotten.push(...clone(items));},
       flush(){throw new Error('SYNC_FLUSH_CALLED');},
       captureLocalSave(){throw new Error('SYNC_CAPTURE_CALLED');}}
@@ -96,7 +104,8 @@ function fixture(settings={}){
   sandbox.window=sandbox;
   vm.createContext(sandbox);
   vm.runInContext(SOURCE,sandbox);
-  return {sandbox,localStorage,stores,rpcCalls,saved,forgotten,cloudRows};
+  return {sandbox,localStorage,stores,rpcCalls,saved,forgotten,cloudRows,
+    repositoryMirrorWrites};
 }
 
 (async function(){
@@ -129,6 +138,14 @@ function fixture(settings={}){
   assert.strictEqual(env.localStorage.getItem('device-identity:user'),'DEVICE');
   assert.strictEqual(env.localStorage.getItem('organization-context'),'ORG');
   assert.strictEqual(env.sandbox.appData.organizationContext.organizationId,ORG);
+  assert.strictEqual(env.repositoryMirrorWrites.length,3);
+  const mirrored=env.localStorage.getItem('conf_v5');
+  const mirrorMetadata=JSON.parse(env.localStorage.getItem(
+    'conf_v5:local_persistence_metadata_v1'));
+  assert.strictEqual(JSON.parse(mirrored).currentConferenceId,
+    'repository-sanitized-candidate');
+  assert.strictEqual(mirrorMetadata.payloadFingerprint,mirrored,
+    'cleanup must not overwrite the repository-owned sanitized mirror');
 
   const repeated=await env.sandbox.TestHouseTemplateCleanup.cleanup();
   assert.strictEqual(repeated.ok,true);

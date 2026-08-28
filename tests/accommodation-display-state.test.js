@@ -15,8 +15,12 @@ var conference={id:'c1',houses:[{id:'h1',floors:[{id:'f1',rooms:[
   {id:'r1',closed:false,guests:[{id:'p1'}],children:[]},
   {id:'r2',closed:false,guests:[],children:[]}
 ]}]}],accommodationDisplayedRoomIds:[]};
+var conferenceEditAuthorized=false;
 var sandbox={window:null,appData:{currentConferenceId:'c1',conferences:[conference]},
   isConferenceImportRecoveryPending:function(){return false;},
+  ConferenceActivationAuthorization:{canEdit:function(id){
+    return conferenceEditAuthorized&&id==='c2';
+  }},
   ConferenceEditLockManager:{canMutateAccommodation:function(){return true;}}};
 sandbox.window=sandbox;
 vm.runInNewContext([
@@ -53,10 +57,9 @@ assert.strictEqual(sandbox.getAllRooms().length,1);
 assert.strictEqual(sandbox.getAllRooms()[0].id,'active-room');
 
 vm.runInNewContext(
-  'var currentConferenceRuntimeAccessRole=null;\n'+
   extract(script,'getAccommodationPersonDisplayName',
     'canEditCurrentConferenceAccommodation')+'\n'+
-  extract(script,'canEditCurrentConferenceAccommodation','renderAccommodation'),
+  extract(script,'canEditCurrentConferenceAccommodation','beginAccommodationEditing'),
   sandbox
 );
 sandbox.getPersonById=function(id){
@@ -68,9 +71,9 @@ assert.strictEqual(sandbox.getAccommodationPersonDisplayName({id:'p1'}),
   'Member Name');
 assert.strictEqual(sandbox.getAccommodationPersonDisplayName({personId:'missing'}),
   '','an invalid personId must not break name rendering');
-sandbox.currentConferenceRuntimeAccessRole='accommodation_viewer';
+conferenceEditAuthorized=false;
 assert.strictEqual(sandbox.canEditCurrentConferenceAccommodation(),false);
-sandbox.currentConferenceRuntimeAccessRole='owner';
+conferenceEditAuthorized=true;
 assert.strictEqual(sandbox.canEditCurrentConferenceAccommodation(),true);
 
 var renderStart=script.indexOf('function renderAccommodation()');

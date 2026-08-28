@@ -11,7 +11,7 @@ function environment(settings={}){
   let client=settings.client||{id:'client-a'};
   let stored=clone(settings.appData||{conferences:[],currentConferenceId:null});
   let memory=clone(stored);
-  let activated=0,downloads=0,inspects=0,configured=0;
+  let activated=0,downloads=0,inspects=0,configured=0,deactivations=0;
   let manualRelinkChecks=[];
   const forbidden={queue:0,publication:0,rpc:0};
   const events=[];
@@ -54,6 +54,11 @@ function environment(settings={}){
     conference:clone(snapshot),snapshot:clone(snapshot)
   };
   const sandbox={window:null,structuredClone:clone,
+    ConferenceActivationAuthorization:{
+      authorizeCloud:()=>({ok:true}),
+      deactivate:()=>{deactivations++;return {ok:false,status:'membership_unavailable'};}
+    },
+    AutomaticSyncOrchestrator:{schedule:()=>{}},
     ConferenceRealtimeManager:{traceDiagnostic:(stage,data)=>{
       realtimePipeline.push({stage,data:clone(data||null)});
     }},
@@ -190,6 +195,7 @@ function environment(settings={}){
     stored:()=>clone(stored),memory:()=>clone(sandbox.appData),
     activated:()=>activated,configured:()=>configured,
     downloads:()=>downloads,inspects:()=>inspects,
+    deactivations:()=>deactivations,
     realtimePipeline:()=>clone(realtimePipeline),
     manualRelinkChecks:()=>manualRelinkChecks.slice(),
     forbidden:()=>clone(forbidden),
@@ -578,7 +584,7 @@ function environment(settings={}){
     revision:2,
     membershipDenied:true,
     appData:{conferences:[{id:'existing-local',name:'Local stale',status:'active'}],
-      currentConferenceId:null},
+      currentConferenceId:'existing-local'},
     existingLink:{localConferenceId:'existing-local',remoteConferenceId:'remote-1',
       knownRevision:1,linkStatus:'linked',pendingLocalApplication:false}
   });
@@ -587,6 +593,10 @@ function environment(settings={}){
   );
   assert.strictEqual(deniedResult.status,'membership_unavailable');
   assert.strictEqual(refreshDenied.stored().conferences[0].name,'Local stale');
+  assert.strictEqual(refreshDenied.stored().currentConferenceId,'existing-local');
+  assert.strictEqual(refreshDenied.memory().currentConferenceId,null);
+  assert.strictEqual(refreshDenied.memory().conferences[0].name,'Local stale');
+  assert.strictEqual(refreshDenied.deactivations(),1);
   assert.deepStrictEqual(refreshDenied.forbidden(),{queue:0,publication:0,rpc:0});
 
   const notLinked=environment({cached:false,revision:2,appData:{
@@ -834,7 +844,7 @@ function environment(settings={}){
   assert.doesNotMatch(discoverySource,/DiscoveredConferenceOpenService\.open/);
   const scriptSource=fs.readFileSync(path.join(__dirname,'../script.js'),'utf8');
   assert.match(scriptSource,
-    /else\{\s*html \+= '<article class="startup-conference-card" onclick="openConferenceFromStartup/);
+    /html \+= '<article class="startup-conference-card '\+cardClass\+'" onclick="openConferenceFromStartup/);
   assert.match(scriptSource,
     /onclick="openDiscoveredConferenceFromStartup\(\\''\+conf\.__startupDiscoveredRemoteId/);
   console.log('discovered conference open service tests passed');

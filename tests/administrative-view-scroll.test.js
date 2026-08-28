@@ -8,7 +8,7 @@ assert(reset,'directed administrative scroll reset must exist');
 assert.match(reset[0],/window\.scrollTo/);
 assert.match(app,/function switchSettingsTab\([\s\S]*?renderSettings\(\);\s*resetAdministrativeViewScroll\(\);/);
 assert.match(app,/function openSettingsFromHome\([\s\S]*?if\(opened\)resetAdministrativeViewScroll\(\)/);
-assert.match(app,/function restoreLastApplicationTab\([\s\S]*?getApplicationTabIdByName\('settings'\)\)resetAdministrativeViewScroll\(\)/);
+assert.match(app,/function restoreLastApplicationTab\(\)[\s\S]*?var settingsTabId=getApplicationTabIdByName\('settings'\);[\s\S]*?if\(restored&&restoredTab===settingsTabId\)\{\s*resetAdministrativeViewScroll\(\)/);
 assert.match(organizations,/function open\([\s\S]*?resetAdministrativeViewScroll/);
 const render=app.match(/function renderSettings\(\)[\s\S]*?\n\}/);
 assert(render);

@@ -31,6 +31,7 @@ function runtime(settings={}){
   assert.strictEqual(cleaned.data.cloudMutationPerformed,false);
   assert.strictEqual(r.writes.rpc,0);
   assert.strictEqual(r.writes.snapshots,1);
+  assert.strictEqual(r.writes.set.length,0,'repository owns the application snapshot mirror');
   assert.strictEqual(r.window.appData.houseTemplates.some(row=>row.id===TARGET),false);
   assert.deepStrictEqual(clone(r.window.appData.houseTemplates.find(row=>row.id===ORIGINAL)),r.original);
   assert.deepStrictEqual(clone(r.window.appData.houseTemplates.find(row=>row.id==='other')),r.other);

@@ -111,6 +111,15 @@ function createEnvironment(){
   const queueOps=[];
   const syncResults=[];
   const traces=[];
+  const activationAuthorization={
+    allowed:false,
+    calls:[],
+    activate:function(id){
+      this.calls.push(id);
+      assert.strictEqual(id,localA);
+      return this.allowed;
+    }
+  };
   const links={
     [localA]:{
       localConferenceId:localA,
@@ -137,6 +146,7 @@ function createEnvironment(){
     structuredClone:clone,
     deepClone:clone,
     navigator:{onLine:true},
+    document:{addEventListener:function(){}},
     console:console,
     APP_RELEASE:{version:'5.0.0'},
     currentTab:0,
@@ -208,6 +218,7 @@ function createEnvironment(){
         return {id:'33333333-3333-4333-8333-333333333333'};
       }
     },
+    ConferenceActivationAuthorization:activationAuthorization,
     AutomaticSyncOrchestrator:{schedule:function(){}},
     ConferenceRepository:{
       recordLocalChange:function(input,id){
@@ -305,6 +316,7 @@ function createEnvironment(){
     saves,
     queueOps,
     syncResults,
+    activationAuthorization,
     localA,
     localB,
     remoteId,
@@ -334,7 +346,16 @@ async function run(){
   assertStable('startup_normalize');
 
   // Activation
+  const beforeDeniedActivation=clone(sandbox.appData);
+  assert.strictEqual(sandbox.activatePersistedConferenceById(
+    env.localA,{alreadyPersisted:true,accessRole:'manager'}),false);
+  assert.deepStrictEqual(env.activationAuthorization.calls,[env.localA]);
+  assert.deepStrictEqual(clone(sandbox.appData),beforeDeniedActivation);
+  assert.deepStrictEqual(
+    clone(sandbox.getMemberActivationDiagnostics().trace),[]);
+  env.activationAuthorization.allowed=true;
   assert.strictEqual(sandbox.activatePersistedConferenceById(env.localA,{alreadyPersisted:true,accessRole:'manager'}),true);
+  assert.deepStrictEqual(env.activationAuthorization.calls,[env.localA,env.localA]);
   assertStable('post_activation');
 
   // Remote apply (no-op payload replacement with same object shape)

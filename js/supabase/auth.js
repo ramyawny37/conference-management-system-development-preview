@@ -114,6 +114,28 @@
       orchestratorState.started&&typeof orchestrator.schedule==='function'){
       orchestrator.schedule('auth_changed');
     }
+    if(typeof global.updateLogoText==='function')global.updateLogoText();
+    if(global.SyncSettingsUI&&
+      typeof global.SyncSettingsUI.refreshAccountIdentity==='function'){
+      global.SyncSettingsUI.refreshAccountIdentity();
+    }
+  }
+
+  function getAccountIdentity(){
+    var user=state.session&&state.session.user?state.session.user:null;
+    if(!user)return {
+      authenticated:false,userId:'',displayName:'',email:'',label:''
+    };
+    var displayName=user.user_metadata&&user.user_metadata.display_name
+      ?String(user.user_metadata.display_name).trim():'';
+    var email=user.email?String(user.email).trim():'';
+    return {
+      authenticated:true,
+      userId:String(user.id||''),
+      displayName:displayName,
+      email:email,
+      label:displayName||email||'صاحب الحساب'
+    };
   }
 
   function initialize(options){
@@ -293,6 +315,7 @@
     signOut:signOut,
     getSession:getSession,
     getUser:getUser,
+    getAccountIdentity:getAccountIdentity,
     getState:getState,
     getSignUpDiagnostic:function(){
       return copySignUpDiagnostic(lastSignUpDiagnostic);

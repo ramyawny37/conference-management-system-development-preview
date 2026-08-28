@@ -555,11 +555,10 @@ async function run(){
   });
   // The revision value changes between releases; verify the cache contract
   // instead of coupling Conference Members to a historical release label.
-  var revisionMatch=serviceWorkerSource.match(
-    /const\s+CACHE_REVISION\s*=\s*(['"])([^'"]+)\1\s*;/
+  assert.ok(
+    /const\s+CACHE_REVISION\s*=\s*IS_DEVELOPMENT\s*\?\s*['"]runtime-authorization-phase2b-v1['"]\s*:\s*['"]production-integrated-3-3-0-main-6d0c1e1-develop-80653ca-v1['"]\s*;/
+      .test(serviceWorkerSource)
   );
-  assert.ok(revisionMatch);
-  assert.ok(revisionMatch[2].trim().length>0);
   assert.ok(
     /const\s+CACHE_NAME\s*=\s*CACHE_PREFIX\s*\+\s*['"]v['"]\s*\+\s*APP_VERSION\s*\+\s*['"]-['"]\s*\+\s*CACHE_REVISION\s*;/
       .test(serviceWorkerSource)

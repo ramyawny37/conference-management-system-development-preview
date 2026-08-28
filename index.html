@@ -10,7 +10,7 @@
 <link rel="apple-touch-icon" sizes="180x180" href="./icons/apple-touch-icon-180x180-v3.png">
 
 <title>إرسالية اصنع فرق</title>
-<link rel="stylesheet" href="style.css?rev=organization-members-refresh-v1">
+<link rel="stylesheet" href="style.css?rev=account-session-identity-v1">
 </head>
 <body>
 
@@ -67,9 +67,15 @@
         <div class="startup-date-copy"><strong id="startupDayName">—</strong><small id="startupDateText">—</small></div>
         <div class="startup-time"><strong id="startupTimeText">—</strong></div>
       </div>
-      <div class="startup-auth-actions">
-        <button type="button" class="startup-auth-create" onclick="StartupAccessGate.showAuthView('signup')">إنشاء حساب</button>
-        <button type="button" class="startup-auth-login" onclick="StartupAccessGate.showAuthView('login')">تسجيل الدخول</button>
+      <div class="startup-auth-actions" id="startupAuthActions">
+        <div class="startup-auth-signed-out" data-startup-auth-signed-out>
+          <button type="button" class="startup-auth-create" onclick="StartupAccessGate.showAuthView('signup')">إنشاء حساب</button>
+          <button type="button" class="startup-auth-login" onclick="StartupAccessGate.showAuthView('login')">تسجيل الدخول</button>
+        </div>
+        <div class="startup-auth-signed-in" data-startup-auth-signed-in style="display:none">
+          <span class="startup-auth-account-name" data-startup-auth-account-name></span>
+          <button type="button" class="startup-auth-create" onclick="SyncSettingsUI.signOut()">تسجيل الخروج</button>
+        </div>
         <button id="install-app-btn" type="button" class="startup-auth-create" style="display:none;">تثبيت البرنامج</button>
       </div>
     </header>
@@ -479,21 +485,23 @@
   <pre id="pwa-update-diagnostics" dir="ltr" style="white-space:pre-wrap"></pre>
 </details>
 <script src="js/storage/environment-namespace.js"></script>
-<script src="js/storage/indexeddb.js?rev=production-baseline-af6b910-v1"></script>
-<script src="js/storage/storage-repository.js?rev=production-baseline-af6b910-v1"></script>
+<script src="js/storage/snapshot-payload-diagnostics.js?rev=snapshot-payload-diagnostics-v1"></script>
+<script src="js/storage/local-persistence-arbitration.js?rev=develop-cross-store-arbitration-v1"></script>
+<script src="js/storage/indexeddb.js?rev=develop-cross-store-arbitration-v1"></script>
+<script src="js/storage/storage-repository.js?rev=develop-cross-store-arbitration-v1"></script>
 <script src="js/storage/conference-repository.js"></script>
 <script src="js/storage/conference-publishing-engine.js?rev=organization-membership-operation-key-v1"></script>
 <script src="js/storage/conference-publish-recovery.js?rev=organization-membership-operation-key-v1"></script>
 <script src="js/storage/conference-publish-manager.js"></script>
-<script src="js/storage/full-backup.js"></script>
-<script src="js/sync/sync-queue.js?rev=startup-queue-recovery-v1"></script>
-<script src="js/sync/startup-queue-recovery.js?rev=startup-queue-recovery-v1"></script>
+<script src="js/storage/full-backup.js?rev=post-restore-proof-boundary-v1"></script>
+<script src="js/sync/sync-queue.js?rev=post-restore-proof-boundary-v1"></script>
+<script src="js/sync/startup-queue-recovery.js?rev=post-restore-proof-boundary-v1"></script>
 <script src="js/storage/migration-audit.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="js/supabase/public-config.js"></script>
 <script src="js/supabase/runtime-config.js"></script>
 <script src="js/supabase/client.js"></script>
-<script src="js/supabase/auth.js?rev=organization-membership-operation-key-v1"></script>
+<script src="js/supabase/auth.js?rev=account-session-identity-v1"></script>
 <script src="js/supabase/system-access-service.js?rev=conference-create-authorization-v1"></script>
 <script src="js/sync/diagnostics-privacy-policy.js?rev=diagnostics-privacy-hardening-v1"></script>
 <script src="js/supabase/first-system-bootstrap-service.js?rev=first-owner-bootstrap-hardening-v1"></script>
@@ -508,7 +516,7 @@
 <script src="js/supabase/device-identity.js?rev=organization-membership-operation-key-v1"></script>
 <script src="js/sync/device-authorization-operation-repository.js"></script>
 <script src="js/supabase/current-device-authorization-service.js?rev=organization-membership-operation-key-v1"></script>
-<script src="js/supabase/device-authorization-administration-service.js?rev=device-single-replacement-v1"></script>
+<script src="js/supabase/device-authorization-administration-service.js?rev=platform-privileged-device-admin-diagnostics-v1"></script>
 <script src="js/sync/current-device-authorization-ui.js?rev=organization-membership-operation-key-v1"></script>
 <script src="js/sync/device-reauthorization-flow.js?rev=device-reauthorization-flow-v1"></script>
 <script src="js/sync/device-authorization-administration-ui.js?rev=startup-device-admin-lifecycle-v1"></script>
@@ -531,10 +539,13 @@
 <script src="js/sync/offline-first-integration.js?rev=revision-publish-1"></script>
 <script src="js/sync/device-rescue-export.js?rev=diagnostics-privacy-hardening-v1"></script>
 <script src="js/sync/template-diagnostic-export.js?rev=template-diagnostic-export-v1"></script>
-<script src="js/sync/sync-settings-ui.js?rev=shared-template-copy-guard-v1"></script>
-<script src="js/sync/startup-access-gate.js?rev=auth-approval-ux-v1"></script>
+<script src="js/sync/sync-settings-ui.js?rev=account-session-identity-v1"></script>
+<script src="js/sync/startup-access-gate.js?rev=account-session-identity-v1"></script>
 <script src="js/sync/link-status-diagnostic-store.js"></script>
 <script src="js/sync/conference-link-store.js"></script>
+<script src="js/sync/conference-permission-contract.js?rev=permission-contract-phase2a-v1"></script>
+<script src="js/sync/conference-permission-resolver.js?rev=runtime-authorization-phase2b-v1"></script>
+<script src="js/sync/conference-activation-authorization.js?rev=runtime-authorization-phase1-v1"></script>
 <script src="js/sync/conference-membership-attempt-store.js"></script>
 <script src="js/sync/conference-members-service.js?rev=legacy-rpc-hardening-v1"></script>
 <script src="js/sync/conference-members-ui.js?rev=diagnostics-privacy-hardening-v1"></script>
@@ -566,25 +577,25 @@
 <script src="js/sync/automatic-queue-runner.js?rev=template-sync-isolation-v1"></script>
 <script src="js/sync/automatic-conference-linking.js?rev=realtime-refresh-completion-v1"></script>
 <script src="js/sync/discovered-conference-open-service.js?rev=repository-rejection-diagnostics-v1"></script>
-<script src="js/sync/member-runtime-diagnostics.js?rev=production-baseline-af6b910-v1"></script>
+<script src="js/sync/member-runtime-diagnostics.js?rev=repository-rejection-diagnostics-v1"></script>
 <script src="js/sync/automatic-sync-orchestrator.js?rev=realtime-reconnect-catchup-v1"></script>
 <script src="js/sync/wrong-remote-binding-repair-store.js?rev=wrong-remote-binding-repair-v1"></script>
 <script src="js/sync/wrong-remote-binding-repair-service.js?rev=wrong-remote-binding-repair-v1"></script>
 <script src="js/sync/wrong-remote-binding-repair-ui.js?rev=diagnostics-privacy-hardening-v1"></script>
 <script src="utils.js"></script>
-<script src="core.js?rev=accommodation-visual-match-v6"></script>
+<script src="core.js?rev=runtime-authorization-phase2b-v1"></script>
 <script src="people.js?rev=canonical-conference-schema-v1"></script>
 <script src="houses.js?rev=template-floor-conference-sync-v1"></script>
 <script src="transport.js"></script>
 <script src="houseTemplates.js?rev=shared-house-template-read-only-v1"></script>
-<script src="state.js?rev=production-baseline-af6b910-v1"></script>
-<script src="js/conference/accounts.js"></script>
+<script src="state.js?rev=develop-cross-store-arbitration-v1"></script>
+<script src="js/conference/accounts.js?rev=runtime-authorization-phase2b-v1"></script>
 <script src="js/conference-template-houses-editor.js"></script>
 <script src="cards.js"></script>
 <script src="libs/html2canvas.min.js"></script>
 <script src="libs/xlsx.full.min.js"></script>
 <script src="js/ui-icons.js?rev=accommodation-visual-match-v6"></script>
-<script src="script.js?rev=organization-members-refresh-v1"></script>
+<script src="script.js?rev=runtime-authorization-phase2b-v1"></script>
 <script src="version.js"></script>
 <script>
   document.addEventListener('DOMContentLoaded', function() {
@@ -608,7 +619,7 @@
     });
   });
 </script>
-<script>window.APP_SHELL_REVISION='production-baseline-af6b910-v1';</script>
+<script>window.APP_SHELL_REVISION='production-integrated-3-3-0-main-6d0c1e1-develop-80653ca-v1';</script>
 <script src="pwa.js?rev=organization-membership-operation-key-v1"></script>
 </body>
 </html>

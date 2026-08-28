@@ -144,63 +144,6 @@
       });
   }
 
-  function createConference(input){
-    input=input&&typeof input==='object'?input:{};
-    var name=String(input.name||'').trim();
-    if(!name){
-      return Promise.resolve(validationError(
-        'CONFERENCE_NAME_REQUIRED',
-        'Conference name is required.'
-      ));
-    }
-    var context=getOnlineContext();
-    if(context.error){
-      return Promise.resolve(result(false,'error',null,context.error));
-    }
-    var conferenceId;
-    try{
-      conferenceId=input.conferenceId
-        ?String(input.conferenceId)
-        :createUuid();
-    }catch(error){
-      return Promise.resolve(validationError(
-        'SECURE_UUID_UNAVAILABLE',
-        'A secure conference ID could not be created.'
-      ));
-    }
-    if(!isUuid(conferenceId)){
-      return Promise.resolve(validationError(
-        'INVALID_CONFERENCE_ID',
-        'conferenceId must be a valid UUID.'
-      ));
-    }
-
-    return Promise.resolve().then(function(){
-      return context.client
-        .from('conferences')
-        .insert({
-          id:conferenceId,
-          name:name,
-          owner_id:context.user.id
-        })
-        .select('id')
-        .single();
-    })
-      .then(function(response){
-        if(response.error){
-          return result(false,'error',null,normalizeRequestError(response.error));
-        }
-        return result(true,'created',{
-          conferenceId:response.data&&response.data.id
-            ?response.data.id
-            :conferenceId
-        },null);
-      })
-      .catch(function(error){
-        return result(false,'error',null,normalizeThrownError(error));
-      });
-  }
-
   function normalizeConferenceCreationResult(rpcData,input){
     var row=Array.isArray(rpcData)?rpcData[0]:rpcData;
     if(!row||typeof row!=='object'){
@@ -860,7 +803,6 @@
   }
 
   global.SupabaseSnapshotSync=Object.freeze({
-    createConference:createConference,
     createConferenceIdempotent:createConferenceIdempotent,
     verifyOwnerMembership:verifyOwnerMembership,
     inspectConferenceCreationOperation:

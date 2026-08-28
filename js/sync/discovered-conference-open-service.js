@@ -99,6 +99,49 @@
     }
     return value;
   }
+  function publishCloudAuthorization(d,localId,remoteId,role){
+    if(!d.activationAuthorization||
+      typeof d.activationAuthorization.authorizeCloud!=='function')return null;
+    return d.activationAuthorization.authorizeCloud({
+      localConferenceId:String(localId||''),
+      remoteConferenceId:String(remoteId||''),
+      authenticatedUserId:userId(d),role:String(role||'')
+    });
+  }
+  function authoritativeAccessLoss(status){
+    return ['device_not_approved','account_not_approved',
+      'conference_unavailable','membership_unavailable']
+      .indexOf(String(status||''))>=0;
+  }
+  function deactivateRuntimeAuthorization(d,localId,remoteId,status){
+    if(!authoritativeAccessLoss(status))return false;
+    if(d.activationAuthorization&&
+      typeof d.activationAuthorization.deactivate==='function'){
+      d.activationAuthorization.deactivate(localId,'unauthorized_linked',
+        String(status),remoteId);
+    }
+    var current=copy(d.getData());
+    if(String(current&&current.currentConferenceId||'')===String(localId)){
+      current.currentConferenceId=null;
+      d.applyData(current);
+    }
+    if(global.currentConferenceRuntimeAccessRoles){
+      delete global.currentConferenceRuntimeAccessRoles[String(localId)];
+    }
+    global.currentConferenceRuntimeAccessRole=null;
+    var editor=global.ConferenceEditLockManager;
+    if(editor&&typeof editor.endAccommodationEdit==='function'){
+      Promise.resolve(editor.endAccommodationEdit()).catch(function(){});
+    }
+    var orchestrator=global.AutomaticSyncOrchestrator;
+    if(orchestrator&&typeof orchestrator.schedule==='function'){
+      orchestrator.schedule('conference_authorization_revoked');
+    }
+    if(typeof global.showSelectConferenceModal==='function'){
+      global.showSelectConferenceModal();
+    }
+    return true;
+  }
   function userId(d){
     var state=d.auth&&d.auth.getState?d.auth.getState():null;
     return String(state&&state.user&&state.user.id||'');
@@ -129,7 +172,9 @@
       activate:options.activate||global.activatePersistedConferenceById,
       integration:options.integration||global.OfflineFirstIntegration,
       backup:options.fullBackupService||options.backup||
-        global.FullBackupService
+        global.FullBackupService,
+      activationAuthorization:options.activationAuthorization||
+        global.ConferenceActivationAuthorization
     };
   }
   function backupOptions(options){
@@ -570,6 +615,8 @@
     try{
       diagnosticState.activationReached=true;
       traceLinkedRefresh('activate_persisted_conference','entered',null);
+      publishCloudAuthorization(d,localConferenceId,
+        details&&details.remoteConferenceId,details&&details.role);
       activated=typeof d.activate==='function'&&
         d.activate(localConferenceId,{
           alreadyPersisted:true,accessRole:details&&details.role||null
@@ -1262,6 +1309,7 @@
           if(currentSelected){
             try{
               diagnosticState.activationReached=true;
+              publishCloudAuthorization(d,prepared.localId,remoteId,ctx.role);
               activated=typeof d.activate==='function'&&
                 d.activate(prepared.localId,{
                   alreadyPersisted:true,accessRole:ctx.role||null
@@ -1322,6 +1370,7 @@
         var activationOk=false;
         try{
           diagnosticState.activationReached=true;
+          publishCloudAuthorization(d,prepared.localId,remoteId,ctx.role);
           activationOk=typeof d.activate==='function'&&
             d.activate(prepared.localId,{
               alreadyPersisted:true,accessRole:ctx.role||null
@@ -1376,6 +1425,14 @@
     }).finally(function(){if(flights[remoteConferenceId]===flight)delete flights[remoteConferenceId];});
     flights[remoteConferenceId]=flight;
     return flight;
+  }
+  function validateAuthorization(remoteConferenceId,options){
+    options=options&&typeof options==='object'?options:{};
+    var d=deps(options),account=userId(d),activeClient=client(d);
+    return validateAccess(d,String(remoteConferenceId||'')).then(function(access){
+      if(!access.ok||account!==userId(d)||activeClient!==client(d))return access.ok?result(false,'stale'):access;
+      return result(true,'authorized',{remoteConferenceId:String(remoteConferenceId),role:access.data.role,authenticatedUserId:account});
+    });
   }
   function cleanupRecovery(remoteConferenceId,options){
     remoteConferenceId=String(remoteConferenceId||'');
@@ -1629,6 +1686,11 @@
         });
       });
     }).then(function(done){
+      if(done&&done.ok===false&&authoritativeAccessLoss(done.status)){
+        deactivateRuntimeAuthorization(
+          d,localConferenceId,remoteId,done.status
+        );
+      }
       if(done&&done.ok===false){
         traceRealtimePipeline('LOCAL_APPLY_BLOCKED',{
           reason:done.status||'unknown'
@@ -1655,6 +1717,7 @@
   }
   global.DiscoveredConferenceOpenService=Object.freeze({
     open:open,
+    validateAuthorization:validateAuthorization,
     invalidate:invalidate,
     cleanupRecovery:cleanupRecovery,
     refreshLinkedLocalConference:refreshLinkedLocalConference,

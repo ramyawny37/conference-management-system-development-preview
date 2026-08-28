@@ -18,6 +18,60 @@
     return {code:String(code||'STARTUP_RECOVERY_FAILED'),
       message:'The queue operation requires server reconciliation.'};
   }
+  function requestToPromise(request){
+    return new Promise(function(resolve,reject){
+      request.onsuccess=function(){resolve(request.result);};
+      request.onerror=function(){reject(request.error);};
+    });
+  }
+  function isolateVerifiedMissing(operation,inspection,options){
+    var repository=options.repository||global.AppIndexedDB;
+    if(!repository||typeof repository.runTransaction!=='function'){
+      return Promise.resolve(result(false,'isolation_unavailable',null,
+        safeError('POST_RESTORE_ISOLATION_UNAVAILABLE')));
+    }
+    var storeName=repository.stores&&repository.stores.syncOperationsQueue||
+      'sync_operations_queue';
+    var isolated;
+    return repository.runTransaction(storeName,'readwrite',function(stores){
+      var store=stores[storeName];
+      return requestToPromise(store.get(operation.operationId)).then(function(current){
+        if(!current||current.status!=='verifying_server'||
+          String(current.operationId)!==String(operation.operationId)||
+          String(current.conferenceId)!==String(operation.conferenceId)||
+          String(current.deviceId)!==String(operation.deviceId)||
+          current.baseRevision!==operation.baseRevision||
+          !inspection||inspection.status!=='not_found'){
+          throw new Error('VERIFIED_MISSING_EVIDENCE_MISMATCH');
+        }
+        var now=new Date().toISOString();
+        current.status='discarded';
+        current.updatedAt=now;
+        current.nextAttemptAt=null;
+        current.lastError=null;
+        current.recovery=null;
+        current.postRestoreIsolation={
+          operationId:current.operationId,
+          conferenceId:current.conferenceId,
+          deviceId:current.deviceId,
+          baseRevision:current.baseRevision,
+          reason:'restored_snapshot_old_cloud_link',
+          proof:'server_not_found',
+          previousStatus:'verifying_server',
+          inspectedAt:now,
+          isolatedAt:now
+        };
+        isolated=current;
+        return requestToPromise(store.put(current));
+      });
+    }).then(function(){
+      return result(true,'isolated',{operationId:isolated.operationId,
+        operation:clone(isolated)},null);
+    }).catch(function(){
+      return result(false,'isolation_failed',null,
+        safeError('VERIFIED_MISSING_EVIDENCE_MISMATCH'));
+    });
+  }
   function dependencies(options){
     options=options&&typeof options==='object'?options:{};
     return {
@@ -117,9 +171,67 @@
         appVersion:String(operation.appVersion||'unknown')
       });
     }
-    if(d.orchestrator&&typeof d.orchestrator.schedule==='function'){
+    if(!d.skipOrchestratorSchedule&&d.orchestrator&&
+      typeof d.orchestrator.schedule==='function'){
       d.orchestrator.schedule('startup_queue_recovered');
     }
+  }
+  function reviewSelectedOperations(operations,options,isolateMissing){
+    options=options&&typeof options==='object'?options:{};
+    var d=dependencies(options);
+    d.skipOrchestratorSchedule=true;
+    if(!queueApiAvailable(d.queue)||!d.snapshotSync||
+      typeof d.snapshotSync.inspectSnapshotOperation!=='function'){
+      return Promise.resolve(result(false,'unavailable',null,
+        safeError('STARTUP_RECOVERY_UNAVAILABLE')));
+    }
+    var supplied=Array.isArray(operations)?operations:[];
+    var allowed=['processing','verifying_server','server_applied',
+      'requires_reconciliation'];
+    if(supplied.some(function(operation){
+      return !operation||allowed.indexOf(operation.status)<0;
+    })){
+      return Promise.resolve(result(false,'invalid_operations',null,
+        safeError('RECOVERY_OPERATIONS_INVALID')));
+    }
+    var scoped=Object.assign({},options,{
+      _generation:generation,
+      _contextFingerprint:contextFingerprint(options),
+      _suppressVerificationTimer:true,
+      _isolateVerifiedMissing:isolateMissing===true
+    });
+    var outcomes=[];
+    var sequence=Promise.resolve();
+    supplied.forEach(function(operation){
+      sequence=sequence.then(function(){
+        clearVerificationTimer(operation.operationId);
+        return reconcileOne(d,operation,scoped).then(function(outcome){
+          outcomes.push(outcome);
+        });
+      });
+    });
+    return sequence.then(function(){
+      return result(true,supplied.length?'completed':'empty',{
+        candidateCount:supplied.length,outcomes:outcomes
+      },null);
+    });
+  }
+  function reviewOperations(operations,options){
+    return reviewSelectedOperations(operations,options,false);
+  }
+  function reviewPostRestoreOperations(operations){
+    return reviewSelectedOperations(operations,{
+      queue:global.OfflineSyncQueue,
+      snapshotSync:global.SupabaseSnapshotSync,
+      linkStore:global.ConferenceLinkStore,
+      processor:global.SyncQueueProcessor,
+      integration:global.OfflineFirstIntegration,
+      orchestrator:global.AutomaticSyncOrchestrator,
+      repository:global.AppIndexedDB,
+      appData:global.appData,
+      auth:global.SupabaseAuth,
+      deviceIdentity:global.SupabaseDeviceIdentity
+    },true);
   }
   function finalizeCheckpoint(d,operation,options){
     var checkpoint=operation.result||{};
@@ -176,13 +288,18 @@
           'SERVER_VERIFICATION_UNAVAILABLE');
         return d.queue.requireReconciliation(operation.operationId,error,
           options.queueOptions).then(function(updated){
-            if(updated&&updated.ok)scheduleVerification(updated.data,options);
+            if(updated&&updated.ok&&!options._suppressVerificationTimer){
+              scheduleVerification(updated.data,options);
+            }
             return result(true,'requires_reconciliation',{
               operationId:operation.operationId
             },error);
           });
       }
       if(inspection.status==='not_found'){
+        if(options._isolateVerifiedMissing===true){
+          return isolateVerifiedMissing(operation,inspection,options);
+        }
         return d.queue.restoreVerifiedMissingToPending(
           operation.operationId,options.queueOptions).then(function(restored){
             return restored&&restored.ok
@@ -314,6 +431,8 @@
 
   global.StartupQueueRecovery=Object.freeze({
     run:run,
+    reviewOperations:reviewOperations,
+    reviewPostRestoreOperations:reviewPostRestoreOperations,
     stop:stop,
     getState:function(){return clone(state);}
   });

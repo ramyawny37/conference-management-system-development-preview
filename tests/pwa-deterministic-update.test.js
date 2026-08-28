@@ -11,38 +11,50 @@ const manager=fs.readFileSync(path.join(root,'js/sync/conference-edit-lock-manag
 
 const previous='exclusive-edit-lock-v1';
 const next='organization-membership-operation-key-v1';
-const shellRevision='production-baseline-af6b910-v1';
+const mobileRoomInputRevision='anchored-glass-person-picker-v5';
+const appVersion='3.3.0';
+const shellRevision='production-integrated-3-3-0-main-6d0c1e1-develop-80653ca-v1';
+const cacheRevision='runtime-authorization-phase2b-v1';
+const priorAuthorizationCacheRevision='runtime-authorization-phase1-v1';
+const productionCacheRevision='production-integrated-3-3-0-main-6d0c1e1-develop-80653ca-v1';
+const accountIdentityRevision='account-session-identity-v1';
+const stateAssetRevision='develop-cross-store-arbitration-v1';
+const persistenceArbitrationRevision='develop-cross-store-arbitration-v1';
+const permissionRuntimeRevision='runtime-authorization-phase2b-v1';
 const testTemplateCleanupRevision='test-house-template-cleanup-v1';
 const templateDiagnosticRevision='template-diagnostic-export-v1';
 const partialTemplateCleanupRevision='partial-template-state-cleanup-v1';
 const rejectedSharedTemplateCleanupRevision='rejected-shared-template-cleanup-v1';
 const sharedTemplateCopyGuardRevision='shared-template-copy-guard-v1';
 const hardeningRevision='legacy-rpc-hardening-v1';
-const organizationAdministrationRevision='organization-membership-manual-retry-v1';
-const memberDiagnosticsRevision='production-baseline-af6b910-v1';
+const memberDiagnosticsRevision='repository-rejection-diagnostics-v1';
 const legacyConferenceRevision='legacy-conference-preflight-v2';
 const privacyRevision='diagnostics-privacy-hardening-v1';
 const templateIsolationRevision='template-sync-isolation-v1';
-const startupRevision='auth-approval-ux-v1';
+const startupRevision=accountIdentityRevision;
 const deviceOnboardingRevision=next;
 const organizationTemplateRevision='shared-template-library-v1';
-const membershipRepositoryRevision='organization-membership-retention-safe-v1';
 const legacyTemplateAuthorizationRevision='legacy-template-adoption-authorization-v1';
 const officialTemplateSharingRevision='official-house-template-sharing-v1';
 const sharedTemplateReadOnlyRevision='shared-house-template-read-only-v1';
 const bootstrapRevision='first-owner-bootstrap-hardening-v1';
 const userManagementUiRevision=next;
-const userManagementStyleRevision='organization-members-refresh-v1';
+const userManagementStyleRevision=accountIdentityRevision;
 const userManagementReadRevision='organization-archive-restore-v1';
 const conferenceRoleRevision=privacyRevision;
 const houseTemplateRevision='template-floor-conference-sync-v1';
 const pwaAssetRevision=next;
 const appAssetRevision='section-accommodation-edit-lock-v1';
 const snapshotGuardRevision='conference-snapshot-device-guard-v1';
-const priorFrontendRevision='organization-members-refresh-v1';
+const priorFrontendRevision=accountIdentityRevision;
 const conferenceSyncRevision='conference-organization-context-v1';
 const organizationMembersRevision='organization-membership-manual-retry-v1';
-assert(worker.includes("CACHE_REVISION = '"+shellRevision+"'"));
+const snapshotPayloadDiagnosticsRevision='snapshot-payload-diagnostics-v1';
+const postRestoreProofBoundaryRevision='post-restore-proof-boundary-v1';
+assert(worker.includes("? '"+cacheRevision+"'"));
+assert(!worker.includes("? '"+priorAuthorizationCacheRevision+"'"));
+assert(worker.includes(": '"+productionCacheRevision+"'"));
+assert(worker.includes("const APP_VERSION = '"+appVersion+"';"));
 assert(index.includes("window.APP_SHELL_REVISION='"+shellRevision+"'"));
 const brandingIcons=[
   'icons/icon-96x96-v3.png',
@@ -64,7 +76,7 @@ brandingIcons.forEach(asset=>{
 });
 assert(index.includes('pwa.js?rev='+pwaAssetRevision));
 ['js/supabase/auth.js'].forEach(asset=>{
-  const versioned=asset+'?rev='+next;
+  const versioned=asset+'?rev='+accountIdentityRevision;
   assert(index.includes(versioned),'index missing '+versioned);
   assert(worker.includes("'./"+versioned+"'"),'app shell missing '+versioned);
 });
@@ -98,8 +110,7 @@ assert(worker.includes("'./"+cleanupAsset+"'"));
   assert(worker.includes("'./"+versioned+"'"),'app shell missing '+versioned);
 });
 [
-  'js/sync/local-template-copy-cleanup.js',
-  'js/sync/sync-settings-ui.js'
+  'js/sync/local-template-copy-cleanup.js'
 ].forEach(asset=>{
   const versioned=asset+'?rev='+sharedTemplateCopyGuardRevision;
   assert(index.includes(versioned),'index missing '+versioned);
@@ -117,7 +128,13 @@ assert(worker.includes("'./js/sync/orphaned-conference-cleanup.js?rev=orphaned-l
 });
 {
   const versioned='js/supabase/organization-administration-service.js?rev='+
-    organizationAdministrationRevision;
+    'organization-membership-manual-retry-v1';
+  assert(index.includes(versioned),'index missing '+versioned);
+  assert(worker.includes("'./"+versioned+"'"),'app shell missing '+versioned);
+}
+{
+  const versioned='js/sync/sync-settings-ui.js?rev='+
+    accountIdentityRevision;
   assert(index.includes(versioned),'index missing '+versioned);
   assert(worker.includes("'./"+versioned+"'"),'app shell missing '+versioned);
 }
@@ -134,7 +151,7 @@ assert(worker.includes("'./js/supabase/first-system-bootstrap-service.js?rev="+b
 assert(index.includes('js/sync/startup-access-gate.js?rev='+startupRevision));
 assert(worker.includes("'./js/sync/startup-access-gate.js?rev="+
   startupRevision+"'"));
-const organizationMembershipRepository='js/sync/organization-membership-operation-repository.js?rev='+membershipRepositoryRevision;
+const organizationMembershipRepository='js/sync/organization-membership-operation-repository.js?rev=organization-membership-retention-safe-v1';
 assert(index.includes(organizationMembershipRepository));
 assert(worker.includes("'./"+organizationMembershipRepository+"'"));
 ['houses.js'].forEach(asset=>{
@@ -145,7 +162,7 @@ assert(worker.includes("'./"+organizationMembershipRepository+"'"));
 const isolatedHouseTemplates='houseTemplates.js?rev='+sharedTemplateReadOnlyRevision;
 assert(index.includes(isolatedHouseTemplates));
 assert(worker.includes("'./"+isolatedHouseTemplates+"'"));
-const isolatedState='state.js?rev='+shellRevision;
+const isolatedState='state.js?rev='+stateAssetRevision;
 assert(index.includes(isolatedState));
 assert(worker.includes("'./"+isolatedState+"'"));
 const conferenceMembersUi='js/sync/conference-members-ui.js?rev='+conferenceRoleRevision;
@@ -180,12 +197,26 @@ const readAsset='js/sync/user-management-read-service.js?rev='+
   userManagementReadRevision;
 assert(index.includes(readAsset));
 assert(worker.includes("'./"+readAsset+"'"));
-assert(index.includes('script.js?rev='+priorFrontendRevision));
-assert(worker.includes("'./script.js?rev="+priorFrontendRevision+"'"));
+assert(index.includes('script.js?rev='+permissionRuntimeRevision));
+assert(worker.includes("'./script.js?rev="+permissionRuntimeRevision+"'"));
+[
+  'js/sync/conference-permission-resolver.js',
+  'core.js',
+  'js/conference/accounts.js'
+].forEach(asset=>{
+  const versioned=asset+'?rev='+permissionRuntimeRevision;
+  assert(index.includes(versioned),'index missing Phase 2B runtime asset '+versioned);
+  assert(worker.includes("'./"+versioned+"'"),'app shell missing Phase 2B runtime asset '+versioned);
+});
+{
+  const activationAsset='js/sync/conference-activation-authorization.js?rev=runtime-authorization-phase1-v1';
+  assert(index.includes(activationAsset),'index missing Phase 1 activation authorization asset');
+  assert(worker.includes("'./"+activationAsset+"'"),'app shell missing Phase 1 activation authorization asset');
+}
 const xlsxAsset='libs/xlsx.full.min.js';
 assert(fs.existsSync(path.join(root,xlsxAsset)),'local XLSX runtime asset missing');
 assert(index.includes('<script src="'+xlsxAsset+'"></script>'),'index missing local XLSX runtime');
-assert(index.indexOf(xlsxAsset)<index.indexOf('script.js?rev='+priorFrontendRevision),'XLSX runtime must load before import logic');
+assert(index.indexOf(xlsxAsset)<index.indexOf('script.js?rev='+permissionRuntimeRevision),'XLSX runtime must load before import logic');
 assert(worker.includes("'./"+xlsxAsset+"'"),'app shell missing local XLSX runtime');
 assert(!/https?:[^"']*(sheetjs|xlsx)/i.test(index),'XLSX must not depend on a CDN');
 const organizationMembersAsset='js/sync/organization-members-ui.js?rev='+organizationMembersRevision;
@@ -196,7 +227,7 @@ assert(worker.includes("'./"+organizationMembersAsset+"'"),'app shell missing de
   assert(index.includes(versioned),'index missing '+versioned);
   assert(worker.includes("'./"+versioned+"'"),'app shell missing '+versioned);
 });
-[/* state.js uses sharedTemplateReadOnlyRevision */
+[/* state.js uses stateAssetRevision */
   'js/sync/automatic-queue-runner.js',
   'js/sync/conference-realtime-manager.js'
 ].forEach(asset=>{
@@ -205,8 +236,13 @@ assert(worker.includes("'./"+organizationMembersAsset+"'"),'app shell missing de
   assert(worker.includes("'./"+versioned+"'"),'app shell missing '+versioned);
 });
 [
-  ['js/storage/indexeddb.js',shellRevision],
-  ['js/storage/storage-repository.js',shellRevision]
+  ['js/storage/snapshot-payload-diagnostics.js',snapshotPayloadDiagnosticsRevision],
+  ['js/storage/local-persistence-arbitration.js',persistenceArbitrationRevision],
+  ['js/storage/indexeddb.js',persistenceArbitrationRevision],
+  ['js/storage/storage-repository.js',persistenceArbitrationRevision],
+  ['js/sync/sync-queue.js',postRestoreProofBoundaryRevision],
+  ['js/sync/startup-queue-recovery.js',postRestoreProofBoundaryRevision],
+  ['js/storage/full-backup.js',postRestoreProofBoundaryRevision]
 ].forEach(([asset,revision])=>{
   const versioned=asset+'?rev='+revision;
   assert(index.includes(versioned),'index missing '+versioned);
@@ -238,6 +274,9 @@ assert(worker.includes("'./"+adoptionUi+"'"));
   assert(index.includes(versioned),'index missing '+versioned);
   assert(worker.includes("'./"+versioned+"'"),'app shell missing '+versioned);
 });
+const platformDeviceAdministrationAsset='js/supabase/device-authorization-administration-service.js?rev=platform-privileged-device-admin-diagnostics-v1';
+assert(index.includes(platformDeviceAdministrationAsset),'index missing '+platformDeviceAdministrationAsset);
+assert(worker.includes("'./"+platformDeviceAdministrationAsset+"'"),'app shell missing '+platformDeviceAdministrationAsset);
 const multiDeviceAsset='js/sync/device-authorization-administration-ui.js?rev=startup-device-admin-lifecycle-v1';
 assert(index.includes(multiDeviceAsset),'index missing '+multiDeviceAsset);
 assert(worker.includes("'./"+multiDeviceAsset+"'"),'app shell missing '+multiDeviceAsset);
@@ -256,6 +295,8 @@ assert(navigation.indexOf("fetch(request,{cache:'no-store'})")>=0,'navigation mu
 assert(navigation.indexOf('fetch(request')<navigation.indexOf('cache.match'),'navigation must be network-first');
 assert(worker.includes("event.data.action === 'skipWaiting'"));
 assert(worker.includes('event.waitUntil(self.skipWaiting())'));
+assert(worker.includes('cacheName.startsWith(CACHE_PREFIX) && cacheName !== CACHE_NAME'));
+assert(worker.includes('caches.delete(cacheName)'));
 assert(pwa.includes("postMessage({ action: 'skipWaiting' })"),'update button and worker message must match');
 assert(pwa.includes("updateViaCache:'none'"),'worker update must bypass HTTP cache');
 assert(pwa.includes("addEventListener('controllerchange'"));

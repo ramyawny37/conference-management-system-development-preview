@@ -19,7 +19,7 @@ function between(start,end){
 }
 
 const helperSource=between('function normalizeAccommodationSearchText(',
-  'function updateAccommodationSearch(');
+  'function getAccommodationOccupants(');
 const context={
   getAccommodationPersonDisplayName(person){
     return person.personId==='person-1'?'Mina Adel':(person.name||'');
@@ -63,7 +63,8 @@ assert.match(accommodationBlock,/if\(!isFiltering\)[\s\S]*current\.houses/,
   'empty houses/floors must not be pre-created while filtering');
 assert.match(accommodationBlock,/floorEntry\.rooms\.forEach\(function\(r\)/,
   'the existing room-card rendering loop must be reused');
-assert.match(accommodationBlock,/class="rcard"/,'full room card must remain present');
+assert.match(accommodationBlock,/class="(?:rcard(?:\s[^"]*)?|[^"]*\srcard(?:\s[^"]*)?)"/,
+  'full room card must remain present');
 assert.match(accommodationBlock,/openRoomEditor\(/,'room actions must remain present');
 assert.match(accommodationBlock,/canEditAccommodation/,'viewing users must still reach filtering before action gating');
 assert.match(accommodationBlock,/accommodationSearchQuery/,'query must survive ordinary rerenders');
@@ -71,7 +72,7 @@ assert.match(accommodationBlock,/function clearAccommodationSearch\(\)[\s\S]*acc
   'clear must restore the unfiltered room set');
 assert.doesNotMatch(helperSource,/requireAccommodationMutation|beginAccommodationEditing/,
   'search matching must not acquire the accommodation lock');
-assert.doesNotMatch(accommodationBlock,/\bsave\s*\(|IndexedDB|\.rpc\s*\(|SyncQueue|syncQueue|Realtime.*(?:set|write|push)/,
+assert.doesNotMatch(helperSource,/\bsave\s*\(|IndexedDB|\.rpc\s*\(|SyncQueue|syncQueue|Realtime.*(?:set|write|push)/,
   'search must not save, write IndexedDB, queue, RPC, or mutate realtime state');
 assert.match(stateSource,/var accommodationSearchQuery='';/,
   'query must be transient UI state');

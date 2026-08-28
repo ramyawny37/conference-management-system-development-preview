@@ -40,6 +40,9 @@ var sandbox={
   }},
   ConferenceRepository:{recordLocalChange:function(){lifecycleCalls++;}},
   AutomaticSyncOrchestrator:{schedule:function(reason){schedules.push(reason);}},
+  ConferenceActivationAuthorization:{
+    canDisplay:function(id){return id==='A'||id==='B';}
+  },
   isConferenceImportRecoveryPending:function(){return false;},
   setCurrentConference:function(){},syncCurrentConferenceRefs:function(){},
   getCurrentConference:function(){return sandbox.appData.conferences.find(function(c){

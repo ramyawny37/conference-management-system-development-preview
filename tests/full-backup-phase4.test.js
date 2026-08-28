@@ -112,6 +112,7 @@ function environment(fix,settings){
     conf_v5:JSON.stringify(fix.previous)
   };
   var applied=fix.previous;
+  var templateSyncCalls=0;
   var repository={
     createLocalBackup:function(snapshot,reason){
       events.push('safety');
@@ -137,6 +138,10 @@ function environment(fix,settings){
       saveCount++;
       events.push(saveCount===1?'candidateIndexedDb':'rollbackIndexedDb');
       assert.strictEqual(options.skipSyncQueue,true);
+      if(saveCount===1){
+        if(options.skipTemplateSync!==true)templateSyncCalls++;
+        assert.strictEqual(options.skipTemplateSync,true);
+      }
       assert.strictEqual(
         options.source,
         saveCount===1?'full_restore':'full_restore_rollback'
@@ -148,7 +153,17 @@ function environment(fix,settings){
         return Promise.reject(new Error('ROLLBACK_INDEXED_FAILED'));
       }
       indexedData=plain(snapshot);
-      return Promise.resolve('**app_snapshot**');
+      if(!settings.localWriteFail){
+        localValues.conf_v5=JSON.stringify(snapshot);
+      }
+      return Promise.resolve({
+        status:settings.localWriteFail
+          ?'persisted_mirror_degraded'
+          :'persisted',
+        mirror:settings.localWriteFail
+          ?{ok:false,code:'LOCAL_STORAGE_MIRROR_FAILED'}
+          :{ok:true}
+      });
     },
     getAppSnapshot:function(){
       events.push('verifyIndexedDb');
@@ -216,6 +231,7 @@ function environment(fix,settings){
     getIndexed:function(){return indexedData;},
     getLocal:function(key){return localValues[key];},
     getApplied:function(){return applied;},
+    getTemplateSyncCalls:function(){return templateSyncCalls;},
     getSafetyBackup:function(){
       return safetyBackupRecord
         ?localBackupStore[safetyBackupRecord.backupId]
@@ -276,6 +292,7 @@ async function testSuccessfulRestore(api){
   );
   assert.strictEqual(JSON.stringify(fix.input),inputBefore);
   assert.strictEqual(JSON.stringify(fix.previous),previousBefore);
+  assert.strictEqual(env.getTemplateSyncCalls(),0);
   assert.strictEqual(api.isFullRestoreInProgress(),false);
 }
 
@@ -348,16 +365,16 @@ async function testLocalFailureRollback(api){
   var fix=fixture(api);
   var env=environment(fix,{localWriteFail:true});
   var result=await api.executeFullRestore(fix.input,env.options);
-  assert.strictEqual(result.success,false);
-  assert.strictEqual(result.failedStage,'local_storage_write');
-  assert.strictEqual(result.rollback.success,true);
-  assert.strictEqual(env.getIndexed().currentConferenceId,'previous');
+  assert.strictEqual(result.success,true);
+  assert.strictEqual(result.persistence.indexedDb,true);
+  assert.strictEqual(result.persistence.localStorage,false);
+  assert.strictEqual(env.getIndexed().currentConferenceId,'incoming');
   assert.strictEqual(
     JSON.parse(env.getLocal('conf_v5')).currentConferenceId,
     'previous'
   );
-  assert.strictEqual(env.getApplied().currentConferenceId,'previous');
-  assert.strictEqual(env.events.indexOf('applyGlobal'),-1);
+  assert.strictEqual(env.getApplied().currentConferenceId,'incoming');
+  assert.notStrictEqual(env.events.indexOf('applyGlobal'),-1);
   assert.strictEqual(env.getSafetyBackup().backupId,'safety-1');
 }
 
@@ -497,14 +514,17 @@ async function testPartialRollbackFailure(api){
   var fix=fixture(api);
   var env=environment(fix,{
     verificationMismatch:true,
-    rollbackIndexedFail:true,
-    rollbackLocalFail:true
+    rollbackIndexedFail:true
   });
   var result=await api.executeFullRestore(fix.input,env.options);
   assert.strictEqual(result.success,false);
   assert.strictEqual(result.rollback.attempted,true);
   assert.strictEqual(result.rollback.success,false);
-  assert.strictEqual(result.rollback.errors.length,2);
+  assert.strictEqual(result.rollback.errors.length,1);
+  assert.strictEqual(
+    result.rollback.errors[0].code,
+    'FULL_RESTORE_INDEXEDDB_ROLLBACK_FAILED'
+  );
   assert.strictEqual(result.safetyBackup.created,true);
   assert.strictEqual(result.safetyBackup.id,'safety-1');
   assert.strictEqual(api.isFullRestoreInProgress(),false);

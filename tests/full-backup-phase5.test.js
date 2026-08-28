@@ -219,6 +219,9 @@ function environment(api,settings){
     }})
   },settings);
   var events=[];
+  var operations=(settings.operations||[]).map(function(operation){
+    return Object.assign({},operation);
+  });
   var runtimeState={
     contexts:{'restored-1':true},
     remoteUpdates:{[REMOTE_ONE]:true},
@@ -230,11 +233,49 @@ function environment(api,settings){
       if(settings.queueDeferred)return settings.queueDeferred.promise;
       return Promise.resolve({
         ok:true,
-        data:{operations:settings.operations||[]}
+        data:{operations:operations.map(function(operation){
+          return Object.assign({},operation);
+        })}
       });
+    },
+    isolatePostRestoreOperations:function(input){
+      events.push('queueIsolate');
+      var isolated=[];
+      input.operationIds.forEach(function(id){
+        var operation=operations.find(function(item){
+          return item.operationId===id;
+        });
+        if(!operation)return;
+        var safe=['pending','failed'].indexOf(operation.status)>=0&&
+          operation.attempts===0;
+        if(!safe)return;
+        operation.status='discarded';
+        operation.postRestoreIsolation={operationId:id,
+          proof:'never_attempted'};
+        isolated.push({operationId:id});
+      });
+      return Promise.resolve({ok:isolated.length===input.operationIds.length,
+        status:'isolated',data:{count:isolated.length,operations:isolated}});
     },
     delete:function(){events.push('queueDelete');}
   };
+  var recovery={reviewPostRestoreOperations:function(candidates){
+    events.push('queueRecovery');
+    var outcomes=[];
+    candidates.forEach(function(candidate){
+      var operation=operations.find(function(item){
+        return item.operationId===candidate.operationId;
+      });
+      var status=settings.recoveryStatus||
+        (candidate.status==='server_applied'?'recovered':'requires_reconciliation');
+      if(status==='recovered')operation.status='applied';
+      if(status==='pending')operation.status='pending';
+      if(status==='isolated')operation.status='discarded';
+      outcomes.push({ok:true,status:status,data:{operationId:candidate.operationId}});
+    });
+    return Promise.resolve({ok:settings.recoveryFails!==true,
+      status:'completed',data:{outcomes:outcomes}});
+  }};
   var pending={
     get:function(id){
       events.push('pendingRead:'+id);
@@ -304,6 +345,7 @@ function environment(api,settings){
       currentAppData:appData(restored),
       storage:store,
       queue:queue,
+      recovery:recovery,
       pendingRemoteApplications:pending,
       indexedDb:indexedDb,
       integration:integration,
@@ -493,11 +535,13 @@ async function testQueueAndPendingBlock(api){
   var linksBefore=env.store.value(LINKS);
   var markerBefore=env.store.value(MARKER);
   var result=await api.completePostRestoreCloudReview(env.options);
-  assert.strictEqual(result.errorCode,'FULL_RESTORE_QUEUE_REVIEW_REQUIRED');
-  assert.strictEqual(env.store.value(LINKS),linksBefore);
-  assert.strictEqual(env.store.value(MARKER),markerBefore);
+  assert.strictEqual(result.success,true);
+  assert.strictEqual(result.queueOperationsHandled,1);
+  assert.notStrictEqual(env.store.value(LINKS),linksBefore);
+  assert.notStrictEqual(env.store.value(MARKER),markerBefore);
+  assert.strictEqual(env.events.indexOf('queueIsolate')>=0,true);
   assert.strictEqual(env.events.indexOf('queueDelete'),-1);
-  assert.strictEqual(env.events.indexOf('orchestratorStart'),-1);
+  assert.strictEqual(env.events.indexOf('orchestratorStart')>=0,true);
 
   env=environment(api,{pendingApplication:true});
   result=await api.completePostRestoreCloudReview(env.options);
@@ -540,6 +584,57 @@ async function testQueueAndPendingBlock(api){
     result.errorCode,
     'FULL_RESTORE_PENDING_REMOTE_APPLICATION_REVIEW_UNAVAILABLE'
   );
+}
+
+async function testPostRestoreQueueStateMachine(api){
+  for(var status of ['processing','verifying_server']){
+    var env=environment(api,{operations:[queueOperation({
+      status:status,attempts:1
+    })],recoveryStatus:'isolated'});
+    var result=await api.completePostRestoreCloudReview(env.options);
+    assert.strictEqual(result.success,true,status);
+    assert.strictEqual(result.queueOperationsHandled,1,status);
+    assert.strictEqual(env.events.indexOf('queueRecovery')>=0,true,status);
+    assert.strictEqual(env.events.indexOf('queueIsolate'),-1,status);
+    assert.strictEqual(env.events.indexOf('orchestratorStart')>=0,true,status);
+  }
+
+  var applied=environment(api,{operations:[queueOperation({
+    status:'server_applied',attempts:1,result:{revision:2}
+  })],recoveryStatus:'recovered'});
+  var appliedResult=await api.completePostRestoreCloudReview(applied.options);
+  assert.strictEqual(appliedResult.success,true);
+  assert.strictEqual(applied.events.indexOf('queueRecovery')>=0,true);
+  assert.strictEqual(applied.events.indexOf('queueIsolate'),-1);
+
+  var already=environment(api,{operations:[queueOperation({
+    status:'applied',attempts:1
+  })]});
+  var alreadyResult=await api.completePostRestoreCloudReview(already.options);
+  assert.strictEqual(alreadyResult.success,true);
+  assert.strictEqual(already.events.indexOf('queueRecovery'),-1);
+  assert.strictEqual(already.events.indexOf('queueIsolate'),-1);
+
+  for(var unresolved of [
+    {status:'processing',attempts:1},
+    {status:'conflict',attempts:1},
+    {status:'failed',attempts:1}
+  ]){
+    var blocked=environment(api,{operations:[queueOperation(unresolved)],
+      recoveryStatus:'requires_reconciliation'});
+    var blockedResult=await api.completePostRestoreCloudReview(blocked.options);
+    assert.strictEqual(blockedResult.success,false,unresolved.status);
+    assert.strictEqual(blockedResult.errorCode,
+      'FULL_RESTORE_QUEUE_REVIEW_REQUIRED',unresolved.status);
+    assert.strictEqual(blocked.events.indexOf('orchestratorStart'),-1,
+      unresolved.status);
+    assert.ok(blocked.store.value(MARKER),unresolved.status);
+    var retained=blockedResult.queueReview.unresolved.concat(
+      blockedResult.queueReview.requiresInspection
+    );
+    assert.strictEqual(retained[0].operationId,OPERATION_ONE,
+      unresolved.status);
+  }
 }
 
 async function testMalformedQueueRecordsBlock(api){
@@ -1254,6 +1349,7 @@ async function run(){
   await testMalformedRootBlocks(api);
   await testMalformedLinkAndAttemptsBlock(api);
   await testQueueAndPendingBlock(api);
+  await testPostRestoreQueueStateMachine(api);
   await testMalformedQueueRecordsBlock(api);
   await testValidQueueContractPasses(api);
   await testQueueSnapshotContractRejectsInvalidValues(api);

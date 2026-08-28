@@ -23,7 +23,8 @@ vm.runInNewContext(repository,sandbox);vm.runInNewContext(service,sandbox);vm.ru
   assert.strictEqual(requests[0].args.p_operation_id,ids.operation);assert.strictEqual(requests[1].args.p_operation_id,ids.operation);
   ['حالة اعتماد هذا الجهاز','غير مسجل','مسجل','بانتظار الموافقة','معتمد','مرفوض أو ملغى','تعذر التحقق','تحديث الحالة','لن يتم اعتماد الجهاز تلقائيًا.'].forEach(function(text){assert.ok(ui.includes(text),text);});
   ['js/sync/device-authorization-operation-repository.js','js/supabase/current-device-authorization-service.js','js/supabase/device-authorization-administration-service.js','js/sync/current-device-authorization-ui.js','js/sync/device-authorization-administration-ui.js'].forEach(function(file){assert.ok(index.includes(file));assert.ok(worker.includes('./'+file));});
-  assert.ok(worker.includes("CACHE_REVISION = 'legacy-conference-preflight-v2'"));
+  assert.match(worker,
+    /const CACHE_REVISION = IS_DEVELOPMENT\s*\? 'runtime-authorization-phase2b-v1'\s*:\s*'production-integrated-3-3-0-main-6d0c1e1-develop-80653ca-v1';/);
   assert.ok(ui.includes('طلب اعتماد الجهاز مرة أخرى'));
   assert.ok(ui.includes("state.status==='revoked'&&state.accountStatus==='approved'"));
   assert.match(service,/function rpcError\(error,fallback\)/);

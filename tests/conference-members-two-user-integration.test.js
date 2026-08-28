@@ -18,6 +18,8 @@ var uiSource=fs.readFileSync(path.resolve(
 var ids={
   owner:'11111111-1111-4111-8111-111111111111',
   manager:'22222222-2222-4222-8222-222222222222',
+  ownerDevice:'55555555-5555-4555-8555-555555555555',
+  managerDevice:'66666666-6666-4666-8666-666666666666',
   conferenceA:'33333333-3333-4333-8333-333333333333',
   conferenceB:'44444444-4444-4444-8444-444444444444',
   localA:'local-conference-a',
@@ -138,7 +140,16 @@ function membershipBackend(){
   }
 
   function rpc(actor,name,args){
-    calls.push({actor:actor,name:name,args:Object.assign({},args)});
+    var rpcName=name;
+    var expectedDeviceId=actor===ids.owner?ids.ownerDevice:ids.managerDevice;
+    if(name.indexOf('device_guarded_')!==0||
+      String(args&&args.p_actor_device_id||'')!==expectedDeviceId){
+      return Promise.resolve({
+        data:null,error:{code:'42501',message:'approved device required'}
+      });
+    }
+    name=name.slice('device_guarded_'.length);
+    calls.push({actor:actor,name:name,rpcName:rpcName,args:Object.assign({},args)});
     var remoteConferenceId=conferenceId(args);
     var actorRole=access(actor,remoteConferenceId);
 
@@ -362,6 +373,11 @@ function userRuntime(actorUserId,backend){
     },
     SupabaseAuth:{
       getSession:function(){return session;}
+    },
+    SupabaseDeviceIdentity:{
+      getOrCreate:function(){
+        return {id:actorUserId===ids.owner?ids.ownerDevice:ids.managerDevice};
+      }
     },
     getCurrentConference:function(){return current;},
     ConferenceLinkStore:{

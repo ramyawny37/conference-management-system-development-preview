@@ -4,9 +4,13 @@ var assert=require('assert');
 var fs=require('fs');
 var path=require('path');
 var vm=require('vm');
+var webcrypto=require('crypto').webcrypto;
 
 var source=fs.readFileSync(path.resolve(
   __dirname,'../js/storage/storage-repository.js'
+),'utf8');
+var arbitrationSource=fs.readFileSync(path.resolve(
+  __dirname,'../js/storage/local-persistence-arbitration.js'
 ),'utf8');
 
 function environment(results,options){
@@ -20,8 +24,15 @@ function environment(results,options){
     Promise:Promise,
     JSON:JSON,
     Object:Object,
+    Array:Array,String:String,Number:Number,Date:Date,
+    TextEncoder:TextEncoder,Uint8Array:Uint8Array,crypto:webcrypto,
+    SK:'conf_v5',BrowserStorageNamespace:{environment:'development'},
+    localStorage:{getItem:function(){return null;},setItem:function(){}},
     structuredClone:global.structuredClone,
     AppIndexedDB:{
+      stores:{conferences:'conferences'},
+      getAppSnapshot:function(){return Promise.resolve(null);},
+      validateAppSnapshot:function(){return {valid:false};},
       saveAppSnapshot:function(snapshot){
         saved.push(snapshot);
         return Promise.resolve({ok:true,status:'saved'});
@@ -44,6 +55,7 @@ function environment(results,options){
   };
   var environmentOptions=options;
   sandbox.window=sandbox;
+  vm.runInNewContext(arbitrationSource,sandbox,{filename:'local-persistence-arbitration.js'});
   vm.runInNewContext(source,sandbox,{filename:'storage-repository.js'});
   return {window:sandbox,saved:saved,handled:handled,wakes:wakes};
 }
@@ -85,7 +97,7 @@ async function run(){
   var persisted=await failedWake.window.StorageRepository.saveAppSnapshot(
     second
   );
-  assert.strictEqual(persisted.status,'saved');
+  assert.strictEqual(persisted.status,'persisted');
   assert.strictEqual(failedWake.saved.length,1);
   assert.strictEqual(failedWake.handled.length,1);
   assert.strictEqual(failedWake.wakes.length,1);
