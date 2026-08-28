@@ -238,7 +238,7 @@
     });
   }
 
-  function saveAppSnapshot(appData){
+  function saveAppSnapshot(appData,persistenceMetadata){
     var diagnostics=global.SnapshotPayloadDiagnostics;
     var inspected;
     if(diagnostics&&typeof diagnostics.inspect==='function'){
@@ -267,7 +267,8 @@
       appVersion: global.APP_RELEASE&&global.APP_RELEASE.version?global.APP_RELEASE.version:'',
       savedAt: new Date().toISOString(),
       source: 'dual-write',
-      sizeBytes: inspected.sizeBytes
+      sizeBytes: inspected.sizeBytes,
+      persistenceMetadata:persistenceMetadata||null
     }).catch(function(error){
       if(diagnostics&&diagnostics.isQuotaExceededError(error)){
         var quotaError=new Error(

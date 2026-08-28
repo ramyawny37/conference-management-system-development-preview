@@ -6,7 +6,7 @@ const ORG_B='30000000-0000-4000-8000-000000000002';
 
 function runtime(remoteRows,settings){
   settings=settings||{};
-  const stores={content:[],access:[]},rpcCalls=[],saveCalls=[];
+  const stores={content:[],access:[]},rpcCalls=[],saveCalls=[],localSnapshotWrites=[];
   const data={houseTemplates:[],templates:[],conferences:[],currentConferenceId:null};
   let sequence=0;
   const client={
@@ -25,7 +25,7 @@ function runtime(remoteRows,settings){
     },
     channel(){return {on(){return this;},subscribe(callback){callback('SUBSCRIBED');return this;},unsubscribe(){}};}
   };
-  const window={JSON,Promise,Date,crypto:{randomUUID:()=>`00000000-0000-4000-8000-${String(++sequence).padStart(12,'0')}`},appData:data,localStorage:{setItem(){}},SK:'x',addEventListener(){}};
+  const window={JSON,Promise,Date,crypto:{randomUUID:()=>`00000000-0000-4000-8000-${String(++sequence).padStart(12,'0')}`},appData:data,localStorage:{setItem(key){if(key==='x')localSnapshotWrites.push(key);}},SK:'x',addEventListener(){}};
   window.SupabaseAuth={getState:()=>({authenticated:true,user:{id:'10000000-0000-4000-8000-000000000001'}})};
   window.SupabaseDeviceIdentity={getOrCreate:()=>({id:'20000000-0000-4000-8000-000000000001'})};
   window.SupabaseClientLayer={getClient:()=>client};
@@ -37,7 +37,7 @@ function runtime(remoteRows,settings){
   window.AppIndexedDB={stores:{libraryTemplateContentOperations:'content',organizationTemplateAccessOperations:'access'},getAllRecords:name=>Promise.resolve(stores[name].slice()),putRecord:(name,row)=>{const i=stores[name].findIndex(x=>x.operationId===row.operationId);if(i<0)stores[name].push(row);else stores[name][i]=row;return Promise.resolve();},deleteRecord:(name,id)=>{const i=stores[name].findIndex(x=>x.operationId===id);if(i>=0)stores[name].splice(i,1);return Promise.resolve();}};
   window.StorageRepository={getAppSnapshot:()=>Promise.resolve({data:window.appData}),saveAppSnapshot:(value,options)=>{saveCalls.push(options);window.appData=value;return Promise.resolve({ok:true});}};
   vm.runInNewContext(source,{window,console});
-  return {window,stores,rpcCalls,saveCalls};
+  return {window,stores,rpcCalls,saveCalls,localSnapshotWrites};
 }
 
 (async()=>{
@@ -62,6 +62,8 @@ function runtime(remoteRows,settings){
   assert.equal(r.rpcCalls.filter(call=>call.name==='apply_organization_template_access_operation').length,2,'one association per selected organization');
   assert.deepEqual(Array.from(r.window.appData.houseTemplates[0].accessibleOrganizationIds),[ORG_A,ORG_B]);
   assert(r.saveCalls.every(options=>options&&options.skipSyncQueue===true&&options.skipTemplateSync===true));
+  assert.strictEqual(r.localSnapshotWrites.length,0,
+    'repository owns the application snapshot mirror');
   await r.window.OrganizationTemplateSync.adoptLegacyTemplates([ORG_A,ORG_B]);
   assert.equal(r.rpcCalls.filter(call=>call.name==='apply_library_template_content_operation').length,1,'replay is idempotent');
 

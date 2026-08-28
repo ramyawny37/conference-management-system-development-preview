@@ -17,7 +17,8 @@ const cacheRevision='runtime-authorization-phase2b-v1';
 const priorAuthorizationCacheRevision='runtime-authorization-phase1-v1';
 const productionCacheRevision='development-target-gpp-v1';
 const accountIdentityRevision='account-session-identity-v1';
-const stateAssetRevision='accommodation-visual-match-v6';
+const stateAssetRevision='develop-cross-store-arbitration-v1';
+const persistenceArbitrationRevision='develop-cross-store-arbitration-v1';
 const permissionRuntimeRevision='runtime-authorization-phase2b-v1';
 const testTemplateCleanupRevision='test-house-template-cleanup-v1';
 const templateDiagnosticRevision='template-diagnostic-export-v1';
@@ -229,8 +230,9 @@ assert(worker.includes("'./"+organizationMembersAsset+"'"),'app shell missing de
 });
 [
   ['js/storage/snapshot-payload-diagnostics.js',snapshotPayloadDiagnosticsRevision],
-  ['js/storage/indexeddb.js',snapshotPayloadDiagnosticsRevision],
-  ['js/storage/storage-repository.js',snapshotPayloadDiagnosticsRevision],
+  ['js/storage/local-persistence-arbitration.js',persistenceArbitrationRevision],
+  ['js/storage/indexeddb.js',persistenceArbitrationRevision],
+  ['js/storage/storage-repository.js',persistenceArbitrationRevision],
   ['js/sync/sync-queue.js',postRestoreProofBoundaryRevision],
   ['js/sync/startup-queue-recovery.js',postRestoreProofBoundaryRevision],
   ['js/storage/full-backup.js',postRestoreProofBoundaryRevision]

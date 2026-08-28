@@ -4,12 +4,15 @@ var assert=require('assert');
 var fs=require('fs');
 var path=require('path');
 var vm=require('vm');
+var webcrypto=require('crypto').webcrypto;
 
 var root=path.resolve(__dirname,'..');
 var diagnosticsSource=fs.readFileSync(path.join(
   root,'js/storage/snapshot-payload-diagnostics.js'),'utf8');
 var repositorySource=fs.readFileSync(path.join(
   root,'js/storage/storage-repository.js'),'utf8');
+var arbitrationSource=fs.readFileSync(path.join(
+  root,'js/storage/local-persistence-arbitration.js'),'utf8');
 var queueSource=fs.readFileSync(path.join(
   root,'js/sync/sync-queue.js'),'utf8');
 
@@ -35,20 +38,26 @@ function baseSandbox(){
   var sandbox={Promise:Promise,JSON:JSON,Object:Object,Array:Array,
     String:String,Number:Number,Date:Date,Error:Error,
     TextEncoder:TextEncoder,structuredClone:global.structuredClone,
+    Uint8Array:Uint8Array,crypto:webcrypto,SK:'conf_v5',
+    BrowserStorageNamespace:{environment:'development'},
+    localStorage:{getItem:function(){return null;},setItem:function(){}},
     setImmediate:setImmediate};
   load(diagnosticsSource,sandbox,'snapshot-payload-diagnostics.js');
+  load(arbitrationSource,sandbox,'local-persistence-arbitration.js');
   return sandbox;
 }
 
 async function verifyRepositoryRecovery(){
   var sandbox=baseSandbox();
-  var previous={conferenceId:'**app_snapshot**',data:{version:'old'},
+  var previous={conferenceId:'**app_snapshot**',data:{version:'old',
+    conferences:[],currentConferenceId:null},
     sizeBytes:17};
   var current=clone(previous);
   var remoteStarts=0;
   sandbox.AppIndexedDB={
     stores:{conferences:'conferences'},
     getAppSnapshot:function(){return Promise.resolve(clone(current));},
+    validateAppSnapshot:function(record){return {valid:!!(record&&record.data)};},
     saveAppSnapshot:function(snapshot){
       current={conferenceId:'**app_snapshot**',data:clone(snapshot)};
       return Promise.resolve({ok:true,status:'saved'});

@@ -203,7 +203,6 @@
       return d.repository.saveAppSnapshot(next,{
         skipSyncQueue:true,skipTemplateSync:true
       }).then(function(){
-        d.storage.setItem(global.SK,JSON.stringify(next));
         global.appData=next;
         d.data=next;
         if(d.templateSync&&typeof d.templateSync.forgetDeletedTemplates==='function'){

@@ -151,42 +151,36 @@ function initializeApplicationStorage(){
   if(storageInitializationPromise)return storageInitializationPromise;
 
   var defaults=cloneApplicationStorageData(appData);
-  var repository=window.StorageRepository;
-  var indexedDbApi=window.AppIndexedDB;
+  var arbitration=window.LocalPersistenceArbitration;
   var deviceApproval=window.DeviceReauthorizationFlow&&
     typeof window.DeviceReauthorizationFlow.waitUntilApproved==='function'
     ?window.DeviceReauthorizationFlow.waitUntilApproved()
     :Promise.resolve();
   storageInitializationPromise=Promise.resolve(deviceApproval)
     .then(function(){
-      if(!repository||typeof repository.getAppSnapshot!=='function'){
-        throw new Error('INDEXEDDB_REPOSITORY_UNAVAILABLE');
+      if(!arbitration||typeof arbitration.inspect!=='function'){
+        throw new Error('LOCAL_PERSISTENCE_ARBITRATION_UNAVAILABLE');
       }
-      return repository.getAppSnapshot();
+      return arbitration.inspect({
+        indexedDB:window.AppIndexedDB,
+        localStorage:window.localStorage,
+        storageKey:SK
+      });
     })
-    .then(function(snapshot){
-      var validation=indexedDbApi&&typeof indexedDbApi.validateAppSnapshot==='function'
-        ?indexedDbApi.validateAppSnapshot(snapshot)
-        :{valid:false,reason:'SNAPSHOT_VALIDATOR_UNAVAILABLE'};
-      return validation.valid
-        ?{source:'indexeddb',data:snapshot.data,savedAt:snapshot.savedAt||null}
-        :null;
-    })
-    .catch(function(error){
-      applicationStorageState.lastStorageError=error;
-      console.warn('تعذر قراءة بيانات IndexedDB:',error);
-      return null;
-    })
-    .then(function(selection){
-      if(selection)return selection;
-      try{
-        var localData=readLocalStorageAppData();
-        if(localData)return {source:'localStorage',data:localData};
-      }catch(error){
-        applicationStorageState.lastStorageError=error;
-        console.warn('تعذر قراءة بيانات localStorage:',error);
+    .then(function(result){
+      if(!result.ok){
+        var error=new Error(result.code||'LOCAL_PERSISTENCE_RECOVERY_REQUIRED');
+        error.code=result.code||'LOCAL_PERSISTENCE_RECOVERY_REQUIRED';
+        error.persistenceResult=result;
+        throw error;
       }
-      return {source:'defaults',data:defaults};
+      if(!result.selected)return {source:'defaults',data:defaults};
+      return {
+        source:result.selected.source,
+        data:result.selected.payload,
+        savedAt:result.selected.record&&result.selected.record.savedAt||null,
+        persistenceStatus:result.status
+      };
     })
     .then(function(selection){
       var persistedCandidate=String(selection.data.currentConferenceId||'');
@@ -203,33 +197,7 @@ function initializeApplicationStorage(){
       var current=getCurrentConference();
       if(current)setCurrentConference(current);
 
-      try{
-        var persisted=activation&&typeof activation.preparePersistedAppData==='function'
-          ?activation.preparePersistedAppData(appData):appData;
-        localStorage.setItem(SK,JSON.stringify(persisted));
-        applicationStorageState.lastLocalSaveAt=new Date().toISOString();
-      }catch(error){
-        applicationStorageState.lastStorageError=error;
-        console.warn('تعذر تحديث بيانات localStorage:',error);
-      }
-
-      if(selection.source==='indexeddb'&&!applicationSelectionRestored||
-        !repository||
-        typeof repository.saveAppSnapshot!=='function'){
-        return selection;
-      }
-      var persistedSnapshot=activation&&typeof activation.preparePersistedAppData==='function'
-        ?activation.preparePersistedAppData(appData):appData;
-      return repository.saveAppSnapshot(persistedSnapshot,{skipSyncQueue:true})
-        .then(function(){
-          applicationStorageState.lastIndexedDbSaveAt=new Date().toISOString();
-          return selection;
-        })
-        .catch(function(error){
-          applicationStorageState.lastStorageError=error;
-          console.warn('تعذر حفظ Snapshot في IndexedDB:',error);
-          return selection;
-        });
+      return selection;
     })
     .then(function(selection){
       applicationStorageState.storageReady=true;
@@ -276,22 +244,26 @@ function save(options){
       persistedData,
       options.skipSyncQueue===true?{skipSyncQueue:true}:undefined
     )
-      .then(function(){
+      .then(function(result){
         applicationStorageState.lastIndexedDbSaveAt=new Date().toISOString();
+        if(result&&result.mirror&&result.mirror.ok){
+          applicationStorageState.lastLocalSaveAt=new Date().toISOString();
+        }else if(result&&result.mirror&&result.mirror.ok===false){
+          applicationStorageState.lastStorageError=result.mirror.error||
+            new Error(result.mirror.code||'LOCAL_STORAGE_MIRROR_FAILED');
+          notifyPersistenceFailure('تعذر حفظ البيانات على الجهاز. قد تكون مساحة التخزين ممتلئة. لم يتم تأكيد حفظ آخر تعديل.');
+        }
       })
       .catch(function(indexedDbError){
         applicationStorageState.lastStorageError=indexedDbError;
         console.warn('تعذر حفظ النسخة الاحتياطية في IndexedDB:',indexedDbError);
       });
-  }
-  try{
-    localStorage.setItem(SK,json);
-    applicationStorageState.lastLocalSaveAt=new Date().toISOString();
-    var b=ge('syncBar');if(b){b.textContent='✔ '+new Date().toLocaleTimeString('ar-EG');}
-  }catch(e){
-    applicationStorageState.lastStorageError=e;
-    console.error('تعذر حفظ بيانات التطبيق:',e);
+  }else{
+    var repositoryError=new Error('Application snapshot repository is unavailable.');
+    repositoryError.code='LOCAL_PERSISTENCE_REPOSITORY_UNAVAILABLE';
+    applicationStorageState.lastStorageError=repositoryError;
     notifyPersistenceFailure('تعذر حفظ البيانات على الجهاز. قد تكون مساحة التخزين ممتلئة. لم يتم تأكيد حفظ آخر تعديل.');
+    return false;
   }
   return true;
 }
@@ -310,18 +282,19 @@ function saveCurrentConferenceSelection(){
   if(window.StorageRepository&&
     typeof window.StorageRepository.saveAppSnapshot==='function'){
     window.StorageRepository.saveAppSnapshot(persistedData,{skipSyncQueue:true})
-      .then(function(){
+      .then(function(result){
         applicationStorageState.lastIndexedDbSaveAt=new Date().toISOString();
+        if(result&&result.mirror&&result.mirror.ok){
+          applicationStorageState.lastLocalSaveAt=new Date().toISOString();
+        }
       })
       .catch(function(indexedDbError){
         applicationStorageState.lastStorageError=indexedDbError;
       });
-  }
-  try{
-    localStorage.setItem(SK,json);
-    applicationStorageState.lastLocalSaveAt=new Date().toISOString();
-  }catch(e){
-    applicationStorageState.lastStorageError=e;
+  }else{
+    var repositoryError=new Error('Application snapshot repository is unavailable.');
+    repositoryError.code='LOCAL_PERSISTENCE_REPOSITORY_UNAVAILABLE';
+    applicationStorageState.lastStorageError=repositoryError;
     return false;
   }
   return true;

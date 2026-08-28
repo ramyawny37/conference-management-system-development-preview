@@ -34,11 +34,11 @@ function fixture(settings={}){
       organizationId:ORG,action:'grant',status:'unknown',lastErrorCode:'42501'}]};
   if(settings.extraTargetOperation)stores.library_template_content_operations.push({
     operationId:'unexpected',templateId:TEMPLATE,templateType:'house',status:'pending'});
-  const writes={snapshots:0,deletes:[],rpc:0};
+  const writes={snapshots:0,deletes:[],rpc:0,localSnapshots:0};
   const storageValues={'sb-project-auth-token':'AUTH','device-identity:user':'DEVICE',
     'organization-context':'ORG','development:data':'DEVELOPMENT'};
   const storage={getItem:key=>storageValues[key]||null,
-    setItem(key,value){storageValues[key]=value;}};
+    setItem(key,value){if(key==='conf_v5')writes.localSnapshots++;storageValues[key]=value;}};
   const sandbox={Promise,JSON,Object,Array,String,Number,
     BrowserStorageNamespace:{environment:settings.environment||'production'},
     SK:'conf_v5',appData:data,localStorage:storage,
@@ -67,6 +67,8 @@ function fixture(settings={}){
   assert.strictEqual(cleaned.data.remainingOperations,0);
   assert.strictEqual(env.writes.rpc,0);
   assert.strictEqual(env.writes.snapshots,1);
+  assert.strictEqual(env.writes.localSnapshots,0,
+    'repository owns the application snapshot mirror');
   assert.deepStrictEqual(env.writes.deletes,[{
     name:'organization_template_access_operations',id:OPERATION}]);
   const target=env.sandbox.appData.houseTemplates.find(row=>row.id===TEMPLATE);

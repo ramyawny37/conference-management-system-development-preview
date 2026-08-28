@@ -26,7 +26,11 @@
 
   function saveAppSnapshot(appData,options){
     options=options&&typeof options==='object'?options:{};
-    var inspected=inspectSnapshot(appData);
+    var activation=global.ConferenceActivationAuthorization;
+    var persistenceInput=activation&&
+      typeof activation.preparePersistedAppData==='function'
+      ?activation.preparePersistedAppData(appData):appData;
+    var inspected=inspectSnapshot(persistenceInput);
     if(!inspected.ok){
       var serializationError=new Error(
         'The snapshot payload could not be serialized.'
@@ -37,6 +41,8 @@
     var queuedSnapshot=cloneSnapshotData(inspected.snapshot);
     var localSaveResult=null;
     var previousSnapshotRecord=null;
+    var persistenceMetadata=null;
+    var arbitration=global.LocalPersistenceArbitration;
     function restorePreviousSnapshot(){
       if(previousSnapshotRecord){
         return global.AppIndexedDB.putRecord(
@@ -57,7 +63,32 @@
       })
       .then(function(previous){
         previousSnapshotRecord=previous||null;
-        return global.AppIndexedDB.saveAppSnapshot(queuedSnapshot);
+        if(!arbitration||typeof arbitration.inspect!=='function'){
+          throw Object.assign(new Error('Persistence arbitration is unavailable.'),
+            {code:'LOCAL_PERSISTENCE_ARBITRATION_UNAVAILABLE'});
+        }
+        return arbitration.inspect({indexedDB:global.AppIndexedDB,
+          localStorage:global.localStorage,storageKey:global.SK});
+      })
+      .then(function(current){
+        if(!current.ok){
+          var persistenceError=new Error(
+            'Local persistence requires recovery before it can be updated.'
+          );
+          persistenceError.code=current.code||
+            'LOCAL_PERSISTENCE_RECOVERY_REQUIRED';
+          persistenceError.persistenceResult=current;
+          throw persistenceError;
+        }
+        var generations=(current.candidates||[]).map(function(candidate){
+          return candidate.metadata&&candidate.metadata.generation||0;
+        });
+        var nextGeneration=Math.max.apply(Math,[0].concat(generations))+1;
+        return arbitration.createMetadata(queuedSnapshot,nextGeneration);
+      })
+      .then(function(metadata){
+        persistenceMetadata=metadata;
+        return global.AppIndexedDB.saveAppSnapshot(queuedSnapshot,metadata);
       })
       .then(function(saveResult){
         var integration=options.skipSyncQueue
@@ -118,10 +149,26 @@
               ?orchestrator.schedule('local_save',options.orchestratorOptions)
               :null;
           if(!wakeResult||wakeResult.ok===false){
-            return saveResult;
+            // Snapshot durability is already established. Mirror persistence
+            // must still run even when the optional wake request is declined.
           }
         }
-        return saveResult;
+        var mirrorStatus={ok:true,status:'persisted',indexedDB:saveResult,
+          persistenceMetadata:persistenceMetadata,mirror:{ok:true}};
+        try{
+          global.localStorage.setItem(global.SK,JSON.stringify(queuedSnapshot));
+          global.localStorage.setItem(
+            arbitration.metadataKey(global.SK),JSON.stringify(persistenceMetadata)
+          );
+        }catch(error){
+          mirrorStatus.status='persisted_mirror_degraded';
+          mirrorStatus.mirror={ok:false,error:error,
+            code:global.SnapshotPayloadDiagnostics&&
+              global.SnapshotPayloadDiagnostics.isQuotaExceededError(error)
+              ?'LOCAL_STORAGE_QUOTA_EXCEEDED':'LOCAL_STORAGE_MIRROR_FAILED',
+            sizeBytes:inspected.sizeBytes};
+        }
+        return mirrorStatus;
       });
     snapshotWriteQueue = writeOperation;
     return writeOperation;

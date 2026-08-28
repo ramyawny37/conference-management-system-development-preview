@@ -24,7 +24,7 @@
   function put(storeName,row){return store().putRecord(storeName,row);}
   function remove(storeName,id){return store().deleteRecord(storeName,id);}
   function makeId(){if(global.crypto&&global.crypto.randomUUID)return global.crypto.randomUUID();throw new Error('SECURE_UUID_UNAVAILABLE');}
-  function persist(data){global.appData=data;return global.StorageRepository.saveAppSnapshot(data,{skipSyncQueue:true,skipTemplateSync:true}).then(function(){try{global.localStorage.setItem(global.SK,JSON.stringify(data));}catch(error){}return data;});}
+  function persist(data){global.appData=data;return global.StorageRepository.saveAppSnapshot(data,{skipSyncQueue:true,skipTemplateSync:true}).then(function(){return data;});}
   function adoptionSnapshot(){return copy(adoption);}
   function setAdoption(status,data){adoption=Object.assign({},adoption,data||{},{status:status});if(global.LegacyTemplateAdoptionUI&&typeof global.LegacyTemplateAdoptionUI.update==='function')global.LegacyTemplateAdoptionUI.update(adoptionSnapshot());}
   function resolveOrganizations(options){var service=global.OrganizationManagementService;if(!service||!service.list)return Promise.resolve([]);return service.list(options).then(function(response){return response&&response.ok&&response.data&&Array.isArray(response.data.organizations)?response.data.organizations.filter(function(item){return item.status==='active'&&uuid(item.organizationId);}).map(function(item){return {organizationId:String(item.organizationId),displayName:String(item.displayName||''),role:String(item.role||'')};}):[];}).catch(function(){return [];});}
