@@ -37,7 +37,8 @@ assert.strictEqual(multi.action,'update');
 assert.strictEqual(multi.allowed,true);
 assert.strictEqual(multi.shouldProceed,true);
 assert.strictEqual(resolver.resolveHandler('saveHouse',null,context('manager')).status,'mode_required');
-assert.strictEqual(resolver.resolveHandler('shareCard',null,context('owner')).status,'unresolved');
+assert.strictEqual(resolver.resolveHandler('shareCard',null,context('owner')).status,'flow_entry');
+assert.strictEqual(resolver.resolveHandler('shareCenterViaSystem',null,context('owner')).status,'unresolved');
 assert.strictEqual(resolver.resolveHandler('createNewConference',null,context('owner')).status,'flow_entry');
 assert.strictEqual(resolver.resolveHandler('missingHandler',null,context('owner')).status,'unknown_handler');
 
@@ -72,10 +73,14 @@ var activeSources=['script.js','core.js','js/conference/accounts.js'].map(functi
   return fs.readFileSync(path.join(root,file),'utf8');
 }).join('\n');
 var contract=sandbox.ConferencePermissionContract;
-var classified=Array.from(contract.mutationCatalog).concat(Array.from(contract.conferenceMutationCatalog)).filter(function(item){return item.status==='classified';});
+var classified=Array.from(contract.mutationCatalog).concat(Array.from(contract.conferenceMutationCatalog)).filter(function(item){
+  return item.status==='classified'&&item.shadowGate!=='pending';
+});
 classified.forEach(function(item){
   assert.ok(activeSources.indexOf("ConferencePermissionShadowGate('"+item.handler+"'")>=0,item.handler+' shadow gate');
 });
+assert.ok(activeSources.indexOf("ConferencePermissionShadowGate('partialTransferGuest'")>=0,'Phase 2B legacy flow gate remains until a later gate phase');
+assert.ok(activeSources.indexOf("ConferencePermissionShadowGate('editCurrentConference'")>=0,'Phase 2B legacy edit-flow gate remains until a later gate phase');
 ['shareCard','shareSelectedCards','shareSelectedCardsFiles','saveSettings','saveConferenceBranding','clearActivityLog','restoreTrashItem','purgeTrashItem','createNewConference','createConferenceFromSelection'].forEach(function(handler){
   assert.strictEqual(activeSources.indexOf("ConferencePermissionShadowGate('"+handler+"'"),-1,handler+' must remain ungated');
 });

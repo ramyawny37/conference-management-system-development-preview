@@ -59,14 +59,15 @@ assert.strictEqual(contract.actions.indexOf('share'),-1);
 assert.deepStrictEqual(Array.from(contract.futureActionCandidates),['share']);
 assert.ok(contract.mutationCatalog.some(function(item){return item.status==='unresolved';}));
 assert.ok(contract.mutationCatalog.every(function(item){
-  return item.status==='unresolved'||
+  return ['unresolved','flow_entry','internal_side_effect'].indexOf(item.status)>=0||
+    item.status==='compound'&&item.section==='templates'||
     contract.sections.indexOf(item.section)>=0&&item.action.length>0&&
       item.action.every(function(action){return contract.actions.indexOf(action)>=0;});
 }));
 var completeCatalog=contract.mutationCatalog.concat(contract.conferenceMutationCatalog);
 var handlerNames=completeCatalog.map(function(item){return item.handler;});
-assert.strictEqual(completeCatalog.length,83);
-assert.strictEqual(new Set(handlerNames).size,83);
+assert.strictEqual(completeCatalog.length,117);
+assert.strictEqual(new Set(handlerNames).size,117);
 assert.strictEqual(handlerNames.filter(function(name){return name==='saveSettings';}).length,1);
 ['saveHouse','saveTransport','saveFinancialV3Adjustment',
   'saveRestaurantV3PriceOverride','saveRestaurantV3CountOverride',
@@ -77,20 +78,29 @@ assert.strictEqual(handlerNames.filter(function(name){return name==='saveSetting
 });
 contract.conferenceMutationCatalog.forEach(function(item){
   if(item.action!==null)assert.ok(contract.conferenceActions.indexOf(item.action)>=0,item.handler);
+  if(item.modes)Object.keys(item.modes).forEach(function(mode){
+    var action=item.modes[mode].action;
+    if(action!==null)assert.ok(contract.conferenceActions.indexOf(action)>=0,item.handler+' '+mode);
+  });
 });
 var createFlow=contract.conferenceMutationCatalog.filter(function(item){return item.handler==='createNewConference';})[0];
 assert.strictEqual(createFlow.action,null);
 assert.strictEqual(createFlow.status,'flow_entry');
 var unresolvedHandlers=Array.from(completeCatalog.filter(function(item){return item.status==='unresolved';}).map(function(item){return item.handler;})).sort();
 assert.deepStrictEqual(unresolvedHandlers,[
-  'clearActivityLog','purgeTrashItem','restoreTrashItem','saveConferenceBranding',
-  'saveSettings','shareCard','shareSelectedCards','shareSelectedCardsFiles'
+  'clearActivityLog','clearAirConditioningRoomSettings','moveArchiveToTrash',
+  'moveBackupToTrash','purgeTrashItem','repairBackupStorageBloat',
+  'resetAirConditioningHouseAndRoomsSettings','restoreTrashItem',
+  'saveConferenceBranding','saveSettings','shareCenterViaSystem',
+  'shareSelectedCardsFiles','shareSelectedQueueCard',
+  'openShareCenterWhatsApp','openSelectedCardsWhatsApp'
 ].sort());
 assert.ok(contract.conferenceMutationCatalog.some(function(item){
   return item.handler==='deleteCurrentConference'&&item.action==='conference.delete';
 }));
 
-var activeSource=['script.js','core.js','js/conference/accounts.js'].map(function(file){
+var activeSource=['script.js','core.js','js/conference/accounts.js',
+  'houseTemplates.js','js/conference-template-houses-editor.js'].map(function(file){
   return fs.readFileSync(path.join(root,file),'utf8');
 }).join('\n');
 handlerNames.forEach(function(handler){
