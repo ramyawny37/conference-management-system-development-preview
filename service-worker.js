@@ -1,4 +1,4 @@
-const APP_VERSION = '3.3.0';
+const APP_VERSION = '3.4.0';
 const DEVELOPMENT_PROJECT_REF = 'gppwltrifgfxrkzvvxoe';
 const DEVELOPMENT_PATH = '/conference-management-system-development-preview/';
 const IS_DEVELOPMENT = self.location.pathname.indexOf(DEVELOPMENT_PATH) === 0;
@@ -7,7 +7,7 @@ const CACHE_NAMESPACE = IS_DEVELOPMENT
   : '';
 const CACHE_PREFIX = CACHE_NAMESPACE + 'conference-manager-core-';
 const CACHE_REVISION = IS_DEVELOPMENT
-  ? 'runtime-authorization-phase2b-v1'
+  ? 'development-3-4-0-platform-foundation-v1'
   : 'production-integrated-3-3-0-main-6d0c1e1-develop-80653ca-v1';
 const CACHE_NAME = CACHE_PREFIX + 'v' + APP_VERSION + '-' + CACHE_REVISION;
 const CORE_ASSETS = [
@@ -73,7 +73,7 @@ const CORE_ASSETS = [
   './js/sync/link-status-diagnostic-store.js',
   './js/sync/conference-link-store.js',
   './js/sync/conference-permission-contract.js?rev=permission-contract-phase2a-v1',
-  './js/sync/conference-permission-resolver.js?rev=runtime-authorization-phase2b-v1',
+  './js/sync/conference-permission-resolver.js?rev=development-3-4-0-platform-foundation-v1',
   './js/sync/conference-activation-authorization.js?rev=runtime-authorization-phase1-v1',
   './js/sync/conference-membership-attempt-store.js',
   './js/sync/conference-members-service.js?rev=legacy-rpc-hardening-v1',
@@ -112,18 +112,18 @@ const CORE_ASSETS = [
   './js/sync/wrong-remote-binding-repair-service.js?rev=wrong-remote-binding-repair-v1',
   './js/sync/wrong-remote-binding-repair-ui.js?rev=diagnostics-privacy-hardening-v1',
   './utils.js',
-  './core.js?rev=runtime-authorization-phase2b-v1',
+  './core.js?rev=development-3-4-0-platform-foundation-v1',
   './people.js?rev=canonical-conference-schema-v1',
   './houses.js?rev=template-floor-conference-sync-v1',
   './transport.js',
   './houseTemplates.js?rev=shared-house-template-read-only-v1',
   './state.js?rev=develop-cross-store-arbitration-v1',
-  './js/conference/accounts.js?rev=runtime-authorization-phase2b-v1',
+  './js/conference/accounts.js?rev=development-3-4-0-platform-foundation-v1',
   './js/conference-template-houses-editor.js',
   './cards.js',
   './libs/xlsx.full.min.js',
   './js/ui-icons.js?rev=accommodation-visual-match-v6',
-  './script.js?rev=runtime-authorization-phase2b-v1',
+  './script.js?rev=development-3-4-0-platform-foundation-v1',
   './version.js',
   './pwa.js?rev=organization-membership-operation-key-v1',
   './libs/html2canvas.min.js',

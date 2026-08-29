@@ -1,5 +1,5 @@
 window.APP_RELEASE = Object.freeze({
-  version: '3.3.0',
+  version: '3.4.0',
   name: 'Conference Management System',
-  displayName: 'Conference Management System v3.3.0'
+  displayName: 'Conference Management System v3.4.0'
 });
