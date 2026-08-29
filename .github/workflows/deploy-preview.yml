@@ -109,7 +109,7 @@ jobs:
           grep -Fq "DEVELOPMENT_PROJECT_REF='gppwltrifgfxrkzvvxoe'" site/js/storage/environment-namespace.js
           grep -Fq "cms:development:' + DEVELOPMENT_PROJECT_REF + ':'" site/service-worker.js
           grep -Fq "'cms:development:'+DEVELOPMENT_PROJECT_REF+':'" site/js/storage/environment-namespace.js
-          grep -Fq "development-3-4-0-platform-shell-phase1c-v1" site/service-worker.js
+          grep -Fq "development-3-4-0-platform-shell-phase2-v1" site/service-worker.js
           node --check site/js/supabase/public-config.js
           node --check site/js/storage/environment-namespace.js
           node --check site/service-worker.js
