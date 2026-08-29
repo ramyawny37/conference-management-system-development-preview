@@ -2,6 +2,7 @@
 const assert=require('assert'),fs=require('fs'),path=require('path');
 const root=path.resolve(__dirname,'..');
 const migration=fs.readFileSync(path.join(root,'supabase/migrations/20260827_6_20_0_platform_privileged_device_administration.sql'),'utf8');
+const reconciliation=fs.readFileSync(path.join(root,'supabase/migrations/20260827125056_system_owner_synced_passkey_policy_full_reconciliation_6_20_4.sql'),'utf8');
 const edge=fs.readFileSync(path.join(root,'supabase/functions/platform-device-authorization/index.ts'),'utf8');
 const service=fs.readFileSync(path.join(root,'js/supabase/device-authorization-administration-service.js'),'utf8');
 const organization=fs.readFileSync(path.join(root,'supabase/migrations/20260802_5_4_2_device_authorization_administration.sql'),'utf8');
@@ -17,6 +18,9 @@ assert.match(edge,/auth\.getUser\(\)/);
 assert.match(edge,/verifyRegistrationResponse/);
 assert.match(edge,/verifyAuthenticationResponse/);
 assert.match(edge,/requireUserVerification:\s*true/);
+assert.strictEqual((edge.match(/!context\.userVerified \|\| \(context\.backupState && !context\.backupEligible\)/g)||[]).length,2);
+assert.doesNotMatch(edge,/context\.backupEligible \|\| context\.backupState \|\| !context\.userVerified/);
+assert.match(reconciliation,/check \(not backup_state or backup_eligible\)/i);
 assert.match(edge,/WEBAUTHN_EXPECTED_ORIGIN/);
 assert.match(edge,/WEBAUTHN_RP_ID/);
 assert.match(edge,/SUPABASE_SERVICE_ROLE_KEY/);
