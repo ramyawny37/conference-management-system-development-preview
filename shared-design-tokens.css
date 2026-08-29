@@ -51,6 +51,8 @@
   --platform-icon-lg:28px;
   --platform-shell-header-height:72px;
   --platform-page-max:1480px;
+  --platform-launcher-max:1240px;
+  --platform-landing-offset:clamp(24px,7vh,84px);
   --platform-font-family:'Segoe UI',Arial,sans-serif;
   --platform-breakpoint-mobile:600px;
   --platform-breakpoint-tablet:820px;
