@@ -7,7 +7,10 @@ assert.ok(completion.indexOf('device_possession_challenge_consumers')<completion
 assert.match(sql,/system-owner-device-operation:/);
 assert.match(sql,/PLATFORM_DEVICE_OPERATION_MISMATCH/);
 assert.match(sql,/stored_result/);
-assert.match(sql,/authorization_status='pending'[\s\S]*account_status='approved'[\s\S]*for update of authorization/i);
+const pendingAuthorizationLock=completion.slice(completion.indexOf('perform 1 from public.user_device_authorizations uda'),completion.indexOf("if not found then raise exception 'PENDING_APPROVED_ACCOUNT_DEVICE_REQUIRED'"));
+assert.match(pendingAuthorizationLock,/uda\.authorization_status='pending'/i);
+assert.match(pendingAuthorizationLock,/access\.account_status='approved'/i);
+assert.match(pendingAuthorizationLock,/for update of uda/i);
 assert.match(sql,/challenge\.verified_at is not null[\s\S]*challenge\.consumed_at is not null[\s\S]*challenge\.failed_at is not null/);
 assert.match(sql,/APPROVED_SYSTEM_OWNER_REQUIRED|APPROVED_SYSTEM_OWNER_DEVICE_REQUIRED/);
 assert.match(sql,/APPROVED_ACTOR_DEVICE_REQUIRED/);

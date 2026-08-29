@@ -1,8 +1,11 @@
 'use strict';
 var assert=require('assert'),fs=require('fs'),path=require('path');
 var root=path.resolve(__dirname,'..');
-var migrationPath=path.join(root,'supabase/migrations/20260824_6_16_0_webauthn_privileged_device_security_foundation.sql');
+var migrationPath=path.join(root,'supabase/migrations/20260826224848_webauthn_privileged_device_foundation_reconciliation_6_19_1.sql');
+var obsoleteMigrationPath=path.join(root,'supabase/migrations/obsolete/20260824_6_16_0_webauthn_privileged_device_security_foundation.sql');
+var obsoleteActivePath=path.join(root,'supabase/migrations/20260824_6_16_0_webauthn_privileged_device_security_foundation.sql');
 var migration=fs.readFileSync(migrationPath,'utf8');
+var lineage=JSON.parse(fs.readFileSync(path.join(root,'supabase/migrations/DEVELOPMENT_PLATFORM_FOUNDATION_LINEAGE.json'),'utf8'));
 var verification=fs.readFileSync(path.join(root,'supabase/webauthn-privileged-device-security-foundation-readonly-verification.sql'),'utf8');
 var organizationMigration=fs.readFileSync(path.join(root,'supabase/migrations/20260802_5_4_2_device_authorization_administration.sql'),'utf8');
 var foundation=fs.readFileSync(path.join(root,'supabase/migrations/20260801_5_4_0_device_authorization_foundation.sql'),'utf8');
@@ -14,6 +17,23 @@ var deviceAuthorizationCredentialFunction=isolatedFunction('guard_device_authori
 var challengeConsumerFunction=isolatedFunction('guard_device_possession_challenge_consumer');
 var bootstrapLifecycleFunction=isolatedFunction('guard_system_owner_bootstrap_authorization_lifecycle');
 var recoveryLifecycleFunction=isolatedFunction('guard_system_owner_recovery_authorization_lifecycle');
+var activeFoundation=lineage.lineage.find(function(entry){return entry.live_version==='20260826224848';});
+var obsoleteFoundation=lineage.obsolete.find(function(entry){return entry.source_version==='6.16.0';});
+
+assert.strictEqual(fs.existsSync(obsoleteActivePath),false,'obsolete 6.16.0 must not be active');
+assert.strictEqual(fs.existsSync(obsoleteMigrationPath),true,'obsolete 6.16.0 provenance missing');
+assert.ok(activeFoundation,'authoritative 6.19.1 lineage entry missing');
+assert.strictEqual(activeFoundation.live_name,'webauthn_privileged_device_foundation_reconciliation_6_19_1');
+assert.strictEqual(activeFoundation.repository_file,'supabase/migrations/20260826224848_webauthn_privileged_device_foundation_reconciliation_6_19_1.sql');
+assert.strictEqual(activeFoundation.applied_live,true);
+assert.strictEqual(activeFoundation.authoritative,true);
+assert.strictEqual(activeFoundation.supersedes,'obsolete/20260824_6_16_0_webauthn_privileged_device_security_foundation.sql');
+assert.ok(obsoleteFoundation,'obsolete 6.16.0 lineage entry missing');
+assert.strictEqual(obsoleteFoundation.repository_file,'supabase/migrations/obsolete/20260824_6_16_0_webauthn_privileged_device_security_foundation.sql');
+assert.strictEqual(obsoleteFoundation.applied_live,false);
+assert.strictEqual(obsoleteFoundation.authoritative,false);
+assert.strictEqual(obsoleteFoundation.status,'obsolete-non-applicable');
+assert.strictEqual(obsoleteFoundation.superseded_by_live_version,'20260826224848');
 
 tables.forEach(function(name){
   assert.match(migration,new RegExp('create table public\\.'+name+'\\s*\\(','i'),name+' table missing');

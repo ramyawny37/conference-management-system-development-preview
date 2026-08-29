@@ -145,7 +145,7 @@ function environment(options={}){
   assert.match(scriptSource,
     /openDiscoveredConferenceFromStartup\(\\''\+conf\.__startupDiscoveredRemoteId/);
   assert.match(scriptSource,
-    /else\{\s*html \+= '<article class="startup-conference-card" onclick="openConferenceFromStartup/);
+    /else\{\s*html \+= '<article class="startup-conference-card '\+cardClass\+'" onclick="openConferenceFromStartup\(\\''\+conf\.id/);
   assert.match(scriptSource,
     /ConferenceLinkStore\.get\(localId\)[\s\S]*remoteConferenceId/);
   assert.match(scriptSource,

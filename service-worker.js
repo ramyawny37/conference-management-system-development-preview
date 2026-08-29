@@ -1,4 +1,4 @@
-const APP_VERSION = '3.1.1';
+const APP_VERSION = '3.3.0';
 const DEVELOPMENT_PROJECT_REF = 'gppwltrifgfxrkzvvxoe';
 const DEVELOPMENT_PATH = '/conference-management-system-development-preview/';
 const IS_DEVELOPMENT = self.location.pathname.indexOf(DEVELOPMENT_PATH) === 0;
@@ -8,7 +8,7 @@ const CACHE_NAMESPACE = IS_DEVELOPMENT
 const CACHE_PREFIX = CACHE_NAMESPACE + 'conference-manager-core-';
 const CACHE_REVISION = IS_DEVELOPMENT
   ? 'runtime-authorization-phase2b-v1'
-  : 'development-target-gpp-v1';
+  : 'production-integrated-3-3-0-main-6d0c1e1-develop-80653ca-v1';
 const CACHE_NAME = CACHE_PREFIX + 'v' + APP_VERSION + '-' + CACHE_REVISION;
 const CORE_ASSETS = [
   './',
@@ -74,6 +74,7 @@ const CORE_ASSETS = [
   './js/sync/conference-link-store.js',
   './js/sync/conference-permission-contract.js?rev=permission-contract-phase2a-v1',
   './js/sync/conference-permission-resolver.js?rev=runtime-authorization-phase2b-v1',
+  './js/sync/conference-activation-authorization.js?rev=runtime-authorization-phase1-v1',
   './js/sync/conference-membership-attempt-store.js',
   './js/sync/conference-members-service.js?rev=legacy-rpc-hardening-v1',
   './js/sync/conference-members-ui.js?rev=diagnostics-privacy-hardening-v1',

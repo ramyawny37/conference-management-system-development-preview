@@ -64,7 +64,7 @@ function lockServer(){
   assert(!/ConferenceEditLockManager\.begin\(currentConference\.id\)/.test(scriptSource),'startup does not acquire a lock');
   assert(!/ConferenceEditLockManager\.begin\(next\.id\)/.test(scriptSource),'conference opening does not acquire a lock');
   assert(!/ConferenceEditLockManager\.guard/.test(stateSource),'save() is not guarded globally');
-  assert(/saveCurrentConferenceSelection\(appData,\{skipSyncQueue:true\}\)|saveAppSnapshot\(appData,\{skipSyncQueue:true\}\)/.test(stateSource),'conference selection persists without queue');
+  assert(/function saveCurrentConferenceSelection\(\)\{[\s\S]*?var persistedData=activation&&typeof activation\.preparePersistedAppData==='function'[\s\S]*?\?activation\.preparePersistedAppData\(appData\):appData;[\s\S]*?window\.StorageRepository\.saveAppSnapshot\(persistedData,\{skipSyncQueue:true\}\)/.test(stateSource),'conference selection persists authorization-safe data without queue');
   assert(/المرحلة: '\+failedStage/.test(scriptSource),'discovered conference failure shows failedStage');
   assert(/p_section:section/.test(lockClientSource),'client sends the lock section to section RPCs');
   assert(/primary key \(conference_id, section\)/i.test(migrationSource),'database lock identity is conference plus section');

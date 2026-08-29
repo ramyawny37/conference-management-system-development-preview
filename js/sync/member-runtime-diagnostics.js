@@ -1,7 +1,7 @@
 (function(global){
   'use strict';
   var RUNTIME_BUILD_REVISION='canonical-conference-schema-v1';
-  var SERVICE_WORKER_CACHE_REVISION='shared-template-copy-guard-v1';
+  var SERVICE_WORKER_CACHE_REVISION='production-integrated-3-3-0-main-6d0c1e1-develop-80653ca-v1';
   var FIELDS=Object.freeze([
     'runtimeBuildRevision','serviceWorkerCacheRevision',
     'orchestratorStarted','lastScheduledReason',

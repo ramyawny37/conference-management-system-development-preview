@@ -12,28 +12,18 @@ var verification=read('supabase/snapshot-sync-account-hardening-readonly-verific
 assert.match(migration,/^begin;/im);
 assert.match(migration,/commit;\s*$/i);
 assert.match(migration,/EXPECTED_MIGRATION_6_18_0_IS_NOT_CURRENT/);
-assert.match(migration,/latest\.name is distinct from 'conference_lifecycle_hardening_6_18_0'/);
-assert.match(migration,/latest\.content_md5 is distinct from[\s\S]*'699f1bf58271c8c75d6026ebc0436b28'/);
-assert.match(migration,/md5\(array_to_string\(statements, E?'\\n'\)\)/i);
+assert.match(migration,/if latest\.version is distinct from '20260826113408'[\s\S]*or latest\.name is distinct from 'conference_lifecycle_hardening_6_18_0'[\s\S]*then[\s\S]*raise exception 'EXPECTED_MIGRATION_6_18_0_IS_NOT_CURRENT'/);
 assert.match(migration,/order by version desc limit 1/i);
-assert.doesNotMatch(migration,/latest\.version is distinct from/i);
-assert.doesNotMatch(migration,/20260826113408/);
-function acceptsMigration618Identity(version,name,contentMd5){
-  return name==='conference_lifecycle_hardening_6_18_0'
-    && contentMd5==='699f1bf58271c8c75d6026ebc0436b28';
+function acceptsMigration618Identity(version,name){
+  return version==='20260826113408'
+    && name==='conference_lifecycle_hardening_6_18_0';
 }
 assert.strictEqual(acceptsMigration618Identity(
-  '20260826113408','conference_lifecycle_hardening_6_18_0',
-  '699f1bf58271c8c75d6026ebc0436b28'),true);
+  '20260826113408','conference_lifecycle_hardening_6_18_0'),true);
 assert.strictEqual(acceptsMigration618Identity(
-  '20260826191920','conference_lifecycle_hardening_6_18_0',
-  '699f1bf58271c8c75d6026ebc0436b28'),true);
+  '20260826191920','conference_lifecycle_hardening_6_18_0'),false);
 assert.strictEqual(acceptsMigration618Identity(
-  '20260826191920','conference_lifecycle_hardening_6_18_0',
-  '00000000000000000000000000000000'),false);
-assert.strictEqual(acceptsMigration618Identity(
-  '20260826191920','conference_lifecycle_hardening_6_18_0_similar',
-  '699f1bf58271c8c75d6026ebc0436b28'),false);
+  '20260826113408','conference_lifecycle_hardening_6_18_0_similar'),false);
 assert.match(migration,/create temporary table migration_6_19_0_data_baseline/i);
 assert.match(migration,/MIGRATION_CHANGED_DATA_OR_HISTORY/);
 assert.match(migration,/revoke insert,update,delete,truncate,references,trigger[\s\S]*conference_snapshots[\s\S]*sync_operations[\s\S]*sync_conflicts[\s\S]*from public,anon,authenticated/i);

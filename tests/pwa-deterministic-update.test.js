@@ -12,10 +12,11 @@ const manager=fs.readFileSync(path.join(root,'js/sync/conference-edit-lock-manag
 const previous='exclusive-edit-lock-v1';
 const next='organization-membership-operation-key-v1';
 const mobileRoomInputRevision='anchored-glass-person-picker-v5';
-const shellRevision='runtime-authorization-phase2b-v1';
+const appVersion='3.3.0';
+const shellRevision='production-integrated-3-3-0-main-6d0c1e1-develop-80653ca-v1';
 const cacheRevision='runtime-authorization-phase2b-v1';
 const priorAuthorizationCacheRevision='runtime-authorization-phase1-v1';
-const productionCacheRevision='development-target-gpp-v1';
+const productionCacheRevision='production-integrated-3-3-0-main-6d0c1e1-develop-80653ca-v1';
 const accountIdentityRevision='account-session-identity-v1';
 const stateAssetRevision='develop-cross-store-arbitration-v1';
 const persistenceArbitrationRevision='develop-cross-store-arbitration-v1';
@@ -53,6 +54,7 @@ const postRestoreProofBoundaryRevision='post-restore-proof-boundary-v1';
 assert(worker.includes("? '"+cacheRevision+"'"));
 assert(!worker.includes("? '"+priorAuthorizationCacheRevision+"'"));
 assert(worker.includes(": '"+productionCacheRevision+"'"));
+assert(worker.includes("const APP_VERSION = '"+appVersion+"';"));
 assert(index.includes("window.APP_SHELL_REVISION='"+shellRevision+"'"));
 const brandingIcons=[
   'icons/icon-96x96-v3.png',
@@ -206,6 +208,11 @@ assert(worker.includes("'./script.js?rev="+permissionRuntimeRevision+"'"));
   assert(index.includes(versioned),'index missing Phase 2B runtime asset '+versioned);
   assert(worker.includes("'./"+versioned+"'"),'app shell missing Phase 2B runtime asset '+versioned);
 });
+{
+  const activationAsset='js/sync/conference-activation-authorization.js?rev=runtime-authorization-phase1-v1';
+  assert(index.includes(activationAsset),'index missing Phase 1 activation authorization asset');
+  assert(worker.includes("'./"+activationAsset+"'"),'app shell missing Phase 1 activation authorization asset');
+}
 const xlsxAsset='libs/xlsx.full.min.js';
 assert(fs.existsSync(path.join(root,xlsxAsset)),'local XLSX runtime asset missing');
 assert(index.includes('<script src="'+xlsxAsset+'"></script>'),'index missing local XLSX runtime');

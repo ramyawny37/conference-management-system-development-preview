@@ -54,6 +54,8 @@ var tab={innerHTML:''};
 Object.assign(sandbox,{
   currentConferenceRuntimeAccessRole:'viewer',getCurrentConference:function(){return member;},
   ge:function(id){return id==='tab1'?tab:null;},esc:function(value){return String(value||'');},
+  unassigned:function(currentName){assert.strictEqual(currentName,'');return [];},
+  accommodationIcon:function(){return '';},
   getTransportRiderData:function(rider){return rider&&rider.r?rider.r:rider||{};},
   formatTransportSeatLabel:function(value){return String(value||'');}
 });

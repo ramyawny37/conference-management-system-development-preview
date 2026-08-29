@@ -50,7 +50,8 @@ async function run(){
   assert.ok(!uiSource.includes('recoverTargetedStuckOperation:recoverTargetedStuckOperation'));
   assert.ok(!indexSource.includes('js/sync/targeted-stuck-operation-recovery.js'));
   assert.ok(!workerSource.includes("'./js/sync/targeted-stuck-operation-recovery.js'"));
-  assert.match(workerSource,/CACHE_REVISION = 'development-target-gpp-v1'/);
+  assert.match(workerSource,
+    /const CACHE_REVISION = IS_DEVELOPMENT\s*\? 'runtime-authorization-phase2b-v1'\s*:\s*'production-integrated-3-3-0-main-6d0c1e1-develop-80653ca-v1';/);
   var ok=environment();var recovered=await ok.api.recover(ok.options);
   assert.strictEqual(recovered.ok,true);assert.strictEqual(recovered.status,'recovered');
   assert.strictEqual(ok.operation().status,'applied');assert.strictEqual(ok.operation().result.revision,18);

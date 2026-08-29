@@ -1962,17 +1962,14 @@
   }
 
   function readRestorePersistenceContext(dependencies){
-    var localValue=null;
     var markerValue=null;
     try{
-      localValue=dependencies.storage.getItem(dependencies.storageKey);
       markerValue=dependencies.storage.getItem(dependencies.markerKey);
     }catch(error){
       throw codedError('FULL_RESTORE_LOCAL_STORAGE_READ_FAILED',
         'Current local persistence state could not be read.');
     }
     return {
-      previousLocalValue:localValue,
       previousMarkerValue:markerValue,
       indexedDbWritten:false,
       localStorageWritten:false,
@@ -2003,7 +2000,6 @@
       ));
     }
     var candidate=cloneFullBackupValue(candidateAppData);
-    var json;
     var markerJson;
     var markerValue=options.markerValue||{
       version:1,
@@ -2021,7 +2017,7 @@
       ));
     }
     try{
-      json=JSON.stringify(candidate);
+      JSON.stringify(candidate);
       markerJson=JSON.stringify(markerValue);
     }catch(error){
       return Promise.reject(codedError(
@@ -2029,17 +2025,19 @@
         'The restore candidate could not be serialized.'
       ));
     }
+    var repositorySaveResult=null;
     return Promise.resolve().then(function(){
       return dependencies.repository.saveAppSnapshot(candidate,{
         skipSyncQueue:true,
         skipTemplateSync:true,
         source:'full_restore'
       });
-    }).then(function(){
+    }).then(function(saveResult){
+      repositorySaveResult=saveResult;
       context.indexedDbWritten=true;
+      context.localStorageWritten=!(saveResult&&saveResult.mirror&&
+        saveResult.mirror.ok===false);
       try{
-        dependencies.storage.setItem(dependencies.storageKey,json);
-        context.localStorageWritten=true;
         dependencies.storage.setItem(
           dependencies.markerKey,
           markerJson
@@ -2061,18 +2059,20 @@
       }catch(error){
         indexedJson='';
       }
-      var localJson;
+      var localJson=null;
       var storedMarkerJson;
       try{
-        localJson=dependencies.storage.getItem(dependencies.storageKey);
+        if(context.localStorageWritten){
+          localJson=dependencies.storage.getItem(dependencies.storageKey);
+        }
         storedMarkerJson=dependencies.storage.getItem(
           dependencies.markerKey
         );
       }catch(error){
-        localJson=null;
         storedMarkerJson=null;
       }
-      if(indexedJson!==json||localJson!==json||
+      if(!snapshot||!isPlainObject(snapshot.data)||!indexedJson||
+        context.localStorageWritten&&localJson!==indexedJson||
         storedMarkerJson!==markerJson){
         var verificationError=codedError(
           'FULL_RESTORE_VERIFICATION_MISMATCH',
@@ -2097,8 +2097,10 @@
       }
       return {
         indexedDb:true,
-        localStorage:true,
+        localStorage:context.localStorageWritten,
         verified:true,
+        data:cloneFullBackupValue(snapshot.data),
+        mirror:repositorySaveResult&&repositorySaveResult.mirror||null,
         rollbackContext:context
       };
     }).catch(function(error){
@@ -2141,11 +2143,6 @@
     });
     return indexedPromise.then(function(){
       try{
-        restoreStorageValue(
-          dependencies.storage,
-          dependencies.storageKey,
-          rollbackContext.previousLocalValue
-        );
         restoreStorageValue(
           dependencies.storage,
           dependencies.markerKey,
@@ -2302,7 +2299,7 @@
         }).then(function(persistence){
           rollbackContext.globalApplyAttempted=true;
           dependencies.applyAppData(
-            cloneFullBackupValue(normalizedCheck.candidateAppData)
+            cloneFullBackupValue(persistence.data)
           );
           rollbackContext.globalApplied=true;
           return {
@@ -2310,7 +2307,7 @@
             restoredAt:new Date().toISOString(),
             sourceBackupCreatedAt:document.createdAt,
             summary:buildFullBackupSummary(
-              normalizedCheck.candidateAppData
+              persistence.data
             ),
             safetyBackup:{
               created:true,
