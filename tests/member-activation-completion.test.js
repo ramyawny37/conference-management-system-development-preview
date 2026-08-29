@@ -11,6 +11,7 @@ const activationSource=source.slice(start,end);
 
 function environment(options={}){
   const calls=[];
+  const authorizationCalls=[];
   const elements=options.missingDom?{}:{
     applicationBody:{style:{display:options.startup?'none':''}},
     tab0:{},tab1:{},tab6:{}
@@ -35,19 +36,34 @@ function environment(options={}){
     renderSettings(){calls.push('render_settings');},
     restoreLastApplicationTab(){calls.push('render_current_tab');},
     switchTab(){calls.push('render_current_tab');return true;},
+    ConferenceActivationAuthorization:{
+      activate(id){
+        authorizationCalls.push(id);
+        assert.strictEqual(id,'local');
+        return options.activationAllowed!==false;
+      }
+    },
     AutomaticSyncOrchestrator:{schedule(){calls.push('schedule');}}
   };
   sandbox.getCurrentConference=()=>sandbox.appData.conferences.find(item=>
     item.id===sandbox.appData.currentConferenceId)||null;
   sandbox.window=sandbox;
   vm.runInNewContext(activationSource,sandbox);
-  return {sandbox,calls,conference};
+  return {sandbox,calls,authorizationCalls,conference};
 }
+
+const denied=environment({activationAllowed:false});
+assert.strictEqual(denied.sandbox.activatePersistedConferenceById(
+  'local',{alreadyPersisted:true}),false);
+assert.deepStrictEqual(denied.authorizationCalls,['local']);
+assert.strictEqual(denied.sandbox.appData.currentConferenceId,null);
+assert.deepStrictEqual(denied.calls,[]);
 
 const success=environment({currentTab:0});
 const successResult=success.sandbox.activatePersistedConferenceById(
   'local',{alreadyPersisted:true});
 assert.strictEqual(successResult,true);
+assert.deepStrictEqual(success.authorizationCalls,['local']);
 assert.strictEqual(successResult&&typeof successResult.then,'undefined');
 assert.strictEqual(success.sandbox.appData.currentConferenceId,'local');
 assert.strictEqual(success.sandbox.getCurrentConference().houses[0]
