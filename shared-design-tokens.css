@@ -48,6 +48,7 @@
   --platform-control-height:40px;
   --platform-touch-target:44px;
   --platform-safe-area-bottom:max(16px,env(safe-area-inset-bottom,0px));
+  --platform-mobile-bottom-breathing:24px;
   --platform-icon-sm:16px;
   --platform-icon-md:20px;
   --platform-icon-lg:28px;

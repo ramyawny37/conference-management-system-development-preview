@@ -751,7 +751,7 @@ tr:nth-child(even) td{background:#F7FBFF}
   .startup-conference-panel,.startup-completed-panel{min-height:0}
 }
 @media(max-width:600px){
-  .startup-dashboard{padding:var(--app-space-3);padding-bottom:var(--platform-safe-area-bottom)}
+  .startup-dashboard{min-height:100svh;padding:var(--app-space-3);padding-bottom:calc(var(--platform-safe-area-bottom) + var(--platform-mobile-bottom-breathing))}
   .startup-home-header{grid-template-columns:auto minmax(0,1fr);grid-template-areas:"brand brand" "switcher auth";gap:var(--app-space-3);padding:var(--app-space-3)}
   .startup-dashboard:not(.platform-conference-active) .startup-home-header{grid-template-areas:"brand brand" "auth auth"}
   .startup-brand{width:100%;min-width:0;justify-self:stretch;justify-content:flex-start}.startup-logo{width:48px;height:48px;flex-basis:48px}.startup-brand h1{font-size:17px}.startup-brand p{font-size:var(--app-font-size-xs)}
@@ -770,10 +770,10 @@ tr:nth-child(even) td{background:#F7FBFF}
   .startup-stat-icon{width:34px;height:34px}.startup-stat>div{display:flex;min-width:0;flex-direction:column;align-items:flex-start;gap:2px}.startup-stat strong{font-size:22px}.startup-stat span,.startup-stat small{font-size:8px}
   .startup-conference-card{grid-template-columns:1fr}.startup-conference-open{grid-column:1;grid-row:auto;justify-self:start;margin-top:var(--app-space-3)}
   .startup-conference-meta{grid-template-columns:repeat(2,minmax(0,1fr));font-size:9px}.startup-conference-meta span{white-space:normal}
-  .startup-version{width:100%;padding-block:var(--app-space-4) var(--app-space-2)}
+  .startup-version{width:100%;margin-top:var(--app-space-6);padding-block:var(--app-space-4) var(--app-space-2)}
 }
 @media(max-width:420px){
-  .startup-dashboard{padding:var(--app-space-2);padding-bottom:var(--platform-safe-area-bottom)}
+  .startup-dashboard{padding:var(--app-space-2);padding-bottom:calc(var(--platform-safe-area-bottom) + var(--platform-mobile-bottom-breathing))}
   .startup-home-header{border-radius:var(--app-radius-card)}
   .startup-brand-copy{overflow:hidden}.startup-brand h1,.startup-brand p{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .platform-section-heading{align-items:flex-start}.platform-section-heading p{max-width:28ch}

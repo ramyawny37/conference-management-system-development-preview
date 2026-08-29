@@ -23,7 +23,10 @@ assert.match(css,/\.platform-conference-active \.platform-module-switcher\{displ
 assert.match(css,/\.platform-conference-active \.conference-workspace\{display:flex\}/);
 assert.match(tokens,/--platform-touch-target:44px/);
 assert.match(tokens,/--platform-safe-area-bottom:max\(16px,env\(safe-area-inset-bottom,0px\)\)/);
-assert.match(css,/@media\(max-width:600px\)[\s\S]*?\.startup-dashboard\{padding:var\(--app-space-3\);padding-bottom:var\(--platform-safe-area-bottom\)\}/);
+assert.match(tokens,/--platform-mobile-bottom-breathing:24px/);
+assert.match(html,/<meta name="viewport" content="width=device-width,initial-scale=1\.0,viewport-fit=cover">/);
+assert.match(css,/@media\(max-width:600px\)[\s\S]*?\.startup-dashboard\{min-height:100svh;padding:var\(--app-space-3\);padding-bottom:calc\(var\(--platform-safe-area-bottom\) \+ var\(--platform-mobile-bottom-breathing\)\)\}/);
+assert.match(css,/@media\(max-width:600px\)[\s\S]*?\.startup-version\{width:100%;margin-top:var\(--app-space-6\);padding-block:/);
 assert.match(html,/<button[^>]+platform-module-card-available[^>]+onclick="openConferenceWorkspace\(\)"[^>]+aria-label="فتح وحدة إدارة المؤتمرات"/);
 assert.strictEqual((html.match(/platform-module-card-unavailable/g)||[]).length,3);
 assert.doesNotMatch(html,/platform-module-card-unavailable[^>]+onclick=/);
