@@ -170,28 +170,70 @@
       "provenance_note": "The local filename timestamp 20260828120000 differs from the live migration version 20260827225739. The SQL bodies are byte-identical and the live migration is already applied exactly once; do not rename for replay or re-apply it."
     }
   ],
-  "packaged_not_applied": {
+  "warehouse_v1_package": {
     "provenance": "supabase/migrations/provenance/warehouse-v1-canonical-packaging.md",
     "authority": "Platform/Conference canonical authority",
-    "target": "Development-only future target when explicitly authorized",
+    "target": "Development gppwltrifgfxrkzvvxoe only; Production is not authorized",
+    "single_session_runtime": "PASS",
+    "multi_session_concurrency": "DEFERRED_RELEASE_GATE",
     "migrations": [
       {
         "canonical_version": "20260829140000",
         "canonical_file": "supabase/migrations/20260829140000_warehouse_module_permission_catalog.sql",
         "canonical_sha256": "d6f78aaa5536f29497eea7d426998d06ee95735be6c4c746fbfbec6eda5dfa61",
-        "status": "NOT_APPLIED"
+        "status": "APPLIED_DEVELOPMENT"
       },
       {
         "canonical_version": "20260829140100",
         "canonical_file": "supabase/migrations/20260829140100_warehouse_v1_business_schema.sql",
         "canonical_sha256": "095dcc4c7bfe6e54a1ad22c846f838bebe10a71ec60d7ba0fe7fc5fdfe472aae",
-        "status": "NOT_APPLIED"
+        "status": "APPLIED_DEVELOPMENT"
       },
       {
         "canonical_version": "20260829140200",
         "canonical_file": "supabase/migrations/20260829140200_warehouse_v1_guarded_rpc.sql",
         "canonical_sha256": "771a45e8efe93de910766495f42a8ab40fb70fb8e535e59afb11baafe060e763",
-        "status": "NOT_APPLIED"
+        "status": "APPLIED_DEVELOPMENT"
+      },
+      {
+        "canonical_version": "20260829150000",
+        "canonical_file": "supabase/migrations/20260829150000_warehouse_post_document_revision_ambiguity_correction.sql",
+        "canonical_sha256": "7eda4615d56d95ff0b8ef3b290d54ca910173b740c482ee199f3e69f07ed1b81",
+        "status": "APPLIED_DEVELOPMENT",
+        "live_version": "20260829164307",
+        "live_name": "warehouse_post_document_revision_ambiguity_correction"
+      },
+      {
+        "canonical_version": "20260829150100",
+        "canonical_file": "supabase/migrations/20260829150100_warehouse_post_reversal_alias_collision_correction.sql",
+        "canonical_sha256": "6ece0b4bf9ac7d3a331b42fff5f6e4e1f9c9fc82d5ca0202b52fac3a6596a16c",
+        "status": "APPLIED_DEVELOPMENT",
+        "live_version": "20260829165820",
+        "live_name": "warehouse_post_reversal_alias_collision_correction"
+      },
+      {
+        "canonical_version": "20260829150200",
+        "canonical_file": "supabase/migrations/20260829150200_warehouse_posted_header_lifecycle_immutability_correction.sql",
+        "canonical_sha256": "f4ca9e67e470521fa5c3a7870736ac463cc487ade9b32e85b85323170ca9abc4",
+        "status": "APPLIED_DEVELOPMENT",
+        "live_version": "20260829171505",
+        "live_name": "warehouse_posted_header_lifecycle_immutability_correction"
+      },
+      {
+        "canonical_version": "20260829150300",
+        "canonical_file": "supabase/migrations/20260829150300_warehouse_posted_header_lifecycle_normalization_correction.sql",
+        "canonical_sha256": "c748aa730ab811dc605e1468c53c29983127fbb8f2674c28d44249204b33dfb3",
+        "status": "APPLIED_DEVELOPMENT",
+        "live_version": "20260829172706",
+        "live_name": "warehouse_posted_header_lifecycle_normalization_correction"
+      },
+      {
+        "canonical_version": "20260829150400",
+        "canonical_file": "supabase/migrations/20260829150400_warehouse_posted_header_generated_column_normalization_correction.sql",
+        "canonical_sha256": "94ecbe7440bd1a8530bd74744fcb624d05af4ead883a5e5b4121995c6995bf22",
+        "status": "APPLIED_DEVELOPMENT",
+        "live_version": "20260829172841",
+        "live_name": "warehouse_posted_header_generated_column_normalization_correction"
       }
     ]
   },
