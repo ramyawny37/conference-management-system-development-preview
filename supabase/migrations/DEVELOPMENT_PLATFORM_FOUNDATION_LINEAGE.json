@@ -170,6 +170,31 @@
       "provenance_note": "The local filename timestamp 20260828120000 differs from the live migration version 20260827225739. The SQL bodies are byte-identical and the live migration is already applied exactly once; do not rename for replay or re-apply it."
     }
   ],
+  "packaged_not_applied": {
+    "provenance": "supabase/migrations/provenance/warehouse-v1-canonical-packaging.md",
+    "authority": "Platform/Conference canonical authority",
+    "target": "Development-only future target when explicitly authorized",
+    "migrations": [
+      {
+        "canonical_version": "20260829140000",
+        "canonical_file": "supabase/migrations/20260829140000_warehouse_module_permission_catalog.sql",
+        "canonical_sha256": "d6f78aaa5536f29497eea7d426998d06ee95735be6c4c746fbfbec6eda5dfa61",
+        "status": "NOT_APPLIED"
+      },
+      {
+        "canonical_version": "20260829140100",
+        "canonical_file": "supabase/migrations/20260829140100_warehouse_v1_business_schema.sql",
+        "canonical_sha256": "095dcc4c7bfe6e54a1ad22c846f838bebe10a71ec60d7ba0fe7fc5fdfe472aae",
+        "status": "NOT_APPLIED"
+      },
+      {
+        "canonical_version": "20260829140200",
+        "canonical_file": "supabase/migrations/20260829140200_warehouse_v1_guarded_rpc.sql",
+        "canonical_sha256": "771a45e8efe93de910766495f42a8ab40fb70fb8e535e59afb11baafe060e763",
+        "status": "NOT_APPLIED"
+      }
+    ]
+  },
   "obsolete": [
     {
       "source_version": "6.16.0",
