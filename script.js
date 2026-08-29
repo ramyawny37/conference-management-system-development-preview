@@ -1544,6 +1544,22 @@ function returnToOrganizationManagementFromMembers(){
 function showHomePage(){
   return openStartupScreen({clearCurrentConference:false,persistView:true});
 }
+function showPlatformModules(){
+  var shell=ge('startupScreen');
+  if(!shell)return false;
+  shell.classList.remove('platform-conference-active');
+  var launcher=ge('platformLauncherTitle');
+  if(launcher)launcher.focus();
+  return true;
+}
+function openConferenceWorkspace(){
+  var shell=ge('startupScreen');
+  var workspace=ge('conferenceWorkspace');
+  if(!shell||!workspace)return false;
+  shell.classList.add('platform-conference-active');
+  workspace.focus();
+  return true;
+}
 function renderTab(n){
   renderGlobalConferenceHeader();
   if (n === 0) renderAccommodation();
@@ -6855,6 +6871,7 @@ function openStartupScreen(options){
   if(window.StartupAccessGate&&!window.StartupAccessGate.isAllowed())return false;
   ensureOrganizationManagementAccess();
   options=options||{};
+  showPlatformModules();
   closeOrganizationManagementScreen();
   document.body.classList.remove('accommodation-shell-active');
   var clearCurrentConference=options.clearCurrentConference===true;

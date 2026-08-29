@@ -14,13 +14,14 @@ const next='organization-membership-operation-key-v1';
 const mobileRoomInputRevision='anchored-glass-person-picker-v5';
 const appVersion='3.4.0';
 const shellRevision='development-3-4-0-platform-foundation-v1';
-const cacheRevision='development-3-4-0-platform-shell-phase1-v1';
+const cacheRevision='development-3-4-0-platform-shell-phase1b-v1';
 const priorAuthorizationCacheRevision='runtime-authorization-phase1-v1';
 const productionCacheRevision='production-integrated-3-3-0-main-6d0c1e1-develop-80653ca-v1';
 const accountIdentityRevision='account-session-identity-v1';
 const stateAssetRevision='develop-cross-store-arbitration-v1';
 const persistenceArbitrationRevision='develop-cross-store-arbitration-v1';
 const permissionRuntimeRevision='development-3-4-0-platform-foundation-v1';
+const platformShellScriptRevision='platform-shell-phase1b-v1';
 const testTemplateCleanupRevision='test-house-template-cleanup-v1';
 const templateDiagnosticRevision='template-diagnostic-export-v1';
 const partialTemplateCleanupRevision='partial-template-state-cleanup-v1';
@@ -39,7 +40,7 @@ const officialTemplateSharingRevision='official-house-template-sharing-v1';
 const sharedTemplateReadOnlyRevision='shared-house-template-read-only-v1';
 const bootstrapRevision='first-owner-bootstrap-hardening-v1';
 const userManagementUiRevision=next;
-const userManagementStyleRevision='platform-shell-phase1-v1';
+const userManagementStyleRevision='platform-shell-phase1b-v1';
 const userManagementReadRevision='organization-archive-restore-v1';
 const conferenceRoleRevision=privacyRevision;
 const houseTemplateRevision='template-floor-conference-sync-v1';
@@ -198,8 +199,8 @@ const readAsset='js/sync/user-management-read-service.js?rev='+
   userManagementReadRevision;
 assert(index.includes(readAsset));
 assert(worker.includes("'./"+readAsset+"'"));
-assert(index.includes('script.js?rev='+permissionRuntimeRevision));
-assert(worker.includes("'./script.js?rev="+permissionRuntimeRevision+"'"));
+assert(index.includes('script.js?rev='+platformShellScriptRevision));
+assert(worker.includes("'./script.js?rev="+platformShellScriptRevision+"'"));
 [
   'js/sync/conference-permission-resolver.js',
   'core.js',
@@ -217,7 +218,7 @@ assert(worker.includes("'./script.js?rev="+permissionRuntimeRevision+"'"));
 const xlsxAsset='libs/xlsx.full.min.js';
 assert(fs.existsSync(path.join(root,xlsxAsset)),'local XLSX runtime asset missing');
 assert(index.includes('<script src="'+xlsxAsset+'"></script>'),'index missing local XLSX runtime');
-assert(index.indexOf(xlsxAsset)<index.indexOf('script.js?rev='+permissionRuntimeRevision),'XLSX runtime must load before import logic');
+assert(index.indexOf(xlsxAsset)<index.indexOf('script.js?rev='+platformShellScriptRevision),'XLSX runtime must load before import logic');
 assert(worker.includes("'./"+xlsxAsset+"'"),'app shell missing local XLSX runtime');
 assert(!/https?:[^"']*(sheetjs|xlsx)/i.test(index),'XLSX must not depend on a CDN');
 const organizationMembersAsset='js/sync/organization-members-ui.js?rev='+organizationMembersRevision;
