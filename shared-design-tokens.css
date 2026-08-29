@@ -1,0 +1,58 @@
+/* Integrated Management Platform shared visual tokens.
+   This framework-neutral source is intended for generated CSS/Tailwind adapters later. */
+:root{
+  --platform-primary:#1452ad;
+  --platform-primary-dark:#0d3f89;
+  --platform-primary-active:#1d65c8;
+  --platform-secondary:#2e75b6;
+  --platform-success:#159957;
+  --platform-warning:#f07a12;
+  --platform-danger:#dc4b4b;
+  --platform-danger-strong:#c63e35;
+  --platform-auxiliary:#8e44ad;
+  --platform-neutral:#708196;
+  --platform-background:#f3f7fb;
+  --platform-page-background:radial-gradient(ellipse at 7% 16%,rgba(174,208,247,.3) 0,rgba(174,208,247,0) 36%),radial-gradient(ellipse at 94% 70%,rgba(232,205,176,.18) 0,rgba(232,205,176,0) 39%),radial-gradient(ellipse at 48% 100%,rgba(176,207,242,.22) 0,rgba(176,207,242,0) 46%),linear-gradient(145deg,#fcfdff 0%,#f2f7fc 56%,#fcf8f4 100%);
+  --platform-surface:#fff;
+  --platform-surface-soft:#f4f8fc;
+  --platform-surface-glass:rgba(255,255,255,.72);
+  --platform-surface-near-solid:rgba(255,255,255,.92);
+  --platform-overlay:rgba(17,39,61,.55);
+  --platform-text:#173a60;
+  --platform-text-secondary:#426987;
+  --platform-text-muted:#6e8299;
+  --platform-text-on-color:#fff;
+  --platform-border:#dce6f0;
+  --platform-border-strong:#d9e6f2;
+  --platform-input-border:#d6e3ef;
+  --platform-focus-ring:0 0 0 3px rgba(46,117,182,.14);
+  --platform-shadow-sm:0 3px 12px rgba(30,65,100,.07);
+  --platform-shadow-md:0 8px 24px rgba(30,65,100,.10);
+  --platform-shadow-active:0 5px 13px rgba(20,82,173,.22);
+  --platform-shadow-dialog:0 20px 52px rgba(17,54,88,.28);
+  --platform-radius-sm:8px;
+  --platform-radius-control:9px;
+  --platform-radius-md:12px;
+  --platform-radius-card:14px;
+  --platform-radius-lg:16px;
+  --platform-radius-pill:999px;
+  --platform-space-1:4px;
+  --platform-space-2:6px;
+  --platform-space-3:8px;
+  --platform-space-4:10px;
+  --platform-space-5:12px;
+  --platform-space-6:16px;
+  --platform-space-7:20px;
+  --platform-space-8:24px;
+  --platform-control-height-sm:31px;
+  --platform-control-height:40px;
+  --platform-icon-sm:16px;
+  --platform-icon-md:20px;
+  --platform-icon-lg:28px;
+  --platform-shell-header-height:72px;
+  --platform-page-max:1480px;
+  --platform-font-family:'Segoe UI',Arial,sans-serif;
+  --platform-breakpoint-mobile:600px;
+  --platform-breakpoint-tablet:820px;
+  --platform-breakpoint-compact:1100px;
+}

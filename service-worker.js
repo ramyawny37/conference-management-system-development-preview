@@ -7,13 +7,14 @@ const CACHE_NAMESPACE = IS_DEVELOPMENT
   : '';
 const CACHE_PREFIX = CACHE_NAMESPACE + 'conference-manager-core-';
 const CACHE_REVISION = IS_DEVELOPMENT
-  ? 'development-3-4-0-platform-foundation-v1'
+  ? 'development-3-4-0-platform-shell-phase1-v1'
   : 'production-integrated-3-3-0-main-6d0c1e1-develop-80653ca-v1';
 const CACHE_NAME = CACHE_PREFIX + 'v' + APP_VERSION + '-' + CACHE_REVISION;
 const CORE_ASSETS = [
   './',
   './index.html',
-  './style.css?rev=account-session-identity-v1',
+  './shared-design-tokens.css?rev=platform-shell-phase1-v1',
+  './style.css?rev=platform-shell-phase1-v1',
   './js/storage/environment-namespace.js',
   './js/storage/snapshot-payload-diagnostics.js?rev=snapshot-payload-diagnostics-v1',
   './js/storage/local-persistence-arbitration.js?rev=develop-cross-store-arbitration-v1',
@@ -128,6 +129,7 @@ const CORE_ASSETS = [
   './pwa.js?rev=organization-membership-operation-key-v1',
   './libs/html2canvas.min.js',
   './assets/logo.jpg',
+  './assets/make-a-difference-logo.png',
   './assets/startup-bg.png',
   './icons/icon-192x192-v3.png',
   './icons/icon-512x512-v3.png',
