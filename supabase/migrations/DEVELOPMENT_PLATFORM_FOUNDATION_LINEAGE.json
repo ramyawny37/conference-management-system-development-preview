@@ -234,6 +234,28 @@
         "status": "APPLIED_DEVELOPMENT",
         "live_version": "20260829172841",
         "live_name": "warehouse_posted_header_generated_column_normalization_correction"
+      },
+      {
+        "canonical_version": "20260829150500",
+        "canonical_file": "supabase/migrations/20260829150500_warehouse_secure_read_surface.sql",
+        "canonical_sha256": "b7a377a82e405a7379e499b77bba91dcbfdbb4e27b19a7079a592ef3151bda31",
+        "reviewed_source_file": "warehouse-management-system/supabase/reviewed-source/warehouse-v1/20260829000900_warehouse_v1_secure_read_surface.sql",
+        "status": "APPLIED_DEVELOPMENT",
+        "live_version": "20260829182912",
+        "live_name": "warehouse_secure_read_surface",
+        "security_runtime": "PASS",
+        "production_applied": false
+      },
+      {
+        "canonical_version": "20260829150600",
+        "canonical_file": "supabase/migrations/20260829150600_warehouse_bounded_balance_read.sql",
+        "canonical_sha256": "359b2ee4d984608b8b2bb6de64e9516e249ff6734b0645534aaa264e7fec89b4",
+        "reviewed_source_file": "warehouse-management-system/supabase/reviewed-source/warehouse-v1/20260829001000_warehouse_v1_bounded_balance_read.sql",
+        "status": "APPLIED_DEVELOPMENT",
+        "live_version": "20260829183306",
+        "live_name": "warehouse_bounded_balance_read",
+        "security_runtime": "PASS",
+        "production_applied": false
       }
     ]
   },
