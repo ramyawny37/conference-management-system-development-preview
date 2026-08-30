@@ -168,6 +168,18 @@
       "authoritative": true,
       "scope": "EXECUTE grants only",
       "provenance_note": "The local filename timestamp 20260828120000 differs from the live migration version 20260827225739. The SQL bodies are byte-identical and the live migration is already applied exactly once; do not rename for replay or re-apply it."
+    },
+    {
+      "live_version": "20260830232909",
+      "live_name": "platform_foundation_reconciliation",
+      "live_content_md5": "4f708778810cd3b58ff747c160ed32c6",
+      "repository_file": "supabase/migrations/20260831023000_platform_foundation_reconciliation.sql",
+      "repository_sha256": "9b5b713756c185f7f85d47fe5f930dc62dfd40222e3b977148249c8816d1e964",
+      "repository_content_matches_live": true,
+      "applied_live": true,
+      "authoritative": true,
+      "scope": "Platform foundation schemas, reference data, guarded RPCs, grants, and RLS",
+      "provenance_note": "Forward-only Development reconciliation of reviewed Warehouse source migrations 20260825000100 through 20260825000300; reserved authorization aliases were renamed without changing behavior. No account or device bootstrap data was created."
     }
   ],
   "warehouse_v1_package": {
