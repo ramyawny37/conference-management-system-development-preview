@@ -199,6 +199,116 @@ test("successful adoption hydrates the Platform identity before context refresh 
   assert.notEqual(selectedIdentity.id, localDeviceId);
   assert.equal(JSON.stringify(platformIdentity).includes("must-not-enter-frontend-state"), false);
   assert.equal(window.PlatformIntegration.getContext(), null);
+  const diagnostic = window.PlatformIntegration.getSafeDiagnostic();
+  assert.equal(diagnostic.platformAdoptionSucceeded, true);
+  assert.equal(diagnostic.adoptionDeviceIdPrefix, platformDeviceId.slice(0, 8));
+  assert.equal(diagnostic.activeIdentitySource, "platform_adoption");
+  assert.equal(diagnostic.adoptionRequestCount, 1);
+  assert.equal(JSON.stringify(diagnostic).includes("must-not-enter-frontend-state"), false);
+});
+
+test("authorization readiness deduplicates adoption and blocks fallback resolution", async () => {
+  const integrationSource = fs.readFileSync("js/platform-integration.js", "utf8");
+  const identitySource = fs.readFileSync("js/supabase/device-identity.js", "utf8");
+  const serviceSource = fs.readFileSync("js/supabase/current-device-authorization-service.js", "utf8");
+  const userId = "33333333-3333-4333-8333-333333333333";
+  const platformDeviceId = "11111111-1111-4111-8111-111111111111";
+  const localDeviceId = "22222222-2222-4222-8222-222222222222";
+  let adoptionResolve, adoptionRequests = 0, identityReads = 0;
+  const rpcCalls = [];
+  const session = { access_token: "access-secret", refresh_token: "refresh-secret", user: { id: userId } };
+  const storage = new Map([["device-identity:" + userId, JSON.stringify({ id: localDeviceId, deviceName: "", platform: "MacIntel", createdAt: "earlier" })]]);
+  const response = (body) => ({ ok: true, status: 200, json: async () => body });
+  const window = {
+    navigator: { platform: "MacIntel" },
+    fetch: async (path, options) => {
+      if (path === "/api/platform/session/adopt") {
+        adoptionRequests += 1;
+        return new Promise((resolve) => { adoptionResolve = () => resolve(response({ authenticated: true, deviceId: platformDeviceId })); });
+      }
+      return response({ configured: true, authenticated: true, deviceId: adoptionRequests ? platformDeviceId : undefined, modules: [] });
+    },
+    SupabaseAuth: { getSession: () => session },
+    BrowserStorageNamespace: { key: (value) => value },
+    localStorage: { getItem: (key) => { identityReads += 1; return storage.get(key) || null; }, setItem: (key, value) => storage.set(key, value) },
+    crypto: { randomUUID: () => localDeviceId },
+    OrganizationAdministrationUtils: { isUuid: (value) => /^[0-9a-f-]{36}$/i.test(String(value || "")) },
+    SupabaseClientLayer: { getClient: () => ({ rpc: async (name, args) => { rpcCalls.push({ name, args }); return { data: { accountStatus: "approved", deviceAuthorizationStatus: "registered" }, error: null }; } }) },
+    SystemAccessService: { getState: () => ({ accountStatus: "approved" }) },
+  };
+  window.window = window;
+  const sandbox = { window, Promise, JSON, Object, String, Array, Error, Date, Number, Uint8Array };
+  vm.runInNewContext(integrationSource, sandbox);
+  vm.runInNewContext(identitySource, sandbox);
+  vm.runInNewContext(serviceSource, sandbox);
+  await window.PlatformIntegration.initialize();
+  identityReads = 0;
+  const first = window.CurrentDeviceAuthorizationService.getStatus();
+  const second = window.CurrentDeviceAuthorizationService.getDeviceAwareAccess();
+  await Promise.resolve();await Promise.resolve();
+  assert.equal(adoptionRequests, 1);
+  assert.equal(identityReads, 0);
+  assert.equal(rpcCalls.length, 0);
+  adoptionResolve();
+  await Promise.all([first, second]);
+  assert.equal(adoptionRequests, 1);
+  assert.equal(rpcCalls.length, 2);
+  assert.equal(rpcCalls[0].args.p_device_id, platformDeviceId);
+  assert.equal(rpcCalls[1].args.p_device_id, platformDeviceId);
+  const diagnostic = window.PlatformIntegration.getSafeDiagnostic();
+  assert.equal(diagnostic.resolverDeviceIdPrefix, platformDeviceId.slice(0, 8));
+  assert.equal(diagnostic.rpcDeviceIdPrefix, platformDeviceId.slice(0, 8));
+  assert.equal(diagnostic.platformReadyAtResolution, true);
+  assert.equal(diagnostic.activeIdentitySource, "platform_adoption");
+  assert.doesNotMatch(JSON.stringify(diagnostic), /access-secret|refresh-secret|MacIntel/);
+});
+
+test("conflicting context identity is diagnosed and never replaces adoption identity", async () => {
+  const source = fs.readFileSync("js/platform-integration.js", "utf8");
+  const adoptionId = "11111111-1111-4111-8111-111111111111";
+  const contextId = "22222222-2222-4222-8222-222222222222";
+  let contextCalls = 0;
+  const response = (body) => ({ ok: true, status: 200, json: async () => body });
+  const window = {
+    navigator: { platform: "MacIntel" },
+    SupabaseAuth: { getSession: () => ({ access_token: "access", refresh_token: "refresh", user: { id: "33333333-3333-4333-8333-333333333333" } }) },
+    fetch: async (path) => {
+      if (path === "/api/platform/session/adopt") return response({ authenticated: true, deviceId: adoptionId });
+      contextCalls += 1;
+      return response(contextCalls === 1 ? { configured: true, authenticated: false, modules: [] } : { configured: true, authenticated: true, deviceId: contextId, modules: [] });
+    },
+  };
+  window.window = window;
+  vm.runInNewContext(source, { window, Promise, JSON, Object, String, Array, Error });
+  await window.PlatformIntegration.initialize();
+  await assert.rejects(window.PlatformIntegration.awaitAuthorizationReady(), (error) => error.code === "PLATFORM_DEVICE_IDENTITY_MISMATCH");
+  assert.equal(window.PlatformIntegration.getDeviceIdentity().id, adoptionId);
+  const diagnostic = window.PlatformIntegration.getSafeDiagnostic();
+  assert.equal(diagnostic.platformAdoptionSucceeded, true);
+  assert.equal(diagnostic.platformIdentityMismatch, true);
+  assert.equal(diagnostic.adoptionDeviceIdPrefix, adoptionId.slice(0, 8));
+  assert.equal(diagnostic.contextDeviceIdPrefix, contextId.slice(0, 8));
+});
+
+test("legacy origin readiness preserves browser-local fallback", async () => {
+  const integrationSource = fs.readFileSync("js/platform-integration.js", "utf8");
+  const identitySource = fs.readFileSync("js/supabase/device-identity.js", "utf8");
+  const userId = "33333333-3333-4333-8333-333333333333";
+  const localDeviceId = "22222222-2222-4222-8222-222222222222";
+  const window = {
+    fetch: async () => ({ ok: false, status: 404, json: async () => null }),
+    SupabaseAuth: { getSession: () => ({ user: { id: userId } }) },
+    BrowserStorageNamespace: { key: (value) => value },
+    localStorage: { getItem: (key) => key === "device-identity:" + userId ? JSON.stringify({ id: localDeviceId, deviceName: "Legacy", platform: "MacIntel" }) : null, setItem: () => {} },
+  };
+  window.window = window;
+  const sandbox = { window, Promise, JSON, Object, String, Array, Error, Date, Uint8Array };
+  vm.runInNewContext(integrationSource, sandbox);
+  vm.runInNewContext(identitySource, sandbox);
+  const readiness = await window.PlatformIntegration.awaitAuthorizationReady();
+  assert.equal(readiness.ready, true);
+  assert.equal(readiness.platform, false);
+  assert.equal(window.SupabaseDeviceIdentity.getOrCreate().id, localDeviceId);
 });
 
 function startupScenario(adoptionResult) {
