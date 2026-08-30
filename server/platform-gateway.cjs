@@ -57,7 +57,7 @@ async function readJson(request) {
   return body ? JSON.parse(body) : {};
 }
 
-function supabaseFor(request, response, device) {
+function supabaseFor(request, response, device, writeCookies) {
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
   if (!key) return null;
   const requestCookies = parseCookies(request.headers.cookie);
@@ -65,7 +65,7 @@ function supabaseFor(request, response, device) {
     global: device ? { headers: { "x-platform-device-id": device.id, "x-platform-device-secret": device.secret } } : undefined,
     cookies: {
       getAll: () => Object.entries(requestCookies).map(([name, value]) => ({ name, value })),
-      setAll: (values) => values.forEach(({ name, value, options }) => appendCookie(response, serializeCookie(name, value, options))),
+      setAll: (values) => (writeCookies || ((cookies) => cookies.forEach(({ name, value, options }) => appendCookie(response, serializeCookie(name, value, options)))))(values),
     },
   });
 }
@@ -77,11 +77,19 @@ function getDevice(request) {
   return /^[0-9a-f-]{36}$/i.test(id || "") && /^[A-Za-z0-9_-]{43}$/.test(secret || "") ? { id, secret } : null;
 }
 
-function issueDevice(response) {
-  const device = { id: crypto.randomUUID(), secret: crypto.randomBytes(32).toString("base64url") };
+function createDevice() {
+  return { id: crypto.randomUUID(), secret: crypto.randomBytes(32).toString("base64url") };
+}
+
+function commitDevice(response, device) {
   const options = { maxAge: 31_536_000 };
   appendCookie(response, serializeCookie(DEVICE_ID_COOKIE, device.id, options));
   appendCookie(response, serializeCookie(DEVICE_SECRET_COOKIE, device.secret, options));
+}
+
+function issueDevice(response) {
+  const device = createDevice();
+  commitDevice(response, device);
   return device;
 }
 
@@ -114,27 +122,44 @@ async function sessionContext(request, response) {
   return { configured: true, authenticated: true, user: { id: data.user.id, email: data.user.email }, accountStatus, deviceStatus, deviceId: device.id, modules };
 }
 
-async function handleApi(request, response, pathname) {
+function createApiHandler(options = {}) {
+  const resolveSupabaseFor = options.supabaseFor || supabaseFor;
+  const resolveGetDevice = options.getDevice || getDevice;
+  const resolveCreateDevice = options.createDevice || createDevice;
+  const resolveCommitDevice = options.commitDevice || commitDevice;
+  const resolveReadJson = options.readJson || readJson;
+  return async function handleApi(request, response, pathname) {
   if (request.method === "GET" && pathname === "/api/platform/context")
     return json(response, 200, await sessionContext(request, response));
   if (request.method === "POST" && pathname === "/api/platform/session/adopt") {
-    const body = await readJson(request);
-    const supabase = supabaseFor(request, response, null);
-    if (!supabase) return json(response, 503, { error: "PLATFORM_SUPABASE_NOT_CONFIGURED" });
+    const body = await resolveReadJson(request);
+    const pendingCookies = [];
+    const deferCookies = (values) => pendingCookies.push(...values);
+    const supabase = resolveSupabaseFor(request, response, null, deferCookies);
+    if (!supabase) return json(response, 503, { error: "PLATFORM_SUPABASE_NOT_CONFIGURED", category: "unexpected" });
     const result = await supabase.auth.setSession({ access_token: String(body.accessToken || ""), refresh_token: String(body.refreshToken || "") });
-    if (result.error || !result.data.user) return json(response, 401, { error: "PLATFORM_SESSION_INVALID" });
-    const device = getDevice(request) || issueDevice(response);
-    const deviceClient = supabaseFor(request, response, device);
-    await deviceClient.auth.setSession({ access_token: String(body.accessToken), refresh_token: String(body.refreshToken) });
+    const currentSession = result.data && result.data.session;
+    if (result.error || !result.data.user || !currentSession || !currentSession.access_token || !currentSession.refresh_token)
+      return json(response, 401, { error: "PLATFORM_SESSION_INVALID", category: "authentication" });
+    const existingDevice = resolveGetDevice(request);
+    const device = existingDevice || resolveCreateDevice();
+    const deviceClient = resolveSupabaseFor(request, response, device, deferCookies);
+    if (!deviceClient) return json(response, 503, { error: "PLATFORM_SUPABASE_NOT_CONFIGURED", category: "unexpected" });
+    const deviceAuthentication = await deviceClient.auth.setSession({
+      access_token: currentSession.access_token,
+      refresh_token: currentSession.refresh_token,
+    });
+    if (deviceAuthentication.error || !deviceAuthentication.data || !deviceAuthentication.data.user)
+      return json(response, 401, { error: "PLATFORM_SESSION_INVALID", category: "authentication" });
     const registration = await deviceClient.schema("platform").rpc("register_current_device", {
       p_display_name: "Integrated Platform browser",
       p_platform: null,
       p_browser: String(request.headers["user-agent"] || "").slice(0, 120) || null,
     });
-    if (registration.error) {
-      await supabase.auth.signOut();
-      return json(response, 403, { error: "PLATFORM_DEVICE_REGISTRATION_FAILED" });
-    }
+    if (registration.error)
+      return json(response, 403, { error: "PLATFORM_DEVICE_REGISTRATION_FAILED", category: "device" });
+    pendingCookies.forEach(({ name, value, options: cookieOptions }) => appendCookie(response, serializeCookie(name, value, cookieOptions)));
+    if (!existingDevice) resolveCommitDevice(response, device);
     return json(response, 200, { authenticated: true, deviceId: device.id });
   }
   if (request.method === "POST" && pathname === "/api/platform/session/logout") {
@@ -143,7 +168,10 @@ async function handleApi(request, response, pathname) {
     return json(response, 200, { authenticated: false });
   }
   return json(response, 404, { error: "PLATFORM_API_NOT_FOUND" });
+  };
 }
+
+const handleApi = createApiHandler();
 
 function contentType(filePath) {
   return ({ ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".css": "text/css; charset=utf-8", ".json": "application/json; charset=utf-8", ".png": "image/png", ".jpg": "image/jpeg", ".svg": "image/svg+xml" })[path.extname(filePath)] || "application/octet-stream";
@@ -239,7 +267,7 @@ function createGatewayHandler(options = {}) {
       }
       if (!serveLocal(response, pathname)) json(response, 404, { error: "PLATFORM_ROUTE_NOT_FOUND" });
     } catch (error) {
-      json(response, 500, { error: "PLATFORM_GATEWAY_FAILURE" });
+      json(response, 500, { error: "PLATFORM_GATEWAY_FAILURE", category: "unexpected" });
     }
   };
 }
@@ -253,6 +281,7 @@ module.exports = {
   server,
   gatewayHandler,
   createGatewayHandler,
+  createApiHandler,
   proxyRequest,
   normalizeLocation,
   normalizeSetCookie,

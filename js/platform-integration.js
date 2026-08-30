@@ -9,8 +9,15 @@
       credentials:'same-origin',
       headers:{'content-type':'application/json'}
     },options||{})).then(function(response){
-      if(!response.ok)throw new Error('PLATFORM_REQUEST_FAILED');
-      return response.json();
+      return response.json().catch(function(){return null;}).then(function(body){
+        if(response.ok)return body;
+        var allowedCodes=['PLATFORM_SESSION_INVALID','PLATFORM_DEVICE_REGISTRATION_FAILED','PLATFORM_GATEWAY_FAILURE'],allowedCategories=['authentication','device','unexpected'];
+        var error=new Error(body&&allowedCodes.indexOf(body.error)>=0?body.error:'PLATFORM_REQUEST_FAILED');
+        error.code=error.message;
+        error.status=response.status;
+        error.category=body&&allowedCategories.indexOf(body.category)>=0?body.category:'unexpected';
+        throw error;
+      });
     });
   }
 
