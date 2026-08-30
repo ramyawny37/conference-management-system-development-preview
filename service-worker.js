@@ -7,7 +7,7 @@ const CACHE_NAMESPACE = IS_DEVELOPMENT
   : '';
 const CACHE_PREFIX = CACHE_NAMESPACE + 'conference-manager-core-';
 const CACHE_REVISION = IS_DEVELOPMENT
-  ? 'development-3-4-0-platform-authorization-readiness-v1'
+  ? 'development-3-4-0-platform-first-login-coordinator-v1'
   : 'production-integrated-3-3-0-main-6d0c1e1-develop-80653ca-v1';
 const CACHE_NAME = CACHE_PREFIX + 'v' + APP_VERSION + '-' + CACHE_REVISION;
 const CORE_ASSETS = [
@@ -32,11 +32,11 @@ const CORE_ASSETS = [
   './js/supabase/runtime-config.js',
   './js/supabase/client.js',
   './js/supabase/auth.js?rev=account-session-identity-v1',
-  './js/platform-integration.js?rev=platform-authorization-readiness-v1',
+  './js/platform-integration.js?rev=platform-first-login-coordinator-v1',
   './js/supabase/system-access-service.js?rev=conference-create-authorization-v1',
   './js/sync/diagnostics-privacy-policy.js?rev=diagnostics-privacy-hardening-v1',
   './js/sync/organization-administration-utils.js',
-  './js/sync/access-diagnostics-ui.js?rev=platform-authorization-readiness-v1',
+  './js/sync/access-diagnostics-ui.js?rev=platform-first-login-coordinator-v1',
   './js/sync/organization-membership-operation-repository.js?rev=organization-membership-retention-safe-v1',
   './js/supabase/organization-administration-service.js?rev=organization-membership-manual-retry-v1',
   './js/sync/organization-members-ui.js?rev=organization-membership-manual-retry-v1',
@@ -47,7 +47,7 @@ const CORE_ASSETS = [
   './js/sync/device-authorization-operation-repository.js',
   './js/supabase/current-device-authorization-service.js?rev=platform-authorization-readiness-v1',
   './js/supabase/device-authorization-administration-service.js?rev=platform-privileged-device-admin-diagnostics-v1',
-  './js/sync/current-device-authorization-ui.js?rev=platform-authorization-readiness-v1',
+  './js/sync/current-device-authorization-ui.js?rev=platform-first-login-coordinator-v1',
   './js/sync/device-reauthorization-flow.js?rev=device-reauthorization-flow-v1',
   './js/sync/device-authorization-administration-ui.js?rev=startup-device-admin-lifecycle-v1',
   './js/supabase/snapshot-sync.js?rev=organization-membership-operation-key-v1',
@@ -69,9 +69,9 @@ const CORE_ASSETS = [
   './js/sync/offline-first-integration.js?rev=revision-publish-1',
   './js/sync/device-rescue-export.js?rev=diagnostics-privacy-hardening-v1',
   './js/sync/template-diagnostic-export.js?rev=template-diagnostic-export-v1',
-  './js/sync/sync-settings-ui.js?rev=account-session-identity-v1',
+  './js/sync/sync-settings-ui.js?rev=platform-first-login-coordinator-v1',
   './js/supabase/first-system-bootstrap-service.js?rev=first-owner-bootstrap-hardening-v1',
-  './js/sync/startup-access-gate.js?rev=session-adoption-v1',
+  './js/sync/startup-access-gate.js?rev=platform-first-login-coordinator-v1',
   './js/sync/link-status-diagnostic-store.js',
   './js/sync/conference-link-store.js',
   './js/sync/conference-permission-contract.js?rev=permission-contract-phase2a-v1',
@@ -125,7 +125,7 @@ const CORE_ASSETS = [
   './cards.js',
   './libs/xlsx.full.min.js',
   './js/ui-icons.js?rev=accommodation-visual-match-v6',
-  './script.js?rev=platform-shell-phase2b-v1',
+  './script.js?rev=platform-first-login-coordinator-v1',
   './version.js',
   './pwa.js?rev=organization-membership-operation-key-v1',
   './libs/html2canvas.min.js',

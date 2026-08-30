@@ -33,7 +33,7 @@ vm.runInNewContext(repository,sandbox);vm.runInNewContext(service,sandbox);vm.ru
   var cacheRevision=worker.match(
     /const CACHE_REVISION = IS_DEVELOPMENT\s*\? '([^']+)'\s*:\s*'([^']+)';/);
   assert.ok(cacheRevision,'cache revision must remain environment-aware');
-  assert.strictEqual(cacheRevision[1],'development-3-4-0-platform-authorization-readiness-v1');
+  assert.strictEqual(cacheRevision[1],'development-3-4-0-platform-first-login-coordinator-v1');
   assert.strictEqual(cacheRevision[2],'production-integrated-3-3-0-main-6d0c1e1-develop-80653ca-v1');
   assert.notStrictEqual(cacheRevision[1],cacheRevision[2]);
   assert.match(worker,/const CACHE_NAMESPACE = IS_DEVELOPMENT[\s\S]*\? 'cms:development:' \+ DEVELOPMENT_PROJECT_REF \+ ':'[\s\S]*:\s*'';/);
@@ -44,7 +44,7 @@ vm.runInNewContext(repository,sandbox);vm.runInNewContext(service,sandbox);vm.ru
   assert.match(ui,/تعذر إرسال طلب الاعتماد\./);
   assert.match(ui,/تعذر تحديث حالة الجهاز\./);
   assert.match(ui,/error\.code/);
-  assert.ok(index.includes('current-device-authorization-ui.js?rev=platform-authorization-readiness-v1'));
-  assert.ok(worker.includes('current-device-authorization-ui.js?rev=platform-authorization-readiness-v1'));
+  assert.ok(index.includes('current-device-authorization-ui.js?rev=platform-first-login-coordinator-v1'));
+  assert.ok(worker.includes('current-device-authorization-ui.js?rev=platform-first-login-coordinator-v1'));
   console.log('current-device authorization Gate 2 tests: passed (explicit refresh/register/request; no polling)');
 })().catch(function(error){console.error(error);process.exitCode=1;});

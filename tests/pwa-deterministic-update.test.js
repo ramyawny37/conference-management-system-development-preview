@@ -14,14 +14,15 @@ const next='organization-membership-operation-key-v1';
 const mobileRoomInputRevision='anchored-glass-person-picker-v5';
 const appVersion='3.4.0';
 const shellRevision='development-3-4-0-platform-foundation-v1';
-const cacheRevision='development-3-4-0-platform-authorization-readiness-v1';
+const cacheRevision='development-3-4-0-platform-first-login-coordinator-v1';
 const priorAuthorizationCacheRevision='runtime-authorization-phase1-v1';
 const productionCacheRevision='production-integrated-3-3-0-main-6d0c1e1-develop-80653ca-v1';
 const accountIdentityRevision='account-session-identity-v1';
+const firstLoginCoordinatorRevision='platform-first-login-coordinator-v1';
 const stateAssetRevision='develop-cross-store-arbitration-v1';
 const persistenceArbitrationRevision='develop-cross-store-arbitration-v1';
 const permissionRuntimeRevision='development-3-4-0-platform-foundation-v1';
-const platformShellScriptRevision='platform-shell-phase2b-v1';
+const platformShellScriptRevision='platform-first-login-coordinator-v1';
 const testTemplateCleanupRevision='test-house-template-cleanup-v1';
 const templateDiagnosticRevision='template-diagnostic-export-v1';
 const partialTemplateCleanupRevision='partial-template-state-cleanup-v1';
@@ -32,8 +33,8 @@ const memberDiagnosticsRevision='repository-rejection-diagnostics-v1';
 const legacyConferenceRevision='legacy-conference-preflight-v2';
 const privacyRevision='diagnostics-privacy-hardening-v1';
 const templateIsolationRevision='template-sync-isolation-v1';
-const startupRevision='session-adoption-v1';
-const deviceOnboardingRevision='platform-authorization-readiness-v1';
+const startupRevision='platform-first-login-coordinator-v1';
+const deviceOnboardingRevision='platform-first-login-coordinator-v1';
 const organizationTemplateRevision='shared-template-library-v1';
 const legacyTemplateAuthorizationRevision='legacy-template-adoption-authorization-v1';
 const officialTemplateSharingRevision='official-house-template-sharing-v1';
@@ -136,7 +137,7 @@ assert(worker.includes("'./js/sync/orphaned-conference-cleanup.js?rev=orphaned-l
 }
 {
   const versioned='js/sync/sync-settings-ui.js?rev='+
-    accountIdentityRevision;
+    firstLoginCoordinatorRevision;
   assert(index.includes(versioned),'index missing '+versioned);
   assert(worker.includes("'./"+versioned+"'"),'app shell missing '+versioned);
 }

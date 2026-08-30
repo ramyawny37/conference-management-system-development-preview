@@ -3,7 +3,7 @@
 
   var state={initialized:false,managedOrigin:null,context:null,deviceIdentity:null,deviceIdentitySource:'none',authorizationReady:false,adoptedUserId:'',adoptionError:null};
   var initializationFlight=null,adoptionFlight=null,sequence=0;
-  var trace={platformAdoptionStarted:false,platformAdoptionCompleted:false,platformAdoptionSucceeded:false,adoptionDeviceIdPrefix:null,platformContextHydrationAttempted:false,contextDeviceIdPrefix:null,activeIdentitySource:'none',resolverDeviceIdPrefix:null,rpcDeviceIdPrefix:null,platformReadyAtResolution:null,adoptionRequestCount:0,authorizationRefreshCount:0,platformIdentityMismatch:false,eventTrace:[]};
+  var trace={canonicalState:'UNAUTHENTICATED',platformAdoptionStarted:false,platformAdoptionCompleted:false,platformAdoptionSucceeded:false,adoptionDeviceIdPrefix:null,platformContextHydrationAttempted:false,contextDeviceIdPrefix:null,activeIdentitySource:'none',resolverDeviceIdPrefix:null,rpcDeviceIdPrefix:null,platformReadyAtResolution:null,adoptionRequestCount:0,authorizationRefreshCount:0,platformIdentityMismatch:false,eventTrace:[]};
 
   function isUuid(value){return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(value||''));}
 
@@ -138,6 +138,7 @@
   function recordResolution(deviceId,source){trace.resolverDeviceIdPrefix=prefix(deviceId);trace.activeIdentitySource=source||'none';trace.platformReadyAtResolution=state.authorizationReady===true;event('DEVICE_RESOLUTION_START');event(source==='platform_adoption'||source==='platform_context'?'DEVICE_SOURCE_PLATFORM':source==='browser_local_fallback'?'DEVICE_SOURCE_BROWSER_LOCAL':'DEVICE_SOURCE_NONE');}
   function recordRpc(deviceId){trace.rpcDeviceIdPrefix=prefix(deviceId);event('DEVICE_ACCESS_RPC');}
   function recordAuthorizationRefresh(){trace.authorizationRefreshCount++;event('AUTHORIZATION_REFRESH');}
+  function recordCanonicalState(value){var allowed=['UNAUTHENTICATED','AUTHENTICATING','AUTHENTICATED','PLATFORM_ADOPTING','ACCOUNT_NOT_APPROVED','DEVICE_REGISTERED','DEVICE_PENDING','DEVICE_APPROVED','DEVICE_REVOKED','ERROR'];trace.canonicalState=allowed.indexOf(value)>=0?value:'ERROR';event('STATE_'+trace.canonicalState);}
 
   function openModule(id){
     if(id==='conference'){
@@ -164,6 +165,7 @@
     recordDeviceResolution:recordResolution,
     recordDeviceAccessRpc:recordRpc,
     recordAuthorizationRefresh:recordAuthorizationRefresh,
+    recordCanonicalState:recordCanonicalState,
     logout:logout,
     openModule:openModule,
     getContext:function(){return state.context;},

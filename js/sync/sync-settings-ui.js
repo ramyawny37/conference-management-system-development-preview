@@ -868,15 +868,11 @@
     }).then(function(result){
       if(passwordElement)passwordElement.value='';
       if(result&&result.success){
-        var session=result.data&&result.data.session;
-        var adoption=global.PlatformIntegration&&
-          typeof global.PlatformIntegration.adoptSession==='function'
-          ?global.PlatformIntegration.adoptSession(session):Promise.resolve();
-        return Promise.resolve(adoption).then(function(){
-          clearStartupAuthDraft();
-          scheduleAuthChanged();
-          rerender();
-        });
+        clearStartupAuthDraft();
+        scheduleAuthChanged();
+        rerender();
+        return global.StartupAccessGate&&typeof global.StartupAccessGate.evaluate==='function'
+          ?global.StartupAccessGate.evaluate():null;
       }else{
         message('sync_auth_message',safeAuthMessage(result,successText),true);
       }

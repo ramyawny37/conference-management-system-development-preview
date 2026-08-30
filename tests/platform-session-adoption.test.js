@@ -324,7 +324,7 @@ function startupScenario(adoptionResult) {
     clearTimeout: () => {},
     SupabaseAuth: { initialize: async () => {}, getState: () => ({ authenticated: true }) },
     SupabaseClientLayer: { getClient: () => null },
-    PlatformIntegration: { synchronizeSession: () => adoptionResult() },
+    PlatformIntegration: { awaitAuthorizationReady: () => adoptionResult(), recordCanonicalState: () => {} },
     FirstSystemBootstrapService: { getStatus: async () => { bootstrapCalls += 1; return { ok: true, status: "completed" }; } },
     SystemAccessService: { initialize: async () => {}, refresh: async () => {}, getState: () => ({ accountStatus: "approved", fresh: true }) },
     SupabaseDeviceIdentity: { getOrCreate: () => ({ id: "22222222-2222-4222-8222-222222222222", deviceName: "Browser" }) },

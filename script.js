@@ -9920,16 +9920,11 @@ function completeAuthorizedApplicationStartup(){
 }
 window.applicationStorageReadyPromise=null;
 (function startIntegratedPlatform(){
-  var integration=window.PlatformIntegration&&
-    typeof window.PlatformIntegration.initialize==='function'
-    ?window.PlatformIntegration.initialize():Promise.resolve();
-  Promise.resolve(integration).catch(function(){return null;}).then(function(){
-    if(window.StartupAccessGate&&typeof window.StartupAccessGate.run==='function'){
-      window.StartupAccessGate.run({
-        completeApplicationStartup:completeAuthorizedApplicationStartup
-      });
-    }else{
-      throw new Error('STARTUP_ACCESS_GATE_REQUIRED');
-    }
-  });
+  if(window.StartupAccessGate&&typeof window.StartupAccessGate.run==='function'){
+    window.StartupAccessGate.run({
+      completeApplicationStartup:completeAuthorizedApplicationStartup
+    });
+  }else{
+    throw new Error('STARTUP_ACCESS_GATE_REQUIRED');
+  }
 })();

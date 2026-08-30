@@ -542,12 +542,12 @@
 <script src="js/supabase/runtime-config.js"></script>
 <script src="js/supabase/client.js"></script>
 <script src="js/supabase/auth.js?rev=account-session-identity-v1"></script>
-<script src="js/platform-integration.js?rev=platform-authorization-readiness-v1"></script>
+<script src="js/platform-integration.js?rev=platform-first-login-coordinator-v1"></script>
 <script src="js/supabase/system-access-service.js?rev=conference-create-authorization-v1"></script>
 <script src="js/sync/diagnostics-privacy-policy.js?rev=diagnostics-privacy-hardening-v1"></script>
 <script src="js/supabase/first-system-bootstrap-service.js?rev=first-owner-bootstrap-hardening-v1"></script>
 <script src="js/sync/organization-administration-utils.js"></script>
-<script src="js/sync/access-diagnostics-ui.js?rev=platform-authorization-readiness-v1"></script>
+<script src="js/sync/access-diagnostics-ui.js?rev=platform-first-login-coordinator-v1"></script>
 <script src="js/sync/organization-membership-operation-repository.js?rev=organization-membership-retention-safe-v1"></script>
 <script src="js/supabase/organization-administration-service.js?rev=organization-membership-manual-retry-v1"></script>
 <script src="js/sync/organization-members-ui.js?rev=organization-membership-manual-retry-v1"></script>
@@ -558,7 +558,7 @@
 <script src="js/sync/device-authorization-operation-repository.js"></script>
 <script src="js/supabase/current-device-authorization-service.js?rev=platform-authorization-readiness-v1"></script>
 <script src="js/supabase/device-authorization-administration-service.js?rev=platform-privileged-device-admin-diagnostics-v1"></script>
-<script src="js/sync/current-device-authorization-ui.js?rev=platform-authorization-readiness-v1"></script>
+<script src="js/sync/current-device-authorization-ui.js?rev=platform-first-login-coordinator-v1"></script>
 <script src="js/sync/device-reauthorization-flow.js?rev=device-reauthorization-flow-v1"></script>
 <script src="js/sync/device-authorization-administration-ui.js?rev=startup-device-admin-lifecycle-v1"></script>
 <script src="js/supabase/snapshot-sync.js?rev=organization-membership-operation-key-v1"></script>
@@ -580,8 +580,8 @@
 <script src="js/sync/offline-first-integration.js?rev=revision-publish-1"></script>
 <script src="js/sync/device-rescue-export.js?rev=diagnostics-privacy-hardening-v1"></script>
 <script src="js/sync/template-diagnostic-export.js?rev=template-diagnostic-export-v1"></script>
-<script src="js/sync/sync-settings-ui.js?rev=account-session-identity-v1"></script>
-<script src="js/sync/startup-access-gate.js?rev=session-adoption-v1"></script>
+<script src="js/sync/sync-settings-ui.js?rev=platform-first-login-coordinator-v1"></script>
+<script src="js/sync/startup-access-gate.js?rev=platform-first-login-coordinator-v1"></script>
 <script src="js/sync/link-status-diagnostic-store.js"></script>
 <script src="js/sync/conference-link-store.js"></script>
 <script src="js/sync/conference-permission-contract.js?rev=permission-contract-phase2a-v1"></script>
@@ -636,11 +636,10 @@
 <script src="libs/html2canvas.min.js"></script>
 <script src="libs/xlsx.full.min.js"></script>
 <script src="js/ui-icons.js?rev=accommodation-visual-match-v6"></script>
-<script src="script.js?rev=platform-shell-phase2b-v1"></script>
+<script src="script.js?rev=platform-first-login-coordinator-v1"></script>
 <script src="version.js"></script>
 <script>
   document.addEventListener('DOMContentLoaded', function() {
-    if (window.CurrentDeviceAuthorizationUI) window.CurrentDeviceAuthorizationUI.initialize();
     if (window.DeviceAuthorizationAdministrationUI) window.DeviceAuthorizationAdministrationUI.initialize();
     var appVersionLabel = document.getElementById('appVersionLabel');
     if (appVersionLabel) {
