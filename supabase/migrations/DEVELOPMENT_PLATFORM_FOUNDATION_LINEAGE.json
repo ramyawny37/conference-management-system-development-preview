@@ -180,6 +180,18 @@
       "authoritative": true,
       "scope": "Platform foundation schemas, reference data, guarded RPCs, grants, and RLS",
       "provenance_note": "Forward-only Development reconciliation of reviewed Warehouse source migrations 20260825000100 through 20260825000300; reserved authorization aliases were renamed without changing behavior. No account or device bootstrap data was created."
+    },
+    {
+      "live_version": "20260830234028",
+      "live_name": "first_platform_owner_bootstrap_reconciliation",
+      "live_content_md5": "4d76594abb5fc0fd659c744492e3a73f",
+      "repository_file": "supabase/migrations/20260831024500_first_platform_owner_bootstrap_reconciliation.sql",
+      "repository_sha256": "603cf13199b1537196e30a1a246c290087c84b46b1f93f5d4f44356a7be2b360",
+      "repository_content_matches_live": true,
+      "applied_live": true,
+      "authoritative": true,
+      "scope": "Guarded one-time first Platform owner bootstrap function",
+      "provenance_note": "Installs the reviewed one-time bootstrap contract only. Live execution created exactly one approved Platform owner and bootstrap device through the guarded function; no direct authorization-table mutation was used."
     }
   ],
   "warehouse_v1_package": {
