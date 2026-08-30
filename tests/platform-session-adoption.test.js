@@ -162,6 +162,45 @@ test("Platform integration exposes only allowlisted adoption failure metadata", 
   });
 });
 
+test("successful adoption hydrates the Platform identity before context refresh fallback", async () => {
+  const integrationSource = fs.readFileSync("js/platform-integration.js", "utf8");
+  const identitySource = fs.readFileSync("js/supabase/device-identity.js", "utf8");
+  const platformDeviceId = "11111111-1111-4111-8111-111111111111";
+  const localDeviceId = "22222222-2222-4222-8222-222222222222";
+  let requestNumber = 0;
+  const storage = new Map([["device-identity:33333333-3333-4333-8333-333333333333", JSON.stringify({
+    id: localDeviceId, deviceName: "", platform: "MacIntel", createdAt: "earlier",
+  })]]);
+  const window = {
+    navigator: { platform: "MacIntel" },
+    fetch: async () => {
+      requestNumber += 1;
+      if (requestNumber === 1) return {
+        ok: true, status: 200,
+        json: async () => ({ authenticated: true, deviceId: platformDeviceId, deviceSecret: "must-not-enter-frontend-state" }),
+      };
+      throw new Error("context unavailable");
+    },
+    SupabaseAuth: { getSession: () => ({ access_token: "access", refresh_token: "refresh", user: { id: "33333333-3333-4333-8333-333333333333" } }) },
+    BrowserStorageNamespace: { key: (value) => value },
+    localStorage: { getItem: (key) => storage.get(key) || null, setItem: (key, value) => storage.set(key, value) },
+    crypto: { randomUUID: () => localDeviceId },
+  };
+  window.window = window;
+  const sandbox = { window, Promise, JSON, Object, String, Array, Error, Date, Uint8Array };
+  vm.runInNewContext(integrationSource, sandbox);
+  vm.runInNewContext(identitySource, sandbox);
+  await window.PlatformIntegration.synchronizeSession();
+  const platformIdentity = window.PlatformIntegration.getDeviceIdentity();
+  const selectedIdentity = window.SupabaseDeviceIdentity.getOrCreate();
+  assert.equal(platformIdentity.id, platformDeviceId);
+  assert.equal(platformIdentity.deviceName, "Integrated Platform browser");
+  assert.equal(selectedIdentity.id, platformDeviceId);
+  assert.notEqual(selectedIdentity.id, localDeviceId);
+  assert.equal(JSON.stringify(platformIdentity).includes("must-not-enter-frontend-state"), false);
+  assert.equal(window.PlatformIntegration.getContext(), null);
+});
+
 function startupScenario(adoptionResult) {
   const source = fs.readFileSync("js/sync/startup-access-gate.js", "utf8");
   const ids = ["startupAccessGate", "applicationTopbar", "applicationBody", "startupScreen", "globalConferenceHeader", "device_authorization_administration_root", "tab0", "tab1", "tab2", "tab3", "tab4", "tab5", "tab6"];

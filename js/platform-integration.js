@@ -3,6 +3,19 @@
 
   var state={initialized:false,context:null,deviceIdentity:null};
 
+  function isUuid(value){return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(value||''));}
+
+  function hydrateDevice(deviceId){
+    if(!isUuid(deviceId))return null;
+    state.deviceIdentity={
+      id:String(deviceId),
+      deviceName:'Integrated Platform browser',
+      platform:String(global.navigator&&global.navigator.platform||''),
+      createdAt:''
+    };
+    return state.deviceIdentity;
+  }
+
   function request(path,options){
     if(!global.fetch)return Promise.resolve(null);
     return global.fetch(path,Object.assign({
@@ -40,14 +53,7 @@
   function initialize(){
     return request('/api/platform/context').then(function(context){
       state.context=context||null;
-      if(context&&context.deviceId){
-        state.deviceIdentity={
-          id:String(context.deviceId),
-          deviceName:'Integrated Platform browser',
-          platform:String(global.navigator&&global.navigator.platform||''),
-          createdAt:''
-        };
-      }
+      if(context&&context.deviceId)hydrateDevice(context.deviceId);
       applyModules(context&&context.modules);
       state.initialized=true;
       return context;
@@ -63,7 +69,10 @@
         accessToken:session.access_token,
         refreshToken:session.refresh_token
       })
-    }).then(function(result){return initialize().then(function(){return result;});});
+    }).then(function(result){
+      hydrateDevice(result&&result.deviceId);
+      return initialize().then(function(){return result;});
+    });
   }
 
   function synchronizeSession(){

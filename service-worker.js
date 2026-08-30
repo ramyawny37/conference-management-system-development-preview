@@ -7,7 +7,7 @@ const CACHE_NAMESPACE = IS_DEVELOPMENT
   : '';
 const CACHE_PREFIX = CACHE_NAMESPACE + 'conference-manager-core-';
 const CACHE_REVISION = IS_DEVELOPMENT
-  ? 'development-3-4-0-platform-foundation-v1'
+  ? 'development-3-4-0-platform-device-hydration-v1'
   : 'production-integrated-3-3-0-main-6d0c1e1-develop-80653ca-v1';
 const CACHE_NAME = CACHE_PREFIX + 'v' + APP_VERSION + '-' + CACHE_REVISION;
 const CORE_ASSETS = [
@@ -32,7 +32,7 @@ const CORE_ASSETS = [
   './js/supabase/runtime-config.js',
   './js/supabase/client.js',
   './js/supabase/auth.js?rev=account-session-identity-v1',
-  './js/platform-integration.js?rev=session-adoption-v1',
+  './js/platform-integration.js?rev=platform-device-hydration-v1',
   './js/supabase/system-access-service.js?rev=conference-create-authorization-v1',
   './js/sync/diagnostics-privacy-policy.js?rev=diagnostics-privacy-hardening-v1',
   './js/sync/organization-administration-utils.js',
@@ -45,7 +45,7 @@ const CORE_ASSETS = [
   './js/sync/organization-management-ui.js?rev=startup-device-admin-lifecycle-v1',
   './js/supabase/device-identity.js?rev=organization-membership-operation-key-v1',
   './js/sync/device-authorization-operation-repository.js',
-  './js/supabase/current-device-authorization-service.js?rev=organization-membership-operation-key-v1',
+  './js/supabase/current-device-authorization-service.js?rev=platform-device-hydration-v1',
   './js/supabase/device-authorization-administration-service.js?rev=platform-privileged-device-admin-diagnostics-v1',
   './js/sync/current-device-authorization-ui.js?rev=organization-membership-operation-key-v1',
   './js/sync/device-reauthorization-flow.js?rev=device-reauthorization-flow-v1',
