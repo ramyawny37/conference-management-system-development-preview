@@ -6,6 +6,7 @@
     }
   },
   "rewrites": [
+    { "source": "/", "destination": "/api/gateway?__platform_path=/" },
     { "source": "/:path*", "destination": "/api/gateway?__platform_path=/:path*" }
   ]
 }

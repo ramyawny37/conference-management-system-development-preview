@@ -220,6 +220,7 @@ test("Vercel adapter and routing delegate every public path to the canonical han
   assert.match(adapter, /gatewayHandler/);
   assert.match(adapter, /__platform_path/);
   assert.deepEqual(config.rewrites, [
+    { source: "/", destination: "/api/gateway?__platform_path=/" },
     { source: "/:path*", destination: "/api/gateway?__platform_path=/:path*" },
   ]);
   assert.equal(config.outputDirectory, "vercel-public");
