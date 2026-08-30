@@ -1,0 +1,11 @@
+{
+  "outputDirectory": "vercel-public",
+  "functions": {
+    "api/gateway.js": {
+      "includeFiles": "{*.html,*.js,*.css,*.json,assets/**,icons/**,libs/**,js/**}"
+    }
+  },
+  "rewrites": [
+    { "source": "/:path*", "destination": "/api/gateway?__platform_path=/:path*" }
+  ]
+}

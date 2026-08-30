@@ -158,48 +158,106 @@ function serveLocal(response, pathname) {
   return true;
 }
 
+function normalizeLocation(value, destination) {
+  if (!value) return value;
+  try {
+    const location = new URL(value, destination);
+    if (location.origin !== destination.origin) return value;
+    return `${location.pathname}${location.search}${location.hash}`;
+  } catch {
+    return value;
+  }
+}
+
+function normalizeSetCookie(value) {
+  if (!value) return value;
+  const cookies = Array.isArray(value) ? value : [value];
+  return cookies.map((cookie) => cookie.replace(/;\s*Domain=[^;]*/gi, ""));
+}
+
+function normalizeProxyHeaders(headers, destination) {
+  const normalized = { ...headers };
+  delete normalized["x-vercel-protection-bypass"];
+  delete normalized["x-vercel-set-bypass-cookie"];
+  if (normalized.location) normalized.location = normalizeLocation(normalized.location, destination);
+  if (normalized["set-cookie"]) normalized["set-cookie"] = normalizeSetCookie(normalized["set-cookie"]);
+  return normalized;
+}
+
 function proxyRequest(request, response, module, target) {
   const destination = new URL(target);
   const transport = destination.protocol === "https:" ? https : http;
-  const outgoing = transport.request({
-    protocol: destination.protocol,
-    hostname: destination.hostname,
-    port: destination.port,
-    method: request.method,
-    path: request.url,
-    headers: { ...request.headers, host: destination.host, "x-forwarded-host": request.headers.host || "", "x-platform-module": module.id },
-  }, (proxied) => {
-    response.writeHead(proxied.statusCode || 502, proxied.headers);
-    proxied.pipe(response);
+  const bypassEnvironment = module.targetEnvironment.replace(/_TARGET$/, "_PROTECTION_BYPASS");
+  const bypass = process.env[bypassEnvironment];
+  const headers = { ...request.headers };
+  delete headers["x-vercel-protection-bypass"];
+  headers["x-vercel-protection-bypass"] = bypass;
+  return new Promise((resolve) => {
+    const outgoing = transport.request({
+      protocol: destination.protocol,
+      hostname: destination.hostname,
+      port: destination.port,
+      method: request.method,
+      path: request.url,
+      headers: { ...headers, host: destination.host, "x-forwarded-host": request.headers.host || "", "x-platform-module": module.id },
+    }, (proxied) => {
+      response.writeHead(proxied.statusCode || 502, normalizeProxyHeaders(proxied.headers, destination));
+      proxied.on("end", resolve);
+      proxied.pipe(response);
+    });
+    outgoing.on("error", () => {
+      json(response, 502, { error: "PLATFORM_MODULE_UNAVAILABLE", module: module.id });
+      resolve();
+    });
+    request.pipe(outgoing);
   });
-  outgoing.on("error", () => json(response, 502, { error: "PLATFORM_MODULE_UNAVAILABLE", module: module.id }));
-  request.pipe(outgoing);
 }
 
-const server = http.createServer(async (request, response) => {
-  try {
-    const pathname = new URL(request.url, `http://${request.headers.host || "localhost"}`).pathname;
-    if (pathname.startsWith("/api/platform/")) return await handleApi(request, response, pathname);
-    const module = registry.find((item) => pathname === item.routePrefix || pathname.startsWith(`${item.routePrefix}/`));
-    if (module) {
-      const context = await sessionContext(request, response);
-      const access = context.modules?.find((item) => item.id === module.id);
-      if (!context.authenticated) return response.writeHead(302, { location: "/?platformLogin=required" }).end();
-      if (!access?.available) return json(response, 403, { error: "PLATFORM_MODULE_ACCESS_DENIED", module: module.id });
-      if (module.runtime === "local-static") {
-        if (!serveLocal(response, pathname)) json(response, 404, { error: "PLATFORM_ROUTE_NOT_FOUND" });
-        return;
+function createGatewayHandler(options = {}) {
+  const resolveSessionContext = options.sessionContext || sessionContext;
+  const resolveApi = options.handleApi || handleApi;
+  const resolveProxy = options.proxyRequest || proxyRequest;
+  return async function gatewayHandler(request, response) {
+    try {
+      const pathname = new URL(request.url, `http://${request.headers.host || "localhost"}`).pathname;
+      if (pathname.startsWith("/api/platform/")) return await resolveApi(request, response, pathname);
+      const module = registry.find((item) => pathname === item.routePrefix || pathname.startsWith(`${item.routePrefix}/`));
+      if (module) {
+        const context = await resolveSessionContext(request, response);
+        const access = context.modules?.find((item) => item.id === module.id);
+        if (!context.authenticated) return response.writeHead(302, { location: "/?platformLogin=required" }).end();
+        if (!access?.available) return json(response, 403, { error: "PLATFORM_MODULE_ACCESS_DENIED", module: module.id });
+        if (module.runtime === "local-static") {
+          if (!serveLocal(response, pathname)) json(response, 404, { error: "PLATFORM_ROUTE_NOT_FOUND" });
+          return;
+        }
+        const target = process.env[module.targetEnvironment];
+        if (!target) return json(response, 503, { error: "PLATFORM_MODULE_TARGET_NOT_CONFIGURED", module: module.id });
+        const bypassEnvironment = module.targetEnvironment.replace(/_TARGET$/, "_PROTECTION_BYPASS");
+        if (!process.env[bypassEnvironment]) return json(response, 503, { error: "PLATFORM_MODULE_PROTECTION_BYPASS_NOT_CONFIGURED", module: module.id });
+        return await resolveProxy(request, response, module, target);
       }
-      const target = process.env[module.targetEnvironment];
-      if (!target) return json(response, 503, { error: "PLATFORM_MODULE_TARGET_NOT_CONFIGURED", module: module.id });
-      return proxyRequest(request, response, module, target);
+      if (!serveLocal(response, pathname)) json(response, 404, { error: "PLATFORM_ROUTE_NOT_FOUND" });
+    } catch (error) {
+      json(response, 500, { error: "PLATFORM_GATEWAY_FAILURE" });
     }
-    if (!serveLocal(response, pathname)) json(response, 404, { error: "PLATFORM_ROUTE_NOT_FOUND" });
-  } catch (error) {
-    json(response, 500, { error: "PLATFORM_GATEWAY_FAILURE" });
-  }
-});
+  };
+}
+
+const gatewayHandler = createGatewayHandler();
+const server = http.createServer(gatewayHandler);
 
 if (require.main === module) server.listen(port, () => process.stdout.write(`Integrated Platform Development gateway listening on ${port}\n`));
 
-module.exports = { server, DEVELOPMENT_REF, DEVICE_ID_COOKIE, DEVICE_SECRET_COOKIE };
+module.exports = {
+  server,
+  gatewayHandler,
+  createGatewayHandler,
+  proxyRequest,
+  normalizeLocation,
+  normalizeSetCookie,
+  issueDevice,
+  DEVELOPMENT_REF,
+  DEVICE_ID_COOKIE,
+  DEVICE_SECRET_COOKIE,
+};
