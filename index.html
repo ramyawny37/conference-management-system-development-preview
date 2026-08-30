@@ -93,26 +93,26 @@
           </div>
         </header>
         <div class="platform-module-grid">
-          <button type="button" class="platform-module-card platform-module-card-available" onclick="openConferenceWorkspace()" aria-label="فتح وحدة إدارة المؤتمرات">
+          <button type="button" data-platform-module="conference" class="platform-module-card platform-module-card-available" onclick="openConferenceWorkspace()" aria-label="فتح وحدة إدارة المؤتمرات">
             <span class="platform-module-icon" data-app-icon="building"></span>
             <span class="platform-module-copy"><strong>إدارة المؤتمرات</strong><small>Conference Management</small></span>
             <span class="platform-module-state platform-module-state-available">متاحة</span>
           </button>
-          <article class="platform-module-card platform-module-card-unavailable" aria-disabled="true">
+          <button type="button" data-platform-module="warehouse" class="platform-module-card platform-module-card-unavailable" aria-disabled="true" disabled>
             <span class="platform-module-icon" data-app-icon="building"></span>
             <span class="platform-module-copy"><strong>إدارة المخازن</strong><small>Warehouse Management</small></span>
             <span class="platform-module-state">غير متكاملة بعد</span>
-          </article>
-          <article class="platform-module-card platform-module-card-unavailable" aria-disabled="true">
+          </button>
+          <button type="button" data-platform-module="reservations" class="platform-module-card platform-module-card-unavailable" aria-disabled="true" disabled>
             <span class="platform-module-icon" data-app-icon="note"></span>
             <span class="platform-module-copy"><strong>الحجوزات</strong><small>Reservations</small></span>
             <span class="platform-module-state">غير متكاملة بعد</span>
-          </article>
-          <article class="platform-module-card platform-module-card-unavailable" aria-disabled="true">
+          </button>
+          <button type="button" data-platform-module="custody" class="platform-module-card platform-module-card-unavailable" aria-disabled="true" disabled>
             <span class="platform-module-icon" data-app-icon="money"></span>
             <span class="platform-module-copy"><strong>العهد والسلف</strong><small>Custody &amp; Advances</small></span>
             <span class="platform-module-state">غير متكاملة بعد</span>
-          </article>
+          </button>
         </div>
       </section>
     </main>
@@ -542,6 +542,7 @@
 <script src="js/supabase/runtime-config.js"></script>
 <script src="js/supabase/client.js"></script>
 <script src="js/supabase/auth.js?rev=account-session-identity-v1"></script>
+<script src="js/platform-integration.js?rev=single-url-foundation-v1"></script>
 <script src="js/supabase/system-access-service.js?rev=conference-create-authorization-v1"></script>
 <script src="js/sync/diagnostics-privacy-policy.js?rev=diagnostics-privacy-hardening-v1"></script>
 <script src="js/supabase/first-system-bootstrap-service.js?rev=first-owner-bootstrap-hardening-v1"></script>

@@ -1,0 +1,16 @@
+{
+  "name": "integrated-management-platform-gateway",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "start": "node server/platform-gateway.cjs",
+    "check": "node --check server/platform-gateway.cjs && node --test tests/platform-*.test.js"
+  },
+  "dependencies": {
+    "@supabase/ssr": "0.12.5",
+    "@supabase/supabase-js": "2.112.4"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

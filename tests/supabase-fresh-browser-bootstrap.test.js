@@ -91,7 +91,7 @@ async function run(){
   );
   assert.strictEqual(
     fresh.window.SupabaseRuntimeConfig.load().url,
-    'https://mpezfbvcdfxpgflehuot.supabase.co'
+    'https://gppwltrifgfxrkzvvxoe.supabase.co'
   );
   assert.strictEqual(fresh.writes.length,0);
 
@@ -101,7 +101,7 @@ async function run(){
   });
   assert.strictEqual(
     stale.createCalls[0].url,
-    'https://mpezfbvcdfxpgflehuot.supabase.co'
+    'https://gppwltrifgfxrkzvvxoe.supabase.co'
   );
 
   var initialized=await fresh.window.SupabaseAuth.initialize();

@@ -868,9 +868,15 @@
     }).then(function(result){
       if(passwordElement)passwordElement.value='';
       if(result&&result.success){
-        clearStartupAuthDraft();
-        scheduleAuthChanged();
-        rerender();
+        var session=result.data&&result.data.session;
+        var adoption=global.PlatformIntegration&&
+          typeof global.PlatformIntegration.adoptSession==='function'
+          ?global.PlatformIntegration.adoptSession(session):Promise.resolve();
+        return Promise.resolve(adoption).then(function(){
+          clearStartupAuthDraft();
+          scheduleAuthChanged();
+          rerender();
+        });
       }else{
         message('sync_auth_message',safeAuthMessage(result,successText),true);
       }
@@ -952,9 +958,14 @@
       return global.SupabaseAuth.signOut();
     }).then(function(result){
       if(result&&result.success){
-        clearStartupAuthDraft();
-        scheduleAuthChanged();
-        rerender();
+        var platformLogout=global.PlatformIntegration&&
+          typeof global.PlatformIntegration.logout==='function'
+          ?global.PlatformIntegration.logout():Promise.resolve();
+        return Promise.resolve(platformLogout).then(function(){
+          clearStartupAuthDraft();
+          scheduleAuthChanged();
+          rerender();
+        });
       }
       else message('sync_auth_message','تعذر تسجيل الخروج.',true);
     }).catch(function(){

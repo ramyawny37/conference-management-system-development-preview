@@ -31,6 +31,10 @@
   function getOrCreate(options){
     options=options&&typeof options==='object'?options:{};var currentUserId=userId(options);
     if(!currentUserId)return null;
+    var platformIdentity=global.PlatformIntegration&&
+      typeof global.PlatformIntegration.getDeviceIdentity==='function'
+      ?global.PlatformIntegration.getDeviceIdentity():null;
+    if(isValidIdentity(platformIdentity))return platformIdentity;
     if(memoryIdentities[currentUserId])return memoryIdentities[currentUserId];
     var existing=read(storageKey(currentUserId),options);
     if(existing){memoryIdentities[currentUserId]=existing;return existing;}

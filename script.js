@@ -9919,10 +9919,17 @@ function completeAuthorizedApplicationStartup(){
   });
 }
 window.applicationStorageReadyPromise=null;
-if(window.StartupAccessGate&&typeof window.StartupAccessGate.run==='function'){
-  window.StartupAccessGate.run({
-    completeApplicationStartup:completeAuthorizedApplicationStartup
+(function startIntegratedPlatform(){
+  var integration=window.PlatformIntegration&&
+    typeof window.PlatformIntegration.initialize==='function'
+    ?window.PlatformIntegration.initialize():Promise.resolve();
+  Promise.resolve(integration).catch(function(){return null;}).then(function(){
+    if(window.StartupAccessGate&&typeof window.StartupAccessGate.run==='function'){
+      window.StartupAccessGate.run({
+        completeApplicationStartup:completeAuthorizedApplicationStartup
+      });
+    }else{
+      throw new Error('STARTUP_ACCESS_GATE_REQUIRED');
+    }
   });
-}else{
-  throw new Error('STARTUP_ACCESS_GATE_REQUIRED');
-}
+})();
