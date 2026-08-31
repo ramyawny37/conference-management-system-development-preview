@@ -8,6 +8,7 @@ const versionedPage=fs.readFileSync(path.join(root,'platform-device-recovery-log
 const browser=fs.readFileSync(path.join(root,'js/platform-stable-device-recovery.js'),'utf8');
 const stateMigration=fs.readFileSync(path.join(root,'supabase/migrations/20260831051000_stable_device_recovery_state_lookup.sql'),'utf8');
 const actorMigration=fs.readFileSync(path.join(root,'supabase/migrations/20260831052000_stable_device_recovery_server_actor_resolution.sql'),'utf8');
+const retryMigration=fs.readFileSync(path.join(root,'supabase/migrations/20260831210905_stable_device_recovery_expired_challenge_retry_reconciliation.sql'),'utf8');
 function exact(input){return Object.assign({owner:true,activeOwner:true,ownerRole:true,source:'approved',sourceActive:true,target:'pending',targetActive:true,targetPrefix:'f9306733',environment:'development_preview',expired:false,consumed:false,credential:'platform_primary',origin:'https://ramyawny37.github.io',rp:'ramyawny37.github.io',userVerified:true,backupEligible:true,backupState:true,enrolledBackupEligible:true,enrolledBackupState:true,signature:true,replay:false},input||{});}
 function permits(v){return v.owner&&v.activeOwner&&v.ownerRole&&v.source==='approved'&&v.sourceActive&&v.target==='pending'&&v.targetActive&&v.targetPrefix==='f9306733'&&v.environment==='development_preview'&&!v.expired&&!v.consumed&&v.credential==='platform_primary'&&v.origin==='https://ramyawny37.github.io'&&v.rp==='ramyawny37.github.io'&&v.userVerified&&v.backupEligible===v.enrolledBackupEligible&&v.backupState===v.enrolledBackupState&&(!v.backupState||v.backupEligible)&&v.signature&&!v.replay;}
 [
@@ -61,4 +62,41 @@ test('Edge resolves the immutable recovery actor and does not trust the browser-
   assert.match(edge,/stableRecoveryAction \? null : uuid\(body\.actorDeviceId/);
   assert.doesNotMatch(browser,/SupabaseDeviceIdentity|getOrCreate|actorDeviceId/);
   assert.doesNotMatch(browser,/credentialId:state\.data\.credentialId/);
+});
+function retryBegin(challenges,now){
+  challenges.forEach(challenge=>{if(!challenge.verified&&!challenge.consumed&&!challenge.failed&&challenge.expires<=now){challenge.failed=true;challenge.failureCode='expired_replaced';}});
+  if(challenges.some(challenge=>!challenge.verified&&!challenge.consumed&&!challenge.failed&&challenge.expires>now))throw new Error('STABLE_DEVICE_RECOVERY_CHALLENGE_ACTIVE');
+  const fresh={expires:now+120000,verified:false,consumed:false,failed:false,failureCode:null};challenges.push(fresh);return fresh;
+}
+function canComplete(challenge,now,authorizationConsumed){return !authorizationConsumed&&!challenge.verified&&!challenge.consumed&&!challenge.failed&&challenge.expires>now;}
+test('expired browser ceremony is preserved as failed/replaced and retry creates one fresh challenge',()=>{
+  const challenges=[{expires:1000,verified:false,consumed:false,failed:false,failureCode:null}];const old=challenges[0];const fresh=retryBegin(challenges,2000);
+  assert.equal(challenges.length,2);assert.equal(old.failed,true);assert.equal(old.failureCode,'expired_replaced');assert.equal(fresh.expires,122000);
+});
+test('retry before challenge expiry is deterministically rejected',()=>{
+  const challenges=[{expires:3000,verified:false,consumed:false,failed:false,failureCode:null}];
+  assert.throws(()=>retryBegin(challenges,2000),/STABLE_DEVICE_RECOVERY_CHALLENGE_ACTIVE/);assert.equal(challenges.length,1);
+});
+test('expired/replaced challenge cannot complete after retry',()=>{
+  const challenges=[{expires:1000,verified:false,consumed:false,failed:false,failureCode:null}];const old=challenges[0];const fresh=retryBegin(challenges,2000);
+  assert.equal(canComplete(old,2001,false),false);assert.equal(canComplete(fresh,2001,false),true);
+});
+test('serialized concurrent begins cannot create two unresolved challenges',()=>{
+  const challenges=[];retryBegin(challenges,2000);assert.throws(()=>retryBegin(challenges,2000),/STABLE_DEVICE_RECOVERY_CHALLENGE_ACTIVE/);
+  assert.equal(challenges.filter(challenge=>!challenge.verified&&!challenge.consumed&&!challenge.failed).length,1);
+});
+test('retry migration preserves history and enforces one serialized unresolved challenge',()=>{
+  assert.match(retryMigration,/drop constraint if exists stable_device_recovery_challenges_recovery_authorization_id_key/);
+  assert.match(retryMigration,/create unique index if not exists stable_device_recovery_one_unresolved_challenge/);
+  assert.match(retryMigration,/where verified_at is null and consumed_at is null and failed_at is null/);
+  assert.match(retryMigration,/select \* into recovery[\s\S]*for update/);
+  assert.match(retryMigration,/failure_code = 'expired_replaced'/);
+  assert.match(retryMigration,/STABLE_DEVICE_RECOVERY_CHALLENGE_ACTIVE/);
+  assert.ok(retryMigration.indexOf("failure_code = 'expired_replaced'")<retryMigration.indexOf('insert into platform_private.stable_device_recovery_challenges'));
+  assert.doesNotMatch(retryMigration,/delete\s+from\s+platform_private\.stable_device_recovery_challenges/i);
+});
+test('retry reconciliation preserves exact one-time completion and frozen device boundaries',()=>{
+  ['9bce8898-%','f9306733-%','b23ece81-%','p_new_sign_count < credential.sign_count',"item.status='pending'",'set consumed_at=pg_catalog.statement_timestamp() where id=recovery.id'].forEach(value=>assert.ok(migration.includes(value),value));
+  assert.doesNotMatch(retryMigration,/update\s+platform\.user_device_authorizations\s+set\s+status/i);
+  assert.doesNotMatch(retryMigration,/stable_device_recovery_authorizations\s*\([^)]*owner_user_id/i);
 });
