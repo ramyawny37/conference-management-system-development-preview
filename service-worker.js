@@ -119,7 +119,7 @@ const CORE_ASSETS = [
   './houses.js?rev=template-floor-conference-sync-v1',
   './transport.js',
   './houseTemplates.js?rev=shared-house-template-read-only-v1',
-  './state.js?rev=develop-cross-store-arbitration-v1',
+  './state.js?rev=managed-platform-startup-gate-v1',
   './js/conference/accounts.js?rev=development-3-4-0-platform-foundation-v1',
   './js/conference-template-houses-editor.js',
   './cards.js',

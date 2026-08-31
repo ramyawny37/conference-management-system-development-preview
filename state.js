@@ -152,7 +152,19 @@ function initializeApplicationStorage(){
 
   var defaults=cloneApplicationStorageData(appData);
   var arbitration=window.LocalPersistenceArbitration;
-  var deviceApproval=window.DeviceReauthorizationFlow&&
+  var platformIntegration=window.PlatformIntegration;
+  var managedPlatformApproved=!!(platformIntegration&&
+    typeof platformIntegration.isManagedOrigin==='function'&&
+    platformIntegration.isManagedOrigin()&&
+    typeof platformIntegration.isAuthorizationReady==='function'&&
+    platformIntegration.isAuthorizationReady()&&
+    typeof platformIntegration.getContext==='function'&&
+    platformIntegration.getContext()&&
+    platformIntegration.getContext().accountStatus==='approved'&&
+    platformIntegration.getContext().deviceStatus==='approved');
+  var deviceApproval=managedPlatformApproved
+    ?Promise.resolve({status:'approved',approved:true,source:'platform_context'})
+    :window.DeviceReauthorizationFlow&&
     typeof window.DeviceReauthorizationFlow.waitUntilApproved==='function'
     ?window.DeviceReauthorizationFlow.waitUntilApproved()
     :Promise.resolve();

@@ -330,6 +330,46 @@ async function testStartupComposition(){
   assert.strictEqual(sandbox.appData.currentConferenceId,null);
 }
 
+async function testManagedPlatformStartupComposition(){
+  const body=stateSource.slice(stateSource.indexOf(
+    'function initializeApplicationStorage()'),stateSource.indexOf('\nfunction save(options)'));
+  const events=[];
+  const selected=payload('managed-startup');
+  const context={accountStatus:'approved',deviceStatus:'approved',
+    deviceId:'f9306733-612d-433f-a38e-5d72855c2fe3'};
+  const window={Promise,structuredClone:clone,localStorage:{},
+    PlatformIntegration:{isManagedOrigin(){return true;},
+      isAuthorizationReady(){return true;},getContext(){return context;}},
+    DeviceReauthorizationFlow:{waitUntilApproved(){events.push('legacy-device');
+      return new Promise(()=>{});}},
+    LocalPersistenceArbitration:{inspect(){events.push('arbitrate');
+      return Promise.resolve({ok:true,status:'selected',selected:{
+        source:'localStorage',payload:selected}});}},
+    AppIndexedDB:{},ConferenceActivationAuthorization:{
+      capturePersistedCandidate(){},preparePersistedAppData(value){return clone(value);}}
+  };
+  const sandbox={window,Promise,JSON,console,SK:'app',appData:payload('default'),
+    storageInitializationPromise:null,applicationStorageState:{},
+    applicationSelectionRestored:false,cloneApplicationStorageData:clone,
+    normalizeAppData(){},restoreSafeSingleCurrentConferenceSelection(){return false;},
+    updateLogoText(){},getCurrentConference(){return null;},setCurrentConference(){}};
+  vm.runInNewContext(body,sandbox);
+  await sandbox.initializeApplicationStorage();
+  assert.deepStrictEqual(events,['arbitrate'],
+    'approved managed Platform startup must not enter the Conference device wait');
+  assert.strictEqual(sandbox.applicationStorageState.storageReady,true);
+
+  context.deviceStatus='pending';
+  events.length=0;
+  sandbox.storageInitializationPromise=null;
+  let resolved=false;
+  sandbox.initializeApplicationStorage().then(()=>{resolved=true;});
+  await Promise.resolve();await Promise.resolve();
+  assert.deepStrictEqual(events,['legacy-device'],
+    'pending managed Platform device must remain gated');
+  assert.strictEqual(resolved,false);
+}
+
 async function testStateSaveFailClosed(){
   const body=stateSource.slice(stateSource.indexOf('function save(options)'),
     stateSource.indexOf('\nfunction getStorageUsageReport'));
@@ -386,6 +426,7 @@ function testAuthorizationComposition(){
   await testIndexedDBBoundary();
   testDirectWriterContract();
   await testStartupComposition();
+  await testManagedPlatformStartupComposition();
   await testStateSaveFailClosed();
   testAuthorizationComposition();
   console.log('local persistence arbitration tests passed');

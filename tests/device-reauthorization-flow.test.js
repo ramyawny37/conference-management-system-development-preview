@@ -28,8 +28,8 @@ function environment(status){
   var approved=environment('approved');await approved.window.DeviceReauthorizationFlow.waitUntilApproved();await approved.window.DeviceReauthorizationFlow.waitUntilApproved();
   assert.strictEqual(approved.count(),1,'approved reopen must bypass reauthorization without duplicate initialization');
   assert.strictEqual(approved.window.DeviceReauthorizationFlow.getState().gateActive,false);
-  assert.match(stateSource,/function initializeApplicationStorage[\s\S]*DeviceReauthorizationFlow\.waitUntilApproved/);
+  assert.match(stateSource,/function initializeApplicationStorage[\s\S]*managedPlatformApproved[\s\S]*DeviceReauthorizationFlow\.waitUntilApproved/);
   assert.ok(index.indexOf('current-device-authorization-ui.js')<index.indexOf('device-reauthorization-flow.js'));
-  ['js/sync/current-device-authorization-ui.js?rev=platform-first-login-coordinator-v1','js/sync/device-reauthorization-flow.js?rev=device-reauthorization-flow-v1','state.js?rev=develop-cross-store-arbitration-v1'].forEach(function(asset){assert.ok(index.includes(asset),asset);assert.ok(worker.includes('./'+asset),asset);});
+  ['js/sync/current-device-authorization-ui.js?rev=platform-first-login-coordinator-v1','js/sync/device-reauthorization-flow.js?rev=device-reauthorization-flow-v1','state.js?rev=managed-platform-startup-gate-v1'].forEach(function(asset){assert.ok(index.includes(asset),asset);assert.ok(worker.includes('./'+asset),asset);});
   console.log('device re-authorization flow tests: passed');
 })().catch(function(error){console.error(error);process.exitCode=1;});
