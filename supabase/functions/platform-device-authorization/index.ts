@@ -124,6 +124,13 @@ Deno.serve(async (request) => {
       return json(200, { ok: true, status: result.status, data: result });
     }
 
+    if (action === 'get-stable-development-recovery-state') {
+      const result = await call('get_stable_development_platform_device_recovery_state', {
+        p_actor_user_id: actorUserId, p_actor_device_id: actorDeviceId,
+      });
+      return json(200, { ok: true, status: result.status, data: result });
+    }
+
     if (action === 'begin-credential-enrollment') {
       const sessionId = crypto.randomUUID();
       const operationId = crypto.randomUUID();
