@@ -28,13 +28,13 @@ begin
     p_actor_user_id, p_actor_device_id, p_credential_id
   );
   select * into recovery
-  from platform_private.stable_device_recovery_authorizations authorization
-  where authorization.owner_user_id = p_actor_user_id
-    and authorization.actor_public_device_id = p_actor_device_id
-    and authorization.credential_id = p_credential_id
-    and authorization.environment = p_environment
-    and authorization.consumed_at is null
-    and pg_catalog.statement_timestamp() between authorization.issued_at and authorization.expires_at
+  from platform_private.stable_device_recovery_authorizations recovery_item
+  where recovery_item.owner_user_id = p_actor_user_id
+    and recovery_item.actor_public_device_id = p_actor_device_id
+    and recovery_item.credential_id = p_credential_id
+    and recovery_item.environment = p_environment
+    and recovery_item.consumed_at is null
+    and pg_catalog.statement_timestamp() between recovery_item.issued_at and recovery_item.expires_at
   for update;
   if not found then
     raise exception 'STABLE_DEVICE_RECOVERY_AUTHORIZATION_INVALID' using errcode = '42501';

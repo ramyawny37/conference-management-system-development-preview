@@ -92,6 +92,7 @@ test('retry migration preserves history and enforces one serialized unresolved c
   assert.match(retryMigration,/select \* into recovery[\s\S]*for update/);
   assert.match(retryMigration,/failure_code = 'expired_replaced'/);
   assert.match(retryMigration,/STABLE_DEVICE_RECOVERY_CHALLENGE_ACTIVE/);
+  assert.doesNotMatch(retryMigration,/stable_device_recovery_authorizations authorization/);
   assert.ok(retryMigration.indexOf("failure_code = 'expired_replaced'")<retryMigration.indexOf('insert into platform_private.stable_device_recovery_challenges'));
   assert.doesNotMatch(retryMigration,/delete\s+from\s+platform_private\.stable_device_recovery_challenges/i);
 });
