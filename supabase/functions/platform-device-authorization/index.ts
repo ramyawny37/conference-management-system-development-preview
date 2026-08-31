@@ -180,6 +180,69 @@ Deno.serve(async (request) => {
       return json(200, { ok: true, status: result.status, data: result });
     }
 
+    if (action === 'begin-stable-development-recovery') {
+      const sessionId = crypto.randomUUID();
+      const options = await generateAuthenticationOptions({
+        rpID, userVerification: 'required', timeout: 120000, allowCredentials: [],
+      });
+      const result = await call('begin_stable_development_platform_device_recovery', {
+        p_actor_user_id: actorUserId, p_actor_device_id: actorDeviceId,
+        p_credential_id: uuid(body.credentialId, 'CREDENTIAL_ID'), p_session_id: sessionId,
+        p_challenge_hash: bytea(await sha256(base64ToBytes(options.challenge))), p_environment: env,
+      });
+      return json(200, { ok: true, status: 'challenge_created', data: {
+        options: { ...options, allowCredentials: [{
+          id: bytesToBase64Url(base64ToBytes(result.credentialExternalId)),
+          type: 'public-key', transports: result.transports || [],
+        }] },
+        sessionId, challengeId: result.challengeId,
+        recoveryAuthorizationId: result.recoveryAuthorizationId,
+        operationId: result.operationId, credentialId: result.credentialId,
+      } });
+    }
+
+    if (action === 'finish-stable-development-recovery') {
+      const challenge = String(body.challenge || '');
+      const material = await call('get_stable_development_platform_device_recovery_material', {
+        p_actor_user_id: actorUserId, p_actor_device_id: actorDeviceId,
+        p_session_id: uuid(body.sessionId, 'SESSION_ID'),
+        p_challenge_id: uuid(body.challengeId, 'CHALLENGE_ID'),
+      });
+      let verification;
+      try {
+        verification = await verifyAuthenticationResponse({
+          response: body.response, expectedChallenge: challenge, expectedOrigin,
+          expectedRPID: rpID, requireUserVerification: true,
+          credential: {
+            id: bytesToBase64Url(base64ToBytes(String(material.credentialExternalId || ''))),
+            publicKey: base64ToBytes(String(material.publicKeyCose || '')),
+            counter: Number(material.signCount), transports: material.transports || [],
+          },
+        });
+      } catch (error) {
+        logSafeDiagnostic('stable-development-recovery-verification', error);
+        throw error;
+      }
+      if (!verification.verified) throw new Error('WEBAUTHN_ASSERTION_INVALID');
+      const info = verification.authenticationInfo;
+      const context = verificationContext(info);
+      if (context.userVerified !== true || (context.backupState && !context.backupEligible)) {
+        throw new Error('WEBAUTHN_CREDENTIAL_POLICY_DENIED');
+      }
+      const result = await call('complete_stable_development_platform_device_recovery', {
+        p_actor_user_id: actorUserId, p_actor_device_id: actorDeviceId,
+        p_credential_id: uuid(material.credentialId, 'CREDENTIAL_ID'),
+        p_session_id: uuid(body.sessionId, 'SESSION_ID'),
+        p_challenge_id: uuid(body.challengeId, 'CHALLENGE_ID'),
+        p_challenge_hash: bytea(await sha256(base64ToBytes(challenge))),
+        p_recovery_authorization_id: uuid(body.recoveryAuthorizationId, 'RECOVERY_AUTHORIZATION_ID'),
+        p_operation_id: uuid(body.operationId, 'OPERATION_ID'), p_environment: env,
+        p_new_sign_count: info.newCounter, p_origin: expectedOrigin, p_rp_id: rpID,
+        p_verification_context: context,
+      });
+      return json(200, { ok: true, status: result.status, data: result });
+    }
+
     if (action.startsWith('begin-pending-device-')) {
       const mode = action.slice('begin-pending-device-'.length);
       if (!['list', 'approval', 'rejection'].includes(mode)) throw new Error('ACTION_NOT_SUPPORTED');
