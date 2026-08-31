@@ -7,6 +7,7 @@ const page=fs.readFileSync(path.join(root,'platform-device-recovery.html'),'utf8
 const versionedPage=fs.readFileSync(path.join(root,'platform-device-recovery-login-v2.html'),'utf8');
 const browser=fs.readFileSync(path.join(root,'js/platform-stable-device-recovery.js'),'utf8');
 const stateMigration=fs.readFileSync(path.join(root,'supabase/migrations/20260831051000_stable_device_recovery_state_lookup.sql'),'utf8');
+const actorMigration=fs.readFileSync(path.join(root,'supabase/migrations/20260831052000_stable_device_recovery_server_actor_resolution.sql'),'utf8');
 function exact(input){return Object.assign({owner:true,activeOwner:true,ownerRole:true,source:'approved',sourceActive:true,target:'pending',targetActive:true,targetPrefix:'f9306733',environment:'development_preview',expired:false,consumed:false,credential:'platform_primary',origin:'https://ramyawny37.github.io',rp:'ramyawny37.github.io',userVerified:true,backupEligible:true,backupState:true,enrolledBackupEligible:true,enrolledBackupState:true,signature:true,replay:false},input||{});}
 function permits(v){return v.owner&&v.activeOwner&&v.ownerRole&&v.source==='approved'&&v.sourceActive&&v.target==='pending'&&v.targetActive&&v.targetPrefix==='f9306733'&&v.environment==='development_preview'&&!v.expired&&!v.consumed&&v.credential==='platform_primary'&&v.origin==='https://ramyawny37.github.io'&&v.rp==='ramyawny37.github.io'&&v.userVerified&&v.backupEligible===v.enrolledBackupEligible&&v.backupState===v.enrolledBackupState&&(!v.backupState||v.backupEligible)&&v.signature&&!v.replay;}
 [
@@ -42,7 +43,7 @@ test('temporary page has one explicit ceremony control and no privileged secret'
 });
 test('cache-independent recovery entry contains visible login and versioned runtime assets',()=>{
   assert.match(versionedPage,/Development owner email/);assert.match(versionedPage,/Sign in to Development recovery/);
-  assert.match(versionedPage,/platform-stable-device-recovery\.js\?rev=recovery-state-v3/);
+  assert.match(versionedPage,/platform-stable-device-recovery\.js\?rev=recovery-server-actor-v4/);
   assert.doesNotMatch(versionedPage,/service-worker\.js|pwa\.js/);
 });
 test('recovery uses its target-bound state lookup instead of legacy administration policy',()=>{
@@ -50,4 +51,14 @@ test('recovery uses its target-bound state lookup instead of legacy administrati
   ['STABLE_DEVICE_RECOVERY_AUTHORIZATION_INVALID','development_preview','https://ramyawny37.github.io','ramyawny37.github.io','require_system_owner_webauthn_actor'].forEach(value=>assert.ok(stateMigration.includes(value),value));
   assert.match(stateMigration,/revoke all on function public\.get_stable_development_platform_device_recovery_state[\s\S]*from public,anon,authenticated/i);
   assert.match(stateMigration,/grant execute on function public\.get_stable_development_platform_device_recovery_state[\s\S]*to service_role/i);
+});
+test('Edge resolves the immutable recovery actor and does not trust the browser-local device for recovery RPCs',()=>{
+  assert.match(actorMigration,/recovery\.actor_public_device_id,recovery\.credential_id/);
+  assert.doesNotMatch(actorMigration,/recovery_item\.actor_public_device_id\s*=\s*p_actor_device_id/);
+  assert.match(edge,/serverActorDeviceId/);assert.match(edge,/recoveryActorDeviceId/);
+  assert.match(edge,/data: \{ status: result\.status, credentialId: result\.credentialId \}/);
+  assert.doesNotMatch(edge,/data: \{[^}]*serverActorDeviceId/);
+  assert.match(edge,/stableRecoveryAction \? null : uuid\(body\.actorDeviceId/);
+  assert.doesNotMatch(browser,/SupabaseDeviceIdentity|getOrCreate|actorDeviceId/);
+  assert.doesNotMatch(browser,/credentialId:state\.data\.credentialId/);
 });

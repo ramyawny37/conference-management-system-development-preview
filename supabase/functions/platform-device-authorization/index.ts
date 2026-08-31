@@ -97,7 +97,10 @@ Deno.serve(async (request) => {
     const body = await request.json();
     const action = String(body.action || '');
     currentAction = action;
-    const actorDeviceId = uuid(body.actorDeviceId, 'ACTOR_DEVICE_ID');
+    const stableRecoveryAction = action === 'get-stable-development-recovery-state'
+      || action === 'begin-stable-development-recovery'
+      || action === 'finish-stable-development-recovery';
+    const actorDeviceId = stableRecoveryAction ? null : uuid(body.actorDeviceId, 'ACTOR_DEVICE_ID');
     const env = environment();
     const call = async (name: string, args: Record<string, unknown>) => {
       const { data, error } = await backend.rpc(name, args);
@@ -126,9 +129,10 @@ Deno.serve(async (request) => {
 
     if (action === 'get-stable-development-recovery-state') {
       const result = await call('get_stable_development_platform_device_recovery_state', {
-        p_actor_user_id: actorUserId, p_actor_device_id: actorDeviceId,
+        p_actor_user_id: actorUserId, p_actor_device_id: null,
       });
-      return json(200, { ok: true, status: result.status, data: result });
+      return json(200, { ok: true, status: result.status,
+        data: { status: result.status, credentialId: result.credentialId } });
     }
 
     if (action === 'begin-credential-enrollment') {
@@ -188,13 +192,17 @@ Deno.serve(async (request) => {
     }
 
     if (action === 'begin-stable-development-recovery') {
+      const recoveryState = await call('get_stable_development_platform_device_recovery_state', {
+        p_actor_user_id: actorUserId, p_actor_device_id: null,
+      });
+      const recoveryActorDeviceId = uuid(recoveryState.serverActorDeviceId, 'RECOVERY_ACTOR_DEVICE_ID');
       const sessionId = crypto.randomUUID();
       const options = await generateAuthenticationOptions({
         rpID, userVerification: 'required', timeout: 120000, allowCredentials: [],
       });
       const result = await call('begin_stable_development_platform_device_recovery', {
-        p_actor_user_id: actorUserId, p_actor_device_id: actorDeviceId,
-        p_credential_id: uuid(body.credentialId, 'CREDENTIAL_ID'), p_session_id: sessionId,
+        p_actor_user_id: actorUserId, p_actor_device_id: recoveryActorDeviceId,
+        p_credential_id: uuid(recoveryState.credentialId, 'CREDENTIAL_ID'), p_session_id: sessionId,
         p_challenge_hash: bytea(await sha256(base64ToBytes(options.challenge))), p_environment: env,
       });
       return json(200, { ok: true, status: 'challenge_created', data: {
@@ -209,9 +217,13 @@ Deno.serve(async (request) => {
     }
 
     if (action === 'finish-stable-development-recovery') {
+      const recoveryState = await call('get_stable_development_platform_device_recovery_state', {
+        p_actor_user_id: actorUserId, p_actor_device_id: null,
+      });
+      const recoveryActorDeviceId = uuid(recoveryState.serverActorDeviceId, 'RECOVERY_ACTOR_DEVICE_ID');
       const challenge = String(body.challenge || '');
       const material = await call('get_stable_development_platform_device_recovery_material', {
-        p_actor_user_id: actorUserId, p_actor_device_id: actorDeviceId,
+        p_actor_user_id: actorUserId, p_actor_device_id: recoveryActorDeviceId,
         p_session_id: uuid(body.sessionId, 'SESSION_ID'),
         p_challenge_id: uuid(body.challengeId, 'CHALLENGE_ID'),
       });
@@ -237,7 +249,7 @@ Deno.serve(async (request) => {
         throw new Error('WEBAUTHN_CREDENTIAL_POLICY_DENIED');
       }
       const result = await call('complete_stable_development_platform_device_recovery', {
-        p_actor_user_id: actorUserId, p_actor_device_id: actorDeviceId,
+        p_actor_user_id: actorUserId, p_actor_device_id: recoveryActorDeviceId,
         p_credential_id: uuid(material.credentialId, 'CREDENTIAL_ID'),
         p_session_id: uuid(body.sessionId, 'SESSION_ID'),
         p_challenge_id: uuid(body.challengeId, 'CHALLENGE_ID'),
