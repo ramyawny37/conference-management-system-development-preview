@@ -93,16 +93,23 @@ function issueDevice(response) {
   return device;
 }
 
-async function sessionContext(request, response) {
-  const device = getDevice(request);
-  const supabase = supabaseFor(request, response, device);
+async function sessionContext(request, response, options = {}) {
+  const resolveGetDevice = options.getDevice || getDevice;
+  const resolveSupabaseFor = options.supabaseFor || supabaseFor;
+  const device = resolveGetDevice(request);
+  const supabase = resolveSupabaseFor(request, response, device);
   if (!supabase) return { configured: false, authenticated: false, modules: [] };
   const { data } = await supabase.auth.getUser();
   if (!data.user) return { configured: true, authenticated: false, modules: [] };
   if (!device) return { configured: true, authenticated: true, deviceStatus: "missing", modules: [] };
-  const { data: authorization } = await supabase.rpc("get_my_device_authorization", { p_device_id: device.id });
-  const accountStatus = authorization?.systemAccessStatus || "pending";
-  const deviceStatus = authorization?.deviceAuthorizationStatus || "pending";
+  const { data: authorization, error: authorizationError } = await supabase.schema("platform").rpc("get_my_access_context", {
+    p_domain: "platform",
+    p_scope_type: "platform",
+    p_scope_id: null,
+  });
+  if (authorizationError || !authorization) throw new Error("PLATFORM_ACCESS_CONTEXT_UNAVAILABLE");
+  const accountStatus = authorization?.accountStatus || "pending";
+  const deviceStatus = authorization?.deviceStatus || "missing";
   const authorized = accountStatus === "approved" && deviceStatus === "approved";
   const modules = [];
   for (const module of registry) {
@@ -128,9 +135,13 @@ function createApiHandler(options = {}) {
   const resolveCreateDevice = options.createDevice || createDevice;
   const resolveCommitDevice = options.commitDevice || commitDevice;
   const resolveReadJson = options.readJson || readJson;
+  const resolveSessionContext = options.sessionContext || ((request, response) => sessionContext(request, response, {
+    getDevice: resolveGetDevice,
+    supabaseFor: resolveSupabaseFor,
+  }));
   return async function handleApi(request, response, pathname) {
   if (request.method === "GET" && pathname === "/api/platform/context")
-    return json(response, 200, await sessionContext(request, response));
+    return json(response, 200, await resolveSessionContext(request, response));
   if (request.method === "POST" && pathname === "/api/platform/session/adopt") {
     const body = await resolveReadJson(request);
     const pendingCookies = [];

@@ -20,6 +20,46 @@ function origin(server) {
   return `http://127.0.0.1:${server.address().port}`;
 }
 
+test("Platform context uses server-managed device credentials and the Platform access RPC", async () => {
+  const device = { id: "11111111-1111-4111-8111-111111111111", secret: "s".repeat(43) };
+  const calls = [];
+  const supabaseFor = (request, response, suppliedDevice) => {
+    assert.deepEqual(suppliedDevice, device);
+    return {
+      auth: { getUser: async () => ({ data: { user: { id: "user-1", email: "owner@example.test" } } }) },
+      schema: (name) => {
+        calls.push({ type: "schema", name });
+        return { rpc: async (rpcName, args) => {
+          calls.push({ type: "rpc", rpcName, args });
+          return { data: { accountStatus: "approved", deviceStatus: "approved" }, error: null };
+        } };
+      },
+      rpc: async (rpcName, args) => {
+        calls.push({ type: "module", rpcName, args });
+        return { error: { code: "DENIED" } };
+      },
+    };
+  };
+  const handleApi = createApiHandler({ supabaseFor, getDevice: () => device });
+  const server = await listen(createGatewayHandler({ handleApi }));
+  try {
+    const response = await fetch(`${origin(server)}/api/platform/context`, { headers: { cookie: "browser-visible=value" } });
+    assert.equal(response.status, 200);
+    const body = await response.json();
+    assert.equal(body.accountStatus, "approved");
+    assert.equal(body.deviceStatus, "approved");
+    assert.equal(body.deviceId, device.id);
+    assert.equal(JSON.stringify(body).includes(device.secret), false);
+    assert.deepEqual(calls.slice(0, 2), [
+      { type: "schema", name: "platform" },
+      { type: "rpc", rpcName: "get_my_access_context", args: { p_domain: "platform", p_scope_type: "platform", p_scope_id: null } },
+    ]);
+    assert.equal(calls.some((call) => call.rpcName === "get_my_device_authorization"), false);
+  } finally {
+    await close(server);
+  }
+});
+
 async function adoptionScenario({ currentSession, firstError = null, deviceError = null, registrationError = null } = {}) {
   const supplied = { accessToken: "original-access", refreshToken: "original-refresh" };
   const calls = [];

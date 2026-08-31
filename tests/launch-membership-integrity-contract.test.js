@@ -39,6 +39,6 @@ assert.match(verification,/begin;[\s\S]*rollback;/i);
 assert.doesNotMatch(ui,/\['manager','viewer','accommodation_viewer','transport_viewer'\]\.map/);
 assert.match(members,/var allowedRoles=\['manager','viewer'\]/);
 assert.match(device,/state\.status!=='pending'/);
-assert.match(gate,/device\.status==='pending'\?'بانتظار الاعتماد':'تعذر إنشاء طلب الاعتماد'/);
+assert.match(gate,/deviceStatus==='pending'\?'بانتظار الاعتماد':'تعذر إنشاء طلب الاعتماد'/);
 ['stage','rpc','errorCode','sqlstate','actorDevicePresent','actorDeviceApproved','targetAccountApproved','organizationIdPresent'].forEach(field=>assert(org.includes(field),'missing diagnostic '+field));
 console.log('launch membership integrity contract: PASS');
