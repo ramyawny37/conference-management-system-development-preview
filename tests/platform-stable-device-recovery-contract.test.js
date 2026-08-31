@@ -4,6 +4,7 @@ const root=path.resolve(__dirname,'..');
 const migration=fs.readFileSync(path.join(root,'supabase/migrations/20260831050000_one_time_stable_development_device_recovery.sql'),'utf8');
 const edge=fs.readFileSync(path.join(root,'supabase/functions/platform-device-authorization/index.ts'),'utf8');
 const page=fs.readFileSync(path.join(root,'platform-device-recovery.html'),'utf8');
+const versionedPage=fs.readFileSync(path.join(root,'platform-device-recovery-login-v2.html'),'utf8');
 const browser=fs.readFileSync(path.join(root,'js/platform-stable-device-recovery.js'),'utf8');
 function exact(input){return Object.assign({owner:true,activeOwner:true,ownerRole:true,source:'approved',sourceActive:true,target:'pending',targetActive:true,targetPrefix:'f9306733',environment:'development_preview',expired:false,consumed:false,credential:'platform_primary',origin:'https://ramyawny37.github.io',rp:'ramyawny37.github.io',userVerified:true,backupEligible:true,backupState:true,enrolledBackupEligible:true,enrolledBackupState:true,signature:true,replay:false},input||{});}
 function permits(v){return v.owner&&v.activeOwner&&v.ownerRole&&v.source==='approved'&&v.sourceActive&&v.target==='pending'&&v.targetActive&&v.targetPrefix==='f9306733'&&v.environment==='development_preview'&&!v.expired&&!v.consumed&&v.credential==='platform_primary'&&v.origin==='https://ramyawny37.github.io'&&v.rp==='ramyawny37.github.io'&&v.userVerified&&v.backupEligible===v.enrolledBackupEligible&&v.backupState===v.enrolledBackupState&&(!v.backupState||v.backupEligible)&&v.signature&&!v.replay;}
@@ -37,4 +38,9 @@ test('temporary page has one explicit ceremony control and no privileged secret'
   assert.match(page,/autocomplete="current-password"/);assert.match(browser,/SupabaseAuth\.signInWithPassword/);
   assert.match(browser,/password\.value=''/);assert.doesNotMatch(browser,/signUp|register_device|PlatformIntegration/);
   assert.doesNotMatch(page+browser,/service.role|SUPABASE_SERVICE_ROLE_KEY|postgres(?:ql)?:\/\//i);
+});
+test('cache-independent recovery entry contains visible login and versioned runtime assets',()=>{
+  assert.match(versionedPage,/Development owner email/);assert.match(versionedPage,/Sign in to Development recovery/);
+  assert.match(versionedPage,/platform-stable-device-recovery\.js\?rev=recovery-login-v2/);
+  assert.doesNotMatch(versionedPage,/service-worker\.js|pwa\.js/);
 });
