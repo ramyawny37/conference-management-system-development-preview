@@ -61,6 +61,17 @@
     });
   }
 
+  function activateCurrentModuleRoute(modules){
+    var pathname=String(global.location&&global.location.pathname||'');
+    var module=(Array.isArray(modules)?modules:[]).find(function(item){
+      return item&&item.available===true&&item.routePrefix===pathname;
+    });
+    if(module&&module.id==='conference'&&
+      typeof global.openConferenceWorkspace==='function'){
+      global.openConferenceWorkspace();
+    }
+  }
+
   function refreshContext(){
     trace.platformContextHydrationAttempted=true;event('PLATFORM_CONTEXT_START');
     return request('/api/platform/context').then(function(context){
@@ -72,6 +83,7 @@
         if(!hydrated&&trace.platformIdentityMismatch){var mismatch=new Error('PLATFORM_DEVICE_IDENTITY_MISMATCH');mismatch.code=mismatch.message;mismatch.category='device';throw mismatch;}
       }
       applyModules(context&&context.modules);
+      activateCurrentModuleRoute(context&&context.modules);
       state.initialized=true;
       event('PLATFORM_CONTEXT_COMPLETE');
       return context;
@@ -141,11 +153,6 @@
   function recordCanonicalState(value){var allowed=['UNAUTHENTICATED','AUTHENTICATING','AUTHENTICATED','PLATFORM_ADOPTING','ACCOUNT_NOT_APPROVED','DEVICE_REGISTERED','DEVICE_PENDING','DEVICE_APPROVED','DEVICE_REVOKED','ERROR'];trace.canonicalState=allowed.indexOf(value)>=0?value:'ERROR';event('STATE_'+trace.canonicalState);}
 
   function openModule(id){
-    if(id==='conference'){
-      if(global.location.pathname!=='/conference')global.location.assign('/conference');
-      else if(typeof global.openConferenceWorkspace==='function')global.openConferenceWorkspace();
-      return true;
-    }
     var modules=state.context&&state.context.modules||[];
     var module=modules.find(function(item){return item.id===id&&item.available===true;});
     if(!module)return false;

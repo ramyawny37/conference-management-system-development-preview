@@ -63,6 +63,22 @@ test("local shell, Conference route, static asset, context, adoption, and logout
   }
 });
 
+test("root remains the launcher and an authorized direct Conference route serves the workspace runtime", async () => {
+  const server = await listen(createGatewayHandler({
+    sessionContext: context(true, ["conference"]),
+  }));
+  try {
+    const root = await fetch(`${origin(server)}/`);
+    assert.equal(root.status, 200);
+    assert.match(await root.text(), /id="platformLauncherTitle"/);
+    const conference = await fetch(`${origin(server)}/conference`, { redirect: "manual" });
+    assert.equal(conference.status, 200);
+    assert.match(await conference.text(), /id="conferenceWorkspace"/);
+  } finally {
+    await close(server);
+  }
+});
+
 test("device issuance uses host-only HttpOnly platform cookies", () => {
   const headers = {};
   const response = {

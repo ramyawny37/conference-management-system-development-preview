@@ -32,7 +32,7 @@ const CORE_ASSETS = [
   './js/supabase/runtime-config.js',
   './js/supabase/client.js',
   './js/supabase/auth.js?rev=account-session-identity-v1',
-  './js/platform-integration.js?rev=platform-first-login-coordinator-v1',
+  './js/platform-integration.js?rev=platform-module-navigation-v1',
   './js/supabase/system-access-service.js?rev=conference-create-authorization-v1',
   './js/sync/diagnostics-privacy-policy.js?rev=diagnostics-privacy-hardening-v1',
   './js/sync/organization-administration-utils.js',
