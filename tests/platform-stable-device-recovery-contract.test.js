@@ -33,6 +33,8 @@ test('Edge verifies assertion and passes only verified policy context to complet
   ['begin-stable-development-recovery','finish-stable-development-recovery','verifyAuthenticationResponse','expectedOrigin','expectedRPID: rpID','requireUserVerification: true','complete_stable_development_platform_device_recovery'].forEach(value=>assert.ok(edge.includes(value),value));
 });
 test('temporary page has one explicit ceremony control and no privileged secret',()=>{
-  assert.equal((page.match(/<button\b/g)||[]).length,1);assert.match(browser,/navigator\.credentials\.get/);
+  assert.equal((page.match(/id="recover"/g)||[]).length,1);assert.match(browser,/navigator\.credentials\.get/);
+  assert.match(page,/autocomplete="current-password"/);assert.match(browser,/SupabaseAuth\.signInWithPassword/);
+  assert.match(browser,/password\.value=''/);assert.doesNotMatch(browser,/signUp|register_device|PlatformIntegration/);
   assert.doesNotMatch(page+browser,/service.role|SUPABASE_SERVICE_ROLE_KEY|postgres(?:ql)?:\/\//i);
 });

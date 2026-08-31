@@ -15,8 +15,14 @@
   <main>
     <h1>Stable Development device recovery</h1>
     <p>This one-time ceremony approves only the pre-authorized stable Development Platform device.</p>
-    <button id="recover" type="button">Verify owner passkey and approve stable device</button>
-    <div id="status" role="status" aria-live="polite">Ready.</div>
+    <form id="login" autocomplete="on">
+      <p>The registered origin has no owner session yet. Sign in with the existing Development owner account. This does not register or approve a device.</p>
+      <label>Owner email<br><input id="email" name="email" type="email" autocomplete="username" required></label><br><br>
+      <label>Password<br><input id="password" name="password" type="password" autocomplete="current-password" required></label><br><br>
+      <button id="sign-in" type="submit">Sign in to Development recovery</button>
+    </form>
+    <button id="recover" type="button" hidden>Verify owner passkey and approve stable device</button>
+    <div id="status" role="status" aria-live="polite">Checking the registered-origin session…</div>
   </main>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="js/storage/environment-namespace.js"></script>
