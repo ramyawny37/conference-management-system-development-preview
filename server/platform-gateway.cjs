@@ -93,6 +93,22 @@ function issueDevice(response) {
   return device;
 }
 
+function isUuid(value) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(value || ""));
+}
+
+async function platformAdministrationClient(request, response, options = {}) {
+  const resolveGetDevice = options.getDevice || getDevice;
+  const resolveSupabaseFor = options.supabaseFor || supabaseFor;
+  const device = resolveGetDevice(request);
+  if (!device) return { error: "PLATFORM_APPROVED_DEVICE_REQUIRED", status: 403 };
+  const supabase = resolveSupabaseFor(request, response, device);
+  if (!supabase) return { error: "PLATFORM_SUPABASE_NOT_CONFIGURED", status: 503 };
+  const { data, error } = await supabase.auth.getUser();
+  if (error || !data.user) return { error: "PLATFORM_AUTHENTICATION_REQUIRED", status: 401 };
+  return { device, supabase, user: data.user };
+}
+
 async function sessionContext(request, response, options = {}) {
   const resolveGetDevice = options.getDevice || getDevice;
   const resolveSupabaseFor = options.supabaseFor || supabaseFor;
@@ -135,6 +151,10 @@ function createApiHandler(options = {}) {
   const resolveCreateDevice = options.createDevice || createDevice;
   const resolveCommitDevice = options.commitDevice || commitDevice;
   const resolveReadJson = options.readJson || readJson;
+  const resolveAdministrationClient = options.platformAdministrationClient || ((request, response) => platformAdministrationClient(request, response, {
+    getDevice: resolveGetDevice,
+    supabaseFor: resolveSupabaseFor,
+  }));
   const resolveSessionContext = options.sessionContext || ((request, response) => sessionContext(request, response, {
     getDevice: resolveGetDevice,
     supabaseFor: resolveSupabaseFor,
@@ -142,6 +162,38 @@ function createApiHandler(options = {}) {
   return async function handleApi(request, response, pathname) {
   if (request.method === "GET" && pathname === "/api/platform/context")
     return json(response, 200, await resolveSessionContext(request, response));
+  if (request.method === "GET" && pathname === "/api/platform/device-authorizations/pending") {
+    const administration = await resolveAdministrationClient(request, response);
+    if (administration.error) return json(response, administration.status, { error: administration.error });
+    const result = await administration.supabase.schema("platform").rpc("list_pending_device_authorizations");
+    if (result.error || !result.data || !Array.isArray(result.data.devices))
+      return json(response, 403, { error: "PLATFORM_DEVICE_ADMINISTRATION_DENIED" });
+    return json(response, 200, { devices: result.data.devices });
+  }
+  if (request.method === "POST" && pathname === "/api/platform/device-authorizations/approve") {
+    const administration = await resolveAdministrationClient(request, response);
+    if (administration.error) return json(response, administration.status, { error: administration.error });
+    const body = await resolveReadJson(request);
+    const authorizationId = String(body.authorizationId || "");
+    const deviceId = String(body.deviceId || "");
+    if (!isUuid(authorizationId) || !isUuid(deviceId))
+      return json(response, 400, { error: "PLATFORM_DEVICE_TARGET_INVALID" });
+    const result = await administration.supabase.schema("platform").rpc("approve_pending_device_authorization", {
+      p_authorization_id: authorizationId,
+      p_device_id: deviceId,
+      p_reason: "Approved through Platform device administration",
+    });
+    if (result.error) {
+      const conflict = result.error.code === "55000" || /NOT_PENDING/.test(String(result.error.message || ""));
+      return json(response, conflict ? 409 : 403, { error: conflict ? "PLATFORM_DEVICE_NOT_PENDING" : "PLATFORM_DEVICE_ADMINISTRATION_DENIED" });
+    }
+    return json(response, 200, {
+      status: result.data && result.data.status,
+      authorizationId: result.data && result.data.authorizationId,
+      deviceId: result.data && result.data.deviceId,
+      authorizationStatus: result.data && result.data.authorizationStatus,
+    });
+  }
   if (request.method === "POST" && pathname === "/api/platform/session/adopt") {
     const body = await resolveReadJson(request);
     const pendingCookies = [];
@@ -189,7 +241,9 @@ function contentType(filePath) {
 }
 
 function serveLocal(response, pathname) {
-  const requested = pathname === "/" || pathname === "/conference" || pathname === "/conference/" ? "index.html" : pathname.replace(/^\/conference\//, "").replace(/^\//, "");
+  const requested = pathname === "/" || pathname === "/conference" || pathname === "/conference/" ? "index.html"
+    : pathname === "/platform/device-admin" || pathname === "/platform/device-admin/" ? "platform-device-admin.html"
+      : pathname.replace(/^\/conference\//, "").replace(/^\//, "");
   const filePath = path.resolve(ROOT, requested);
   if (!filePath.startsWith(`${ROOT}${path.sep}`) || !fs.existsSync(filePath) || !fs.statSync(filePath).isFile()) return false;
   response.writeHead(200, { "content-type": contentType(filePath) });
