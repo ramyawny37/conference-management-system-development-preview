@@ -15,17 +15,30 @@ test('shell registers all module cards through the platform contract',()=>{
   assert.doesNotMatch(html,/data-platform-module="[^"]+"[^>]+onclick=/);
 });
 
-function navigationRuntime(pathname,modules){
+function navigationRuntime(pathname,modules,contextFailure){
   const cards={};
+  const documentListeners={};
   for(const module of modules){
     cards[module.id]={disabled:false,onclick:null,attributes:{},
       setAttribute(name,value){this.attributes[name]=value;},
-      classList:{toggle(){}}};
+      classList:{toggle(){}},
+      closest(selector){return selector==='[data-platform-module]'?this:null;},
+      getAttribute(name){return name==='data-platform-module'?module.id:this.attributes[name];},
+      click(){
+        if(this.disabled)return;
+        const event={target:this,defaultPrevented:false,
+          preventDefault(){this.defaultPrevented=true;}};
+        if(typeof this.onclick==='function')this.onclick(event);
+        for(const listener of documentListeners.click||[])listener(event);
+      }};
   }
   const assigned=[];let workspaceOpens=0;
   const window={Promise,navigator:{platform:'test'},location:{pathname,
-    assign(route){assigned.push(route);}},fetch(){return Promise.resolve({ok:true,
-      json(){return Promise.resolve({modules});}});},document:{querySelector(selector){
+    assign(route){assigned.push(route);}},fetch(){return Promise.resolve(contextFailure
+      ?{ok:false,status:401,json(){return Promise.resolve({error:'PLATFORM_SESSION_INVALID'});}}
+      :{ok:true,json(){return Promise.resolve({modules});}});},document:{addEventListener(type,listener){
+      (documentListeners[type]||(documentListeners[type]=[])).push(listener);
+    },querySelector(selector){
       const match=selector.match(/data-platform-module="([^"]+)"/);
       return match?cards[match[1]]||null:null;}},
     openConferenceWorkspace(){workspaceOpens+=1;}};
@@ -42,12 +55,13 @@ test('available cards use the hydrated registry route and unavailable cards rema
     {id:'custody',routePrefix:'/custody',available:true}
   ];
   const runtime=await navigationRuntime('/',modules);
-  runtime.cards.conference.onclick();
-  runtime.cards.warehouse.onclick();
-  runtime.cards.custody.onclick();
+  runtime.cards.conference.click();
+  runtime.cards.warehouse.click();
+  runtime.cards.custody.click();
   assert.deepStrictEqual(runtime.assigned,['/conference','/warehouse','/custody']);
   assert.strictEqual(runtime.cards.reservations.disabled,true);
   assert.strictEqual(runtime.cards.reservations.onclick,null);
+  assert.strictEqual(runtime.cards.conference.onclick,null);
   assert.strictEqual(runtime.cards.conference.attributes['aria-disabled'],'false');
 });
 
@@ -57,6 +71,15 @@ test('direct available Conference route activates its workspace without redirect
   ]);
   assert.strictEqual(runtime.workspaceOpens(),1);
   assert.deepStrictEqual(runtime.assigned,[]);
+});
+
+test('rendered available Conference card navigates even when initial context hydration fails',async()=>{
+  const failed=await navigationRuntime('/',[
+    {id:'conference',routePrefix:'/conference',available:true}
+  ],true);
+  failed.cards.conference.click();
+  assert.strictEqual(failed.cards.conference.disabled,false);
+  assert.deepStrictEqual(failed.assigned,['/conference']);
 });
 
 test('gateway is development locked and secret-bearing device credentials stay HttpOnly',()=>{

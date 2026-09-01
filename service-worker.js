@@ -1,13 +1,14 @@
 const APP_VERSION = '3.4.0';
 const DEVELOPMENT_PROJECT_REF = 'gppwltrifgfxrkzvvxoe';
 const DEVELOPMENT_PATH = '/conference-management-system-development-preview/';
-const IS_DEVELOPMENT = self.location.pathname.indexOf(DEVELOPMENT_PATH) === 0;
+const IS_DEVELOPMENT = self.location.pathname.indexOf(DEVELOPMENT_PATH) === 0 ||
+  String(self.location.hostname || '').indexOf('integrated-platform-development') === 0;
 const CACHE_NAMESPACE = IS_DEVELOPMENT
   ? 'cms:development:' + DEVELOPMENT_PROJECT_REF + ':'
   : '';
 const CACHE_PREFIX = CACHE_NAMESPACE + 'conference-manager-core-';
 const CACHE_REVISION = IS_DEVELOPMENT
-  ? 'development-3-4-0-platform-first-login-coordinator-v1'
+  ? 'development-3-4-0-platform-module-navigation-v2'
   : 'production-integrated-3-3-0-main-6d0c1e1-develop-80653ca-v1';
 const CACHE_NAME = CACHE_PREFIX + 'v' + APP_VERSION + '-' + CACHE_REVISION;
 const CORE_ASSETS = [
@@ -32,7 +33,7 @@ const CORE_ASSETS = [
   './js/supabase/runtime-config.js',
   './js/supabase/client.js',
   './js/supabase/auth.js?rev=account-session-identity-v1',
-  './js/platform-integration.js?rev=platform-module-navigation-v1',
+  './js/platform-integration.js?rev=platform-module-navigation-v2',
   './js/supabase/system-access-service.js?rev=conference-create-authorization-v1',
   './js/sync/diagnostics-privacy-policy.js?rev=diagnostics-privacy-hardening-v1',
   './js/sync/organization-administration-utils.js',
