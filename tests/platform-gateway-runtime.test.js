@@ -7,6 +7,7 @@ const { spawnSync } = require("node:child_process");
 const test = require("node:test");
 const {
   createGatewayHandler,
+  createApiHandler,
   issueDevice,
 } = require("../server/platform-gateway.cjs");
 
@@ -93,6 +94,54 @@ test("device issuance uses host-only HttpOnly platform cookies", () => {
     assert.match(cookie, /HttpOnly/);
     assert.match(cookie, /SameSite=Lax/);
     assert.doesNotMatch(cookie, /Domain=/i);
+  }
+});
+
+test("Conference guarded RPC uses the proven Platform device and rechecks module access", async () => {
+  const calls = [];
+  const device = { id: "f9306733-612d-433f-a38e-5d72855c2fe3", secret: "s".repeat(43) };
+  const supabase = {
+    rpc: async (name, args) => {
+      calls.push({ name, args });
+      if (name === "require_module_permission") return { data: { status: "allowed" }, error: null };
+      return { data: { status: "success", organizations: [] }, error: null };
+    },
+  };
+  const api = createApiHandler({
+    platformAdministrationClient: async () => ({ device, supabase, user: { id: "user-1" } }),
+    readJson: async () => ({ name: "device_guarded_list_my_organizations", args: { p_actor_device_id: device.id } }),
+  });
+  const server = await listen(createGatewayHandler({ handleApi: api }));
+  try {
+    const result = await fetch(`${origin(server)}/api/platform/conference-rpc`, { method: "POST" });
+    assert.equal(result.status, 200);
+    assert.deepEqual(await result.json(), { data: { status: "success", organizations: [] }, error: null });
+    assert.deepEqual(calls.map((call) => call.name), ["require_module_permission", "device_guarded_list_my_organizations"]);
+    assert.equal(calls[0].args.p_module_key, "conference");
+    assert.equal(calls[0].args.p_permission_key, "module.access");
+  } finally {
+    await close(server);
+  }
+});
+
+test("Conference RPC gateway rejects a mismatched browser device and non-allowlisted function", async () => {
+  const device = { id: "f9306733-612d-433f-a38e-5d72855c2fe3", secret: "s".repeat(43) };
+  for (const body of [
+    { name: "device_guarded_list_my_organizations", args: { p_actor_device_id: "9bce8898-0000-4000-8000-000000000000" } },
+    { name: "register_current_device", args: { p_actor_device_id: device.id } },
+  ]) {
+    const api = createApiHandler({
+      platformAdministrationClient: async () => ({ device, supabase: { rpc: async () => { throw new Error("must not execute"); } } }),
+      readJson: async () => body,
+    });
+    const server = await listen(createGatewayHandler({ handleApi: api }));
+    try {
+      const result = await fetch(`${origin(server)}/api/platform/conference-rpc`, { method: "POST" });
+      assert.equal(result.status, 400);
+      assert.equal((await result.json()).error.code, "CONFERENCE_RPC_REQUEST_INVALID");
+    } finally {
+      await close(server);
+    }
   }
 });
 

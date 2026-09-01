@@ -54,5 +54,10 @@ assert.match(edge,/\.replace\(\/\[A-Za-z0-9_\-\]\{41,\}\/g, '\[REDACTED\]'\)/);
 assert.match(edge,/logSafeDiagnostic\(phase, error\)/);
 assert.match(edge,/logSafeDiagnostic\('credential-enrollment', error\)/);
 assert.doesNotMatch(edge,/authenticatorAttachment:\s*'platform'/);
+assert.match(edge,/DEVELOPMENT_APP_ORIGIN = 'https:\/\/integrated-platform-development-git-develop-ramyawny37-3662\.vercel\.app'/);
+assert.match(edge,/environment\(\) === 'development_preview'[\s\S]*\[expectedOrigin, DEVELOPMENT_APP_ORIGIN\]/);
+assert.match(edge,/APP_ORIGIN_DENIED/);
+assert.doesNotMatch(edge,/Access-Control-Allow-Origin':\s*'\*'/);
+assert.match(edge,/expectedOrigin, expectedRPID: rpID/);
 
 console.log('system-owner synced passkey policy reconciliation contracts: passed');

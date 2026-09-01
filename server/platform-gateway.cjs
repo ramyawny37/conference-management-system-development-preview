@@ -13,6 +13,25 @@ const DEVELOPMENT_REF = "gppwltrifgfxrkzvvxoe";
 const DEVELOPMENT_URL = `https://${DEVELOPMENT_REF}.supabase.co`;
 const DEVICE_ID_COOKIE = "platform-device-id";
 const DEVICE_SECRET_COOKIE = "platform-device-secret";
+const CONFERENCE_DEVICE_RPC_ALLOWLIST = new Set([
+  "apply_library_template_content_operation", "apply_organization_template_access_operation", "apply_organization_template_operation",
+  "device_guarded_acquire_conference_lock", "device_guarded_add_conference_manager", "device_guarded_add_organization_member",
+  "device_guarded_apply_conference_snapshot", "device_guarded_assign_legacy_conference_organization", "device_guarded_change_organization_role",
+  "device_guarded_create_conference_idempotent", "device_guarded_create_organization_conference_idempotent",
+  "device_guarded_download_conference_snapshot", "device_guarded_get_conference_creation_operation", "device_guarded_get_conference_lock",
+  "device_guarded_get_conference_snapshot_metadata", "device_guarded_get_my_conference_access", "device_guarded_get_my_conference_membership",
+  "device_guarded_get_my_organization_access", "device_guarded_get_organization_membership_operation", "device_guarded_get_sync_conflict",
+  "device_guarded_list_available_conferences", "device_guarded_list_conference_members", "device_guarded_list_eligible_legacy_conference_organizations",
+  "device_guarded_list_my_organizations", "device_guarded_list_organization_members", "device_guarded_list_sync_conflicts",
+  "device_guarded_lookup_conference_user_by_email", "device_guarded_lookup_organization_candidate_by_email",
+  "device_guarded_manage_conference_member", "device_guarded_manage_system_user", "device_guarded_release_conference_lock",
+  "device_guarded_remove_conference_manager", "device_guarded_remove_organization_member", "device_guarded_renew_conference_lock",
+  "device_guarded_resolve_sync_conflict", "get_organization_management_overview", "get_user_management_account",
+  "get_user_management_actor_capabilities", "get_user_management_devices", "get_user_management_overview",
+  "list_member_device_authorizations", "list_module_permission_grants", "list_organization_templates",
+  "list_shared_organization_templates", "manage_catalog_module_grant", "manage_foundation_module_grant", "manage_organization",
+  "recover_revoke_final_module_manager", "search_user_management_users",
+]);
 const registry = loadModuleRegistry();
 const port = Number(process.env.PORT || 3000);
 
@@ -162,6 +181,29 @@ function createApiHandler(options = {}) {
   return async function handleApi(request, response, pathname) {
   if (request.method === "GET" && pathname === "/api/platform/context")
     return json(response, 200, await resolveSessionContext(request, response));
+  if (request.method === "POST" && pathname === "/api/platform/conference-rpc") {
+    const administration = await resolveAdministrationClient(request, response);
+    if (administration.error) return json(response, administration.status, { error: { code: administration.error } });
+    const body = await resolveReadJson(request);
+    const name = String(body.name || "");
+    const args = body.args && typeof body.args === "object" && !Array.isArray(body.args) ? body.args : null;
+    if (!CONFERENCE_DEVICE_RPC_ALLOWLIST.has(name) || !args || args.p_actor_device_id !== administration.device.id)
+      return json(response, 400, { error: { code: "CONFERENCE_RPC_REQUEST_INVALID" } });
+    const permission = await administration.supabase.rpc("require_module_permission", {
+      p_actor_device_id: administration.device.id,
+      p_module_key: "conference",
+      p_permission_key: "module.access",
+      p_resource_type: null,
+      p_resource_id: null,
+    });
+    if (permission.error) return json(response, 403, { error: { code: "PLATFORM_MODULE_ACCESS_DENIED" } });
+    const result = await administration.supabase.rpc(name, args);
+    if (result.error) return json(response, 403, { error: {
+      code: String(result.error.code || "CONFERENCE_RPC_DENIED"),
+      message: String(result.error.message || "CONFERENCE_RPC_DENIED").slice(0, 240),
+    } });
+    return json(response, 200, { data: result.data, error: null });
+  }
   if (request.method === "GET" && pathname === "/api/platform/device-authorizations/pending") {
     const administration = await resolveAdministrationClient(request, response);
     if (administration.error) return json(response, administration.status, { error: administration.error });
@@ -354,4 +396,5 @@ module.exports = {
   DEVELOPMENT_REF,
   DEVICE_ID_COOKIE,
   DEVICE_SECRET_COOKIE,
+  CONFERENCE_DEVICE_RPC_ALLOWLIST,
 };

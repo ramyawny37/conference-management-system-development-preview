@@ -38,6 +38,28 @@
     return null;
   }
 
+  function shouldUsePlatformDeviceRpc(args){
+    return /^integrated-platform-development(?:-|\.)/.test(String(global.location&&global.location.hostname||''))&&
+      args&&typeof args==='object'&&!Array.isArray(args)&&
+      typeof args.p_actor_device_id==='string';
+  }
+
+  function attachPlatformDeviceRpc(client){
+    if(!client||typeof client.rpc!=='function')return client;
+    var directRpc=client.rpc.bind(client);
+    client.rpc=function(name,args,options){
+      if(!shouldUsePlatformDeviceRpc(args))return directRpc(name,args,options);
+      return global.fetch('/api/platform/conference-rpc',{
+        method:'POST',credentials:'same-origin',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({name:String(name||''),args:args})
+      }).then(function(response){return response.json().catch(function(){return {error:{code:'PLATFORM_GATEWAY_INVALID_RESPONSE'}};});})
+        .then(function(result){return result&&result.error?{data:null,error:result.error}:{data:result&&result.data,error:null};})
+        .catch(function(){return {data:null,error:{code:'PLATFORM_GATEWAY_UNAVAILABLE'}};});
+    };
+    return client;
+  }
+
   function configure(options){
     options=options&&typeof options==='object'?options:{};
     var runtimeConfig=global.SUPABASE_RUNTIME_CONFIG&&
@@ -98,13 +120,13 @@
       state.client=null;
       state.url=null;
       state.publishableKey=null;
-      state.client=createClient(url,publishableKey,{
+      state.client=attachPlatformDeviceRpc(createClient(url,publishableKey,{
         auth:{
           persistSession:true,
           autoRefreshToken:true,
           detectSessionInUrl:true
         }
-      });
+      }));
       state.configured=true;
       state.available=!!state.client;
       state.url=url;

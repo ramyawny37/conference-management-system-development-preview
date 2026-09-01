@@ -7,8 +7,8 @@ import {
 } from '@simplewebauthn/server';
 import { cose, decodeCredentialPublicKey } from '@simplewebauthn/server/helpers';
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': String(Deno.env.get('WEBAUTHN_EXPECTED_ORIGIN') || ''),
+const DEVELOPMENT_APP_ORIGIN = 'https://integrated-platform-development-git-develop-ramyawny37-3662.vercel.app';
+const corsBaseHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
   'Vary': 'Origin',
@@ -43,10 +43,19 @@ function uuid(value: unknown, label: string): string {
   }
   return normalized;
 }
-function json(status: number, body: unknown): Response {
+function corsHeaders(requestOrigin: string): Record<string, string> | null {
+  const expectedOrigin = required('WEBAUTHN_EXPECTED_ORIGIN').toLowerCase();
+  const allowedOrigins = environment() === 'development_preview'
+    ? [expectedOrigin, DEVELOPMENT_APP_ORIGIN]
+    : [expectedOrigin];
+  return allowedOrigins.includes(requestOrigin.toLowerCase())
+    ? { ...corsBaseHeaders, 'Access-Control-Allow-Origin': requestOrigin.toLowerCase() }
+    : null;
+}
+function responseJson(status: number, body: unknown, headers: Record<string, string>): Response {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { ...corsHeaders, 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
+    headers: { ...headers, 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
   });
 }
 function environment(): string {
@@ -76,7 +85,11 @@ function logSafeDiagnostic(phase: string, error: unknown): void {
 
 Deno.serve(async (request) => {
   let currentAction = '';
-  if (request.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
+  const requestOrigin = String(request.headers.get('origin') || '').toLowerCase();
+  const responseCorsHeaders = corsHeaders(requestOrigin);
+  if (!responseCorsHeaders) return responseJson(403, { ok: false, error: { code: 'APP_ORIGIN_DENIED' } }, corsBaseHeaders);
+  if (request.method === 'OPTIONS') return new Response('ok', { headers: responseCorsHeaders });
+  const json = (status: number, body: unknown) => responseJson(status, body, responseCorsHeaders);
   if (request.method !== 'POST') return json(405, { ok: false, error: { code: 'METHOD_NOT_ALLOWED' } });
   try {
     const supabaseUrl = required('SUPABASE_URL');
@@ -85,8 +98,6 @@ Deno.serve(async (request) => {
     const expectedOrigin = required('WEBAUTHN_EXPECTED_ORIGIN').toLowerCase();
     const rpID = required('WEBAUTHN_RP_ID').toLowerCase();
     const rpName = Deno.env.get('WEBAUTHN_RP_NAME') || 'Conference Management Platform';
-    const requestOrigin = String(request.headers.get('origin') || '').toLowerCase();
-    if (requestOrigin !== expectedOrigin) throw new Error('WEBAUTHN_ORIGIN_DENIED');
     const authorization = request.headers.get('authorization') || '';
     if (!authorization.toLowerCase().startsWith('bearer ')) throw new Error('AUTH_REQUIRED');
     const userClient = createClient(supabaseUrl, anonKey, { global: { headers: { Authorization: authorization } } });
