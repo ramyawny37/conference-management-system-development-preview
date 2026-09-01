@@ -1544,9 +1544,22 @@ function returnToOrganizationManagementFromMembers(){
 function showHomePage(){
   return openStartupScreen({clearCurrentConference:false,persistView:true});
 }
-function showPlatformModules(){
+function getPlatformShellPathname(){
+  var pathname=String(window.location&&window.location.pathname||'/');
+  return pathname.length>1?pathname.replace(/\/+$/,''):pathname;
+}
+function replacePlatformShellPathname(pathname){
+  if(!window.history||typeof window.history.replaceState!=='function')return false;
+  window.history.replaceState(null,'',pathname);
+  return true;
+}
+function showPlatformModules(options){
+  options=options||{};
   var shell=ge('startupScreen');
   if(!shell)return false;
+  if(options.preservePathname!==true&&getPlatformShellPathname()!=='/'){
+    replacePlatformShellPathname('/');
+  }
   shell.classList.remove('platform-conference-active');
   var launcher=ge('platformLauncherTitle');
   if(launcher)launcher.focus();
@@ -6870,7 +6883,6 @@ Application Navigation - Central Entry Points
 function openStartupScreen(options){
   if(window.StartupAccessGate&&!window.StartupAccessGate.isAllowed())return false;
   options=options||{};
-  showPlatformModules();
   closeOrganizationManagementScreen();
   document.body.classList.remove('accommodation-shell-active');
   var clearCurrentConference=options.clearCurrentConference===true;
@@ -6898,6 +6910,11 @@ function openStartupScreen(options){
   if(homeTabButton)homeTabButton.classList.add('active','main-tab-active');
   currentApplicationView='startup';
   if(persistView)saveApplicationView('startup');
+  if(getPlatformShellPathname()==='/conference'){
+    openConferenceWorkspace();
+  }else{
+    showPlatformModules({preservePathname:true});
+  }
   return true;
 }
 
