@@ -87,5 +87,7 @@ test('gateway is development locked and secret-bearing device credentials stay H
   assert.doesNotMatch(gateway,/mpezfbvcdfxpgflehuot/);
   assert.match(gateway,/platform-device-secret/);
   assert.match(gateway,/HttpOnly/);
-  assert.match(gateway,/require_module_permission/);
+  assert.match(gateway,/moduleAccessFor/);
+  assert.match(gateway,/list_module_permission_grants/);
+  assert.doesNotMatch(gateway,/\.rpc\("require_module_permission"/);
 });

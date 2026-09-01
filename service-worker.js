@@ -8,7 +8,7 @@ const CACHE_NAMESPACE = IS_DEVELOPMENT
   : '';
 const CACHE_PREFIX = CACHE_NAMESPACE + 'conference-manager-core-';
 const CACHE_REVISION = IS_DEVELOPMENT
-  ? 'development-3-4-0-platform-device-rpc-cors-manifest-v1'
+  ? 'development-3-4-0-platform-runtime-contract-v2'
   : 'production-integrated-3-3-0-main-6d0c1e1-develop-80653ca-v1';
 const CACHE_NAME = CACHE_PREFIX + 'v' + APP_VERSION + '-' + CACHE_REVISION;
 const CORE_ASSETS = [
@@ -202,8 +202,16 @@ self.addEventListener('fetch', event => {
 
   if (IS_DEVELOPMENT && requestUrl.pathname === '/manifest.json') {
     event.respondWith(
-      fetch(request).catch(() => new Response('{}', {
-        status: 503,
+      Promise.resolve(new Response(JSON.stringify({
+        name: 'Integrated Management Platform Development',
+        short_name: 'Platform Dev',
+        start_url: '/',
+        scope: '/',
+        display: 'standalone',
+        theme_color: '#123E7A',
+        background_color: '#123E7A'
+      }), {
+        status: 200,
         headers: { 'Content-Type': 'application/manifest+json', 'Cache-Control': 'no-store' }
       }))
     );

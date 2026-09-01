@@ -8,6 +8,7 @@ const test = require("node:test");
 const {
   createGatewayHandler,
   createApiHandler,
+  moduleAccessFor,
   issueDevice,
 } = require("../server/platform-gateway.cjs");
 
@@ -80,6 +81,17 @@ test("root remains the launcher and an authorized direct Conference route serves
   }
 });
 
+test("protected Development HTML omits the manifest request while ordinary and Production-compatible HTML retain it", async () => {
+  const server = await listen(createGatewayHandler());
+  try {
+    const development = await fetch(`${origin(server)}/`, { headers: { "x-forwarded-host": "integrated-platform-development-git-develop-ramyawny37-3662.vercel.app" } });
+    assert.equal(development.status, 200);
+    assert.doesNotMatch(await development.text(), /rel="manifest"/);
+    const ordinary = await fetch(`${origin(server)}/`);
+    assert.match(await ordinary.text(), /rel="manifest" href="\.\/manifest\.json"/);
+  } finally { await close(server); }
+});
+
 test("device issuance uses host-only HttpOnly platform cookies", () => {
   const headers = {};
   const response = {
@@ -97,6 +109,24 @@ test("device issuance uses host-only HttpOnly platform cookies", () => {
   }
 });
 
+test("module access uses the public Platform context and never calls the internal permission function", async () => {
+  const device = { id: "f9306733-612d-433f-a38e-5d72855c2fe3" };
+  const calls = [];
+  const ownerClient = {
+    schema: () => ({ rpc: async (name) => { calls.push(name); return { data: {
+      accountStatus: "approved", deviceStatus: "approved", deviceLifecycle: "active", roles: ["platform_owner"],
+    }, error: null }; } }),
+    rpc: async () => { throw new Error("owner must not need a public grant lookup"); },
+  };
+  assert.equal((await moduleAccessFor(ownerClient, device, "conference", "module.access")).allowed, true);
+  assert.deepEqual(calls, ["get_my_access_context"]);
+
+  const pendingClient = { schema: () => ({ rpc: async () => ({ data: {
+    accountStatus: "approved", deviceStatus: "pending", deviceLifecycle: "active", roles: ["platform_owner"],
+  }, error: null }) }) };
+  assert.equal((await moduleAccessFor(pendingClient, device, "conference", "module.access")).allowed, false);
+});
+
 test("Conference guarded RPC uses the proven Platform device and rechecks module access", async () => {
   const calls = [];
   const device = { id: "f9306733-612d-433f-a38e-5d72855c2fe3", secret: "s".repeat(43) };
@@ -109,19 +139,37 @@ test("Conference guarded RPC uses the proven Platform device and rechecks module
   };
   const api = createApiHandler({
     platformAdministrationClient: async () => ({ device, supabase, user: { id: "user-1" } }),
-    readJson: async () => ({ name: "device_guarded_list_my_organizations", args: { p_actor_device_id: device.id } }),
+    moduleAccessFor: async () => ({ allowed: true, context: { deviceStatus: "approved" } }),
+    readJson: async () => ({ name: "device_guarded_list_my_organizations", args: {} }),
   });
   const server = await listen(createGatewayHandler({ handleApi: api }));
   try {
     const result = await fetch(`${origin(server)}/api/platform/conference-rpc`, { method: "POST" });
     assert.equal(result.status, 200);
     assert.deepEqual(await result.json(), { data: { status: "success", organizations: [] }, error: null });
-    assert.deepEqual(calls.map((call) => call.name), ["require_module_permission", "device_guarded_list_my_organizations"]);
-    assert.equal(calls[0].args.p_module_key, "conference");
-    assert.equal(calls[0].args.p_permission_key, "module.access");
+    assert.deepEqual(calls.map((call) => call.name), ["device_guarded_list_my_organizations"]);
+    assert.equal(calls[0].args.p_actor_device_id, device.id);
   } finally {
     await close(server);
   }
+});
+
+test("metadata-classified allowlisted RPC without a device argument is accepted without a synthetic argument", async () => {
+  const device = { id: "f9306733-612d-433f-a38e-5d72855c2fe3", secret: "s".repeat(43) };
+  let executedArgs;
+  const supabase = { rpc: async (name, args) => { executedArgs = args; return { data: { status: "ok" }, error: null }; } };
+  const api = createApiHandler({
+    platformAdministrationClient: async () => ({ device, supabase, user: { id: "user-1" } }),
+    moduleAccessFor: async () => ({ allowed: true, context: { deviceStatus: "approved" } }),
+    rpcMetadata: new Map([["signature_verified_without_device", { actorDeviceArgument: null }]]),
+    readJson: async () => ({ name: "signature_verified_without_device", args: { p_limit: 10 } }),
+  });
+  const server = await listen(createGatewayHandler({ handleApi: api }));
+  try {
+    const result = await fetch(`${origin(server)}/api/platform/conference-rpc`, { method: "POST" });
+    assert.equal(result.status, 200);
+    assert.deepEqual(executedArgs, { p_limit: 10 });
+  } finally { await close(server); }
 });
 
 test("Conference RPC gateway rejects a mismatched browser device and non-allowlisted function", async () => {

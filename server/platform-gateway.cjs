@@ -32,6 +32,9 @@ const CONFERENCE_DEVICE_RPC_ALLOWLIST = new Set([
   "list_shared_organization_templates", "manage_catalog_module_grant", "manage_foundation_module_grant", "manage_organization",
   "recover_revoke_final_module_manager", "search_user_management_users",
 ]);
+const CONFERENCE_DEVICE_RPC_METADATA = new Map(
+  [...CONFERENCE_DEVICE_RPC_ALLOWLIST].map((name) => [name, Object.freeze({ actorDeviceArgument: "p_actor_device_id" })]),
+);
 const registry = loadModuleRegistry();
 const port = Number(process.env.PORT || 3000);
 
@@ -128,6 +131,29 @@ async function platformAdministrationClient(request, response, options = {}) {
   return { device, supabase, user: data.user };
 }
 
+async function moduleAccessFor(supabase, device, moduleKey, permissionKey, knownContext) {
+  const contextResult = knownContext ? { data: knownContext, error: null }
+    : await supabase.schema("platform").rpc("get_my_access_context", {
+      p_domain: "platform", p_scope_type: "platform", p_scope_id: null,
+    });
+  const context = contextResult.data;
+  if (contextResult.error || !context || context.accountStatus !== "approved" ||
+      context.deviceStatus !== "approved" || context.deviceLifecycle !== "active")
+    return { allowed: false, context, error: contextResult.error || { code: "PLATFORM_APPROVED_DEVICE_REQUIRED" } };
+  if (Array.isArray(context.roles) && context.roles.includes("platform_owner"))
+    return { allowed: true, context, authority: "platform_owner" };
+  const grants = await supabase.rpc("list_module_permission_grants", {
+    p_actor_device_id: device.id, p_module_key: moduleKey, p_target_user_id: null,
+  });
+  if (grants.error) return { allowed: false, context, error: grants.error };
+  const items = grants.data && Array.isArray(grants.data.grants) ? grants.data.grants : [];
+  const allowed = items.some((grant) => !grant.revokedAt &&
+    (grant.permissionKey === permissionKey ||
+      (permissionKey === "module.access" && grant.permissionKey === "module.manage")) &&
+    grant.resourceType == null && grant.resourceId == null);
+  return { allowed, context, authority: allowed ? "module_grant" : null };
+}
+
 async function sessionContext(request, response, options = {}) {
   const resolveGetDevice = options.getDevice || getDevice;
   const resolveSupabaseFor = options.supabaseFor || supabaseFor;
@@ -150,14 +176,7 @@ async function sessionContext(request, response, options = {}) {
   for (const module of registry) {
     let allowed = false;
     if (authorized && module.enabled) {
-      const result = await supabase.rpc("require_module_permission", {
-        p_actor_device_id: device.id,
-        p_module_key: module.id,
-        p_permission_key: module.permission,
-        p_resource_type: null,
-        p_resource_id: null,
-      });
-      allowed = !result.error;
+      allowed = (await moduleAccessFor(supabase, device, module.id, module.permission, authorization)).allowed;
     }
     modules.push(publicModule(module, allowed));
   }
@@ -170,6 +189,8 @@ function createApiHandler(options = {}) {
   const resolveCreateDevice = options.createDevice || createDevice;
   const resolveCommitDevice = options.commitDevice || commitDevice;
   const resolveReadJson = options.readJson || readJson;
+  const resolveModuleAccess = options.moduleAccessFor || moduleAccessFor;
+  const resolveRpcMetadata = options.rpcMetadata || CONFERENCE_DEVICE_RPC_METADATA;
   const resolveAdministrationClient = options.platformAdministrationClient || ((request, response) => platformAdministrationClient(request, response, {
     getDevice: resolveGetDevice,
     supabaseFor: resolveSupabaseFor,
@@ -186,22 +207,30 @@ function createApiHandler(options = {}) {
     if (administration.error) return json(response, administration.status, { error: { code: administration.error } });
     const body = await resolveReadJson(request);
     const name = String(body.name || "");
-    const args = body.args && typeof body.args === "object" && !Array.isArray(body.args) ? body.args : null;
-    if (!CONFERENCE_DEVICE_RPC_ALLOWLIST.has(name) || !args || args.p_actor_device_id !== administration.device.id)
+    const metadata = resolveRpcMetadata.get(name);
+    const args = body.args && typeof body.args === "object" && !Array.isArray(body.args) ? body.args : {};
+    if (!metadata || (args.p_actor_device_id !== undefined && args.p_actor_device_id !== administration.device.id))
       return json(response, 400, { error: { code: "CONFERENCE_RPC_REQUEST_INVALID" } });
-    const permission = await administration.supabase.rpc("require_module_permission", {
-      p_actor_device_id: administration.device.id,
-      p_module_key: "conference",
-      p_permission_key: "module.access",
-      p_resource_type: null,
-      p_resource_id: null,
-    });
-    if (permission.error) return json(response, 403, { error: { code: "PLATFORM_MODULE_ACCESS_DENIED" } });
-    const result = await administration.supabase.rpc(name, args);
-    if (result.error) return json(response, 403, { error: {
-      code: String(result.error.code || "CONFERENCE_RPC_DENIED"),
-      message: String(result.error.message || "CONFERENCE_RPC_DENIED").slice(0, 240),
-    } });
+    const permission = await resolveModuleAccess(administration.supabase, administration.device, "conference", "module.access");
+    if (!permission.allowed) {
+      console.error(JSON.stringify({ phase: "conference-rpc-module-access", rpcName: name,
+        code: String(permission.error && permission.error.code || "PLATFORM_MODULE_ACCESS_DENIED"),
+        message: String(permission.error && permission.error.message || "PLATFORM_MODULE_ACCESS_DENIED").slice(0, 240),
+        requestDeviceId: administration.device.id,
+        platformDeviceStatus: permission.context && permission.context.deviceStatus || "unknown" }));
+      return json(response, 403, { error: { code: "PLATFORM_MODULE_ACCESS_DENIED" } });
+    }
+    const authoritativeArgs = { ...args };
+    if (metadata.actorDeviceArgument) authoritativeArgs[metadata.actorDeviceArgument] = administration.device.id;
+    const result = await administration.supabase.rpc(name, authoritativeArgs);
+    if (result.error) {
+      const safeError = { code: String(result.error.code || "CONFERENCE_RPC_DENIED"),
+        message: String(result.error.message || "CONFERENCE_RPC_DENIED").slice(0, 240) };
+      console.error(JSON.stringify({ phase: "conference-rpc", rpcName: name, code: safeError.code,
+        message: safeError.message, requestDeviceId: administration.device.id,
+        platformDeviceStatus: permission.context && permission.context.deviceStatus || "approved" }));
+      return json(response, 403, { error: safeError });
+    }
     return json(response, 200, { data: result.data, error: null });
   }
   if (request.method === "GET" && pathname === "/api/platform/device-authorizations/pending") {
@@ -282,12 +311,19 @@ function contentType(filePath) {
   return ({ ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".css": "text/css; charset=utf-8", ".json": "application/json; charset=utf-8", ".png": "image/png", ".jpg": "image/jpeg", ".svg": "image/svg+xml" })[path.extname(filePath)] || "application/octet-stream";
 }
 
-function serveLocal(response, pathname) {
+function serveLocal(request, response, pathname) {
   const requested = pathname === "/" || pathname === "/conference" || pathname === "/conference/" ? "index.html"
     : pathname === "/platform/device-admin" || pathname === "/platform/device-admin/" ? "platform-device-admin.html"
       : pathname.replace(/^\/conference\//, "").replace(/^\//, "");
   const filePath = path.resolve(ROOT, requested);
   if (!filePath.startsWith(`${ROOT}${path.sep}`) || !fs.existsSync(filePath) || !fs.statSync(filePath).isFile()) return false;
+  const publicHost = String(request.headers["x-forwarded-host"] || request.headers.host || "");
+  if (requested === "index.html" && publicHost.startsWith("integrated-platform-development")) {
+    const html = fs.readFileSync(filePath, "utf8").replace('<link rel="manifest" href="./manifest.json">', "");
+    response.writeHead(200, { "content-type": contentType(filePath), "cache-control": "no-store" });
+    response.end(html);
+    return true;
+  }
   response.writeHead(200, { "content-type": contentType(filePath) });
   fs.createReadStream(filePath).pipe(response);
   return true;
@@ -363,7 +399,7 @@ function createGatewayHandler(options = {}) {
         if (!context.authenticated) return response.writeHead(302, { location: "/?platformLogin=required" }).end();
         if (!access?.available) return json(response, 403, { error: "PLATFORM_MODULE_ACCESS_DENIED", module: module.id });
         if (module.runtime === "local-static") {
-          if (!serveLocal(response, pathname)) json(response, 404, { error: "PLATFORM_ROUTE_NOT_FOUND" });
+          if (!serveLocal(request, response, pathname)) json(response, 404, { error: "PLATFORM_ROUTE_NOT_FOUND" });
           return;
         }
         const target = process.env[module.targetEnvironment];
@@ -372,7 +408,7 @@ function createGatewayHandler(options = {}) {
         if (!process.env[bypassEnvironment]) return json(response, 503, { error: "PLATFORM_MODULE_PROTECTION_BYPASS_NOT_CONFIGURED", module: module.id });
         return await resolveProxy(request, response, module, target);
       }
-      if (!serveLocal(response, pathname)) json(response, 404, { error: "PLATFORM_ROUTE_NOT_FOUND" });
+      if (!serveLocal(request, response, pathname)) json(response, 404, { error: "PLATFORM_ROUTE_NOT_FOUND" });
     } catch (error) {
       json(response, 500, { error: "PLATFORM_GATEWAY_FAILURE", category: "unexpected" });
     }
@@ -397,4 +433,6 @@ module.exports = {
   DEVICE_ID_COOKIE,
   DEVICE_SECRET_COOKIE,
   CONFERENCE_DEVICE_RPC_ALLOWLIST,
+  CONFERENCE_DEVICE_RPC_METADATA,
+  moduleAccessFor,
 };

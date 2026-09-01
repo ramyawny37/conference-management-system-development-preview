@@ -6869,7 +6869,6 @@ Application Navigation - Central Entry Points
 */
 function openStartupScreen(options){
   if(window.StartupAccessGate&&!window.StartupAccessGate.isAllowed())return false;
-  ensureOrganizationManagementAccess();
   options=options||{};
   showPlatformModules();
   closeOrganizationManagementScreen();

@@ -6,6 +6,7 @@ const vm=require('node:vm');
 const root=path.resolve(__dirname,'..');
 const migration=fs.readFileSync(path.join(root,'supabase/migrations/20260901051509_reconcile_platform_device_guard.sql'),'utf8');
 const clientSource=fs.readFileSync(path.join(root,'js/supabase/client.js'),'utf8');
+const platformFoundation=fs.readFileSync(path.join(root,'supabase/migrations/20260831023000_platform_foundation_reconciliation.sql'),'utf8');
 
 assert.match(migration,/public\.is_account_approved\(current_user_id\)/);
 assert.match(migration,/platform_private\.current_device_authorization_id\(current_user_id\)/);
@@ -13,6 +14,14 @@ assert.match(migration,/platform_private\.request_device_id\(\) is distinct from
 assert.match(migration,/authorization_status = 'approved'[\s\S]*revoked_at is null/);
 assert.match(migration,/revoke all on function public\.require_current_approved_device\(uuid\)[\s\S]*from public, anon, authenticated/);
 assert.doesNotMatch(migration,/insert into|update\s+platform\.|update\s+public\.user_device_authorizations|grant execute/i);
+assert.match(platformFoundation,/current_device_authorization_id[\s\S]*device_authorization\.status='approved'[\s\S]*device\.lifecycle_status='active'[\s\S]*device\.secret_hash=platform_private\.hash_device_secret/);
+function platformGuard(input){return input.authorizationStatus==='approved'&&input.lifecycle==='active'&&input.secretValid&&input.requestDeviceId===input.actorDeviceId;}
+const approved={authorizationStatus:'approved',lifecycle:'active',secretValid:true,requestDeviceId:'f930',actorDeviceId:'f930'};
+assert.equal(platformGuard(approved),true);
+assert.equal(platformGuard(Object.assign({},approved,{authorizationStatus:'pending'})),false);
+assert.equal(platformGuard(Object.assign({},approved,{authorizationStatus:'revoked'})),false);
+assert.equal(platformGuard(Object.assign({},approved,{secretValid:false})),false);
+assert.equal(platformGuard(Object.assign({},approved,{requestDeviceId:null})),false);
 
 (async function(){
   const calls=[];
@@ -25,6 +34,7 @@ assert.doesNotMatch(migration,/insert into|update\s+platform\.|update\s+public\.
   assert.equal(guarded.data.status,'success');
   assert.equal(calls[0].kind,'gateway');
   assert.equal(calls[0].url,'/api/platform/conference-rpc');
+  assert.equal(Object.prototype.hasOwnProperty.call(calls[0].body.args,'p_actor_device_id'),false);
   await client.rpc('get_first_system_bootstrap_status',{});
   assert.equal(calls[1].kind,'direct');
   console.log('Platform device Conference RPC reconciliation contracts: passed');

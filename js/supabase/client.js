@@ -49,10 +49,12 @@
     var directRpc=client.rpc.bind(client);
     client.rpc=function(name,args,options){
       if(!shouldUsePlatformDeviceRpc(args))return directRpc(name,args,options);
+      var gatewayArgs=Object.assign({},args);
+      delete gatewayArgs.p_actor_device_id;
       return global.fetch('/api/platform/conference-rpc',{
         method:'POST',credentials:'same-origin',
         headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({name:String(name||''),args:args})
+        body:JSON.stringify({name:String(name||''),args:gatewayArgs})
       }).then(function(response){return response.json().catch(function(){return {error:{code:'PLATFORM_GATEWAY_INVALID_RESPONSE'}};});})
         .then(function(result){return result&&result.error?{data:null,error:result.error}:{data:result&&result.data,error:null};})
         .catch(function(){return {data:null,error:{code:'PLATFORM_GATEWAY_UNAVAILABLE'}};});
