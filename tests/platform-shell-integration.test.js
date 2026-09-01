@@ -19,11 +19,13 @@ function navigationRuntime(pathname,modules,contextFailure){
   const cards={};
   const documentListeners={};
   for(const module of modules){
-    cards[module.id]={disabled:false,onclick:null,attributes:{},
+    const state={textContent:module.id==='conference'?'AVAILABLE':'UNAVAILABLE',dataset:{},classList:{add(){},remove(){}}};
+    cards[module.id]={disabled:false,onclick:null,attributes:{},state,
       setAttribute(name,value){this.attributes[name]=value;},
       classList:{toggle(){}},
       closest(selector){return selector==='[data-platform-module]'?this:null;},
       getAttribute(name){return name==='data-platform-module'?module.id:this.attributes[name];},
+      querySelector(selector){return selector==='.platform-module-state'?this.state:null;},
       click(){
         if(this.disabled)return;
         const event={target:this,defaultPrevented:false,
@@ -39,6 +41,7 @@ function navigationRuntime(pathname,modules,contextFailure){
       :{ok:true,json(){return Promise.resolve({modules});}});},document:{addEventListener(type,listener){
       (documentListeners[type]||(documentListeners[type]=[])).push(listener);
     },querySelector(selector){
+      if(selector==='[data-platform-module="conference"] .platform-module-state-available')return cards.conference&&cards.conference.state;
       const match=selector.match(/data-platform-module="([^"]+)"/);
       return match?cards[match[1]]||null:null;}},
     openConferenceWorkspace(){workspaceOpens+=1;}};
@@ -63,6 +66,9 @@ test('available cards use the hydrated registry route and unavailable cards rema
   assert.strictEqual(runtime.cards.reservations.onclick,null);
   assert.strictEqual(runtime.cards.conference.onclick,null);
   assert.strictEqual(runtime.cards.conference.attributes['aria-disabled'],'false');
+  assert.strictEqual(runtime.cards.warehouse.state.textContent,'AVAILABLE');
+  assert.strictEqual(runtime.cards.custody.state.textContent,'AVAILABLE');
+  assert.strictEqual(runtime.cards.reservations.state.textContent,'UNAVAILABLE');
 });
 
 test('direct available Conference route activates its workspace without redirecting',async()=>{

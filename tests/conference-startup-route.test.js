@@ -4,6 +4,8 @@ const test=require('node:test');
 const vm=require('node:vm');
 
 const source=fs.readFileSync('script.js','utf8');
+const html=fs.readFileSync('index.html','utf8');
+const worker=fs.readFileSync('service-worker.js','utf8');
 const navigation=source.slice(
   source.indexOf('function showHomePage'),
   source.indexOf('function renderTab')
@@ -50,4 +52,10 @@ test('root startup remains on the Platform launcher',()=>{
   state.sandbox.openStartupScreen({persistView:false});
   assert.strictEqual(state.location.pathname,'/');
   assert.strictEqual(state.classes.has('platform-conference-active'),false);
+});
+
+test('Conference route correction invalidates the Development runtime cache',()=>{
+  assert.match(html,/script\.js\?rev=conference-route-restoration-v2/);
+  assert.match(worker,/development-3-4-0-integration-reconciliation-v3/);
+  assert.match(worker,/script\.js\?rev=conference-route-restoration-v2/);
 });

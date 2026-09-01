@@ -47,6 +47,10 @@
 
   function applyModules(modules){
     if(!global.document)return;
+    var availableState=global.document.querySelector(
+      '[data-platform-module="conference"] .platform-module-state-available'
+    );
+    var availableText=availableState&&availableState.textContent;
     (Array.isArray(modules)?modules:[]).forEach(function(module){
       var card=global.document.querySelector(
         '[data-platform-module="'+String(module.id).replace(/[^a-z0-9-]/g,'')+'"]'
@@ -57,6 +61,18 @@
       card.setAttribute('aria-disabled',available?'false':'true');
       card.classList.toggle('platform-module-card-available',available);
       card.classList.toggle('platform-module-card-unavailable',!available);
+      var moduleState=card.querySelector&&card.querySelector('.platform-module-state');
+      if(moduleState&&module.id!=='conference'&&
+        !moduleState.dataset.platformUnavailableLabel){
+        moduleState.dataset.platformUnavailableLabel=moduleState.textContent;
+      }
+      if(available&&moduleState&&availableText){
+        moduleState.textContent=availableText;
+        moduleState.classList.add('platform-module-state-available');
+      }else if(moduleState&&moduleState.dataset.platformUnavailableLabel){
+        moduleState.textContent=moduleState.dataset.platformUnavailableLabel;
+        moduleState.classList.remove('platform-module-state-available');
+      }
     });
   }
 
