@@ -92,11 +92,11 @@ begin
   end if;
   v_authorization:=platform_private.current_device_authorization_id(v_user);
   if v_authorization is null then raise exception 'DEVICE_HANDOFF_CURRENT_DEVICE_REQUIRED' using errcode='42501'; end if;
-  select authorization.device_id into strict v_device from platform.user_device_authorizations authorization
-    join platform.devices device on device.id=authorization.device_id
-    join platform.profiles profile on profile.user_id=authorization.user_id
-    where authorization.id=v_authorization and authorization.user_id=v_user
-      and authorization.status='approved' and authorization.revoked_at is null
+  select device_authorization.device_id into strict v_device from platform.user_device_authorizations device_authorization
+    join platform.devices device on device.id=device_authorization.device_id
+    join platform.profiles profile on profile.user_id=device_authorization.user_id
+    where device_authorization.id=v_authorization and device_authorization.user_id=v_user
+      and device_authorization.status='approved' and device_authorization.revoked_at is null
       and device.lifecycle_status='active' and profile.account_status='approved';
   if v_device<>'f9306733-612d-433f-a38e-5d72855c2fe3'::uuid then
     raise exception 'DEVICE_HANDOFF_CANONICAL_DEVICE_MISMATCH' using errcode='42501';
@@ -164,11 +164,11 @@ begin
     or pg_catalog.octet_length(p_assertion_hash)<>32 then
     raise exception 'DEVICE_HANDOFF_FINALIZATION_DENIED' using errcode='42501';
   end if;
-  if not exists(select 1 from platform.user_device_authorizations authorization
-      join platform.devices device on device.id=authorization.device_id
-      join platform.profiles profile on profile.user_id=authorization.user_id
-      where authorization.id=p_authorization_id and authorization.user_id=p_user_id and authorization.device_id=p_device_id
-        and authorization.status='approved' and authorization.revoked_at is null and device.lifecycle_status='active'
+  if not exists(select 1 from platform.user_device_authorizations device_authorization
+      join platform.devices device on device.id=device_authorization.device_id
+      join platform.profiles profile on profile.user_id=device_authorization.user_id
+      where device_authorization.id=p_authorization_id and device_authorization.user_id=p_user_id and device_authorization.device_id=p_device_id
+        and device_authorization.status='approved' and device_authorization.revoked_at is null and device.lifecycle_status='active'
         and profile.account_status='approved') then
     raise exception 'DEVICE_HANDOFF_AUTHORIZATION_INVALID' using errcode='42501';
   end if;
@@ -201,11 +201,11 @@ returns jsonb language sql stable security definer set search_path=pg_catalog,pl
   select coalesce((select jsonb_build_object('status',binding.lifecycle_status,'bindingId',binding.id,
     'deviceId',binding.device_id,'authorizationId',binding.device_authorization_id,
     'publicKeyThumbprint',binding.public_key_thumbprint,'algorithm',binding.algorithm)
-    from platform.device_key_bindings binding join platform.user_device_authorizations authorization
-      on authorization.id=binding.device_authorization_id and authorization.user_id=binding.user_id and authorization.device_id=binding.device_id
+    from platform.device_key_bindings binding join platform.user_device_authorizations device_authorization
+      on device_authorization.id=binding.device_authorization_id and device_authorization.user_id=binding.user_id and device_authorization.device_id=binding.device_id
     join platform.devices device on device.id=binding.device_id join platform.profiles profile on profile.user_id=binding.user_id
-    where binding.user_id=auth.uid() and binding.lifecycle_status='active' and authorization.status='approved'
-      and authorization.revoked_at is null and device.lifecycle_status='active' and profile.account_status='approved'
+    where binding.user_id=auth.uid() and binding.lifecycle_status='active' and device_authorization.status='approved'
+      and device_authorization.revoked_at is null and device.lifecycle_status='active' and profile.account_status='approved'
     order by binding.activated_at desc limit 1),jsonb_build_object('status','missing'));
 $$;
 
