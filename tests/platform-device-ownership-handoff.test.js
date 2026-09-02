@@ -93,6 +93,18 @@ test("known f930 UUID without the current secret context and every altered autho
   assert.doesNotMatch(edge,/deviceSecretVerified|register_current_device|conference|warehouse|reservation|custody/i);
 });
 
+test("diagnostics expose only a sanitized Edge code and a bounded handoff stage",()=>{
+  const edge=fs.readFileSync("supabase/functions/platform-device-ownership-handoff/index.ts","utf8");
+  const client=fs.readFileSync("js/platform-device-ownership-handoff.js","utf8");
+  for(const stage of ["AUTH","ASSERTION_FORMAT","ASSERTION_SIGNATURE","ASSERTION_CLAIMS","USER_BINDING","PUBLIC_KEY","PAYLOAD_HASH","NEW_KEY_POSSESSION","DB_FINALIZATION"])
+    assert.match(edge,new RegExp(`['\"]${stage}['\"]`));
+  assert.match(edge,/console\.error\(JSON\.stringify\(\{ code, stage: handoffStage\(code\), timestamp,/);
+  assert.doesNotMatch(edge,/console\.error\([^\n]*(assertion|authorization|publicJwk|signingPayload|request\.headers)/);
+  assert.match(client,/context\.json\(\)/);
+  assert.match(client,/safeEdgeCode/);
+  assert.match(client,/if\(code\)throw \{code:code\}/);
+});
+
 test("replay, expiry, wrong user/device/authorization/key/purpose, and inactive authority are database-denied",()=>{
   const sql=fs.readFileSync("supabase/migrations/20260902020000_platform_device_ownership_handoff_1a.sql","utf8");
   for(const fragment of ["challenge.consumed_at is not null","challenge.expires_at<=statement_timestamp()","challenge.user_id<>p_user_id","challenge.device_id<>p_device_id","challenge.device_authorization_id<>p_authorization_id","challenge.public_key_thumbprint<>p_public_key_thumbprint","challenge.purpose<>'PLATFORM_DEVICE_OWNERSHIP_HANDOFF'","authorization.status='approved'","device.lifecycle_status='active'","profile.account_status='approved'"])

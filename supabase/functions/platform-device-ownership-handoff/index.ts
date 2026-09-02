@@ -23,6 +23,28 @@ function bytesHex(value: Uint8Array): string {
   return Array.from(value).map((item) => item.toString(16).padStart(2, '0')).join('');
 }
 function bytea(value: Uint8Array): string { return `\\x${bytesHex(value)}`; }
+function sanitizedCode(error: unknown): string {
+  const value = String(error instanceof Error ? error.message : 'HANDOFF_DENIED')
+    .replace(/\beyJ\S+/g, '[REDACTED]').slice(0, 160);
+  return /^[A-Z][A-Z0-9_]{0,95}$/.test(value) ? value : 'HANDOFF_DENIED';
+}
+function handoffStage(code: string): string {
+  if (code === 'METHOD_NOT_ALLOWED' || code === 'ACTION_NOT_SUPPORTED') return 'REQUEST';
+  if (code === 'AUTH_REQUIRED' || code === 'HANDOFF_ORIGIN_DENIED') return 'AUTH';
+  if (code === 'HANDOFF_ASSERTION_INVALID' || code === 'HANDOFF_ASSERTION_ALGORITHM_DENIED'
+    || code.startsWith('INVALID_ASSERTION_')) return 'ASSERTION_FORMAT';
+  if (code === 'HANDOFF_ASSERTION_SIGNATURE_INVALID' || code === 'MISSING_PLATFORM_HANDOFF_ASSERTION_SECRET') return 'ASSERTION_SIGNATURE';
+  if (code === 'HANDOFF_ASSERTION_CLAIMS_INVALID' || code === 'MISSING_PLATFORM_HANDOFF_ASSERTION_ISSUER'
+    || code === 'MISSING_PLATFORM_HANDOFF_ASSERTION_AUDIENCE') return 'ASSERTION_CLAIMS';
+  if (code === 'HANDOFF_ASSERTION_USER_MISMATCH') return 'USER_BINDING';
+  if (code === 'PUBLIC_KEY_INVALID' || code === 'HANDOFF_PUBLIC_KEY_THUMBPRINT_MISMATCH') return 'PUBLIC_KEY';
+  if (code === 'HANDOFF_CHALLENGE_PAYLOAD_MISMATCH') return 'PAYLOAD_HASH';
+  if (code === 'NEW_KEY_POSSESSION_INVALID') return 'NEW_KEY_POSSESSION';
+  return 'DB_FINALIZATION';
+}
+function logDenial(code: string, timestamp: string, requestId: string): void {
+  console.error(JSON.stringify({ code, stage: handoffStage(code), timestamp, ...(requestId ? { requestId } : {}) }));
+}
 function json(status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), { status, headers: { ...cors, 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } });
 }
@@ -56,8 +78,14 @@ async function assertion(compact: string, secret: string): Promise<Record<string
 }
 
 Deno.serve(async (request) => {
+  const requestTimestamp = new Date().toISOString();
+  const candidateRequestId = String(request.headers.get('x-request-id') || request.headers.get('sb-request-id') || request.headers.get('cf-ray') || '');
+  const requestId = /^[A-Za-z0-9._:-]{1,100}$/.test(candidateRequestId) ? candidateRequestId : '';
   if (request.method === 'OPTIONS') return new Response('ok', { headers: cors });
-  if (request.method !== 'POST') return json(405, { ok: false, error: { code: 'METHOD_NOT_ALLOWED' } });
+  if (request.method !== 'POST') {
+    logDenial('METHOD_NOT_ALLOWED', requestTimestamp, requestId);
+    return json(405, { ok: false, error: { code: 'METHOD_NOT_ALLOWED' } });
+  }
   try {
     if (String(request.headers.get('origin') || '') !== cors['Access-Control-Allow-Origin']) throw new Error('HANDOFF_ORIGIN_DENIED');
     const authorization = request.headers.get('authorization') || '';
@@ -96,7 +124,8 @@ Deno.serve(async (request) => {
     if (result.error) throw new Error(String(result.error.message || 'HANDOFF_FINALIZATION_DENIED'));
     return json(200, { ok: true, status: 'active', data: result.data });
   } catch (error) {
-    const code = String(error instanceof Error ? error.message : 'HANDOFF_DENIED').replace(/\beyJ\S+/g, '[REDACTED]').slice(0, 160);
+    const code = sanitizedCode(error);
+    logDenial(code, requestTimestamp, requestId);
     return json(code === 'AUTH_REQUIRED' ? 401 : 403, { ok: false, status: 'denied', error: { code } });
   }
 });
