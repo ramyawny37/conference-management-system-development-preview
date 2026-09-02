@@ -29,7 +29,10 @@ test("migration is a closed server-only binding contract", () => {
 });
 
 test("browser key contract is P-256, non-exportable, IndexedDB-held, and never serializes private material", () => {
+  const page=fs.readFileSync("platform-device-ownership-handoff.html","utf8");
   const source=fs.readFileSync("js/platform-device-ownership-handoff.js","utf8");
+  assert.match(page,/\.\/js\/storage\/environment-namespace\.js/);
+  assert.doesNotMatch(page,/browser-storage-namespace\.js/);
   assert.match(source,/generateKey\(\{name:'ECDSA',namedCurve:'P-256'\},false/);
   assert.match(source,/indexedDB\.open/);assert.match(source,/privateKey\.extractable!==false/);
   assert.match(source,/exportKey\('jwk',key\)/);assert.doesNotMatch(source,/localStorage|sessionStorage|exportKey\([^,]+,\s*keys\.privateKey/);
