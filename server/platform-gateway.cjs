@@ -13,6 +13,9 @@ const DEVELOPMENT_REF = "gppwltrifgfxrkzvvxoe";
 const DEVELOPMENT_URL = `https://${DEVELOPMENT_REF}.supabase.co`;
 const DEVICE_ID_COOKIE = "platform-device-id";
 const DEVICE_SECRET_COOKIE = "platform-device-secret";
+const DEVICE_HANDOFF_PURPOSE = "PLATFORM_DEVICE_OWNERSHIP_HANDOFF";
+const DEVICE_HANDOFF_DEVICE_ID = "f9306733-612d-433f-a38e-5d72855c2fe3";
+const DEVICE_HANDOFF_RETURN = "https://ramyawny37.github.io/conference-management-system-development-preview/platform-device-ownership-handoff.html";
 const CONFERENCE_DEVICE_RPC_ALLOWLIST = new Set([
   "apply_library_template_content_operation", "apply_organization_template_access_operation", "apply_organization_template_operation",
   "device_guarded_acquire_conference_lock", "device_guarded_add_conference_manager", "device_guarded_add_organization_member",
@@ -119,6 +122,27 @@ function isUuid(value) {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(value || ""));
 }
 
+function base64url(value) {
+  return Buffer.from(value).toString("base64url");
+}
+
+function issueHandoffAssertion(claims) {
+  const secret = String(process.env.PLATFORM_HANDOFF_ASSERTION_SECRET || "");
+  const issuer = String(process.env.PLATFORM_HANDOFF_ASSERTION_ISSUER || "");
+  const audience = String(process.env.PLATFORM_HANDOFF_ASSERTION_AUDIENCE || "");
+  if (secret.length < 32 || !issuer || !audience) throw new Error("PLATFORM_HANDOFF_SIGNING_AUTHORITY_UNAVAILABLE");
+  const now = Math.floor(Date.now() / 1000);
+  const payload = {
+    iss: issuer, aud: audience, purpose: DEVICE_HANDOFF_PURPOSE,
+    user_id: claims.userId, device_id: claims.deviceId, authorization_id: claims.authorizationId,
+    public_key_thumbprint: claims.publicKeyThumbprint, challenge_id: claims.challengeId,
+    signing_payload_hash: crypto.createHash("sha256").update(String(claims.signingPayload || "")).digest("hex"),
+    jti: crypto.randomUUID(), iat: now, exp: now + 90,
+  };
+  const encoded = `${base64url(JSON.stringify({ alg: "HS256", typ: "JWT" }))}.${base64url(JSON.stringify(payload))}`;
+  return `${encoded}.${crypto.createHmac("sha256", secret).update(encoded).digest("base64url")}`;
+}
+
 async function platformAdministrationClient(request, response, options = {}) {
   const resolveGetDevice = options.getDevice || getDevice;
   const resolveSupabaseFor = options.supabaseFor || supabaseFor;
@@ -202,6 +226,30 @@ function createApiHandler(options = {}) {
   return async function handleApi(request, response, pathname) {
   if (request.method === "GET" && pathname === "/api/platform/context")
     return json(response, 200, await resolveSessionContext(request, response));
+  if (request.method === "GET" && pathname === "/api/platform/device-ownership-handoff/authorize") {
+    const administration = await resolveAdministrationClient(request, response);
+    if (administration.error) return json(response, administration.status, { error: { code: administration.error } });
+    if (administration.device.id !== DEVICE_HANDOFF_DEVICE_ID)
+      return json(response, 403, { error: { code: "DEVICE_HANDOFF_CANONICAL_DEVICE_MISMATCH" } });
+    const input = new URL(request.url, `https://${request.headers.host || "localhost"}`);
+    const thumbprint = String(input.searchParams.get("thumbprint") || "");
+    if (!/^[0-9a-f]{64}$/.test(thumbprint)) return json(response, 400, { error: { code: "DEVICE_HANDOFF_THUMBPRINT_INVALID" } });
+    const result = await administration.supabase.schema("platform").rpc("begin_current_device_ownership_handoff", {
+      p_public_key_thumbprint: thumbprint,
+    });
+    if (result.error || !result.data) return json(response, 403, { error: { code: "DEVICE_HANDOFF_BEGIN_DENIED" } });
+    try {
+      const claims = result.data;
+      if (claims.deviceId !== administration.device.id || claims.publicKeyThumbprint !== thumbprint)
+        throw new Error("DEVICE_HANDOFF_ASSERTION_DENIED");
+      const transition = base64url(JSON.stringify({ assertion: issueHandoffAssertion(claims), challenge: claims }));
+      response.writeHead(302, { location: `${DEVICE_HANDOFF_RETURN}#handoff=${transition}`,
+        "cache-control": "no-store", "referrer-policy": "no-referrer" });
+      return response.end();
+    } catch (error) {
+      return json(response, 403, { error: { code: String(error && error.message || "DEVICE_HANDOFF_ASSERTION_DENIED").slice(0, 160) } });
+    }
+  }
   if (request.method === "POST" && pathname === "/api/platform/conference-rpc") {
     const administration = await resolveAdministrationClient(request, response);
     if (administration.error) return json(response, administration.status, { error: { code: administration.error } });
@@ -314,6 +362,7 @@ function contentType(filePath) {
 function serveLocal(request, response, pathname) {
   const requested = pathname === "/" || pathname === "/conference" || pathname === "/conference/" ? "index.html"
     : pathname === "/platform/device-admin" || pathname === "/platform/device-admin/" ? "platform-device-admin.html"
+      : pathname === "/platform/device-ownership-handoff" || pathname === "/platform/device-ownership-handoff/" ? "platform-device-ownership-handoff.html"
       : pathname.replace(/^\/conference\//, "").replace(/^\//, "");
   const filePath = path.resolve(ROOT, requested);
   if (!filePath.startsWith(`${ROOT}${path.sep}`) || !fs.existsSync(filePath) || !fs.statSync(filePath).isFile()) return false;
@@ -435,4 +484,5 @@ module.exports = {
   CONFERENCE_DEVICE_RPC_ALLOWLIST,
   CONFERENCE_DEVICE_RPC_METADATA,
   moduleAccessFor,
+  issueHandoffAssertion,
 };
