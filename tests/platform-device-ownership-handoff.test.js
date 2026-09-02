@@ -74,7 +74,7 @@ test("gateway uses only the authoritative current f930 device and returns one ch
   const api=createApiHandler({platformAdministrationClient:async()=>({device:{id:DEVICE,secret:"not-exposed"},supabase,user:{id:USER}})});
   const server=await listen(createGatewayHandler({handleApi:api}));try{
     const result=await fetch(`${origin(server)}/api/platform/device-ownership-handoff/authorize?thumbprint=${THUMBPRINT}`,{redirect:"manual"});assert.equal(result.status,302);
-    assert.match(result.headers.get("location"),/^https:\/\/ramyawny37\.github\.io\/.*#handoff=/);
+    assert.match(result.headers.get("location"),/^https:\/\/ramyawny37\.github\.io\/conference-management-system-v1\/platform-device-ownership-handoff\.html#handoff=/);
     assert.deepEqual(calls.map(x=>x.name),["begin_current_device_ownership_handoff"]);
   }finally{process.env=old;await close(server);}
 });

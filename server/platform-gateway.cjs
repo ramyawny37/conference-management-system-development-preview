@@ -15,7 +15,7 @@ const DEVICE_ID_COOKIE = "platform-device-id";
 const DEVICE_SECRET_COOKIE = "platform-device-secret";
 const DEVICE_HANDOFF_PURPOSE = "PLATFORM_DEVICE_OWNERSHIP_HANDOFF";
 const DEVICE_HANDOFF_DEVICE_ID = "f9306733-612d-433f-a38e-5d72855c2fe3";
-const DEVICE_HANDOFF_RETURN = "https://ramyawny37.github.io/conference-management-system-development-preview/platform-device-ownership-handoff.html";
+const DEVICE_HANDOFF_RETURN = "https://ramyawny37.github.io/conference-management-system-v1/platform-device-ownership-handoff.html";
 const CONFERENCE_DEVICE_RPC_ALLOWLIST = new Set([
   "apply_library_template_content_operation", "apply_organization_template_access_operation", "apply_organization_template_operation",
   "device_guarded_acquire_conference_lock", "device_guarded_add_conference_manager", "device_guarded_add_organization_member",
