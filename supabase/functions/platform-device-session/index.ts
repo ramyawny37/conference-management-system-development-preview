@@ -8,6 +8,14 @@ const cors = {
   'Access-Control-Allow-Origin': ORIGIN,
   'Vary': 'Origin',
 };
+const applicationCodes = new Set([
+  'ACTION_NOT_SUPPORTED', 'AUTH_REQUIRED', 'BINDING_ID_INVALID', 'CHALLENGE_ID_INVALID',
+  'DEVICE_SESSION_ARGUMENT_INVALID', 'DEVICE_SESSION_AUTHORITY_INVALID', 'DEVICE_SESSION_BACKEND_REQUIRED',
+  'DEVICE_SESSION_BINDING_INVALID', 'DEVICE_SESSION_CHALLENGE_ALREADY_OPEN', 'DEVICE_SESSION_CHALLENGE_INVALID',
+  'DEVICE_SESSION_CONTEXT_INVALID', 'DEVICE_SESSION_FINALIZATION_DENIED', 'DEVICE_SESSION_INVALID',
+  'DEVICE_SESSION_SIGNATURE_INVALID', 'DEVICE_SESSION_TOKEN_INVALID', 'PUBLIC_KEY_INVALID',
+  'SESSION_ID_INVALID', 'SIGNATURE_FORMAT_INVALID',
+]);
 
 function required(name: string): string {
   const value = String(Deno.env.get(name) || '').trim();
@@ -39,10 +47,17 @@ function bytea(value: Uint8Array): string {
 async function sha256(value: Uint8Array): Promise<Uint8Array> {
   return new Uint8Array(await crypto.subtle.digest('SHA-256', value));
 }
-function safeCode(error: unknown): string {
-  const source = error && typeof error === 'object' && 'message' in error ? String((error as { message?: unknown }).message || '') : String(error || '');
-  const match = source.match(/\b([A-Z][A-Z0-9_]{2,95})\b/);
-  return match ? match[1] : 'DEVICE_SESSION_DENIED';
+function safeDiagnostic(error: unknown): { code: string; sqlstate?: string; applicationCode?: string } {
+  const value = error && typeof error === 'object' ? error as { code?: unknown; message?: unknown } : {};
+  const message = String(value.message || (error instanceof Error ? error.message : '')).trim();
+  const applicationCode = applicationCodes.has(message) ? message : undefined;
+  const rawSqlstate = String(value.code || '').trim();
+  const sqlstate = /^[0-9A-Z]{5}$/.test(rawSqlstate) ? rawSqlstate : undefined;
+  return { code: applicationCode || 'PLATFORM_DEVICE_SESSION_DENIED', ...(sqlstate ? { sqlstate } : {}), ...(applicationCode ? { applicationCode } : {}) };
+}
+function safeRequestId(request: Request): string | undefined {
+  const value = String(request.headers.get('sb-request-id') || request.headers.get('x-request-id') || '').trim();
+  return /^[A-Za-z0-9._:-]{1,96}$/.test(value) ? value : undefined;
 }
 async function authenticatedUser(request: Request) {
   const authorization = request.headers.get('Authorization') || '';
@@ -64,21 +79,25 @@ Deno.serve(async (request) => {
   if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors });
   if (request.method !== 'POST') return json(405, { ok: false, error: { code: 'METHOD_NOT_ALLOWED' } });
   if (request.headers.get('Origin') !== ORIGIN) return json(403, { ok: false, error: { code: 'DEVICE_SESSION_ORIGIN_DENIED' } });
+  let stage = 'AUTH';
   try {
     const { client, user } = await authenticatedUser(request);
     const body = await request.json();
     const action = String(body && body.action || '');
     if (action === 'begin') {
+      stage = 'CHALLENGE_CREATION';
       const bindingId = uuid(body.bindingId, 'BINDING_ID_INVALID');
       const result = await client.schema('platform').rpc('begin_device_session_challenge', { p_binding_id: bindingId });
       if (result.error) throw result.error;
       return json(200, { ok: true, data: result.data });
     }
     if (action === 'establish') {
+      stage = 'SIGNATURE_FORMAT';
       const challengeId = uuid(body.challengeId, 'CHALLENGE_ID_INVALID');
       const signature = b64urlBytes(body.signature, 'SIGNATURE_FORMAT_INVALID');
       if (signature.length !== 64) throw new Error('SIGNATURE_FORMAT_INVALID');
       const service = serviceClient();
+      stage = 'CHALLENGE_CONTEXT';
       const contextResult = await service.schema('platform').rpc('get_device_session_challenge_context', {
         p_challenge_id: challengeId, p_user_id: user.id,
       });
@@ -88,13 +107,16 @@ Deno.serve(async (request) => {
         throw new Error('DEVICE_SESSION_CONTEXT_INVALID');
       }
       const jwk = context.publicKeyJwk as JsonWebKey;
+      stage = 'BINDING_JWK_LOOKUP';
       if (!jwk || jwk.kty !== 'EC' || jwk.crv !== 'P-256' || !jwk.x || !jwk.y || jwk.d) throw new Error('PUBLIC_KEY_INVALID');
       const key = await crypto.subtle.importKey('jwk', jwk, { name: 'ECDSA', namedCurve: 'P-256' }, false, ['verify']);
+      stage = 'SIGNATURE_VERIFICATION';
       const valid = await crypto.subtle.verify({ name: 'ECDSA', hash: 'SHA-256' }, key, signature, encoder.encode(String(context.signingPayload || '')));
       if (!valid) throw new Error('DEVICE_SESSION_SIGNATURE_INVALID');
       const tokenBytes = crypto.getRandomValues(new Uint8Array(32));
       const token = b64url(tokenBytes);
       const sessionId = crypto.randomUUID();
+      stage = 'SESSION_FINALIZATION';
       const complete = await service.schema('platform').rpc('complete_device_session', {
         p_challenge_id: challengeId,
         p_user_id: user.id,
@@ -109,6 +131,7 @@ Deno.serve(async (request) => {
       return json(200, { ok: true, data: { ...complete.data, token } });
     }
     if (action === 'verify') {
+      stage = 'SESSION_VERIFICATION';
       const sessionId = uuid(body.sessionId, 'SESSION_ID_INVALID');
       const tokenBytes = b64urlBytes(body.token, 'DEVICE_SESSION_TOKEN_INVALID');
       if (tokenBytes.length !== 32) throw new Error('DEVICE_SESSION_TOKEN_INVALID');
@@ -120,8 +143,11 @@ Deno.serve(async (request) => {
     }
     throw new Error('ACTION_NOT_SUPPORTED');
   } catch (error) {
-    const code = safeCode(error);
-    console.error(JSON.stringify({ code, stage: 'DEVICE_SESSION', timestamp: new Date().toISOString() }));
+    const diagnostic = safeDiagnostic(error);
+    const code = diagnostic.code;
+    console.error(JSON.stringify({ stage, ...(diagnostic.sqlstate ? { sqlstate: diagnostic.sqlstate } : {}),
+      ...(diagnostic.applicationCode ? { applicationCode: diagnostic.applicationCode } : {}),
+      timestamp: new Date().toISOString(), ...(safeRequestId(request) ? { requestId: safeRequestId(request) } : {}) }));
     return json(code === 'AUTH_REQUIRED' ? 401 : 403, { ok: false, error: { code } });
   }
 });

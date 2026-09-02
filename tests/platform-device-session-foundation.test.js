@@ -8,6 +8,29 @@ const migration=fs.readFileSync("supabase/migrations/20260902122033_platform_dev
 const edge=fs.readFileSync("supabase/functions/platform-device-session/index.ts","utf8");
 const browser=fs.readFileSync("js/supabase/device-session.js","utf8");
 const page=fs.readFileSync("platform-device-session.html","utf8");
+const correction=fs.readFileSync("supabase/migrations/20260902130805_platform_device_session_context_rowtype_correction.sql","utf8");
+const runtime=fs.readFileSync("supabase/platform-device-session-1b-runtime-verification.sql","utf8");
+
+test("rowtype correction changes only the proven assignment in the replacement function",()=>{
+  assert.match(correction,/select challenge\.\* into v_challenge/);
+  assert.doesNotMatch(correction,/select challenge into v_challenge/);
+  assert.match(correction,/security definer/);
+  assert.match(correction,/search_path=pg_catalog,platform,platform_private/);
+});
+
+test("Edge accepts only exact allowlisted application errors and logs safe metadata",()=>{
+  assert.match(edge,/applicationCodes\.has\(message\)/);
+  assert.doesNotMatch(edge,/source\.match\(\/\\b\(\[A-Z\]/);
+  assert.match(edge,/PLATFORM_DEVICE_SESSION_DENIED/);
+  for(const value of ["stage","sqlstate","applicationCode","timestamp","requestId"])assert.ok(edge.includes(value),value);
+  assert.doesNotMatch(edge,/console\.error\([^\n]*(token|signature|publicKeyJwk|signingPayload|Authorization)/);
+});
+
+test("rollback fixture executes every database runtime stage without touching f930",()=>{
+  for(const value of ["begin;","rollback;","begin_device_session_challenge","get_device_session_challenge_context","publicKeyJwk","signingPayload","complete_device_session","device_sessions","device_session_audit","verify_device_session","RUNTIME_REPLAY_ACCEPTED"])
+    assert.ok(runtime.includes(value),value);
+  assert.doesNotMatch(runtime,/f9306733-612d-433f-a38e-5d72855c2fe3|2e9b9993-a427-4462-b407-90216655b077|3c05e1b0-0327-45cd-8eca-2b99606eba4c/);
+});
 
 test("Phase 1B database contract binds every authority dimension and keeps private state closed",()=>{
   for(const value of ["PLATFORM_DEVICE_SESSION_ESTABLISH","PLATFORM_DEVICE_SESSION","device_session_challenges","device_sessions","device_session_audit","user_id","device_id","device_authorization_id","binding_id","public_key_thumbprint","signing_payload_hash","consumed_at","expires_at","profile.account_status='approved'","device_authorization.status='approved'","binding.lifecycle_status='active'","device.lifecycle_status='active'","force row level security","DEVICE_SESSION_CHALLENGE_INVALID","DEVICE_SESSION_INVALID"])
