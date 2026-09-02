@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <title>Development Supabase device session</title>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <main class="container">
+    <h1>Development Supabase device session</h1>
+    <p>This test proves possession of the existing browser-held key directly to Supabase.</p>
+    <p id="device-session-status" role="status">Checking Supabase authentication…</p>
+    <button id="device-session-start" type="button" disabled>Establish Supabase device session</button>
+  </main>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="./js/storage/environment-namespace.js"></script>
+  <script src="./js/supabase/public-config.js"></script>
+  <script src="./js/supabase/runtime-config.js"></script>
+  <script src="./js/supabase/client.js"></script>
+  <script src="./js/supabase/auth.js"></script>
+  <script src="./js/supabase/device-session.js"></script>
+  <script src="./js/platform-device-session-foundation.js"></script>
+</body>
+</html>
