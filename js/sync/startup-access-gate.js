@@ -10,6 +10,7 @@
   function markSignUpStartupFailure(error){var auth=global.SupabaseAuth;if(auth&&typeof auth.markSignUpStartupAccessFailed==='function')auth.markSignUpStartupAccessFailed(error||{code:'STARTUP_ACCESS_FAILED'});}
   function showStartupDenied(text,code){markSignUpStartupFailure({code:code||'STARTUP_ACCESS_FAILED'});return show('denied',text);}
   function refreshAccountLabel(){if(typeof global.updateLogoText==='function')global.updateLogoText();}
+  function establishDeviceSession(){var service=global.PlatformDeviceSession;return service&&typeof service.ensureValid==='function'?service.ensureValid():Promise.resolve({valid:true,compatibility:true});}
   function accountIdentity(){var auth=global.SupabaseAuth;return auth&&typeof auth.getAccountIdentity==='function'?auth.getAccountIdentity():{authenticated:false,userId:'',displayName:'',email:'',label:''};}
   function setCanonicalState(value){canonicalState=value;var integration=global.PlatformIntegration;if(integration&&typeof integration.recordCanonicalState==='function')integration.recordCanonicalState(value);recordStage('canonical_state',value);return value;}
   function publicState(){return {allowed:allowed,authorizationPassed:authorizationPassed,applicationVisible:applicationVisible,pipelineState:pipelineState,gateState:currentGateKind,canonicalState:canonicalState,generation:generation,authView:authView,trace:runtimeTrace.slice()};}
@@ -77,14 +78,14 @@
       return Promise.resolve(deviceUi.initialize()).then(function(){
         if(token!==generation)return {status:'stale'};
         var device=deviceUi.getState();
-        if(device.status==='approved'){setCanonicalState('DEVICE_APPROVED');return allow();}
+        if(device.status==='approved'){setCanonicalState('DEVICE_APPROVED');return establishDeviceSession().then(allow);}
         if(device.status==='revoked'){setCanonicalState('DEVICE_REVOKED');show('device','يجب اعتماد هذا الجهاز للمتابعة.');return {status:'device'};}
         if(device.status==='pending'){setCanonicalState('DEVICE_PENDING');show('device','يجب اعتماد هذا الجهاز للمتابعة.');return {status:'device'};}
         if(device.status==='registered'||device.status==='not_registered')setCanonicalState('DEVICE_REGISTERED');
         return Promise.resolve(typeof deviceUi.ensurePendingAuthorization==='function'?deviceUi.ensurePendingAuthorization():null).then(function(){
           if(token!==generation)return {status:'stale'};
           device=deviceUi.getState();
-          if(device.status==='approved'){setCanonicalState('DEVICE_APPROVED');return allow();}
+          if(device.status==='approved'){setCanonicalState('DEVICE_APPROVED');return establishDeviceSession().then(allow);}
           if(device.status==='pending'){setCanonicalState('DEVICE_PENDING');show('device','يجب اعتماد هذا الجهاز للمتابعة.');return {status:'device'};}
           if(device.status==='revoked'){setCanonicalState('DEVICE_REVOKED');show('device','يجب اعتماد هذا الجهاز للمتابعة.');return {status:'device'};}
           setCanonicalState('ERROR');show('device','يجب اعتماد هذا الجهاز للمتابعة.');return {status:'device'};

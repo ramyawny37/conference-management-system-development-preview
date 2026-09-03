@@ -931,6 +931,7 @@
   }
 
   function signOut(){
+    if(global.PlatformDeviceSession&&typeof global.PlatformDeviceSession.clear==='function')global.PlatformDeviceSession.clear();
     if(busy||!global.SupabaseAuth)return;
     if(global.RealtimeLocksUI&&
       typeof global.RealtimeLocksUI.hasOwnedLock==='function'&&

@@ -38,26 +38,24 @@
     return null;
   }
 
-  function shouldUsePlatformDeviceRpc(args){
-    return /^integrated-platform-development(?:-|\.)/.test(String(global.location&&global.location.hostname||''))&&
-      args&&typeof args==='object'&&!Array.isArray(args)&&
-      typeof args.p_actor_device_id==='string';
+  function shouldUseDeviceSessionRpc(name){
+    var contract=global.ConferenceDeviceOperationContract;
+    return !!(contract&&typeof contract.isProtectedOperation==='function'&&
+      contract.isProtectedOperation(String(name||'')));
   }
 
   function attachPlatformDeviceRpc(client){
     if(!client||typeof client.rpc!=='function')return client;
     var directRpc=client.rpc.bind(client);
     client.rpc=function(name,args,options){
-      if(!shouldUsePlatformDeviceRpc(args))return directRpc(name,args,options);
-      var gatewayArgs=Object.assign({},args);
-      delete gatewayArgs.p_actor_device_id;
-      return global.fetch('/api/platform/conference-rpc',{
-        method:'POST',credentials:'same-origin',
-        headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({name:String(name||''),args:gatewayArgs})
-      }).then(function(response){return response.json().catch(function(){return {error:{code:'PLATFORM_GATEWAY_INVALID_RESPONSE'}};});})
-        .then(function(result){return result&&result.error?{data:null,error:result.error}:{data:result&&result.data,error:null};})
-        .catch(function(){return {data:null,error:{code:'PLATFORM_GATEWAY_UNAVAILABLE'}};});
+      if(!shouldUseDeviceSessionRpc(name))return directRpc(name,args,options);
+      if(!global.PlatformDeviceSession||typeof global.PlatformDeviceSession.invokeProtected!=='function')return Promise.resolve({data:null,error:{code:'DEVICE_SESSION_RUNTIME_REQUIRED'}});
+      var protectedArgs=Object.assign({},args||{});
+      delete protectedArgs.p_actor_device_id;
+      if(String(name||'')!=='approve_pending_device_authorization')delete protectedArgs.p_device_id;
+      return global.PlatformDeviceSession.invokeProtected(String(name||''),protectedArgs)
+        .then(function(data){return {data:data,error:null};})
+        .catch(function(error){return {data:null,error:{code:String(error&&error.code||error&&error.message||'CONFERENCE_DEVICE_OPERATION_DENIED')}};});
     };
     return client;
   }

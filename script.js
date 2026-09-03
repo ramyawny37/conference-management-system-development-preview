@@ -1240,6 +1240,13 @@ function refreshOrganizationMembersSection(){
   }
 }
 
+function refreshDeviceAuthorizationAdministration(){
+  if(window.DeviceAuthorizationAdministrationUI&&
+    typeof window.DeviceAuthorizationAdministrationUI.initialize==='function'){
+    window.DeviceAuthorizationAdministrationUI.initialize();
+  }
+}
+
 function renderHouseTemplateDetails(house) {
   if (!house) {
     return '<div style="color:#95a5a6;text-align:center;padding:18px">اختر بيتًا لعرض غرفه هنا</div>';
@@ -8115,6 +8122,7 @@ function renderSettings(){
   if(canOpenUserManagement)h+='<button class="btn '+(activeSettingsTab==='users'?'btn-purple':'btn-gray')+' btn-sm" onclick="switchSettingsTab(\'users\')">👥 إدارة المستخدمين</button>';
   if(organizationManagementAccessState.status==='loaded'&&organizationManagementAccessState.canOpen)h+='<button class="btn btn-gray btn-sm" data-organization-management-entry onclick="OrganizationManagementUI.open({returnView:\'settings\'})">🏢 إدارة المؤسسات</button>';
   h+='</div>';
+  if(activeSettingsTab==='general')h+='<div id="device_authorization_administration_root" style="display:none"></div>';
   if (activeSettingsTab === 'houses') {
     h += '<section class="settings-section settings-library-section">' + renderHouseTemplatesSettings() + '</section></div>';
     ge('tab6').innerHTML = h;
@@ -8174,6 +8182,7 @@ function renderSettings(){
     mountSyncSettingsSection();
     refreshConferenceMembersSection();
     refreshOrganizationMembersSection();
+    refreshDeviceAuthorizationAdministration();
     return;
   }
   conferenceBrandingDraft=getConferenceBrandingSettings(current);
@@ -8305,6 +8314,7 @@ function renderSettings(){
   mountSyncSettingsSection();
   refreshConferenceMembersSection();
   refreshOrganizationMembersSection();
+  refreshDeviceAuthorizationAdministration();
   var conferenceSelect = ge('conf_select');
   if(conferenceSelect){
     conferenceSelect.value = appData.currentConferenceId || '';

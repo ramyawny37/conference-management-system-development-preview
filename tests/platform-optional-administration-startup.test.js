@@ -14,5 +14,6 @@ assert.doesNotMatch(startup,/ensureOrganizationManagementAccess\(\)/);
 assert.match(script,/function renderSettings\(\)[\s\S]{0,300}ensureUserManagementAccess\(\);[\s\S]*ensureOrganizationManagementAccess\(\);/);
 assert.match(deviceUi,/global\.DeviceAuthorizationAdministrationUI=Object\.freeze\(\{initialize:initialize/);
 assert.match(deviceService,/function administrationState\(options\)[\s\S]*get-administration-state/);
-assert.match(deviceUi,/function refreshPlatformPendingRequests\(\)[\s\S]*listSystemOwnerPendingDevices/);
+assert.match(deviceUi,/function refreshPlatformPendingRequests\(\)[\s\S]*listPlatformPendingDevices/);
+assert.match(script,/device_authorization_administration_root[\s\S]*refreshDeviceAuthorizationAdministration/);
 console.log('Platform optional administration startup contracts: passed');

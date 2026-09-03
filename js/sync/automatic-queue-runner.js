@@ -227,7 +227,7 @@
     if(processResult&&processResult.status==='conflict')return 'conflict';
     var code=String(processResult&&processResult.error&&
       processResult.error.code||'').toUpperCase();
-    if(/AUTH|401|403/.test(code))return 'auth';
+    if(/AUTH|DEVICE_SESSION|401|403/.test(code))return 'auth';
     if(/NETWORK|TIMEOUT|TEMPORARY|SERVICE_UNAVAILABLE|SERVER_ERROR|5\d\d/
       .test(code)){
       return 'temporary';
@@ -236,7 +236,7 @@
   }
   function classifyErrorCode(code){
     code=String(code||'').toUpperCase();
-    if(/AUTH|401|403/.test(code))return 'auth';
+    if(/AUTH|DEVICE_SESSION|401|403/.test(code))return 'auth';
     if(/NETWORK|TIMEOUT|TEMPORARY|SERVICE_UNAVAILABLE|SERVER_ERROR|5\d\d/
       .test(code)){
       return 'temporary';

@@ -940,6 +940,7 @@
       return outcome(true,'closed',{results:results});
     });
   }
+  if(global.document&&typeof global.document.addEventListener==='function')global.document.addEventListener('platform-device-session-invalid',function(){stopAll({reason:'device_session_invalid'});});
   function resetForTests(options){
     return stopAll(options).then(function(){
       entries=Object.create(null);

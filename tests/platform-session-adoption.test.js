@@ -292,9 +292,9 @@ test("authorization readiness deduplicates adoption and blocks fallback resoluti
   adoptionResolve();
   await Promise.all([first, second]);
   assert.equal(adoptionRequests, 1);
-  assert.equal(rpcCalls.length, 2);
+  assert.equal(rpcCalls.length, 1);
   assert.equal(rpcCalls[0].args.p_device_id, platformDeviceId);
-  assert.equal(rpcCalls[1].args.p_device_id, platformDeviceId);
+  assert.equal(rpcCalls[0].name, "get_my_device_aware_system_access");
   const diagnostic = window.PlatformIntegration.getSafeDiagnostic();
   assert.equal(diagnostic.resolverDeviceIdPrefix, platformDeviceId.slice(0, 8));
   assert.equal(diagnostic.rpcDeviceIdPrefix, platformDeviceId.slice(0, 8));

@@ -56,6 +56,6 @@ test('root startup remains on the Platform launcher',()=>{
 
 test('Conference route correction invalidates the Development runtime cache',()=>{
   assert.match(html,/script\.js\?rev=conference-route-restoration-v2/);
-  assert.match(worker,/development-3-4-0-integration-reconciliation-v4/);
+  assert.match(worker,/development-3-4-0-phase1c-device-session-v1/);
   assert.match(worker,/script\.js\?rev=conference-route-restoration-v2/);
 });

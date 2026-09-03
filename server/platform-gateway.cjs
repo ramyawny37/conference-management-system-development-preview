@@ -16,28 +16,6 @@ const DEVICE_SECRET_COOKIE = "platform-device-secret";
 const DEVICE_HANDOFF_PURPOSE = "PLATFORM_DEVICE_OWNERSHIP_HANDOFF";
 const DEVICE_HANDOFF_DEVICE_ID = "f9306733-612d-433f-a38e-5d72855c2fe3";
 const DEVICE_HANDOFF_RETURN = "https://ramyawny37.github.io/conference-management-system-v1/platform-device-ownership-handoff.html";
-const CONFERENCE_DEVICE_RPC_ALLOWLIST = new Set([
-  "apply_library_template_content_operation", "apply_organization_template_access_operation", "apply_organization_template_operation",
-  "device_guarded_acquire_conference_lock", "device_guarded_add_conference_manager", "device_guarded_add_organization_member",
-  "device_guarded_apply_conference_snapshot", "device_guarded_assign_legacy_conference_organization", "device_guarded_change_organization_role",
-  "device_guarded_create_conference_idempotent", "device_guarded_create_organization_conference_idempotent",
-  "device_guarded_download_conference_snapshot", "device_guarded_get_conference_creation_operation", "device_guarded_get_conference_lock",
-  "device_guarded_get_conference_snapshot_metadata", "device_guarded_get_my_conference_access", "device_guarded_get_my_conference_membership",
-  "device_guarded_get_my_organization_access", "device_guarded_get_organization_membership_operation", "device_guarded_get_sync_conflict",
-  "device_guarded_list_available_conferences", "device_guarded_list_conference_members", "device_guarded_list_eligible_legacy_conference_organizations",
-  "device_guarded_list_my_organizations", "device_guarded_list_organization_members", "device_guarded_list_sync_conflicts",
-  "device_guarded_lookup_conference_user_by_email", "device_guarded_lookup_organization_candidate_by_email",
-  "device_guarded_manage_conference_member", "device_guarded_manage_system_user", "device_guarded_release_conference_lock",
-  "device_guarded_remove_conference_manager", "device_guarded_remove_organization_member", "device_guarded_renew_conference_lock",
-  "device_guarded_resolve_sync_conflict", "get_organization_management_overview", "get_user_management_account",
-  "get_user_management_actor_capabilities", "get_user_management_devices", "get_user_management_overview",
-  "list_member_device_authorizations", "list_module_permission_grants", "list_organization_templates",
-  "list_shared_organization_templates", "manage_catalog_module_grant", "manage_foundation_module_grant", "manage_organization",
-  "recover_revoke_final_module_manager", "search_user_management_users",
-]);
-const CONFERENCE_DEVICE_RPC_METADATA = new Map(
-  [...CONFERENCE_DEVICE_RPC_ALLOWLIST].map((name) => [name, Object.freeze({ actorDeviceArgument: "p_actor_device_id" })]),
-);
 const registry = loadModuleRegistry();
 const port = Number(process.env.PORT || 3000);
 
@@ -166,15 +144,9 @@ async function moduleAccessFor(supabase, device, moduleKey, permissionKey, known
     return { allowed: false, context, error: contextResult.error || { code: "PLATFORM_APPROVED_DEVICE_REQUIRED" } };
   if (Array.isArray(context.roles) && context.roles.includes("platform_owner"))
     return { allowed: true, context, authority: "platform_owner" };
-  const grants = await supabase.rpc("list_module_permission_grants", {
-    p_actor_device_id: device.id, p_module_key: moduleKey, p_target_user_id: null,
-  });
-  if (grants.error) return { allowed: false, context, error: grants.error };
-  const items = grants.data && Array.isArray(grants.data.grants) ? grants.data.grants : [];
-  const allowed = items.some((grant) => !grant.revokedAt &&
-    (grant.permissionKey === permissionKey ||
-      (permissionKey === "module.access" && grant.permissionKey === "module.manage")) &&
-    grant.resourceType == null && grant.resourceId == null);
+  const permissions = Array.isArray(context.permissions) ? context.permissions : [];
+  const allowed = permissions.includes(permissionKey) ||
+    (permissionKey === "module.access" && permissions.includes("module.manage"));
   return { allowed, context, authority: allowed ? "module_grant" : null };
 }
 
@@ -213,8 +185,6 @@ function createApiHandler(options = {}) {
   const resolveCreateDevice = options.createDevice || createDevice;
   const resolveCommitDevice = options.commitDevice || commitDevice;
   const resolveReadJson = options.readJson || readJson;
-  const resolveModuleAccess = options.moduleAccessFor || moduleAccessFor;
-  const resolveRpcMetadata = options.rpcMetadata || CONFERENCE_DEVICE_RPC_METADATA;
   const resolveAdministrationClient = options.platformAdministrationClient || ((request, response) => platformAdministrationClient(request, response, {
     getDevice: resolveGetDevice,
     supabaseFor: resolveSupabaseFor,
@@ -250,69 +220,10 @@ function createApiHandler(options = {}) {
       return json(response, 403, { error: { code: String(error && error.message || "DEVICE_HANDOFF_ASSERTION_DENIED").slice(0, 160) } });
     }
   }
-  if (request.method === "POST" && pathname === "/api/platform/conference-rpc") {
-    const administration = await resolveAdministrationClient(request, response);
-    if (administration.error) return json(response, administration.status, { error: { code: administration.error } });
-    const body = await resolveReadJson(request);
-    const name = String(body.name || "");
-    const metadata = resolveRpcMetadata.get(name);
-    const args = body.args && typeof body.args === "object" && !Array.isArray(body.args) ? body.args : {};
-    if (!metadata || (args.p_actor_device_id !== undefined && args.p_actor_device_id !== administration.device.id))
-      return json(response, 400, { error: { code: "CONFERENCE_RPC_REQUEST_INVALID" } });
-    const permission = await resolveModuleAccess(administration.supabase, administration.device, "conference", "module.access");
-    if (!permission.allowed) {
-      console.error(JSON.stringify({ phase: "conference-rpc-module-access", rpcName: name,
-        code: String(permission.error && permission.error.code || "PLATFORM_MODULE_ACCESS_DENIED"),
-        message: String(permission.error && permission.error.message || "PLATFORM_MODULE_ACCESS_DENIED").slice(0, 240),
-        requestDeviceId: administration.device.id,
-        platformDeviceStatus: permission.context && permission.context.deviceStatus || "unknown" }));
-      return json(response, 403, { error: { code: "PLATFORM_MODULE_ACCESS_DENIED" } });
-    }
-    const authoritativeArgs = { ...args };
-    if (metadata.actorDeviceArgument) authoritativeArgs[metadata.actorDeviceArgument] = administration.device.id;
-    const result = await administration.supabase.rpc(name, authoritativeArgs);
-    if (result.error) {
-      const safeError = { code: String(result.error.code || "CONFERENCE_RPC_DENIED"),
-        message: String(result.error.message || "CONFERENCE_RPC_DENIED").slice(0, 240) };
-      console.error(JSON.stringify({ phase: "conference-rpc", rpcName: name, code: safeError.code,
-        message: safeError.message, requestDeviceId: administration.device.id,
-        platformDeviceStatus: permission.context && permission.context.deviceStatus || "approved" }));
-      return json(response, 403, { error: safeError });
-    }
-    return json(response, 200, { data: result.data, error: null });
-  }
-  if (request.method === "GET" && pathname === "/api/platform/device-authorizations/pending") {
-    const administration = await resolveAdministrationClient(request, response);
-    if (administration.error) return json(response, administration.status, { error: administration.error });
-    const result = await administration.supabase.schema("platform").rpc("list_pending_device_authorizations");
-    if (result.error || !result.data || !Array.isArray(result.data.devices))
-      return json(response, 403, { error: "PLATFORM_DEVICE_ADMINISTRATION_DENIED" });
-    return json(response, 200, { devices: result.data.devices });
-  }
-  if (request.method === "POST" && pathname === "/api/platform/device-authorizations/approve") {
-    const administration = await resolveAdministrationClient(request, response);
-    if (administration.error) return json(response, administration.status, { error: administration.error });
-    const body = await resolveReadJson(request);
-    const authorizationId = String(body.authorizationId || "");
-    const deviceId = String(body.deviceId || "");
-    if (!isUuid(authorizationId) || !isUuid(deviceId))
-      return json(response, 400, { error: "PLATFORM_DEVICE_TARGET_INVALID" });
-    const result = await administration.supabase.schema("platform").rpc("approve_pending_device_authorization", {
-      p_authorization_id: authorizationId,
-      p_device_id: deviceId,
-      p_reason: "Approved through Platform device administration",
-    });
-    if (result.error) {
-      const conflict = result.error.code === "55000" || /NOT_PENDING/.test(String(result.error.message || ""));
-      return json(response, conflict ? 409 : 403, { error: conflict ? "PLATFORM_DEVICE_NOT_PENDING" : "PLATFORM_DEVICE_ADMINISTRATION_DENIED" });
-    }
-    return json(response, 200, {
-      status: result.data && result.data.status,
-      authorizationId: result.data && result.data.authorizationId,
-      deviceId: result.data && result.data.deviceId,
-      authorizationStatus: result.data && result.data.authorizationStatus,
-    });
-  }
+  if (pathname === "/api/platform/conference-rpc" ||
+      pathname === "/api/platform/device-authorizations/pending" ||
+      pathname === "/api/platform/device-authorizations/approve")
+    return json(response, 410, { error: "PLATFORM_PRIVILEGED_GATEWAY_RETIRED" });
   if (request.method === "POST" && pathname === "/api/platform/session/adopt") {
     const body = await resolveReadJson(request);
     const pendingCookies = [];
@@ -481,8 +392,6 @@ module.exports = {
   DEVELOPMENT_REF,
   DEVICE_ID_COOKIE,
   DEVICE_SECRET_COOKIE,
-  CONFERENCE_DEVICE_RPC_ALLOWLIST,
-  CONFERENCE_DEVICE_RPC_METADATA,
   moduleAccessFor,
   issueHandoffAssertion,
 };
