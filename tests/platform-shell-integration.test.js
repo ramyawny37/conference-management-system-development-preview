@@ -5,6 +5,7 @@ const vm=require('node:vm');
 
 const html=fs.readFileSync('index.html','utf8');
 const integration=fs.readFileSync('js/platform-integration.js','utf8');
+const applicationRouting=fs.readFileSync('js/application-routing.js','utf8');
 const gateway=fs.readFileSync('server/platform-gateway.cjs','utf8');
 
 test('shell registers all module cards through the platform contract',()=>{
@@ -15,7 +16,7 @@ test('shell registers all module cards through the platform contract',()=>{
   assert.doesNotMatch(html,/data-platform-module="[^"]+"[^>]+onclick=/);
 });
 
-function navigationRuntime(pathname,modules,contextFailure){
+function navigationRuntime(pathname,modules,contextFailure,basePath='/'){
   const cards={};
   const documentListeners={};
   for(const module of modules){
@@ -34,20 +35,26 @@ function navigationRuntime(pathname,modules,contextFailure){
         for(const listener of documentListeners.click||[])listener(event);
       }};
   }
-  const assigned=[];let workspaceOpens=0;
-  const window={Promise,navigator:{platform:'test'},location:{pathname,
+  const assigned=[];const listeners={};let workspaceOpens=0,moduleOpens=0;
+  const origin='https://example.test';
+  const window={Promise,navigator:{platform:'test'},location:{pathname,origin,
     assign(route){assigned.push(route);}},fetch(){return Promise.resolve(contextFailure
       ?{ok:false,status:401,json(){return Promise.resolve({error:'PLATFORM_SESSION_INVALID'});}}
       :{ok:true,json(){return Promise.resolve({modules});}});},document:{addEventListener(type,listener){
       (documentListeners[type]||(documentListeners[type]=[])).push(listener);
-    },querySelector(selector){
+    },currentScript:{src:origin+basePath+'js/application-routing.js'},querySelector(selector){
       if(selector==='[data-platform-module="conference"] .platform-module-state-available')return cards.conference&&cards.conference.state;
       const match=selector.match(/data-platform-module="([^"]+)"/);
       return match?cards[match[1]]||null:null;}},
-    openConferenceWorkspace(){workspaceOpens+=1;}};
+    openConferenceWorkspace(){workspaceOpens+=1;},
+    showPlatformModules(){moduleOpens+=1;},history:{pushState(_state,_title,route){
+      window.location.pathname=route;
+    }},addEventListener(type,listener){(listeners[type]||(listeners[type]=[])).push(listener);}};
+  vm.runInNewContext(applicationRouting,{window,URL,Error,Object,String});
   vm.runInNewContext(integration,{window,Promise,Object,Array,String,Error,JSON});
   return window.PlatformIntegration.initialize().then(()=>({window,cards,assigned,
-    workspaceOpens:()=>workspaceOpens}));
+    workspaceOpens:()=>workspaceOpens,moduleOpens:()=>moduleOpens,
+    popstate(){for(const listener of listeners.popstate||[])listener();}}));
 }
 
 test('available cards use the hydrated registry route and unavailable cards remain inert',async()=>{
@@ -61,7 +68,9 @@ test('available cards use the hydrated registry route and unavailable cards rema
   runtime.cards.conference.click();
   runtime.cards.warehouse.click();
   runtime.cards.custody.click();
-  assert.deepStrictEqual(runtime.assigned,['/conference','/warehouse','/custody']);
+  assert.deepStrictEqual(runtime.assigned,['/warehouse','/custody']);
+  assert.strictEqual(runtime.window.location.pathname,'/conference');
+  assert.strictEqual(runtime.workspaceOpens(),1);
   assert.strictEqual(runtime.cards.reservations.disabled,true);
   assert.strictEqual(runtime.cards.reservations.onclick,null);
   assert.strictEqual(runtime.cards.conference.onclick,null);
@@ -82,10 +91,27 @@ test('direct available Conference route activates its workspace without redirect
 test('rendered available Conference card navigates even when initial context hydration fails',async()=>{
   const failed=await navigationRuntime('/',[
     {id:'conference',routePrefix:'/conference',available:true}
-  ],true);
+  ],true,'/preview/');
   failed.cards.conference.click();
   assert.strictEqual(failed.cards.conference.disabled,false);
-  assert.deepStrictEqual(failed.assigned,['/conference']);
+  assert.deepStrictEqual(failed.assigned,[]);
+  assert.strictEqual(failed.window.location.pathname,'/preview/conference');
+  assert.strictEqual(failed.workspaceOpens(),1);
+});
+
+test('Conference navigation and popstate restore the repository-scoped SPA shell',async()=>{
+  const runtime=await navigationRuntime('/preview/',[
+    {id:'conference',routePrefix:'/conference',available:true}
+  ],false,'/preview/');
+  runtime.cards.conference.click();
+  assert.deepStrictEqual(runtime.assigned,[]);
+  assert.strictEqual(runtime.window.location.pathname,'/preview/conference');
+  runtime.window.location.pathname='/preview/';
+  runtime.popstate();
+  assert.strictEqual(runtime.moduleOpens(),1);
+  runtime.window.location.pathname='/preview/conference';
+  runtime.popstate();
+  assert.strictEqual(runtime.workspaceOpens(),2);
 });
 
 test('gateway is development locked and secret-bearing device credentials stay HttpOnly',()=>{

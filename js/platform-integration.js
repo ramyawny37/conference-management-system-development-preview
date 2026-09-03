@@ -91,7 +91,9 @@
   }
 
   function activateCurrentModuleRoute(modules){
-    var pathname=String(global.location&&global.location.pathname||'');
+    var routing=global.ApplicationRouting;
+    var pathname=routing?routing.getLogicalPathname():
+      String(global.location&&global.location.pathname||'');
     var module=(Array.isArray(modules)?modules:[]).find(function(item){
       return item&&item.available===true&&item.routePrefix===pathname;
     });
@@ -187,11 +189,33 @@
     var routePrefix=module&&module.routePrefix||
       (!state.context&&id==='conference'?'/conference':'');
     if(!routePrefix)return false;
-    global.location.assign(routePrefix);
+    var routing=global.ApplicationRouting;
+    var resolved=routing?routing.resolveLogicalRoute(routePrefix):routePrefix;
+    if(id==='conference'&&typeof global.openConferenceWorkspace==='function'){
+      if(routing&&routing.getLogicalPathname()!=='/conference'){
+        global.history.pushState(null,'',resolved);
+      }
+      global.openConferenceWorkspace();
+      return true;
+    }
+    global.location.assign(resolved);
     return true;
   }
 
+  function restoreModuleFromHistory(){
+    var routing=global.ApplicationRouting;
+    var route=routing&&routing.getLogicalPathname();
+    if(route==='/conference'&&typeof global.openConferenceWorkspace==='function'){
+      global.openConferenceWorkspace();
+    }else if(route==='/'&&typeof global.showPlatformModules==='function'){
+      global.showPlatformModules({preservePathname:true});
+    }
+  }
+
   bindModuleNavigation();
+  if(typeof global.addEventListener==='function'){
+    global.addEventListener('popstate',restoreModuleFromHistory);
+  }
 
   global.PlatformIntegration=Object.freeze({
     initialize:initialize,

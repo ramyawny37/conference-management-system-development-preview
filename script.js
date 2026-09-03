@@ -1552,12 +1552,16 @@ function showHomePage(){
   return openStartupScreen({clearCurrentConference:false,persistView:true});
 }
 function getPlatformShellPathname(){
-  var pathname=String(window.location&&window.location.pathname||'/');
+  var routing=window.ApplicationRouting;
+  var pathname=routing?routing.getLogicalPathname():
+    String(window.location&&window.location.pathname||'/');
+  if(pathname===null)return '';
   return pathname.length>1?pathname.replace(/\/+$/,''):pathname;
 }
 function replacePlatformShellPathname(pathname){
   if(!window.history||typeof window.history.replaceState!=='function')return false;
-  window.history.replaceState(null,'',pathname);
+  var routing=window.ApplicationRouting;
+  window.history.replaceState(null,'',routing?routing.resolveLogicalRoute(pathname):pathname);
   return true;
 }
 function showPlatformModules(options){

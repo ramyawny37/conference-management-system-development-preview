@@ -15,7 +15,7 @@ const startup=source.slice(
   source.indexOf('function conferenceStatusText')
 );
 
-function runtime(pathname){
+function runtime(pathname,basePath='/'){
   const classes=new Set();
   const elements={
     startupScreen:{classList:{add:value=>classes.add(value),remove:value=>classes.delete(value)}},
@@ -24,7 +24,11 @@ function runtime(pathname){
     homeTabButton:{classList:{add(){}}},
   };
   const location={pathname};
-  const window={location,history:{replaceState(_state,_title,next){location.pathname=next;}},StartupAccessGate:{isAllowed:()=>true}};
+  const routing={getLogicalPathname(){
+    if(location.pathname===basePath||location.pathname===basePath.replace(/\/$/,''))return '/';
+    return location.pathname.indexOf(basePath)===0?'/'+location.pathname.slice(basePath.length).replace(/^\/+|\/+$/g,''):null;
+  },resolveLogicalRoute(route){return basePath+(route==='/'?'':route.slice(1));}};
+  const window={location,ApplicationRouting:routing,history:{replaceState(_state,_title,next){location.pathname=next;}},StartupAccessGate:{isAllowed:()=>true}};
   const sandbox={window,document:{body:{classList:{remove(){}}},querySelectorAll:()=>[]},appData:{currentConferenceId:'conference-1'},currentApplicationView:'',
     ge:id=>elements[id]||null,closeOrganizationManagementScreen(){},showStartupConferenceList(){},setApplicationMode(){},
     getValidApplicationTabIds:()=>[],saveApplicationView(){},save:()=>true};
@@ -54,8 +58,17 @@ test('root startup remains on the Platform launcher',()=>{
   assert.strictEqual(state.classes.has('platform-conference-active'),false);
 });
 
+test('repository-scoped Conference restores workspace and return home restores application base',()=>{
+  const state=runtime('/preview/conference','/preview/');
+  state.sandbox.openStartupScreen({persistView:false});
+  assert.strictEqual(state.classes.has('platform-conference-active'),true);
+  state.sandbox.showPlatformModules();
+  assert.strictEqual(state.location.pathname,'/preview/');
+  assert.strictEqual(state.classes.has('platform-conference-active'),false);
+});
+
 test('Conference route correction invalidates the Development runtime cache',()=>{
-  assert.match(html,/script\.js\?rev=conference-route-restoration-v2/);
-  assert.match(worker,/development-3-4-0-phase1c-device-session-v1/);
-  assert.match(worker,/script\.js\?rev=conference-route-restoration-v2/);
+  assert.match(html,/script\.js\?rev=base-path-module-routing-v1/);
+  assert.match(worker,/development-3-4-0-base-path-module-routing-v1/);
+  assert.match(worker,/script\.js\?rev=base-path-module-routing-v1/);
 });
