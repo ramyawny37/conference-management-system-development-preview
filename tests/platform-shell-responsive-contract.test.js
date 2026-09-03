@@ -18,9 +18,10 @@ assert.match(css,/@media\(max-width:600px\)[\s\S]*?grid-template-areas:"brand br
 assert.match(css,/@media\(max-width:600px\)[\s\S]*?\.startup-dashboard:not\(\.platform-conference-active\) \.startup-home-header\{grid-template-areas:"brand brand" "auth auth"\}/);
 assert.match(css,/@media\(max-width:600px\)[\s\S]*?\.platform-module-switcher\{width:auto;min-height:var\(--platform-touch-target\)/);
 assert.match(css,/@media\(max-width:600px\)[\s\S]*?\.startup-auth-signed-in button,#install-app-btn\{flex:0 0 auto/);
-assert.match(css,/\.platform-conference-active \.platform-home\{display:none\}/);
-assert.match(css,/\.platform-conference-active \.platform-module-switcher\{display:flex\}/);
-assert.match(css,/\.platform-conference-active \.conference-workspace\{display:flex\}/);
+assert.match(css,/\.platform-conference-active \.platform-home,\.platform-warehouse-active \.platform-home\{display:none\}/);
+assert.match(css,/\.platform-conference-active \.platform-module-switcher,\.platform-warehouse-active \.platform-module-switcher\{display:flex\}/);
+assert.match(css,/\.platform-conference-active #conferenceWorkspace\{display:flex\}/);
+assert.match(css,/\.platform-warehouse-active #warehouseWorkspace\{display:flex\}/);
 assert.match(tokens,/--platform-touch-target:44px/);
 assert.match(tokens,/--platform-safe-area-bottom:max\(16px,env\(safe-area-inset-bottom,0px\)\)/);
 assert.match(tokens,/--platform-mobile-bottom-breathing:24px/);

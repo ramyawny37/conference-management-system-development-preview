@@ -271,6 +271,12 @@ function setCurrentConferenceById(id, options){
     return;
   }
 
+  if(options.enterApplication!==true&&conferenceModuleHomeRouteActive&&
+    getPlatformShellPathname()==='/conference'){
+    openStartupScreen({clearCurrentConference:false,persistView:true});
+    return true;
+  }
+
   var applicationBody = ge('applicationBody');
   var wasStartup = applicationBody && applicationBody.style.display === 'none';
   setApplicationMode('application');
@@ -1384,7 +1390,7 @@ var SETTINGS_INTERNAL_VIEW_KEY = browserStorageNamespace.key(
   'conference_manager_settings_internal_view'
 );
 var currentApplicationView = 'application';
-var conferenceModuleEntryLandingPending = false;
+var conferenceModuleHomeRouteActive = false;
 
 function getValidApplicationTabIds(){
   return [0, 1, 2, 3, 4, 5, 6];
@@ -1466,9 +1472,7 @@ function saveSettingsInternalView(view){
 }
 
 function restoreLastApplicationTab(){
-  if(conferenceModuleEntryLandingPending){
-    if(!switchTab(0))return false;
-    conferenceModuleEntryLandingPending=false;
+  if(conferenceModuleHomeRouteActive&&getPlatformShellPathname()==='/conference'){
     return true;
   }
   var storedTab = getStoredLastTab();
@@ -1494,6 +1498,7 @@ function switchTab(n){
   if(window.StartupAccessGate&&!window.StartupAccessGate.isAllowed())return false;
   var tabId = typeof n === 'number' ? n : parseInt(n, 10);
   if (!isValidApplicationTab(tabId)) return false;
+  conferenceModuleHomeRouteActive=false;
   var settingsTabId=getApplicationTabIdByName('settings');
   if(tabId!==settingsTabId&&window.ConferenceTemplateHousesEditor){
     window.ConferenceTemplateHousesEditor.close();
@@ -1533,6 +1538,7 @@ function openSettingsFromHome(){
   if(window.StartupAccessGate&&!window.StartupAccessGate.isAllowed())return false;
   var settingsTabId=getApplicationTabIdByName('settings');
   if(settingsTabId===null)return false;
+  conferenceModuleHomeRouteActive=false;
   setApplicationMode('application');
   var opened=switchTab(settingsTabId);
   if(opened)resetAdministrativeViewScroll();
@@ -1557,6 +1563,10 @@ function returnToOrganizationManagementFromMembers(){
 }
 
 function showHomePage(){
+  if(getPlatformShellPathname()!=='/conference'){
+    replacePlatformShellPathname('/conference');
+  }
+  conferenceModuleHomeRouteActive=true;
   return openStartupScreen({clearCurrentConference:false,persistView:true});
 }
 function getPlatformShellPathname(){
@@ -1579,7 +1589,8 @@ function showPlatformModules(options){
   if(options.preservePathname!==true&&getPlatformShellPathname()!=='/'){
     replacePlatformShellPathname('/');
   }
-  shell.classList.remove('platform-conference-active');
+  conferenceModuleHomeRouteActive=false;
+  shell.classList.remove('platform-conference-active','platform-warehouse-active');
   var launcher=ge('platformLauncherTitle');
   if(launcher)launcher.focus();
   return true;
@@ -1589,9 +1600,8 @@ function openConferenceWorkspace(options){
   var shell=ge('startupScreen');
   var workspace=ge('conferenceWorkspace');
   if(!shell||!workspace)return false;
-  if(options.explicitModuleEntry===true){
-    conferenceModuleEntryLandingPending=true;
-  }
+  conferenceModuleHomeRouteActive=true;
+  shell.classList.remove('platform-warehouse-active');
   shell.classList.add('platform-conference-active');
   workspace.focus();
   return true;
@@ -6933,8 +6943,12 @@ function openStartupScreen(options){
   if(homeTabButton)homeTabButton.classList.add('active','main-tab-active');
   currentApplicationView='startup';
   if(persistView)saveApplicationView('startup');
-  if(getPlatformShellPathname()==='/conference'){
-    openConferenceWorkspace();
+  var platformRoute=getPlatformShellPathname();
+  if(platformRoute==='/conference'){
+    openConferenceWorkspace({explicitModuleEntry:true});
+  }else if(platformRoute&&platformRoute.indexOf('/warehouse')===0&&
+    typeof window.openWarehouseWorkspace==='function'){
+    window.openWarehouseWorkspace({route:platformRoute});
   }else{
     showPlatformModules({preservePathname:true});
   }
@@ -7207,7 +7221,7 @@ function openPreviousConferenceById(id){
 يجب أن تمر جميع بطاقات وقوائم اختيار المؤتمرات من خلال هذه الدالة.
 */
 function openConferenceFromStartup(id){
-  return setCurrentConferenceById(id);
+  return setCurrentConferenceById(id,{enterApplication:true});
 }
 
 var conferenceBrandingDraft=null;
@@ -8335,7 +8349,7 @@ function renderSettings(){
   if(conferenceSelect){
     conferenceSelect.value = appData.currentConferenceId || '';
     conferenceSelect.onchange = function(){
-      setCurrentConferenceById(this.value);
+      setCurrentConferenceById(this.value,{enterApplication:true});
     };
   }
   updateConferenceBrandingPreview();
@@ -9377,7 +9391,7 @@ function createConferenceFromSelection(){
     showToast('تعذر إنشاء المؤتمر المحلي بأمان.','#C0392B');
     return;
   }
-  setCurrentConferenceById(newConf.id, { skipToast: true });
+  setCurrentConferenceById(newConf.id, { skipToast: true,enterApplication:true });
   addActivityLog('conference_created','تم إنشاء مؤتمر جديد',{section:'conference',entityType:'conference',entityId:newConf.id});
   closeNewConferenceModal();
   showToast('✅ تم إنشاء مؤتمر جديد');

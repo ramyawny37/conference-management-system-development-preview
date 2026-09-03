@@ -22,7 +22,7 @@ function runtime(storedTab){
   const storage={last:String(storedTab),removed:0};
   let ready=true;
   const elements={
-    startupScreen:{classList:{add() {}}},
+    startupScreen:{classList:{add() {},remove() {}}},
     conferenceWorkspace:{focus() {}}
   };
   const sandbox={window:null,browserStorageNamespace:{key:value=>value},
@@ -31,6 +31,7 @@ function runtime(storedTab){
       storage.last=String(value);},removeItem(){storage.removed+=1;}},
     document:{querySelectorAll(){return Array.from({length:7},()=>({style:{}}));}},
     ge:id=>elements[id]||{style:{}},isFinite,parseInt,
+    getPlatformShellPathname:()=>'/conference',
     getApplicationTabIdByName:name=>name==='settings'?6:null,
     getStoredSettingsInternalView:()=>'',resetAdministrativeViewScroll(){},
     refreshOrganizationMembersSection(){},settingsTab:'general'};
@@ -45,14 +46,14 @@ function runtime(storedTab){
   return {sandbox,calls,storage,setReady:value=>{ready=value;}};
 }
 
-for(const previousTab of [6,5,2,3,4,1]){
-  test(`explicit Conference entry replaces persisted tab ${previousTab} with tab 0`,()=>{
+for(const previousTab of [0,6,5,2,3,4,1]){
+  test(`explicit Conference entry keeps module home over persisted tab ${previousTab}`,()=>{
     const state=runtime(previousTab);
     assert.strictEqual(state.sandbox.openConferenceWorkspace(
       {explicitModuleEntry:true}),true);
     assert.strictEqual(state.sandbox.restoreLastApplicationTab(),true);
-    assert.deepStrictEqual(state.calls,[0]);
-    assert.strictEqual(state.storage.last,'0');
+    assert.deepStrictEqual(state.calls,[]);
+    assert.strictEqual(state.storage.last,String(previousTab));
     assert.strictEqual(state.storage.removed,0);
   });
 }
@@ -64,18 +65,16 @@ test('ordinary authorized restoration preserves the current persisted tab',()=>{
   assert.strictEqual(state.storage.last,'6');
 });
 
-test('explicit entry survives readiness delay and is consumed exactly once',()=>{
+test('Conference module home remains distinct from application restoration',()=>{
   const state=runtime(6);
   state.sandbox.openConferenceWorkspace({explicitModuleEntry:true});
   state.setReady(false);
-  assert.strictEqual(state.sandbox.restoreLastApplicationTab(),false);
-  assert.deepStrictEqual(state.calls,[0]);
+  assert.strictEqual(state.sandbox.restoreLastApplicationTab(),true);
+  assert.deepStrictEqual(state.calls,[]);
   assert.strictEqual(state.storage.last,'6');
   state.setReady(true);
   assert.strictEqual(state.sandbox.restoreLastApplicationTab(),true);
-  state.storage.last='6';
-  state.sandbox.restoreLastApplicationTab();
-  assert.deepStrictEqual(state.calls,[0,0,6]);
+  assert.deepStrictEqual(state.calls,[]);
 });
 
 test('Settings rendering diagnostics do not trigger tab navigation',()=>{
