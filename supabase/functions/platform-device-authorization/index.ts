@@ -7,7 +7,6 @@ import {
 } from '@simplewebauthn/server';
 import { cose, decodeCredentialPublicKey } from '@simplewebauthn/server/helpers';
 
-const DEVELOPMENT_APP_ORIGIN = 'https://integrated-platform-development-git-develop-ramyawny37-3662.vercel.app';
 const corsBaseHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
@@ -45,10 +44,7 @@ function uuid(value: unknown, label: string): string {
 }
 function corsHeaders(requestOrigin: string): Record<string, string> | null {
   const expectedOrigin = required('WEBAUTHN_EXPECTED_ORIGIN').toLowerCase();
-  const allowedOrigins = environment() === 'development_preview'
-    ? [expectedOrigin, DEVELOPMENT_APP_ORIGIN]
-    : [expectedOrigin];
-  return allowedOrigins.includes(requestOrigin.toLowerCase())
+  return requestOrigin.toLowerCase() === expectedOrigin
     ? { ...corsBaseHeaders, 'Access-Control-Allow-Origin': requestOrigin.toLowerCase() }
     : null;
 }

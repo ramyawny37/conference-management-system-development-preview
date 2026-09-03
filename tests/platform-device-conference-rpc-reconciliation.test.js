@@ -28,7 +28,7 @@ assert.equal(platformGuard(Object.assign({},approved,{requestDeviceId:null})),fa
   const calls=[];
   const rawClient={rpc:function(name,args){calls.push({kind:'direct',name,args});return Promise.resolve({data:'direct',error:null});},auth:{}};
   const sandbox={window:null,console,JSON,Promise,Object,String,Array,Error};
-  sandbox.window={location:{hostname:'integrated-platform-development-git-develop-ramyawny37-3662.vercel.app'},atob:()=>'',supabase:{createClient:()=>rawClient},SUPABASE_RUNTIME_CONFIG:{url:'https://gppwltrifgfxrkzvvxoe.supabase.co',publishableKey:'sb_publishable_test'},PlatformDeviceSession:{invokeProtected:function(name,args){calls.push({kind:'device-session',name,args});return Promise.resolve({status:'success'});}}};
+  sandbox.window={location:{hostname:'ramyawny37.github.io'},atob:()=>'',supabase:{createClient:()=>rawClient},SUPABASE_RUNTIME_CONFIG:{url:'https://gppwltrifgfxrkzvvxoe.supabase.co',publishableKey:'sb_publishable_test'},PlatformDeviceSession:{invokeProtected:function(name,args){calls.push({kind:'device-session',name,args});return Promise.resolve({status:'success'});}}};
   vm.runInNewContext(deviceOperationContractSource,sandbox);
   vm.runInNewContext(clientSource,sandbox);
   const client=sandbox.window.SupabaseClientLayer.getClient();
