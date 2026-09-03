@@ -51,6 +51,13 @@ function json(response, status, body) {
   response.end(JSON.stringify(body));
 }
 
+function handoffRecoveryError(response, code) {
+  const transition = base64url(JSON.stringify({ code }));
+  response.writeHead(302, { location: `${DEVICE_HANDOFF_RETURN}?mode=binding_recovery#handoff-error=${transition}`,
+    "cache-control": "no-store", "referrer-policy": "no-referrer" });
+  return response.end();
+}
+
 async function readJson(request) {
   let body = "";
   for await (const chunk of request) {
@@ -117,6 +124,13 @@ function issueHandoffAssertion(claims) {
     signing_payload_hash: crypto.createHash("sha256").update(String(claims.signingPayload || "")).digest("hex"),
     jti: crypto.randomUUID(), iat: now, exp: now + 90,
   };
+  if (claims.handoffMode === "binding_recovery") {
+    if (!isUuid(claims.replacementBindingId) || claims.recoveryReason !== "lost_private_key")
+      throw new Error("DEVICE_HANDOFF_RECOVERY_CLAIMS_INVALID");
+    payload.handoff_mode = claims.handoffMode;
+    payload.replacement_binding_id = claims.replacementBindingId;
+    payload.recovery_reason = claims.recoveryReason;
+  }
   const encoded = `${base64url(JSON.stringify({ alg: "HS256", typ: "JWT" }))}.${base64url(JSON.stringify(payload))}`;
   return `${encoded}.${crypto.createHmac("sha256", secret).update(encoded).digest("base64url")}`;
 }
@@ -197,23 +211,36 @@ function createApiHandler(options = {}) {
   if (request.method === "GET" && pathname === "/api/platform/context")
     return json(response, 200, await resolveSessionContext(request, response));
   if (request.method === "GET" && pathname === "/api/platform/device-ownership-handoff/authorize") {
-    const administration = await resolveAdministrationClient(request, response);
-    if (administration.error) return json(response, administration.status, { error: { code: administration.error } });
-    if (administration.device.id !== DEVICE_HANDOFF_DEVICE_ID)
-      return json(response, 403, { error: { code: "DEVICE_HANDOFF_CANONICAL_DEVICE_MISMATCH" } });
     const input = new URL(request.url, `https://${request.headers.host || "localhost"}`);
     const thumbprint = String(input.searchParams.get("thumbprint") || "");
-    if (!/^[0-9a-f]{64}$/.test(thumbprint)) return json(response, 400, { error: { code: "DEVICE_HANDOFF_THUMBPRINT_INVALID" } });
+    const recovery = input.searchParams.get("mode") === "binding_recovery";
+    const reason = String(input.searchParams.get("reason") || "");
+    const administration = await resolveAdministrationClient(request, response);
+    if (administration.error) return recovery
+      ? handoffRecoveryError(response, administration.error)
+      : json(response, administration.status, { error: { code: administration.error } });
+    if (administration.device.id !== DEVICE_HANDOFF_DEVICE_ID)
+      return recovery ? handoffRecoveryError(response, "DEVICE_HANDOFF_CANONICAL_DEVICE_MISMATCH")
+        : json(response, 403, { error: { code: "DEVICE_HANDOFF_CANONICAL_DEVICE_MISMATCH" } });
+    if (!/^[0-9a-f]{64}$/.test(thumbprint)) return recovery
+      ? handoffRecoveryError(response, "DEVICE_HANDOFF_THUMBPRINT_INVALID")
+      : json(response, 400, { error: { code: "DEVICE_HANDOFF_THUMBPRINT_INVALID" } });
+    if (recovery && reason !== "lost_private_key") return handoffRecoveryError(response, "DEVICE_HANDOFF_RECOVERY_REASON_INVALID");
     const result = await administration.supabase.schema("platform").rpc("begin_current_device_ownership_handoff", {
-      p_public_key_thumbprint: thumbprint,
+      p_public_key_thumbprint: recovery ? `recovery:lost_private_key:${thumbprint}` : thumbprint,
     });
-    if (result.error || !result.data) return json(response, 403, { error: { code: "DEVICE_HANDOFF_BEGIN_DENIED" } });
+    if (result.error || !result.data) {
+      if (recovery) return handoffRecoveryError(response, "DEVICE_HANDOFF_BEGIN_DENIED");
+      return json(response, 403, { error: { code: "DEVICE_HANDOFF_BEGIN_DENIED" } });
+    }
     try {
       const claims = result.data;
       if (claims.deviceId !== administration.device.id || claims.publicKeyThumbprint !== thumbprint)
         throw new Error("DEVICE_HANDOFF_ASSERTION_DENIED");
       const transition = base64url(JSON.stringify({ assertion: issueHandoffAssertion(claims), challenge: claims }));
-      response.writeHead(302, { location: `${DEVICE_HANDOFF_RETURN}#handoff=${transition}`,
+      if (recovery && (claims.handoffMode !== "binding_recovery" || !isUuid(claims.replacementBindingId) || claims.recoveryReason !== reason))
+        throw new Error("DEVICE_HANDOFF_RECOVERY_CLAIMS_INVALID");
+      response.writeHead(302, { location: `${DEVICE_HANDOFF_RETURN}${recovery ? "?mode=binding_recovery" : ""}#handoff=${transition}`,
         "cache-control": "no-store", "referrer-policy": "no-referrer" });
       return response.end();
     } catch (error) {

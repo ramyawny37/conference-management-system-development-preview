@@ -74,6 +74,11 @@ async function assertion(compact: string, secret: string): Promise<Record<string
     || claims.iat > now + 15 || claims.exp <= now || claims.exp > claims.iat + 120) throw new Error('HANDOFF_ASSERTION_CLAIMS_INVALID');
   uuid(claims.jti, 'ASSERTION_JTI'); uuid(claims.user_id, 'ASSERTION_USER');
   uuid(claims.authorization_id, 'ASSERTION_AUTHORIZATION'); uuid(claims.challenge_id, 'ASSERTION_CHALLENGE');
+  if (claims.handoff_mode !== undefined || claims.replacement_binding_id !== undefined || claims.recovery_reason !== undefined) {
+    if (claims.handoff_mode !== 'binding_recovery' || claims.recovery_reason !== 'lost_private_key')
+      throw new Error('HANDOFF_ASSERTION_CLAIMS_INVALID');
+    uuid(claims.replacement_binding_id, 'REPLACEMENT_BINDING');
+  }
   return claims;
 }
 
@@ -100,8 +105,10 @@ Deno.serve(async (request) => {
       if (status.error) throw new Error('BINDING_STATUS_DENIED');
       return json(200, { ok: true, data: status.data });
     }
-    if (body.action !== 'finalize') throw new Error('ACTION_NOT_SUPPORTED');
+    if (body.action !== 'finalize' && body.action !== 'finalize-recovery') throw new Error('ACTION_NOT_SUPPORTED');
     const claims = await assertion(String(body.assertion || ''), required('PLATFORM_HANDOFF_ASSERTION_SECRET'));
+    const recovery = body.action === 'finalize-recovery';
+    if (recovery !== (claims.handoff_mode === 'binding_recovery')) throw new Error('HANDOFF_ASSERTION_CLAIMS_INVALID');
     if (claims.user_id !== userResult.data.user.id) throw new Error('HANDOFF_ASSERTION_USER_MISMATCH');
     const publicJwk = body.publicKeyJwk as JsonWebKey;
     const computedThumbprint = await thumbprint(publicJwk);
@@ -114,13 +121,18 @@ Deno.serve(async (request) => {
       b64urlBytes(String(body.keySignature || '')), encoder.encode(signingPayload),
     )) throw new Error('NEW_KEY_POSSESSION_INVALID');
     const service = createClient(url, required('SUPABASE_SERVICE_ROLE_KEY'), { auth: { persistSession: false, autoRefreshToken: false } });
-    const result = await service.schema('platform').rpc('complete_device_ownership_handoff', {
+    const common = {
       p_user_id: claims.user_id, p_device_id: claims.device_id, p_authorization_id: claims.authorization_id,
       p_challenge_id: claims.challenge_id, p_public_key_thumbprint: computedThumbprint, p_public_key_jwk: publicJwk,
       p_assertion_jti: claims.jti, p_assertion_hash: bytea(await sha256(String(body.assertion))),
       p_assertion_issued_at: new Date(Number(claims.iat) * 1000).toISOString(),
       p_assertion_expires_at: new Date(Number(claims.exp) * 1000).toISOString(),
-    });
+    };
+    const result = recovery
+      ? await service.schema('platform').rpc('complete_device_binding_recovery', {
+        ...common, p_replacement_binding_id: claims.replacement_binding_id, p_recovery_reason: claims.recovery_reason,
+      })
+      : await service.schema('platform').rpc('complete_device_ownership_handoff', common);
     if (result.error) throw new Error(String(result.error.message || 'HANDOFF_FINALIZATION_DENIED'));
     return json(200, { ok: true, status: 'active', data: result.data });
   } catch (error) {
