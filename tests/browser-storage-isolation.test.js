@@ -134,14 +134,10 @@ const productionCache=workerCacheName('/conference-management-system-v1/service-
 const developmentCache=workerCacheName(
   '/conference-management-system-development-preview/service-worker.js'
 );
-const stableDevelopmentCache=workerCacheName(
-  '/service-worker.js','integrated-platform-development-git-develop-ramyawny37-3662.vercel.app'
-);
 assert.ok(productionCache.startsWith('conference-manager-core-'));
 assert.ok(developmentCache.startsWith(
   prefix+'conference-manager-core-'
 ));
-assert.strictEqual(stableDevelopmentCache,developmentCache);
 assert.notStrictEqual(developmentCache,productionCache);
 
 const activeSources=[

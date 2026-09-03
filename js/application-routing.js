@@ -33,8 +33,7 @@
 
   function resolveLogicalRoute(route){
     route=normalizeLogicalRoute(route);
-    var resolved=new URL(route==='/'?'./':'./'+route.slice(1),requireBase());
-    return resolved.pathname+resolved.search+resolved.hash;
+    return requireBase().pathname+(route==='/'?'':'#'+route);
   }
 
   function logicalPathname(pathname){
@@ -50,7 +49,8 @@
     getBasePathname:basePathname,
     resolveLogicalRoute:resolveLogicalRoute,
     getLogicalPathname:function(){
-      return logicalPathname(location&&location.pathname);
+      var hash=String(location&&location.hash||'');
+      return hash.indexOf('#/')===0?normalizeLogicalRoute(hash.slice(1)):'/';
     },
     logicalPathname:logicalPathname
   });

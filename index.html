@@ -97,10 +97,10 @@
             <span class="platform-module-copy"><strong>إدارة المؤتمرات</strong><small>Conference Management</small></span>
             <span class="platform-module-state platform-module-state-available">متاحة</span>
           </button>
-          <button type="button" data-platform-module="warehouse" class="platform-module-card platform-module-card-unavailable" aria-disabled="true" disabled>
+          <button type="button" data-platform-module="warehouse" class="platform-module-card platform-module-card-available" aria-label="فتح وحدة إدارة المخازن">
             <span class="platform-module-icon" data-app-icon="building"></span>
             <span class="platform-module-copy"><strong>إدارة المخازن</strong><small>Warehouse Management</small></span>
-            <span class="platform-module-state">غير متكاملة بعد</span>
+            <span class="platform-module-state platform-module-state-available">متاحة</span>
           </button>
           <button type="button" data-platform-module="reservations" class="platform-module-card platform-module-card-unavailable" aria-disabled="true" disabled>
             <span class="platform-module-icon" data-app-icon="note"></span>
@@ -172,6 +172,7 @@
       </div>
     </section>
     </div>
+    <div id="warehouseWorkspace" class="conference-workspace" tabindex="-1" style="display:none"></div>
   </div>
   <div id="appVersionLabel" class="startup-version"></div>
 </div>
@@ -542,6 +543,9 @@
 <script src="js/supabase/runtime-config.js"></script>
 <script src="js/supabase/device-session.js?rev=startup-transport-cleanup-v1"></script>
 <script src="js/supabase/conference-device-operation-contract.js?rev=phase1c-v1"></script>
+<script src="js/supabase/warehouse-device-operation-contract.js?rev=phase-w1-v1"></script>
+<script src="js/supabase/platform-device-operation-contract.js?rev=phase-w1-v1"></script>
+<script src="js/supabase/warehouse-transport.js?rev=phase-w1-v1"></script>
 <script src="js/supabase/client.js?rev=phase1c-v1"></script>
 <script src="js/supabase/auth.js?rev=account-session-identity-v1"></script>
 <script src="js/platform-integration.js?rev=startup-transport-cleanup-v1"></script>
@@ -557,6 +561,7 @@
 <script src="js/supabase/organization-management-service.js?rev=organization-archive-restore-v1"></script>
 <script src="js/sync/organization-management-ui.js?rev=startup-device-admin-lifecycle-v1"></script>
 <script src="js/supabase/device-identity.js?rev=phase1c-device-identity-reconciliation-v1"></script>
+<script src="js/supabase/device-enrollment.js?rev=phase-w1-native-enrollment-v1"></script>
 <script src="js/sync/device-authorization-operation-repository.js"></script>
 <script src="js/supabase/current-device-authorization-service.js?rev=platform-authorization-readiness-v2"></script>
 <script src="js/supabase/device-authorization-administration-service.js?rev=platform-privileged-device-admin-diagnostics-v1"></script>
@@ -638,6 +643,7 @@
 <script src="libs/html2canvas.min.js"></script>
 <script src="libs/xlsx.full.min.js"></script>
 <script src="js/ui-icons.js?rev=accommodation-visual-match-v6"></script>
+<script src="js/warehouse/workspace.js?rev=phase-w1-v1"></script>
 <script src="script.js?rev=conference-module-entry-landing-v1"></script>
 <script src="version.js"></script>
 <script>

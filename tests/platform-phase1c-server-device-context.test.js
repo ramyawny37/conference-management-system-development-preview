@@ -55,12 +55,14 @@ test("handoff live definitions are generalized without weakening exact-device jo
   assert.doesNotMatch(migration,/f9306733-612d-433f-a38e-5d72855c2fe3/i);
 });
 
-test("runtime handoff sources contain no device-specific UUID",()=>{
+test("runtime handoff sources are removed and native enrollment contains no device-specific UUID",()=>{
   for(const file of ["server/platform-gateway.cjs","supabase/functions/platform-device-ownership-handoff/index.ts","js/platform-device-ownership-handoff.js"])
+    assert.equal(fs.existsSync(file),false,file);
+  for(const file of ["supabase/functions/platform-device-enrollment/index.ts","js/supabase/device-enrollment.js"])
     assert.doesNotMatch(fs.readFileSync(file,"utf8"),/f9306733-612d-433f-a38e-5d72855c2fe3/i,file);
 });
 
-test("DIRECT EDGE INTERNAL POLICY cardinalities remain 13/57/16/9 with 10 legacy mutation internals",()=>{
-  assert.deepEqual([contract.DIRECT_BROWSER_REQUIRED.length,contract.EDGE_ONLY_PROTECTED.length,contract.INTERNAL_ONLY.length,contract.POLICY_HELPER_BROWSER_READ.length],[13,57,16,9]);
-  assert.equal(contract.INTERNAL_ONLY.filter(x=>!/device_session|device_ownership_handoff|execute_conference_device_operation|require_exact_jsonb_keys/.test(x)).length,10);
+test("DIRECT EDGE INTERNAL POLICY cardinalities remain 11/57/16/9 with 10 legacy mutation internals",()=>{
+  assert.deepEqual([contract.DIRECT_BROWSER_REQUIRED.length,contract.EDGE_ONLY_PROTECTED.length,contract.INTERNAL_ONLY.length,contract.POLICY_HELPER_BROWSER_READ.length],[11,57,16,9]);
+  assert.equal(contract.INTERNAL_ONLY.filter(x=>!/device_session|device_ownership_handoff|execute_(?:conference_)?device_operation|require_exact_jsonb_keys/.test(x)).length,10);
 });

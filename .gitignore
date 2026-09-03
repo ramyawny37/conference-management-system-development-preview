@@ -1,3 +1,4 @@
 .continue/
 supabase_readonly_report.json
 node_modules/
+supabase/.temp/

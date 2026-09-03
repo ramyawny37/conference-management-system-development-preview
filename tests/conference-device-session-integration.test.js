@@ -7,7 +7,7 @@ const client=fs.readFileSync("js/supabase/client.js","utf8");
 const contractSource=fs.readFileSync("js/supabase/conference-device-operation-contract.js","utf8");
 const sandbox={window:{}};vm.runInNewContext(contractSource,sandbox);
 const contract=sandbox.window.ConferenceDeviceOperationContract;
-const gateway=fs.readFileSync("server/platform-gateway.cjs","utf8");
+const unifiedEdge=fs.readFileSync("supabase/functions/platform-device-operation/index.ts","utf8");
 const deviceAdministration=fs.readFileSync("js/supabase/device-authorization-administration-service.js","utf8");
 test("dispatcher is service-role-only, verifies all authority dimensions, and derives the actor device",()=>{
   assert.match(migration,/auth\.role\(\) is distinct from 'service_role'/);
@@ -27,7 +27,7 @@ test("Edge validates auth, hashes bearer, rejects actor override and never logs 
 });
 test("normal runtime keeps the token in tab memory and routes protected RPCs through Edge",()=>{
   assert.match(session,/var memorySession=null/);
-  assert.match(session,/conference-device-operation/);
+  assert.match(session,/platform-device-operation/);
   assert.doesNotMatch(session,/localStorage|sessionStorage|document\.cookie|BroadcastChannel/);
   assert.match(client,/delete protectedArgs\.p_actor_device_id/);
   assert.match(client,/delete protectedArgs\.p_device_id/);
@@ -60,7 +60,7 @@ test("live-discovered browser SECURITY DEFINER surface has no unclassified signa
     assert.ok(migration.includes(signature),"missing internal-only revoke: "+signature);
   }
   assert.equal(contract.POLICY_HELPER_BROWSER_READ.length,9);
-  assert.equal(contract.DIRECT_BROWSER_REQUIRED.length,13);
+  assert.equal(contract.DIRECT_BROWSER_REQUIRED.length,11);
   assert.equal(contract.EDGE_ONLY_PROTECTED.length,57);
   assert.equal(contract.INTERNAL_ONLY.filter(signature=>discovered.includes(signature)).length,10);
   assert.equal(discovered.length,89-13-52+3);
@@ -69,15 +69,14 @@ test("five former gateway operations have one Phase 1B/1C route and no gateway f
   const operations=['list_pending_device_authorizations','approve_pending_device_authorization','list_module_permission_grants','manage_foundation_module_grant','recover_revoke_final_module_manager'];
   for(const operation of operations){
     assert.ok(contract.isProtectedOperation(operation),operation);
-    assert.doesNotMatch(gateway,new RegExp('\\.rpc\\(["\\\']'+operation+'["\\\']'));
+    assert.ok(unifiedEdge.includes("'"+operation+"'"),operation);
   }
   assert.match(deviceAdministration,/\.rpc\('list_pending_device_authorizations'/);
   assert.match(deviceAdministration,/\.rpc\('approve_pending_device_authorization'/);
   assert.doesNotMatch(deviceAdministration,/\/api\/platform\/device-authorizations|conference-rpc/);
-  assert.doesNotMatch(gateway,/CONFERENCE_DEVICE_RPC_ALLOWLIST|CONFERENCE_DEVICE_RPC_METADATA/);
-  assert.match(gateway,/PLATFORM_PRIVILEGED_GATEWAY_RETIRED/);
-  assert.doesNotMatch(gateway,/supabase\.rpc\("list_module_permission_grants"/);
-  assert.match(gateway,/context\.permissions/);
+  assert.equal(fs.existsSync('server/platform-gateway.cjs'),false);
+  assert.equal(fs.existsSync('api/gateway.js'),false);
+  assert.match(unifiedEdge,/execute_device_operation/);
 });
 test("literal browser RPC inventory is classified direct-safe or protected",()=>{
   const files=fs.readdirSync('js/supabase').map(name=>'js/supabase/'+name).concat(fs.readdirSync('js/sync').map(name=>'js/sync/'+name)).filter(name=>name.endsWith('.js'));

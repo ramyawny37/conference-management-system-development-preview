@@ -26,6 +26,7 @@
     ensureFlight=establish().then(function(value){scheduleExpiry();ensureFlight=null;return value.verified;},function(error){ensureFlight=null;throw error;});
     return ensureFlight;
   }
-  function invokeProtected(operation,args){return ensureValid().then(function(){var client=global.SupabaseClientLayer.getClient();return client.functions.invoke('conference-device-operation',{body:{sessionId:memorySession.sessionId,token:memorySession.token,operation:operation,args:args||{}}});}).then(function(response){if(response.error)throw response.error;if(!response.data||response.data.ok!==true)throw response.data&&response.data.error||{code:'CONFERENCE_DEVICE_OPERATION_DENIED'};return response.data.data;});}
-  global.PlatformDeviceSession=Object.freeze({establish:establish,ensureValid:ensureValid,validFor:validFor,invokeProtected:invokeProtected,verify:verify,getSession:copy,clear:clear});
+  function invokeModuleProtected(module,operation,args){return ensureValid().then(function(){var client=global.SupabaseClientLayer.getClient();return client.functions.invoke('platform-device-operation',{body:{sessionId:memorySession.sessionId,token:memorySession.token,module:module,operation:operation,args:args||{}}});}).then(function(response){if(response.error)throw response.error;if(!response.data||response.data.ok!==true)throw response.data&&response.data.error||{code:'PLATFORM_DEVICE_OPERATION_DENIED'};return response.data.data;});}
+  function invokeProtected(operation,args){return invokeModuleProtected('conference',operation,args);}
+  global.PlatformDeviceSession=Object.freeze({establish:establish,ensureValid:ensureValid,validFor:validFor,invokeProtected:invokeProtected,invokeModuleProtected:invokeModuleProtected,verify:verify,getSession:copy,clear:clear});
 })(window);

@@ -5,9 +5,9 @@ const vm=require('node:vm');
 
 const source=fs.readFileSync('js/application-routing.js','utf8');
 
-function runtime(basePath,pathname){
+function runtime(basePath,pathname,hash){
   const origin='https://example.test';
-  const window={location:{origin,pathname:pathname||basePath},document:{
+  const window={location:{origin,pathname:pathname||basePath,hash:hash||''},document:{
     currentScript:{src:origin+basePath+'js/application-routing.js'}
   }};
   vm.runInNewContext(source,{window,URL,Error,Object,String});
@@ -15,16 +15,16 @@ function runtime(basePath,pathname){
 }
 
 test('logical routes resolve beneath development-like, production-like, and root bases',()=>{
-  assert.strictEqual(runtime('/preview/').resolveLogicalRoute('/conference'),'/preview/conference');
-  assert.strictEqual(runtime('/app/').resolveLogicalRoute('/conference'),'/app/conference');
-  assert.strictEqual(runtime('/').resolveLogicalRoute('/conference'),'/conference');
+  assert.strictEqual(runtime('/preview/').resolveLogicalRoute('/conference'),'/preview/#/conference');
+  assert.strictEqual(runtime('/app/').resolveLogicalRoute('/conference'),'/app/#/conference');
+  assert.strictEqual(runtime('/').resolveLogicalRoute('/conference'),'/#/conference');
 });
 
 test('logical pathnames are recovered without repository-name knowledge',()=>{
-  assert.strictEqual(runtime('/preview/','/preview/conference').getLogicalPathname(),'/conference');
-  assert.strictEqual(runtime('/app/','/app/conference/').getLogicalPathname(),'/conference');
-  assert.strictEqual(runtime('/','/conference').getLogicalPathname(),'/conference');
-  assert.strictEqual(runtime('/preview/','/outside').getLogicalPathname(),null);
+  assert.strictEqual(runtime('/preview/','/preview/','#/conference').getLogicalPathname(),'/conference');
+  assert.strictEqual(runtime('/app/','/app/','#/conference/').getLogicalPathname(),'/conference/');
+  assert.strictEqual(runtime('/','/','#/conference').getLogicalPathname(),'/conference');
+  assert.strictEqual(runtime('/preview/','/outside').getLogicalPathname(),'/');
 });
 
 test('all current same-origin module routes remain beneath a repository scope',()=>{

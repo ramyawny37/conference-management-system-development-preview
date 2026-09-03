@@ -52,7 +52,7 @@ test("both direct reads share the resolver and preserve their JSON shapes",()=>{
 });
 
 test("operation cardinalities and protected boundary remain unchanged",()=>{
-  assert.deepEqual([contract.DIRECT_BROWSER_REQUIRED.length,contract.EDGE_ONLY_PROTECTED.length,contract.INTERNAL_ONLY.length,contract.POLICY_HELPER_BROWSER_READ.length],[13,57,16,9]);
+  assert.deepEqual([contract.DIRECT_BROWSER_REQUIRED.length,contract.EDGE_ONLY_PROTECTED.length,contract.INTERNAL_ONLY.length,contract.POLICY_HELPER_BROWSER_READ.length],[11,57,16,9]);
   assert.equal(new Set(contract.EDGE_ONLY_PROTECTED.map(x=>x.operation)).size,57);
   assert.equal(new Set(contract.EDGE_ONLY_PROTECTED.map(x=>x.signature)).size,57);
   assert.doesNotMatch(migration,/execute_conference_device_operation|device_guarded_|grant execute/i);

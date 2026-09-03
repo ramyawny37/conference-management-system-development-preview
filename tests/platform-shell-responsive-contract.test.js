@@ -29,7 +29,7 @@ assert.match(css,/@media\(max-width:600px\)[\s\S]*?\.startup-dashboard\{min-heig
 assert.match(css,/@media\(max-width:600px\)[\s\S]*?\.startup-version\{width:100%;margin-top:var\(--app-space-6\);padding-block:/);
 assert.match(html,/<button[^>]+platform-module-card-available[^>]+aria-label="فتح وحدة إدارة المؤتمرات"/);
 assert.doesNotMatch(html,/data-platform-module="conference"[^>]+onclick=/);
-assert.strictEqual((html.match(/platform-module-card-unavailable/g)||[]).length,3);
+assert.strictEqual((html.match(/platform-module-card-unavailable/g)||[]).length,2);
 assert.doesNotMatch(html,/platform-module-card-unavailable[^>]+onclick=/);
 assert.match(html,/data-startup-auth-account-name/);
 assert.match(html,/SyncSettingsUI\.signOut\(\)/);

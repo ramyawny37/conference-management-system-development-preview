@@ -18,7 +18,7 @@ function runtime(beginFlights){
     publicKeyThumbprint:'thumbprint-1',privateKey:{}};
   const client={functions:{invoke(name,request){
     calls.push({name,body:request.body});
-    if(name==='conference-device-operation')
+    if(name==='platform-device-operation')
       return Promise.resolve({data:{ok:true,data:{operation:request.body.operation}}});
     if(request.body.action==='begin')return beginFlights.shift().promise;
     if(request.body.action==='establish')return Promise.resolve({data:{ok:true,data:{
@@ -89,7 +89,7 @@ test('concurrent protected operations share the session establishment flight',as
   assert.equal(actionCount(state.calls,'begin'),1);
   assert.equal(actionCount(state.calls,'establish'),1);
   assert.equal(actionCount(state.calls,'verify'),1);
-  assert.equal(state.calls.filter(call=>call.name==='conference-device-operation').length,5);
+  assert.equal(state.calls.filter(call=>call.name==='platform-device-operation').length,5);
 });
 
 test('rejected establishment clears the flight and permits a later retry',async()=>{

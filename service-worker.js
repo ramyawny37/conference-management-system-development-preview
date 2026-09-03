@@ -1,8 +1,7 @@
 const APP_VERSION = '3.4.0';
 const DEVELOPMENT_PROJECT_REF = 'gppwltrifgfxrkzvvxoe';
 const DEVELOPMENT_PATH = '/conference-management-system-development-preview/';
-const IS_DEVELOPMENT = self.location.pathname.indexOf(DEVELOPMENT_PATH) === 0 ||
-  String(self.location.hostname || '').indexOf('integrated-platform-development') === 0;
+const IS_DEVELOPMENT = self.location.pathname.indexOf(DEVELOPMENT_PATH) === 0;
 const CACHE_NAMESPACE = IS_DEVELOPMENT
   ? 'cms:development:' + DEVELOPMENT_PROJECT_REF + ':'
   : '';
@@ -34,6 +33,9 @@ const CORE_ASSETS = [
   './js/supabase/runtime-config.js',
   './js/supabase/device-session.js?rev=startup-transport-cleanup-v1',
   './js/supabase/conference-device-operation-contract.js?rev=phase1c-v1',
+  './js/supabase/warehouse-device-operation-contract.js?rev=phase-w1-v1',
+  './js/supabase/platform-device-operation-contract.js?rev=phase-w1-v1',
+  './js/supabase/warehouse-transport.js?rev=phase-w1-v1',
   './js/supabase/client.js?rev=phase1c-v1',
   './js/supabase/auth.js?rev=account-session-identity-v1',
   './js/platform-integration.js?rev=startup-transport-cleanup-v1',
@@ -48,6 +50,7 @@ const CORE_ASSETS = [
   './js/supabase/organization-management-service.js?rev=organization-archive-restore-v1',
   './js/sync/organization-management-ui.js?rev=startup-device-admin-lifecycle-v1',
   './js/supabase/device-identity.js?rev=organization-membership-operation-key-v1',
+  './js/supabase/device-enrollment.js?rev=phase-w1-native-enrollment-v1',
   './js/sync/device-authorization-operation-repository.js',
   './js/supabase/current-device-authorization-service.js?rev=platform-authorization-readiness-v2',
   './js/supabase/device-authorization-administration-service.js?rev=platform-privileged-device-admin-diagnostics-v1',
@@ -129,6 +132,7 @@ const CORE_ASSETS = [
   './cards.js',
   './libs/xlsx.full.min.js',
   './js/ui-icons.js?rev=accommodation-visual-match-v6',
+  './js/warehouse/workspace.js?rev=phase-w1-v1',
   './script.js?rev=conference-module-entry-landing-v1',
   './version.js',
   './pwa.js?rev=organization-membership-operation-key-v1',
