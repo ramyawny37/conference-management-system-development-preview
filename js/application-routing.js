@@ -6,6 +6,9 @@
   var source=script&&script.src;
   var location=global.location;
   var baseUrl=null;
+  var conferenceTabNames=[
+    'accommodation','transportation','accounts','reports','cards','search','settings'
+  ];
 
   try{
     baseUrl=new URL('../',source);
@@ -45,6 +48,26 @@
     return null;
   }
 
+  function getConferenceRoute(route){
+    route=String(route===undefined
+      ?(location&&location.hash||'').replace(/^#/,'')
+      :route||'/');
+    if(route.length>1)route=route.replace(/\/+$/,'');
+    if(route==='/conference')return Object.freeze({kind:'home',tabId:null,tabName:null});
+    var match=/^\/conference\/app\/([a-z-]+)$/.exec(route);
+    if(!match)return route.indexOf('/conference')===0
+      ?Object.freeze({kind:'invalid',tabId:null,tabName:null}):null;
+    var tabId=conferenceTabNames.indexOf(match[1]);
+    return tabId<0?Object.freeze({kind:'invalid',tabId:null,tabName:null})
+      :Object.freeze({kind:'application',tabId:tabId,tabName:match[1]});
+  }
+
+  function resolveConferenceTabRoute(tabId){
+    tabId=typeof tabId==='number'?tabId:parseInt(tabId,10);
+    if(tabId<0||tabId>=conferenceTabNames.length||!isFinite(tabId))return null;
+    return '/conference/app/'+conferenceTabNames[tabId];
+  }
+
   global.ApplicationRouting=Object.freeze({
     getBasePathname:basePathname,
     resolveLogicalRoute:resolveLogicalRoute,
@@ -52,6 +75,8 @@
       var hash=String(location&&location.hash||'');
       return hash.indexOf('#/')===0?normalizeLogicalRoute(hash.slice(1)):'/';
     },
-    logicalPathname:logicalPathname
+    logicalPathname:logicalPathname,
+    getConferenceRoute:getConferenceRoute,
+    resolveConferenceTabRoute:resolveConferenceTabRoute
   });
 })(window);

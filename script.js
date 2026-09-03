@@ -271,13 +271,18 @@ function setCurrentConferenceById(id, options){
     return;
   }
 
+  var conferenceRoute=getCanonicalConferenceRoute();
+  var requestedTabId=null;
   if(options.enterApplication===true){
-    conferenceApplicationEntryActive=true;
-    conferenceModuleHomeRouteActive=false;
+    requestedTabId=getStoredLastTab();
+    if(requestedTabId===null)requestedTabId=0;
+    setConferenceApplicationPathname(requestedTabId,{push:true});
+  }else if(conferenceRoute&&conferenceRoute.kind==='application'){
+    requestedTabId=conferenceRoute.tabId;
   }
 
-  if(options.enterApplication!==true&&conferenceModuleHomeRouteActive&&
-    getPlatformShellPathname()==='/conference'){
+  if(options.enterApplication!==true&&conferenceRoute&&
+    conferenceRoute.kind==='home'){
     openStartupScreen({clearCurrentConference:false,persistView:true});
     return true;
   }
@@ -289,8 +294,10 @@ function setCurrentConferenceById(id, options){
   renderAccommodation();
   renderTransports();
   renderSettings();
-  if (wasStartup) restoreLastApplicationTab();
-  else if (!switchTab(currentTab)) switchTab(0);
+  if (wasStartup) restoreLastApplicationTab({tabId:requestedTabId});
+  else if(requestedTabId!==null){
+    if(!switchTab(requestedTabId,{preserveRoute:true}))switchTab(0);
+  }else if (!switchTab(currentTab)) switchTab(0);
   if(!options.skipToast) showToast('✅ تم تبديل المؤتمر');
   return true;
 }
@@ -506,8 +513,8 @@ function activatePersistedConferenceById(id,options){
     return false;
   }
   traceMemberActivation('conference_resolved','completed',null);
-  if(getPlatformShellPathname()==='/conference'&&
-    !conferenceApplicationEntryActive){
+  var conferenceRoute=getCanonicalConferenceRoute();
+  if(conferenceRoute&&conferenceRoute.kind==='home'){
     openStartupScreen({clearCurrentConference:false,persistView:false});
     traceMemberActivation('activation_return','completed','CONFERENCE_HOME_ROUTE');
     return true;
@@ -528,8 +535,13 @@ function activatePersistedConferenceById(id,options){
       }
     }],
     ['render_current_tab',function(){
-      if(wasStartup)restoreLastApplicationTab();
-      else if(!switchTab(currentTab))switchTab(0);
+      if(wasStartup)restoreLastApplicationTab({
+        tabId:conferenceRoute&&conferenceRoute.kind==='application'
+          ?conferenceRoute.tabId:null
+      });
+      else if(conferenceRoute&&conferenceRoute.kind==='application'){
+        if(!switchTab(conferenceRoute.tabId,{preserveRoute:true}))switchTab(0);
+      }else if(!switchTab(currentTab))switchTab(0);
     }]
   ];
   for(var stepIndex=0;stepIndex<steps.length;stepIndex++){
@@ -1401,8 +1413,6 @@ var SETTINGS_INTERNAL_VIEW_KEY = browserStorageNamespace.key(
   'conference_manager_settings_internal_view'
 );
 var currentApplicationView = 'application';
-var conferenceModuleHomeRouteActive = false;
-var conferenceApplicationEntryActive = false;
 
 function getValidApplicationTabIds(){
   return [0, 1, 2, 3, 4, 5, 6];
@@ -1483,22 +1493,27 @@ function saveSettingsInternalView(view){
   }catch(e){}
 }
 
-function restoreLastApplicationTab(){
-  if(conferenceModuleHomeRouteActive&&getPlatformShellPathname()==='/conference'){
-    return true;
+function restoreLastApplicationTab(options){
+  options=options||{};
+  var conferenceRoute=getCanonicalConferenceRoute();
+  var requestedTab=options.tabId;
+  if(requestedTab===undefined||requestedTab===null){
+    requestedTab=conferenceRoute&&conferenceRoute.kind==='application'
+      ?conferenceRoute.tabId:getStoredLastTab();
   }
-  var storedTab = getStoredLastTab();
-  var restoredTab=storedTab===null?0:storedTab;
+  var restoredTab=requestedTab===null?0:requestedTab;
   var settingsTabId=getApplicationTabIdByName('settings');
   if(restoredTab===settingsTabId){
     settingsTab=getStoredSettingsInternalView()||'general';
   }
-  var restored=switchTab(restoredTab);
+  var restored=switchTab(restoredTab,{preserveRoute:
+    !!(conferenceRoute&&conferenceRoute.kind==='application')});
   if(!restored)switchTab(0);
   if(restored&&restoredTab===settingsTabId){
     resetAdministrativeViewScroll();
     if(settingsTab==='organization-members')refreshOrganizationMembersSection();
   }
+  return restored;
 }
 
 function resetAdministrativeViewScroll(){
@@ -1506,11 +1521,11 @@ function resetAdministrativeViewScroll(){
   try{window.scrollTo({top:0,left:0,behavior:'auto'});}catch(error){window.scrollTo(0,0);}
 }
 
-function switchTab(n){
+function switchTab(n,options){
   if(window.StartupAccessGate&&!window.StartupAccessGate.isAllowed())return false;
+  options=options||{};
   var tabId = typeof n === 'number' ? n : parseInt(n, 10);
   if (!isValidApplicationTab(tabId)) return false;
-  conferenceModuleHomeRouteActive=false;
   var settingsTabId=getApplicationTabIdByName('settings');
   if(tabId!==settingsTabId&&window.ConferenceTemplateHousesEditor){
     window.ConferenceTemplateHousesEditor.close();
@@ -1531,6 +1546,7 @@ function switchTab(n){
   getValidApplicationTabIds().forEach(function(id){ge('tab'+id).style.display=id===tabId?'':'none';});
   renderTab(tabId);
   saveLastTab(tabId);
+  if(options.preserveRoute!==true)setConferenceApplicationPathname(tabId,{push:true});
   return true;
 }
 
@@ -1550,7 +1566,6 @@ function openSettingsFromHome(){
   if(window.StartupAccessGate&&!window.StartupAccessGate.isAllowed())return false;
   var settingsTabId=getApplicationTabIdByName('settings');
   if(settingsTabId===null)return false;
-  conferenceModuleHomeRouteActive=false;
   setApplicationMode('application');
   var opened=switchTab(settingsTabId);
   if(opened)resetAdministrativeViewScroll();
@@ -1578,8 +1593,6 @@ function showHomePage(){
   if(getPlatformShellPathname()!=='/conference'){
     replacePlatformShellPathname('/conference');
   }
-  conferenceApplicationEntryActive=false;
-  conferenceModuleHomeRouteActive=true;
   return openStartupScreen({clearCurrentConference:false,persistView:true});
 }
 function getPlatformShellPathname(){
@@ -1595,6 +1608,26 @@ function replacePlatformShellPathname(pathname){
   window.history.replaceState(null,'',routing?routing.resolveLogicalRoute(pathname):pathname);
   return true;
 }
+function pushPlatformShellPathname(pathname){
+  if(!window.history||typeof window.history.pushState!=='function')return false;
+  var routing=window.ApplicationRouting;
+  window.history.pushState(null,'',routing?routing.resolveLogicalRoute(pathname):pathname);
+  return true;
+}
+function getCanonicalConferenceRoute(){
+  var routing=window.ApplicationRouting;
+  return routing&&typeof routing.getConferenceRoute==='function'
+    ?routing.getConferenceRoute(getPlatformShellPathname()):null;
+}
+function setConferenceApplicationPathname(tabId,options){
+  var routing=window.ApplicationRouting;
+  var pathname=routing&&typeof routing.resolveConferenceTabRoute==='function'
+    ?routing.resolveConferenceTabRoute(tabId):null;
+  if(!pathname)return false;
+  if(getPlatformShellPathname()===pathname)return true;
+  return options&&options.push===true
+    ?pushPlatformShellPathname(pathname):replacePlatformShellPathname(pathname);
+}
 function showPlatformModules(options){
   options=options||{};
   var shell=ge('startupScreen');
@@ -1602,8 +1635,6 @@ function showPlatformModules(options){
   if(options.preservePathname!==true&&getPlatformShellPathname()!=='/'){
     replacePlatformShellPathname('/');
   }
-  conferenceApplicationEntryActive=false;
-  conferenceModuleHomeRouteActive=false;
   shell.classList.remove('platform-conference-active','platform-warehouse-active');
   var launcher=ge('platformLauncherTitle');
   if(launcher)launcher.focus();
@@ -1614,8 +1645,6 @@ function openConferenceWorkspace(options){
   var shell=ge('startupScreen');
   var workspace=ge('conferenceWorkspace');
   if(!shell||!workspace)return false;
-  conferenceApplicationEntryActive=false;
-  conferenceModuleHomeRouteActive=true;
   shell.classList.remove('platform-warehouse-active');
   shell.classList.add('platform-conference-active');
   workspace.focus();
@@ -1631,8 +1660,21 @@ function renderTab(n){
   else if (n === 5) renderSearch();
   else if (n === 6) renderSettings();
 }
-function isConferenceApplicationEntryActive(){
-  return conferenceApplicationEntryActive===true;
+function reconcileConferenceRoute(){
+  var route=getCanonicalConferenceRoute();
+  if(!route)return false;
+  if(route.kind==='home')return showHomePage();
+  var current=getCurrentConference();
+  var authorization=window.ConferenceActivationAuthorization;
+  if(route.kind!=='application'||!current||!authorization||
+    !authorization.canDisplay(current.id)){
+    replacePlatformShellPathname('/conference');
+    openStartupScreen({clearCurrentConference:false,persistView:false});
+    return false;
+  }
+  openConferenceWorkspace();
+  setApplicationMode('application');
+  return switchTab(route.tabId,{preserveRoute:true});
 }
 
 function getAccommodationPricingModeLabel(mode){
@@ -6962,7 +7004,7 @@ function openStartupScreen(options){
   currentApplicationView='startup';
   if(persistView)saveApplicationView('startup');
   var platformRoute=getPlatformShellPathname();
-  if(platformRoute==='/conference'){
+  if(platformRoute&&platformRoute.indexOf('/conference')===0){
     openConferenceWorkspace({explicitModuleEntry:true});
   }else if(platformRoute&&platformRoute.indexOf('/warehouse')===0&&
     typeof window.openWarehouseWorkspace==='function'){
@@ -9901,28 +9943,45 @@ function completeApplicationStartup(){
 }
 function restoreAuthorizedApplicationView(){
   recordStartupStage('view_restore','started');
-  var authorization=window.ConferenceActivationAuthorization;
-  var current=getCurrentConference();
-  if(!current||!authorization||!authorization.canDisplay(current.id)){
-    appData.currentConferenceId=null;
-    showSelectConferenceModal();
-    recordStartupStage('view_restore','completed','NO_AUTHORIZED_CONFERENCE');
+  var platformRoute=getPlatformShellPathname();
+  var conferenceRoute=getCanonicalConferenceRoute();
+  if(platformRoute==='/'){
+    showPlatformModules({preservePathname:true});
+    recordStartupStage('view_restore','completed','PLATFORM_HOME_ROUTE');
     return true;
   }
-  syncCurrentConferenceRefs();
-  if(getPlatformShellPathname()==='/conference'&&
-    !conferenceApplicationEntryActive){
+  if(platformRoute&&platformRoute.indexOf('/warehouse')===0){
+    if(typeof window.openWarehouseWorkspace==='function'){
+      window.openWarehouseWorkspace({route:platformRoute});
+    }
+    recordStartupStage('view_restore','completed','WAREHOUSE_ROUTE');
+    return true;
+  }
+  var authorization=window.ConferenceActivationAuthorization;
+  var current=getCurrentConference();
+  if(conferenceRoute&&conferenceRoute.kind==='home'){
     openStartupScreen({clearCurrentConference:false,persistView:false});
     recordStartupStage('view_restore','completed','CONFERENCE_HOME_ROUTE');
     return true;
   }
+  if(!current||!authorization||!authorization.canDisplay(current.id)){
+    appData.currentConferenceId=null;
+    if(conferenceRoute){
+      replacePlatformShellPathname('/conference');
+      openStartupScreen({clearCurrentConference:false,persistView:false});
+    }else showSelectConferenceModal();
+    recordStartupStage('view_restore','completed','NO_AUTHORIZED_CONFERENCE');
+    return true;
+  }
+  syncCurrentConferenceRefs();
   if(!getCurrentConference()){
     showSelectConferenceModal();
-  }else if(getStoredApplicationView()==='startup'){
-    openStartupScreen({clearCurrentConference:false,persistView:false});
-  }else{
+  }else if(conferenceRoute&&conferenceRoute.kind==='application'){
     setApplicationMode('application');
-    restoreLastApplicationTab();
+    restoreLastApplicationTab({tabId:conferenceRoute.tabId});
+  }else{
+    replacePlatformShellPathname('/conference');
+    openStartupScreen({clearCurrentConference:false,persistView:false});
   }
   var body=ge('applicationBody'),startup=ge('startupScreen');
   if(!(body&&body.style.display!=='none'||startup&&startup.style.display!=='none')){

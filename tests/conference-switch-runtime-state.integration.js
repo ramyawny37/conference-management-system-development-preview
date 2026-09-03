@@ -52,6 +52,10 @@ var sandbox={
   refreshPeopleDatalist:function(){},renderAccommodation:function(){},
   renderTransports:function(){},renderSettings:function(){},currentTab:0,
   switchTab:function(){return true;},restoreLastApplicationTab:function(){},
+  getCanonicalConferenceRoute:function(){return null;},
+  getStoredLastTab:function(){return 0;},
+  setConferenceApplicationPathname:function(){return true;},
+  openStartupScreen:function(){return true;},
   showToast:function(){},console:console,Promise:Promise
 };
 sandbox.window=sandbox;

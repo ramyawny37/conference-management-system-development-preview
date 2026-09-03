@@ -46,6 +46,7 @@ function environment(options={}){
     AutomaticSyncOrchestrator:{schedule(){calls.push('schedule');}}
   };
   sandbox.getPlatformShellPathname=()=>'/';
+  sandbox.getCanonicalConferenceRoute=()=>null;
   sandbox.getCurrentConference=()=>sandbox.appData.conferences.find(item=>
     item.id===sandbox.appData.currentConferenceId)||null;
   sandbox.window=sandbox;

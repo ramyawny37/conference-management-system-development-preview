@@ -13,15 +13,16 @@ function classList(){
     remove(...names){names.forEach(name=>values.delete(name));}};
 }
 
-function integrationRuntime(initialRoute,applicationEntry){
+function integrationRuntime(initialRoute){
   let route=initialRoute;
   const calls=[];
   const listeners={};
-  const window={document:{addEventListener(){}},isConferenceApplicationEntryActive:()=>applicationEntry===true,ApplicationRouting:{
+  const window={document:{addEventListener(){}},ApplicationRouting:{
     getLogicalPathname:()=>route,resolveLogicalRoute:value=>'/preview/#'+value
   },history:{pushState(_state,_title,value){calls.push(['push',value]);route=value.split('#')[1];}},
   addEventListener(name,handler){listeners[name]=handler;},
-  showHomePage(){calls.push(['conference']);},showPlatformModules(){calls.push(['platform']);},
+  reconcileConferenceRoute(){calls.push(['conference-route',route]);},
+  showPlatformModules(){calls.push(['platform']);},
   openConferenceWorkspace(){calls.push(['conference-open']);},
   openWarehouseWorkspace(options){calls.push(['warehouse',options.route]);}};
   vm.runInNewContext(integrationSource,{window,Promise,Object,JSON,String});
@@ -43,7 +44,11 @@ test('one hash listener owns Back and Forward reconciliation',()=>{
   const state=integrationRuntime('/conference');
   assert.deepStrictEqual(Object.keys(state.listeners),['hashchange']);
   state.listeners.hashchange();
-  assert.deepStrictEqual(state.calls,[['conference']]);
+  assert.deepStrictEqual(state.calls,[['conference-route','/conference']]);
+  state.calls.length=0;
+  state.setRoute('/conference/app/reports');
+  state.listeners.hashchange();
+  assert.deepStrictEqual(state.calls,[['conference-route','/conference/app/reports']]);
   state.calls.length=0;
   state.setRoute('/warehouse/approvals');
   state.listeners.hashchange();
@@ -54,10 +59,16 @@ test('one hash listener owns Back and Forward reconciliation',()=>{
   assert.deepStrictEqual(state.calls,[['platform']]);
 });
 
-test('delayed route reconciliation cannot undo explicit Conference application entry',()=>{
-  const state=integrationRuntime('/conference',true);
+test('delayed reconciliation delegates the current canonical Conference route',()=>{
+  const state=integrationRuntime('/conference/app/settings');
   state.window.PlatformIntegration.initialize();
-  assert.deepStrictEqual(state.calls,[]);
+  assert.deepStrictEqual(state.calls,[['conference-route','/conference/app/settings']]);
+});
+
+test('routing has one hashchange owner and no competing popstate owner',()=>{
+  const state=integrationRuntime('/');
+  assert.deepStrictEqual(Object.keys(state.listeners),['hashchange']);
+  assert.doesNotMatch(integrationSource,/addEventListener\(['"]popstate/);
 });
 
 function warehouseRuntime(route){

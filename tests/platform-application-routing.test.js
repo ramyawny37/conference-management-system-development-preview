@@ -33,3 +33,18 @@ test('all current same-origin module routes remain beneath a repository scope',(
     assert.match(routing.resolveLogicalRoute(route),/^\/preview\//);
   }
 });
+
+test('canonical Conference routes map every application tab bidirectionally',()=>{
+  const routing=runtime('/preview/');
+  const names=['accommodation','transportation','accounts','reports','cards','search','settings'];
+  names.forEach((name,tabId)=>{
+    assert.strictEqual(routing.resolveConferenceTabRoute(tabId),'/conference/app/'+name);
+    assert.deepStrictEqual({...routing.getConferenceRoute('/conference/app/'+name)},
+      {kind:'application',tabId,tabName:name});
+  });
+  assert.deepStrictEqual({...routing.getConferenceRoute('/conference')},
+    {kind:'home',tabId:null,tabName:null});
+  assert.strictEqual(routing.resolveConferenceTabRoute(7),null);
+  assert.strictEqual(routing.getConferenceRoute('/warehouse'),null);
+  assert.strictEqual(routing.getConferenceRoute('/conference/app/unknown').kind,'invalid');
+});

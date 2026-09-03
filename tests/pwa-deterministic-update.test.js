@@ -14,7 +14,7 @@ const next='organization-membership-operation-key-v1';
 const mobileRoomInputRevision='anchored-glass-person-picker-v5';
 const appVersion='3.4.0';
 const shellRevision='development-3-4-0-platform-foundation-v1';
-const cacheRevision='development-3-4-0-conference-entry-v1';
+const cacheRevision='development-3-4-0-canonical-conference-routing-v1';
 const startupTransportRevision='startup-transport-cleanup-v1';
 const moduleRoutingRevision='warehouse-workspace-v1';
 const priorAuthorizationCacheRevision='runtime-authorization-phase1-v1';
@@ -24,7 +24,7 @@ const firstLoginCoordinatorRevision='platform-first-login-coordinator-v1';
 const stateAssetRevision='managed-platform-startup-gate-v1';
 const persistenceArbitrationRevision='develop-cross-store-arbitration-v1';
 const permissionRuntimeRevision='development-3-4-0-platform-foundation-v1';
-const platformShellScriptRevision='conference-entry-v1';
+const platformShellScriptRevision='canonical-conference-routing-v1';
 const testTemplateCleanupRevision='test-house-template-cleanup-v1';
 const templateDiagnosticRevision='template-diagnostic-export-v1';
 const partialTemplateCleanupRevision='partial-template-state-cleanup-v1';
@@ -204,7 +204,7 @@ assert(index.includes(readAsset));
 assert(worker.includes("'./"+readAsset+"'"));
 assert(index.includes('script.js?rev='+platformShellScriptRevision));
 assert(worker.includes("'./script.js?rev="+platformShellScriptRevision+"'"));
-[['js/platform-integration.js','conference-entry-v1'],
+[['js/platform-integration.js','canonical-conference-routing-v1'],
  ['js/supabase/device-session.js',startupTransportRevision]].forEach(([asset,revision])=>{
   const versioned=asset+'?rev='+revision;
   assert(index.includes(versioned),'index missing '+versioned);

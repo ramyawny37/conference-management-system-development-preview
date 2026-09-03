@@ -17,7 +17,7 @@ const settingsRendering=source.slice(
   source.indexOf('function renderHouseTemplatesSettings()')
 );
 
-function runtime(storedTab){
+function runtime(storedTab,routeTab){
   const calls=[];
   const storage={last:String(storedTab),removed:0};
   let ready=true;
@@ -32,12 +32,14 @@ function runtime(storedTab){
     document:{querySelectorAll(){return Array.from({length:7},()=>({style:{}}));}},
     ge:id=>elements[id]||{style:{}},isFinite,parseInt,
     getPlatformShellPathname:()=>'/conference',
+    getCanonicalConferenceRoute:()=>routeTab===undefined?null:
+      ({kind:'application',tabId:routeTab}),
     getApplicationTabIdByName:name=>name==='settings'?6:null,
     getStoredSettingsInternalView:()=>'',resetAdministrativeViewScroll(){},
     refreshOrganizationMembersSection(){},settingsTab:'general'};
   sandbox.window=sandbox;
-  sandbox.switchTab=function(tabId){
-    calls.push(tabId);
+  sandbox.switchTab=function(tabId,options){
+    calls.push([tabId,!!(options&&options.preserveRoute)]);
     if(!ready)return false;
     sandbox.saveLastTab(tabId);
     return true;
@@ -46,35 +48,25 @@ function runtime(storedTab){
   return {sandbox,calls,storage,setReady:value=>{ready=value;}};
 }
 
-for(const previousTab of [0,6,5,2,3,4,1]){
-  test(`explicit Conference entry keeps module home over persisted tab ${previousTab}`,()=>{
-    const state=runtime(previousTab);
-    assert.strictEqual(state.sandbox.openConferenceWorkspace(
-      {explicitModuleEntry:true}),true);
+for(const requestedTab of [0,1,2,3,4,5,6]){
+  test(`canonical Conference application route restores exact tab ${requestedTab}`,()=>{
+    const state=runtime((requestedTab+1)%7,requestedTab);
     assert.strictEqual(state.sandbox.restoreLastApplicationTab(),true);
-    assert.deepStrictEqual(state.calls,[]);
-    assert.strictEqual(state.storage.last,String(previousTab));
-    assert.strictEqual(state.storage.removed,0);
+    assert.deepStrictEqual(state.calls,[[requestedTab,true]]);
+    assert.strictEqual(state.storage.last,String(requestedTab));
   });
 }
 
 test('ordinary authorized restoration preserves the current persisted tab',()=>{
   const state=runtime(6);
   state.sandbox.restoreLastApplicationTab();
-  assert.deepStrictEqual(state.calls,[6]);
+  assert.deepStrictEqual(state.calls,[[6,false]]);
   assert.strictEqual(state.storage.last,'6');
 });
 
-test('Conference module home remains distinct from application restoration',()=>{
-  const state=runtime(6);
-  state.sandbox.openConferenceWorkspace({explicitModuleEntry:true});
-  state.setReady(false);
-  assert.strictEqual(state.sandbox.restoreLastApplicationTab(),true);
-  assert.deepStrictEqual(state.calls,[]);
-  assert.strictEqual(state.storage.last,'6');
-  state.setReady(true);
-  assert.strictEqual(state.sandbox.restoreLastApplicationTab(),true);
-  assert.deepStrictEqual(state.calls,[]);
+test('Conference workspace shell no longer owns Home versus Application state',()=>{
+  assert.doesNotMatch(workspace,
+    /conferenceApplicationEntryActive|conferenceModuleHomeRouteActive/);
 });
 
 test('Settings rendering diagnostics do not trigger tab navigation',()=>{

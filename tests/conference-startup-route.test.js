@@ -68,23 +68,23 @@ test('repository-scoped Conference restores workspace and return home restores a
 });
 
 test('Conference route correction invalidates the Development runtime cache',()=>{
-  assert.match(html,/script\.js\?rev=conference-entry-v1/);
-  assert.match(worker,/development-3-4-0-conference-entry-v1/);
-  assert.match(worker,/script\.js\?rev=conference-entry-v1/);
+  assert.match(html,/script\.js\?rev=canonical-conference-routing-v1/);
+  assert.match(worker,/development-3-4-0-canonical-conference-routing-v1/);
+  assert.match(worker,/script\.js\?rev=canonical-conference-routing-v1/);
 });
 
 test('authorized async restoration cannot override an explicit Conference home route',()=>{
   const restore=source.slice(source.indexOf('function restoreAuthorizedApplicationView'),source.indexOf('function traceRealtimeStartup'));
   const activation=source.slice(source.indexOf('function activatePersistedConferenceById'),source.indexOf('function downloadFullApplicationBackup'));
-  assert.match(restore,/getPlatformShellPathname\(\)==='\/conference'[\s\S]*openStartupScreen/);
-  assert.match(activation,/getPlatformShellPathname\(\)==='\/conference'[\s\S]*openStartupScreen/);
-  assert.ok(restore.indexOf("getPlatformShellPathname()==='/conference'")<restore.indexOf("setApplicationMode('application')"));
+  assert.match(restore,/conferenceRoute\.kind==='home'[\s\S]*openStartupScreen/);
+  assert.match(activation,/conferenceRoute\.kind==='home'[\s\S]*openStartupScreen/);
+  assert.ok(restore.indexOf("conferenceRoute.kind==='home'")<restore.indexOf("setApplicationMode('application')"));
 });
 
-test('explicit Conference opening owns application entry until Home is requested',()=>{
+test('explicit Conference opening publishes a durable route and Home removes no selection',()=>{
   const selection=source.slice(source.indexOf('function setCurrentConferenceById'),source.indexOf('function completeCurrentConference'));
   const navigation=source.slice(source.indexOf('function showHomePage'),source.indexOf('function getAccommodationPricingModeLabel'));
-  assert.match(selection,/options\.enterApplication===true[\s\S]*conferenceApplicationEntryActive=true[\s\S]*setApplicationMode\('application'\)[\s\S]*restoreLastApplicationTab/);
-  assert.match(navigation,/function showHomePage\(\)[\s\S]*conferenceApplicationEntryActive=false/);
-  assert.match(navigation,/function isConferenceApplicationEntryActive\(\)[\s\S]*return conferenceApplicationEntryActive===true/);
+  assert.match(selection,/options\.enterApplication===true[\s\S]*getStoredLastTab\(\)[\s\S]*setConferenceApplicationPathname\(requestedTabId,\{push:true\}\)[\s\S]*setApplicationMode\('application'\)/);
+  assert.match(navigation,/function showHomePage\(\)[\s\S]*replacePlatformShellPathname\('\/conference'\)[\s\S]*clearCurrentConference:false/);
+  assert.doesNotMatch(source,/conferenceApplicationEntryActive|conferenceModuleHomeRouteActive/);
 });
