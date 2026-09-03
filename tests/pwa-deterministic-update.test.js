@@ -14,7 +14,8 @@ const next='organization-membership-operation-key-v1';
 const mobileRoomInputRevision='anchored-glass-person-picker-v5';
 const appVersion='3.4.0';
 const shellRevision='development-3-4-0-platform-foundation-v1';
-const cacheRevision='development-3-4-0-conference-module-entry-landing-v1';
+const cacheRevision='development-3-4-0-startup-transport-cleanup-v1';
+const startupTransportRevision='startup-transport-cleanup-v1';
 const priorAuthorizationCacheRevision='runtime-authorization-phase1-v1';
 const productionCacheRevision='production-integrated-3-3-0-main-6d0c1e1-develop-80653ca-v1';
 const accountIdentityRevision='account-session-identity-v1';
@@ -202,6 +203,11 @@ assert(index.includes(readAsset));
 assert(worker.includes("'./"+readAsset+"'"));
 assert(index.includes('script.js?rev='+platformShellScriptRevision));
 assert(worker.includes("'./script.js?rev="+platformShellScriptRevision+"'"));
+['js/platform-integration.js','js/supabase/device-session.js'].forEach(asset=>{
+  const versioned=asset+'?rev='+startupTransportRevision;
+  assert(index.includes(versioned),'index missing '+versioned);
+  assert(worker.includes("'./"+versioned+"'"),'app shell missing '+versioned);
+});
 [
   'js/sync/conference-permission-resolver.js',
   'core.js',

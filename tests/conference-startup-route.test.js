@@ -69,6 +69,6 @@ test('repository-scoped Conference restores workspace and return home restores a
 
 test('Conference route correction invalidates the Development runtime cache',()=>{
   assert.match(html,/script\.js\?rev=conference-module-entry-landing-v1/);
-  assert.match(worker,/development-3-4-0-conference-module-entry-landing-v1/);
+  assert.match(worker,/development-3-4-0-startup-transport-cleanup-v1/);
   assert.match(worker,/script\.js\?rev=conference-module-entry-landing-v1/);
 });

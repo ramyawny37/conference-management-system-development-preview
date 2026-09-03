@@ -16,7 +16,7 @@ test('shell registers all module cards through the platform contract',()=>{
   assert.doesNotMatch(html,/data-platform-module="[^"]+"[^>]+onclick=/);
 });
 
-function navigationRuntime(pathname,modules,contextFailure,basePath='/'){
+function navigationRuntime(pathname,modules,contextFailure,basePath='/',hostname='example.test'){
   const cards={};
   const documentListeners={};
   for(const module of modules){
@@ -36,11 +36,11 @@ function navigationRuntime(pathname,modules,contextFailure,basePath='/'){
       }};
   }
   const assigned=[];const listeners={};const workspaceOptions=[];let moduleOpens=0;
-  const origin='https://example.test';
-  const window={Promise,navigator:{platform:'test'},location:{pathname,origin,
+  const origin='https://'+hostname;let contextRequests=0;
+  const window={Promise,navigator:{platform:'test'},location:{pathname,origin,hostname,
     assign(route){assigned.push(route);}},fetch(){return Promise.resolve(contextFailure
-      ?{ok:false,status:401,json(){return Promise.resolve({error:'PLATFORM_SESSION_INVALID'});}}
-      :{ok:true,json(){return Promise.resolve({modules});}});},document:{addEventListener(type,listener){
+      ?(contextRequests++,{ok:false,status:401,json(){return Promise.resolve({error:'PLATFORM_SESSION_INVALID'});}})
+      :(contextRequests++,{ok:true,json(){return Promise.resolve({modules});}}));},document:{addEventListener(type,listener){
       (documentListeners[type]||(documentListeners[type]=[])).push(listener);
     },currentScript:{src:origin+basePath+'js/application-routing.js'},querySelector(selector){
       if(selector==='[data-platform-module="conference"] .platform-module-state-available')return cards.conference&&cards.conference.state;
@@ -53,9 +53,34 @@ function navigationRuntime(pathname,modules,contextFailure,basePath='/'){
   vm.runInNewContext(applicationRouting,{window,URL,Error,Object,String});
   vm.runInNewContext(integration,{window,Promise,Object,Array,String,Error,JSON});
   return window.PlatformIntegration.initialize().then(()=>({window,cards,assigned,
-    workspaceOptions,moduleOpens:()=>moduleOpens,
+    workspaceOptions,moduleOpens:()=>moduleOpens,contextRequests:()=>contextRequests,
     popstate(){for(const listener of listeners.popstate||[])listener();}}));
 }
+
+test('GitHub Pages initializes unmanaged without probing platform context',async()=>{
+  const runtime=await navigationRuntime(
+    '/conference-management-system-development-preview/',
+    [{id:'conference',routePrefix:'/conference',available:true}],false,
+    '/conference-management-system-development-preview/','ramyawny37.github.io');
+  assert.strictEqual(runtime.contextRequests(),0);
+  assert.strictEqual(runtime.window.PlatformIntegration.isInitialized(),true);
+  assert.strictEqual(runtime.window.PlatformIntegration.isManagedOrigin(),false);
+  assert.strictEqual(runtime.window.PlatformIntegration.getContext(),null);
+  runtime.cards.conference.click();
+  assert.strictEqual(runtime.window.location.pathname,
+    '/conference-management-system-development-preview/conference');
+  assert.strictEqual(runtime.workspaceOptions[0].explicitModuleEntry,true);
+});
+
+test('managed gateway origin still hydrates the returned module registry',async()=>{
+  const runtime=await navigationRuntime('/',[
+    {id:'conference',routePrefix:'/conference',available:true},
+    {id:'warehouse',routePrefix:'/warehouse',available:false}
+  ]);
+  assert.strictEqual(runtime.contextRequests(),1);
+  assert.strictEqual(runtime.window.PlatformIntegration.isManagedOrigin(),true);
+  assert.strictEqual(runtime.cards.warehouse.disabled,true);
+});
 
 test('available cards use the hydrated registry route and unavailable cards remain inert',async()=>{
   const modules=[

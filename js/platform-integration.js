@@ -103,7 +103,19 @@
     }
   }
 
+  function isStaticApplicationOrigin(){
+    return String(global.location&&global.location.hostname||'').toLowerCase()===
+      'ramyawny37.github.io';
+  }
+
   function refreshContext(){
+    if(isStaticApplicationOrigin()){
+      state.managedOrigin=false;
+      state.context=null;
+      state.initialized=true;
+      event('PLATFORM_STATIC_ORIGIN');
+      return Promise.resolve(null);
+    }
     trace.platformContextHydrationAttempted=true;event('PLATFORM_CONTEXT_START');
     return request('/api/platform/context').then(function(context){
       state.managedOrigin=true;
@@ -222,6 +234,7 @@
     adoptSession:adoptSession,
     synchronizeSession:synchronizeSession,
     awaitAuthorizationReady:awaitAuthorizationReady,
+    isInitialized:function(){return state.initialized===true;},
     isManagedOrigin:function(){return state.managedOrigin===true;},
     isAuthorizationReady:function(){return state.authorizationReady===true;},
     getDeviceIdentitySource:function(){return state.deviceIdentitySource;},

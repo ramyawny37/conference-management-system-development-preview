@@ -3,7 +3,7 @@
   var DATABASE='platform-device-ownership-v1',STORE='keys';
   var PURPOSE='PLATFORM_DEVICE_SESSION_ESTABLISH';
   var ORIGIN='https://ramyawny37.github.io';
-  var memorySession=null,expiryTimer=null;
+  var memorySession=null,expiryTimer=null,ensureFlight=null;
 
   function encoded(value){return btoa(String.fromCharCode.apply(null,new Uint8Array(value))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');}
   function database(){return new Promise(function(resolve,reject){var opening=indexedDB.open(DATABASE,1);opening.onsuccess=function(){resolve(opening.result);};opening.onerror=function(){reject(opening.error);};});}
@@ -20,7 +20,12 @@
   function clear(){memorySession=null;if(expiryTimer){global.clearTimeout(expiryTimer);expiryTimer=null;}if(global.document&&typeof global.document.dispatchEvent==='function')global.document.dispatchEvent(new CustomEvent('platform-device-session-invalid'));}
   function validFor(milliseconds){return !!(memorySession&&Date.parse(memorySession.expiresAt)-Date.now()>Number(milliseconds||0));}
   function scheduleExpiry(){if(expiryTimer)global.clearTimeout(expiryTimer);var delay=memorySession?Math.max(0,Date.parse(memorySession.expiresAt)-Date.now()):0;expiryTimer=global.setTimeout(clear,delay);}
-  function ensureValid(){if(validFor(90000))return verify();return establish().then(function(value){scheduleExpiry();return value.verified;});}
+  function ensureValid(){
+    if(validFor(90000))return verify();
+    if(ensureFlight)return ensureFlight;
+    ensureFlight=establish().then(function(value){scheduleExpiry();ensureFlight=null;return value.verified;},function(error){ensureFlight=null;throw error;});
+    return ensureFlight;
+  }
   function invokeProtected(operation,args){return ensureValid().then(function(){var client=global.SupabaseClientLayer.getClient();return client.functions.invoke('conference-device-operation',{body:{sessionId:memorySession.sessionId,token:memorySession.token,operation:operation,args:args||{}}});}).then(function(response){if(response.error)throw response.error;if(!response.data||response.data.ok!==true)throw response.data&&response.data.error||{code:'CONFERENCE_DEVICE_OPERATION_DENIED'};return response.data.data;});}
   global.PlatformDeviceSession=Object.freeze({establish:establish,ensureValid:ensureValid,validFor:validFor,invokeProtected:invokeProtected,verify:verify,getSession:copy,clear:clear});
 })(window);
