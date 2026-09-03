@@ -68,9 +68,9 @@ test('repository-scoped Conference restores workspace and return home restores a
 });
 
 test('Conference route correction invalidates the Development runtime cache',()=>{
-  assert.match(html,/script\.js\?rev=conference-refresh-v1/);
-  assert.match(worker,/development-3-4-0-warehouse-workspace-v1/);
-  assert.match(worker,/script\.js\?rev=conference-refresh-v1/);
+  assert.match(html,/script\.js\?rev=conference-entry-v1/);
+  assert.match(worker,/development-3-4-0-conference-entry-v1/);
+  assert.match(worker,/script\.js\?rev=conference-entry-v1/);
 });
 
 test('authorized async restoration cannot override an explicit Conference home route',()=>{
@@ -79,4 +79,12 @@ test('authorized async restoration cannot override an explicit Conference home r
   assert.match(restore,/getPlatformShellPathname\(\)==='\/conference'[\s\S]*openStartupScreen/);
   assert.match(activation,/getPlatformShellPathname\(\)==='\/conference'[\s\S]*openStartupScreen/);
   assert.ok(restore.indexOf("getPlatformShellPathname()==='/conference'")<restore.indexOf("setApplicationMode('application')"));
+});
+
+test('explicit Conference opening owns application entry until Home is requested',()=>{
+  const selection=source.slice(source.indexOf('function setCurrentConferenceById'),source.indexOf('function completeCurrentConference'));
+  const navigation=source.slice(source.indexOf('function showHomePage'),source.indexOf('function getAccommodationPricingModeLabel'));
+  assert.match(selection,/options\.enterApplication===true[\s\S]*conferenceApplicationEntryActive=true[\s\S]*setApplicationMode\('application'\)[\s\S]*restoreLastApplicationTab/);
+  assert.match(navigation,/function showHomePage\(\)[\s\S]*conferenceApplicationEntryActive=false/);
+  assert.match(navigation,/function isConferenceApplicationEntryActive\(\)[\s\S]*return conferenceApplicationEntryActive===true/);
 });

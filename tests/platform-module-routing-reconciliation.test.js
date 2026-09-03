@@ -13,11 +13,11 @@ function classList(){
     remove(...names){names.forEach(name=>values.delete(name));}};
 }
 
-function integrationRuntime(initialRoute){
+function integrationRuntime(initialRoute,applicationEntry){
   let route=initialRoute;
   const calls=[];
   const listeners={};
-  const window={document:{addEventListener(){}},ApplicationRouting:{
+  const window={document:{addEventListener(){}},isConferenceApplicationEntryActive:()=>applicationEntry===true,ApplicationRouting:{
     getLogicalPathname:()=>route,resolveLogicalRoute:value=>'/preview/#'+value
   },history:{pushState(_state,_title,value){calls.push(['push',value]);route=value.split('#')[1];}},
   addEventListener(name,handler){listeners[name]=handler;},
@@ -52,6 +52,12 @@ test('one hash listener owns Back and Forward reconciliation',()=>{
   state.setRoute('/');
   state.listeners.hashchange();
   assert.deepStrictEqual(state.calls,[['platform']]);
+});
+
+test('delayed route reconciliation cannot undo explicit Conference application entry',()=>{
+  const state=integrationRuntime('/conference',true);
+  state.window.PlatformIntegration.initialize();
+  assert.deepStrictEqual(state.calls,[]);
 });
 
 function warehouseRuntime(route){
