@@ -32,10 +32,34 @@ test("browser key contract is P-256, non-exportable, IndexedDB-held, and never s
   const page=fs.readFileSync("platform-device-ownership-handoff.html","utf8");
   const source=fs.readFileSync("js/platform-device-ownership-handoff.js","utf8");
   assert.match(page,/\.\/js\/storage\/environment-namespace\.js/);
+  assert.ok(page.indexOf('js/supabase/auth.js')<page.indexOf('js/supabase/device-identity.js'));
+  assert.ok(page.indexOf('js/supabase/device-identity.js')<page.indexOf('js/platform-device-ownership-handoff.js'));
   assert.doesNotMatch(page,/browser-storage-namespace\.js/);
   assert.match(source,/generateKey\(\{name:'ECDSA',namedCurve:'P-256'\},false/);
   assert.match(source,/indexedDB\.open/);assert.match(source,/privateKey\.extractable!==false/);
   assert.match(source,/exportKey\('jwk',key\)/);assert.doesNotMatch(source,/localStorage|sessionStorage|exportKey\([^,]+,\s*keys\.privateKey/);
+});
+
+test("successful backend handoff reconciles stale account identity from its proved result", () => {
+  const source=fs.readFileSync("js/platform-device-ownership-handoff.js","utf8");
+  assert.match(source,/canonicalDeviceId=String\(result\.data&&result\.data\.deviceId/);
+  assert.match(source,/canonicalDeviceId!==challenge\.deviceId/);
+  assert.match(source,/deviceId:canonicalDeviceId,bindingId:result\.data\.bindingId,state:'active'/);
+  const persistence=source.indexOf('activateRecovery(next):persistAt(ACTIVE_RECORD,next)');
+  const reconciliation=source.indexOf('reconcileProvedIdentity({id:canonicalDeviceId})');
+  assert.ok(persistence>=0&&reconciliation>persistence);
+  assert.doesNotMatch(source,/reconcileProvedIdentity\(\{id:DEVICE_ID\}\)/);
+});
+
+test("an already-completed recovery passively reconciles without rotating again", () => {
+  const source=fs.readFileSync("js/platform-device-ownership-handoff.js","utf8");
+  assert.match(source,/function reconcileActiveBinding\(\)/);
+  assert.match(source,/action:'status'/);
+  assert.match(source,/proved\.status!=='active'/);
+  assert.match(source,/String\(proved\.deviceId\|\|''\)!==record\.deviceId/);
+  assert.match(source,/String\(proved\.bindingId\|\|''\)!==record\.bindingId/);
+  assert.match(source,/reconcileProvedIdentity\(\{id:String\(proved\.deviceId\)\}\)/);
+  assert.match(source,/if\(reconciled\)\{show\('The active Development binding and browser device identity are reconciled\.'/);
 });
 
 test("real WebCrypto non-exportable P-256 key proves possession and rejects private-key export",async()=>{

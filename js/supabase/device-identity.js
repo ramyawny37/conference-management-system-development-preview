@@ -50,6 +50,19 @@
     memoryIdentities[currentUserId]=identity;
     return write(storageKey(currentUserId),identity,options)?{success:true,identity:identity,status:'adopted'}:{success:false,reason:'DEVICE_IDENTITY_STORAGE_FAILED'};
   }
+  function reconcileProvedIdentity(identity,options){
+    options=options&&typeof options==='object'?options:{};var currentUserId=userId(options);
+    if(!currentUserId||!isValidIdentity(identity))return {success:false,reason:'DEVICE_IDENTITY_RECONCILIATION_INVALID'};
+    var existing=memoryIdentities[currentUserId]||read(storageKey(currentUserId),options),next={
+      id:String(identity.id),
+      deviceName:String(existing&&existing.deviceName||identity.deviceName||'').trim(),
+      platform:String(existing&&existing.platform||identity.platform||(global.navigator&&global.navigator.platform)||'').trim(),
+      createdAt:String(existing&&existing.createdAt||identity.createdAt||new Date().toISOString())
+    };
+    if(!write(storageKey(currentUserId),next,options))return {success:false,reason:'DEVICE_IDENTITY_STORAGE_FAILED'};
+    memoryIdentities[currentUserId]=next;
+    return {success:true,identity:next,status:existing&&existing.id===next.id?'unchanged':'reconciled'};
+  }
   function setDeviceName(deviceName,options){
     options=options&&typeof options==='object'?options:{};var currentUserId=userId(options),identity=getOrCreate(options);
     if(!currentUserId||!identity)return {success:false,reason:'AUTH_REQUIRED'};
@@ -57,5 +70,5 @@
     return write(storageKey(currentUserId),memoryIdentities[currentUserId],options)?{success:true,identity:memoryIdentities[currentUserId]}:{success:false,reason:'DEVICE_IDENTITY_STORAGE_FAILED'};
   }
 
-  global.SupabaseDeviceIdentity=Object.freeze({getOrCreate:getOrCreate,getCurrent:getCurrent,setDeviceName:setDeviceName,getLegacyCandidate:getLegacyCandidate,adoptLegacyForCurrentUser:adoptLegacyForCurrentUser,getStorageKeyForUser:storageKey});
+  global.SupabaseDeviceIdentity=Object.freeze({getOrCreate:getOrCreate,getCurrent:getCurrent,setDeviceName:setDeviceName,getLegacyCandidate:getLegacyCandidate,adoptLegacyForCurrentUser:adoptLegacyForCurrentUser,reconcileProvedIdentity:reconcileProvedIdentity,getStorageKeyForUser:storageKey});
 })(window);
