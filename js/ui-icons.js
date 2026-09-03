@@ -21,7 +21,21 @@
     door:'<path d="M5 21V3h12v18M5 21h14M13 12h.01"/>',
     note:'<path d="M5 3h14v18H5zM8 8h8M8 12h8M8 16h5"/>',
     lock:'<rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/>',
-    more:'<circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/>'
+    more:'<circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/>',
+    boxes:'<path d="m12 2 8 4.5v9L12 20l-8-4.5v-9L12 2Z"/><path d="m4 6.5 8 4.5 8-4.5M12 11v9M8 4.3l8 4.5"/>',
+    warehouse:'<path d="M3 21V8l9-5 9 5v13M7 21v-8h10v8M7 16h10"/>',
+    receipt:'<path d="M6 3h12v18l-3-2-3 2-3-2-3 2V3Z"/><path d="M9 8h6M9 12h6M9 16h3"/>',
+    packageOpen:'<path d="m3 8 9 5 9-5M12 13v9M4 8l8-5 8 5v9l-8 5-8-5V8Z"/><path d="m8 5 8 5"/>',
+    transfer:'<path d="M4 7h15m0 0-3-3m3 3-3 3M20 17H5m0 0 3 3m-3-3 3-3"/>',
+    approval:'<path d="M9 5H6a2 2 0 0 0-2 2v12h16V7a2 2 0 0 0-2-2h-3M9 3h6v4H9z"/><path d="m8 13 2.5 2.5L16 10"/>',
+    adjustment:'<path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/>',
+    history:'<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/>',
+    balance:'<path d="M4 19h16M6 16V9m4 7V5m4 11v-4m4 4V7"/>',
+    report:'<path d="M5 3h14v18H5z"/><path d="M9 16v-3m3 3V8m3 8v-5"/>',
+    menu:'<path d="M4 6h16M4 12h16M4 18h16"/>',
+    panelClose:'<path d="M4 4h16v16H4zM10 4v16m4-11-3 3 3 3"/>',
+    modules:'<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>',
+    bell:'<path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/>'
   };
 
   function icon(name,className,title){

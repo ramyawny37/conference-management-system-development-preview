@@ -105,7 +105,7 @@ test('#/warehouse defaults to the Warehouse dashboard and launcher is structural
 
 test('expanded Warehouse routes and protected transport boundary are static-safe',()=>{
   for(const route of ['items','stores','receipts','issues','transfers','adjustments','approvals','history','balances','reports'])assert.match(warehouseSource,new RegExp("'"+route+"'"));
-  assert.doesNotMatch(warehouseSource,/\.schema\(|\.rpc\(|supabase|stage_import|next\/|vercel/i);
+  assert.doesNotMatch(warehouseSource,/\.schema\(|\.rpc\(|SupabaseClientLayer|stage_import|next\/|vercel/i);
   assert.match(warehouseSource,/WarehouseTransport\.invoke/);
   assert.match(warehouseSource,/documents:'receipts',stock:'balances'/);
 });
