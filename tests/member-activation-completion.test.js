@@ -12,6 +12,7 @@ const activationSource=source.slice(start,end);
 function environment(options={}){
   const calls=[];
   const authorizationCalls=[];
+  let route=options.route||'/warehouse/approvals';
   const elements=options.missingDom?{}:{
     applicationBody:{style:{display:options.startup?'none':''}},
     tab0:{},tab1:{},tab6:{}
@@ -35,7 +36,13 @@ function environment(options={}){
     renderTransports(){calls.push('render_transports');},
     renderSettings(){calls.push('render_settings');},
     restoreLastApplicationTab(){calls.push('render_current_tab');},
-    switchTab(){calls.push('render_current_tab');return true;},
+    switchTab(_tabId,switchOptions){
+      calls.push('render_current_tab');
+      if(!switchOptions||switchOptions.preserveRoute!==true){
+        route='/conference/app/accommodation';
+      }
+      return true;
+    },
     ConferenceActivationAuthorization:{
       activate(id){
         authorizationCalls.push(id);
@@ -45,13 +52,17 @@ function environment(options={}){
     },
     AutomaticSyncOrchestrator:{schedule(){calls.push('schedule');}}
   };
-  sandbox.getPlatformShellPathname=()=>'/';
-  sandbox.getCanonicalConferenceRoute=()=>null;
+  sandbox.getPlatformShellPathname=()=>route;
+  sandbox.getCanonicalConferenceRoute=()=>{
+    if(route==='/conference')return {kind:'home',tabId:null};
+    const match=/^\/conference\/app\/(accommodation)$/.exec(route);
+    return match?{kind:'application',tabId:0}:null;
+  };
   sandbox.getCurrentConference=()=>sandbox.appData.conferences.find(item=>
     item.id===sandbox.appData.currentConferenceId)||null;
   sandbox.window=sandbox;
   vm.runInNewContext(activationSource,sandbox);
-  return {sandbox,calls,authorizationCalls,conference};
+  return {sandbox,calls,authorizationCalls,conference,route:()=>route};
 }
 
 const denied=environment({activationAllowed:false});
@@ -61,7 +72,9 @@ assert.deepStrictEqual(denied.authorizationCalls,['local']);
 assert.strictEqual(denied.sandbox.appData.currentConferenceId,null);
 assert.deepStrictEqual(denied.calls,[]);
 
-const success=environment({currentTab:0});
+const success=environment({
+  currentTab:0,route:'/conference/app/accommodation'
+});
 const successResult=success.sandbox.activatePersistedConferenceById(
   'local',{alreadyPersisted:true});
 assert.strictEqual(successResult,true);
@@ -76,12 +89,25 @@ assert.deepStrictEqual(success.calls,[
   'render_settings','render_current_tab'
 ]);
 assert.strictEqual(success.calls.includes('schedule'),false);
+assert.strictEqual(success.route(),'/conference/app/accommodation');
 assert.strictEqual(success.sandbox.getMemberActivationDiagnostics()
   .currentStage,'activation_return');
 assert.strictEqual(success.sandbox.getMemberActivationDiagnostics()
   .settingsResolved,true);
 
-const missingDom=environment({missingDom:true,currentTab:6});
+const background=environment({route:'/warehouse/approvals'});
+assert.strictEqual(background.sandbox.activatePersistedConferenceById(
+  'local',{alreadyPersisted:true}),true);
+assert.deepStrictEqual(background.calls,[
+  'set_current_conference','sync_current_references'
+]);
+assert.strictEqual(background.route(),'/warehouse/approvals');
+assert.strictEqual(background.sandbox.getMemberActivationDiagnostics()
+  .settingsResolved,false);
+
+const missingDom=environment({
+  missingDom:true,currentTab:6,route:'/conference/app/accommodation'
+});
 assert.strictEqual(missingDom.sandbox.activatePersistedConferenceById(
   'local',{alreadyPersisted:true}),true);
 assert.strictEqual(missingDom.calls.includes('render_accommodation'),false);
@@ -89,12 +115,16 @@ assert.strictEqual(missingDom.calls.includes('render_settings'),false);
 assert.strictEqual(missingDom.sandbox.getMemberActivationDiagnostics()
   .settingsResolved,false);
 
-const conflictVisible=environment({currentTab:6});
+const conflictVisible=environment({
+  currentTab:6,route:'/conference/app/accommodation'
+});
 assert.strictEqual(conflictVisible.sandbox.activatePersistedConferenceById(
   'local',{alreadyPersisted:true}),true);
 assert.strictEqual(conflictVisible.calls.includes('render_settings'),true);
 
-const renderFailure=environment({throwStage:'render_accommodation'});
+const renderFailure=environment({
+  throwStage:'render_accommodation',route:'/conference/app/accommodation'
+});
 assert.strictEqual(renderFailure.sandbox.activatePersistedConferenceById(
   'local',{alreadyPersisted:true}),false);
 const failureState=renderFailure.sandbox.getMemberActivationDiagnostics();

@@ -514,6 +514,26 @@ function activatePersistedConferenceById(id,options){
   }
   traceMemberActivation('conference_resolved','completed',null);
   var conferenceRoute=getCanonicalConferenceRoute();
+  if(!conferenceRoute){
+    var backgroundSteps=[
+      ['set_current_conference',function(){setCurrentConference(current)}],
+      ['sync_current_references',function(){syncCurrentConferenceRefs()}]
+    ];
+    for(var backgroundStepIndex=0;
+      backgroundStepIndex<backgroundSteps.length;backgroundStepIndex++){
+      if(!runMemberActivationStep(
+        backgroundSteps[backgroundStepIndex][0],
+        backgroundSteps[backgroundStepIndex][1]
+      ).ok){
+        traceMemberActivation('activation_return','return','step_failed');
+        return false;
+      }
+    }
+    traceMemberActivation(
+      'activation_return','completed','NON_CONFERENCE_ROUTE'
+    );
+    return true;
+  }
   if(conferenceRoute&&conferenceRoute.kind==='home'){
     openStartupScreen({clearCurrentConference:false,persistView:false});
     traceMemberActivation('activation_return','completed','CONFERENCE_HOME_ROUTE');
