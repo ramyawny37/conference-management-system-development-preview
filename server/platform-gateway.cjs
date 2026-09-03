@@ -14,7 +14,6 @@ const DEVELOPMENT_URL = `https://${DEVELOPMENT_REF}.supabase.co`;
 const DEVICE_ID_COOKIE = "platform-device-id";
 const DEVICE_SECRET_COOKIE = "platform-device-secret";
 const DEVICE_HANDOFF_PURPOSE = "PLATFORM_DEVICE_OWNERSHIP_HANDOFF";
-const DEVICE_HANDOFF_DEVICE_ID = "f9306733-612d-433f-a38e-5d72855c2fe3";
 const DEVICE_HANDOFF_RETURN = "https://ramyawny37.github.io/conference-management-system-v1/platform-device-ownership-handoff.html";
 const registry = loadModuleRegistry();
 const port = Number(process.env.PORT || 3000);
@@ -219,9 +218,6 @@ function createApiHandler(options = {}) {
     if (administration.error) return recovery
       ? handoffRecoveryError(response, administration.error)
       : json(response, administration.status, { error: { code: administration.error } });
-    if (administration.device.id !== DEVICE_HANDOFF_DEVICE_ID)
-      return recovery ? handoffRecoveryError(response, "DEVICE_HANDOFF_CANONICAL_DEVICE_MISMATCH")
-        : json(response, 403, { error: { code: "DEVICE_HANDOFF_CANONICAL_DEVICE_MISMATCH" } });
     if (!/^[0-9a-f]{64}$/.test(thumbprint)) return recovery
       ? handoffRecoveryError(response, "DEVICE_HANDOFF_THUMBPRINT_INVALID")
       : json(response, 400, { error: { code: "DEVICE_HANDOFF_THUMBPRINT_INVALID" } });

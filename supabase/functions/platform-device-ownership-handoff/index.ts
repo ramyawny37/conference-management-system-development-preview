@@ -1,7 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 
 const PURPOSE = 'PLATFORM_DEVICE_OWNERSHIP_HANDOFF';
-const DEVICE_ID = 'f9306733-612d-433f-a38e-5d72855c2fe3';
 const encoder = new TextEncoder();
 const cors = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -70,9 +69,9 @@ async function assertion(compact: string, secret: string): Promise<Record<string
   if (!await crypto.subtle.verify('HMAC', key, b64urlBytes(parts[2]), encoder.encode(`${parts[0]}.${parts[1]}`))) throw new Error('HANDOFF_ASSERTION_SIGNATURE_INVALID');
   const now = Math.floor(Date.now() / 1000);
   if (claims.iss !== required('PLATFORM_HANDOFF_ASSERTION_ISSUER') || claims.aud !== required('PLATFORM_HANDOFF_ASSERTION_AUDIENCE')
-    || claims.purpose !== PURPOSE || claims.device_id !== DEVICE_ID || typeof claims.iat !== 'number' || typeof claims.exp !== 'number'
+    || claims.purpose !== PURPOSE || typeof claims.iat !== 'number' || typeof claims.exp !== 'number'
     || claims.iat > now + 15 || claims.exp <= now || claims.exp > claims.iat + 120) throw new Error('HANDOFF_ASSERTION_CLAIMS_INVALID');
-  uuid(claims.jti, 'ASSERTION_JTI'); uuid(claims.user_id, 'ASSERTION_USER');
+  uuid(claims.jti, 'ASSERTION_JTI'); uuid(claims.user_id, 'ASSERTION_USER'); uuid(claims.device_id, 'ASSERTION_DEVICE');
   uuid(claims.authorization_id, 'ASSERTION_AUTHORIZATION'); uuid(claims.challenge_id, 'ASSERTION_CHALLENGE');
   if (claims.handoff_mode !== undefined || claims.replacement_binding_id !== undefined || claims.recovery_reason !== undefined) {
     if (claims.handoff_mode !== 'binding_recovery' || claims.recovery_reason !== 'lost_private_key')

@@ -91,7 +91,7 @@ test("assertion is short-lived HS256 and bound to every migration dimension", ()
   }finally{process.env=old;}
 });
 
-test("gateway uses only the authoritative current f930 device and returns one challenge-bound assertion", async()=>{
+test("gateway uses the authoritative current cookie device and returns one challenge-bound assertion", async()=>{
   const calls=[];const signingPayload="bound-payload";
   const supabase={schema:()=>({rpc:async(name,args)=>{calls.push({name,args});return {data:{userId:USER,deviceId:DEVICE,authorizationId:AUTHORIZATION,challengeId:CHALLENGE,publicKeyThumbprint:THUMBPRINT,signingPayload},error:null};}})};
   const old={...process.env};process.env.PLATFORM_HANDOFF_ASSERTION_SECRET="s".repeat(32);process.env.PLATFORM_HANDOFF_ASSERTION_ISSUER="development-migration-bridge";process.env.PLATFORM_HANDOFF_ASSERTION_AUDIENCE="development-edge-handoff";
@@ -103,14 +103,9 @@ test("gateway uses only the authoritative current f930 device and returns one ch
   }finally{process.env=old;await close(server);}
 });
 
-test("known f930 UUID without the current secret context and every altered authority dimension are denied", async()=>{
-  for(const variant of [
-    {device:null,status:403},
-    {device:{id:"9bce8898-0000-4000-8000-000000000000"},status:403},
-  ]){
-    const api=createApiHandler({platformAdministrationClient:async()=>variant.device?({device:variant.device,supabase:{},user:{id:USER}}):({error:"PLATFORM_APPROVED_DEVICE_REQUIRED",status:403}),readJson:async()=>({publicKeyThumbprint:THUMBPRINT})});
-    await new Promise((resolve)=>api({method:"GET",url:`/api/platform/device-ownership-handoff/authorize?thumbprint=${THUMBPRINT}`,headers:{host:"test"}},{...mockResponse(resolve)},"/api/platform/device-ownership-handoff/authorize")).then((result)=>assert.equal(result.status,variant.status));
-  }
+test("missing trusted current-device context and every altered authority dimension are denied", async()=>{
+  const api=createApiHandler({platformAdministrationClient:async()=>({error:"PLATFORM_APPROVED_DEVICE_REQUIRED",status:403})});
+  await new Promise((resolve)=>api({method:"GET",url:`/api/platform/device-ownership-handoff/authorize?thumbprint=${THUMBPRINT}`,headers:{host:"test"}},{...mockResponse(resolve)},"/api/platform/device-ownership-handoff/authorize")).then((result)=>assert.equal(result.status,403));
   const edge=fs.readFileSync("supabase/functions/platform-device-ownership-handoff/index.ts","utf8");
   for(const denial of ["HANDOFF_ASSERTION_SIGNATURE_INVALID","HANDOFF_ASSERTION_CLAIMS_INVALID","HANDOFF_ASSERTION_USER_MISMATCH","HANDOFF_PUBLIC_KEY_THUMBPRINT_MISMATCH","HANDOFF_CHALLENGE_PAYLOAD_MISMATCH","NEW_KEY_POSSESSION_INVALID","HANDOFF_ORIGIN_DENIED"])
     assert.match(edge,new RegExp(denial));
