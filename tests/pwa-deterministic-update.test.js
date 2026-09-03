@@ -14,9 +14,9 @@ const next='organization-membership-operation-key-v1';
 const mobileRoomInputRevision='anchored-glass-person-picker-v5';
 const appVersion='3.4.0';
 const shellRevision='development-3-4-0-platform-foundation-v1';
-const cacheRevision='development-3-4-0-frontend-module-routing-v1';
+const cacheRevision='development-3-4-0-warehouse-workspace-v1';
 const startupTransportRevision='startup-transport-cleanup-v1';
-const moduleRoutingRevision='frontend-module-routing-v1';
+const moduleRoutingRevision='warehouse-workspace-v1';
 const priorAuthorizationCacheRevision='runtime-authorization-phase1-v1';
 const productionCacheRevision='production-integrated-3-3-0-main-6d0c1e1-develop-80653ca-v1';
 const accountIdentityRevision='account-session-identity-v1';
@@ -24,7 +24,7 @@ const firstLoginCoordinatorRevision='platform-first-login-coordinator-v1';
 const stateAssetRevision='managed-platform-startup-gate-v1';
 const persistenceArbitrationRevision='develop-cross-store-arbitration-v1';
 const permissionRuntimeRevision='development-3-4-0-platform-foundation-v1';
-const platformShellScriptRevision=moduleRoutingRevision;
+const platformShellScriptRevision='conference-refresh-v1';
 const testTemplateCleanupRevision='test-house-template-cleanup-v1';
 const templateDiagnosticRevision='template-diagnostic-export-v1';
 const partialTemplateCleanupRevision='partial-template-state-cleanup-v1';
@@ -204,7 +204,7 @@ assert(index.includes(readAsset));
 assert(worker.includes("'./"+readAsset+"'"));
 assert(index.includes('script.js?rev='+platformShellScriptRevision));
 assert(worker.includes("'./script.js?rev="+platformShellScriptRevision+"'"));
-[['js/platform-integration.js',moduleRoutingRevision],
+[['js/platform-integration.js','frontend-module-routing-v1'],
  ['js/supabase/device-session.js',startupTransportRevision]].forEach(([asset,revision])=>{
   const versioned=asset+'?rev='+revision;
   assert(index.includes(versioned),'index missing '+versioned);
@@ -311,7 +311,7 @@ assert(worker.includes('caches.delete(cacheName)'));
 assert.match(worker,/IS_DEVELOPMENT && requestUrl\.pathname === '\/manifest\.json'[\s\S]*JSON\.stringify\(\{[\s\S]*start_url: '\/'[\s\S]*status: 200/);
 assert.match(worker,/application\/manifest\+json/);
 assert.doesNotMatch(worker,/requestUrl\.pathname === '\/manifest\.json'[\s\S]{0,800}status: 503/);
-assert.match(worker,/frontend-module-routing-v1/);
+assert.match(worker,/warehouse-workspace-v1/);
 assert(pwa.includes("postMessage({ action: 'skipWaiting' })"),'update button and worker message must match');
 assert(pwa.includes("updateViaCache:'none'"),'worker update must bypass HTTP cache');
 assert(pwa.includes("addEventListener('controllerchange'"));

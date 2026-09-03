@@ -58,11 +58,11 @@ function warehouseRuntime(route){
   const shellClasses=classList();
   const buttons=[];
   const shell={classList:shellClasses};
-  const node={innerHTML:'',querySelectorAll(){return buttons;}};
-  const window={document:{getElementById:id=>id==='startupScreen'?shell:id==='warehouseWorkspace'?node:null},
+  const node={innerHTML:'',querySelectorAll(){return buttons;},querySelector(){return null;}};
+  const window={document:{getElementById:id=>id==='startupScreen'?shell:id==='warehouseWorkspace'?node:null,querySelector(){return null;}},
     ApplicationRouting:{getLogicalPathname:()=>route,resolveLogicalRoute:value=>'/preview/#'+value},
-    history:{pushState(){}},WarehouseTransport:{invoke:()=>new Promise(()=>{})}};
-  vm.runInNewContext(warehouseSource,{window,Promise,Array,String});
+    history:{pushState(){}},crypto:{randomUUID:()=> 'operation-id'},WarehouseDeviceOperationContract:{get:()=>({operationIdRequired:false})},WarehouseTransport:{invoke:()=>new Promise(()=>{})}};
+  vm.runInNewContext(warehouseSource,{window,Promise,Array,String,Object,JSON,Number,Date,Math});
   return {window,node,shellClasses};
 }
 
@@ -72,15 +72,23 @@ for(const section of ['stores','documents','items','stock','approvals']){
     state.window.openWarehouseWorkspace({route:'/warehouse/'+section});
     assert.strictEqual(state.shellClasses.values.has('platform-warehouse-active'),true);
     assert.strictEqual(state.shellClasses.values.has('platform-conference-active'),false);
-    assert.match(state.node.innerHTML,new RegExp('data-warehouse-route="'+section+'"'));
-    assert.match(state.node.innerHTML,new RegExp('btn btn-blue[^>]+data-warehouse-route="'+section+'"'));
+    const normalized={documents:'receipts',stock:'balances'}[section]||section;
+    assert.match(state.node.innerHTML,new RegExp('data-wh-route="'+normalized+'"'));
+    assert.match(state.node.innerHTML,new RegExp('warehouse-nav-item active[^>]*>[^<]*<i>'));
   });
 }
 
-test('#/warehouse defaults to stores and launcher is structurally separate',()=>{
+test('#/warehouse defaults to the Warehouse dashboard and launcher is structurally separate',()=>{
   const state=warehouseRuntime('/warehouse');
   state.window.openWarehouseWorkspace({route:'/warehouse'});
-  assert.match(state.node.innerHTML,/btn btn-blue[^>]+data-warehouse-route="stores"/);
+  assert.match(state.node.innerHTML,/warehouse-nav-item active[^>]*data-wh-route=""|data-wh-route=""[^>]*warehouse-nav-item active/);
   assert.match(html,/<main class="platform-home"[\s\S]*?<\/main>[\s\S]*?id="conferenceWorkspace"[\s\S]*?id="warehouseWorkspace"/);
   assert.doesNotMatch(html,/id="warehouseWorkspace"[^>]+style="display:none"/);
+});
+
+test('expanded Warehouse routes and protected transport boundary are static-safe',()=>{
+  for(const route of ['items','stores','receipts','issues','transfers','adjustments','approvals','history','balances','reports'])assert.match(warehouseSource,new RegExp("'"+route+"'"));
+  assert.doesNotMatch(warehouseSource,/\.schema\(|\.rpc\(|supabase|stage_import|next\/|vercel/i);
+  assert.match(warehouseSource,/WarehouseTransport\.invoke/);
+  assert.match(warehouseSource,/documents:'receipts',stock:'balances'/);
 });

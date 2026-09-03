@@ -501,6 +501,11 @@ function activatePersistedConferenceById(id,options){
     return false;
   }
   traceMemberActivation('conference_resolved','completed',null);
+  if(getPlatformShellPathname()==='/conference'){
+    openStartupScreen({clearCurrentConference:false,persistView:false});
+    traceMemberActivation('activation_return','completed','CONFERENCE_HOME_ROUTE');
+    return true;
+  }
   var applicationBody=ge('applicationBody');
   var wasStartup=applicationBody&&applicationBody.style.display==='none';
   var steps=[
@@ -9892,6 +9897,11 @@ function restoreAuthorizedApplicationView(){
     return true;
   }
   syncCurrentConferenceRefs();
+  if(getPlatformShellPathname()==='/conference'){
+    openStartupScreen({clearCurrentConference:false,persistView:false});
+    recordStartupStage('view_restore','completed','CONFERENCE_HOME_ROUTE');
+    return true;
+  }
   if(!getCurrentConference()){
     showSelectConferenceModal();
   }else if(getStoredApplicationView()==='startup'){

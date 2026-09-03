@@ -68,7 +68,15 @@ test('repository-scoped Conference restores workspace and return home restores a
 });
 
 test('Conference route correction invalidates the Development runtime cache',()=>{
-  assert.match(html,/script\.js\?rev=frontend-module-routing-v1/);
-  assert.match(worker,/development-3-4-0-frontend-module-routing-v1/);
-  assert.match(worker,/script\.js\?rev=frontend-module-routing-v1/);
+  assert.match(html,/script\.js\?rev=conference-refresh-v1/);
+  assert.match(worker,/development-3-4-0-warehouse-workspace-v1/);
+  assert.match(worker,/script\.js\?rev=conference-refresh-v1/);
+});
+
+test('authorized async restoration cannot override an explicit Conference home route',()=>{
+  const restore=source.slice(source.indexOf('function restoreAuthorizedApplicationView'),source.indexOf('function traceRealtimeStartup'));
+  const activation=source.slice(source.indexOf('function activatePersistedConferenceById'),source.indexOf('function downloadFullApplicationBackup'));
+  assert.match(restore,/getPlatformShellPathname\(\)==='\/conference'[\s\S]*openStartupScreen/);
+  assert.match(activation,/getPlatformShellPathname\(\)==='\/conference'[\s\S]*openStartupScreen/);
+  assert.ok(restore.indexOf("getPlatformShellPathname()==='/conference'")<restore.indexOf("setApplicationMode('application')"));
 });
