@@ -9946,11 +9946,13 @@ function restoreAuthorizedApplicationView(){
   var platformRoute=getPlatformShellPathname();
   var conferenceRoute=getCanonicalConferenceRoute();
   if(platformRoute==='/'){
+    setApplicationMode('startup');
     showPlatformModules({preservePathname:true});
     recordStartupStage('view_restore','completed','PLATFORM_HOME_ROUTE');
     return true;
   }
   if(platformRoute&&platformRoute.indexOf('/warehouse')===0){
+    setApplicationMode('startup');
     if(typeof window.openWarehouseWorkspace==='function'){
       window.openWarehouseWorkspace({route:platformRoute});
     }

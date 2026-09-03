@@ -1,103 +1,34 @@
 'use strict';
-
-const assert=require('node:assert');
-const fs=require('node:fs');
-const test=require('node:test');
-const vm=require('node:vm');
-
-const gateSource=fs.readFileSync('js/sync/startup-access-gate.js','utf8');
-const integrationSource=fs.readFileSync('js/platform-integration.js','utf8');
-const conferenceRoutes=['/conference','/conference/app/accommodation',
-  '/conference/app/transportation','/conference/app/accounts',
-  '/conference/app/reports','/conference/app/cards','/conference/app/search',
-  '/conference/app/settings'];
-
-function deferred(){
-  let resolve;
-  const promise=new Promise(done=>{resolve=done;});
-  return {promise,resolve};
+const assert=require('node:assert'),fs=require('node:fs'),test=require('node:test'),vm=require('node:vm'),cp=require('node:child_process');
+const gate=fs.readFileSync('js/sync/startup-access-gate.js','utf8');
+const integration=fs.readFileSync('js/platform-integration.js','utf8');
+const authorization=fs.readFileSync('js/sync/conference-activation-authorization.js','utf8');
+const stateSource=fs.readFileSync('state.js','utf8');
+const current=fs.readFileSync('script.js','utf8');
+const baseline=cp.execFileSync('git',['show','d8e5c076aa7d714c365cda005337cfad66638155:script.js'],{encoding:'utf8'});
+const appRoutes=['accommodation','transportation','accounts','reports','cards','search','settings'];
+function fn(source,name){const start=source.indexOf('function '+name+'(');assert.ok(start>=0,name);let at=source.indexOf('{',start),depth=0,quote='',escape=false;for(;at<source.length;at++){const c=source[at];if(quote){if(escape)escape=false;else if(c==='\\')escape=true;else if(c===quote)quote='';continue;}if(c==='"'||c==="'"||c==='`'){quote=c;continue;}if(c==='{')depth++;else if(c==='}'&&!--depth)return source.slice(start,at+1);}throw Error(name);}
+function runtime(script,initial,noConference){
+  let route=initial;const listeners={},tabs=[],events=[];
+  const ids=['startupAccessGate','applicationTopbar','applicationBody','startupScreen','conferenceWorkspace','platformLauncherTitle','globalConferenceHeader','device_authorization_administration_root','homeTabButton','tab0','tab1','tab2','tab3','tab4','tab5','tab6'],nodes={};
+  const classes=()=>({add(){},remove(){},toggle(){}});ids.forEach(id=>nodes[id]={style:{display:id==='startupAccessGate'?'flex':'none'},innerHTML:'',classList:classes(),focus(){}});
+  const tabButtons=appRoutes.map(()=>({hidden:false,style:{display:''},className:'tab main-tab',classList:classes()}));
+  const conference={id:'local',name:'Conference',status:'active'};
+  const appData={currentConferenceId:'local',conferences:[conference],conferenceLifecycle:{records:{local:{cloudLifecycle:'local_only',publishMetadata:{requestedByUserId:'user'}}}}};
+  const document={body:{classList:classes()},visibilityState:'visible',getElementById:id=>nodes[id]||null,querySelectorAll:selector=>selector==='.tab'?tabButtons:selector==='.main-tab'?tabButtons:[],addEventListener(){}};
+  let window={document,localStorage:{getItem:()=>null,setItem(){}},LocalPersistenceArbitration:{inspect:()=>Promise.resolve({ok:true,status:'selected',selected:{source:'localstorage',payload:appData}})},addEventListener:(n,h)=>{listeners[n]=h;},ApplicationRouting:{getLogicalPathname:()=>route,getConferenceRoute(){if(route==='/conference')return {kind:'home',tabId:null};const m=/^\/conference\/app\/([^/]+)$/.exec(route);if(!m)return route.indexOf('/conference')===0?{kind:'invalid',tabId:null}:null;const tabId=appRoutes.indexOf(m[1]);return tabId<0?{kind:'invalid',tabId:null}:{kind:'application',tabId};},resolveLogicalRoute:r=>'#'+r},history:{replaceState(_s,_t,r){route=r.slice(1);}},SupabaseAuth:{initialize:()=>Promise.resolve(),getState:()=>({authenticated:true,user:{id:'user'}})},SupabaseClientLayer:{getClient:()=>({auth:{onAuthStateChange:()=>({data:{subscription:{}}})}})},FirstSystemBootstrapService:{getStatus:()=>Promise.resolve({ok:true,status:'completed'})},SystemAccessService:{initialize:()=>Promise.resolve(),refresh:()=>Promise.resolve(),getState:()=>({accountStatus:'approved',fresh:true})},CurrentDeviceAuthorizationUI:{initialize:()=>Promise.resolve(),refresh:()=>Promise.resolve(),getState:()=>({status:'approved'})},StartupConferenceDiscovery:{refresh:()=>Promise.resolve({ok:true,data:{conferences:[]}})},ConferenceLinkStore:{get:()=>null},DiscoveredConferenceOpenService:{validateAuthorization:()=>Promise.resolve({ok:false})},AutomaticConferenceLinking:{initialize:()=>({ok:true,promise:Promise.resolve({ok:true})})},StartupQueueRecovery:{run:()=>Promise.resolve({ok:true})},AutomaticSyncOrchestrator:{start:()=>({ok:true})},FullBackupService:{isFullRestoreCloudReviewPending:()=>false}};
+  const c={window,document,appData,Promise,Date,Error,Object,JSON,String,Array,Number,Math,isFinite,parseInt,console,setTimeout:()=>0,clearTimeout(){},setInterval:()=>1,clearInterval(){},SK:'conf_v5',applicationStorageState:{},storageInitializationPromise:null,currentApplicationView:'startup',startupClockTimer:null,currentTab:0,currentConferenceRuntimeAccessRole:null,currentConferenceRuntimeAccessRoles:Object.create(null),memberActivationDiagnosticState:{trace:[]},ge:id=>nodes[id]||null,deepClone:v=>JSON.parse(JSON.stringify(v)),getCurrentConference:()=>c.appData.conferences.find(x=>x.id===c.appData.currentConferenceId)||null,setCurrentConference(){},syncCurrentConferenceRefs(){},normalizeAppData(){},refreshPeopleDatalist(){},renderAccommodation(){},renderTransports(){},renderSettings(){},closeOrganizationManagementScreen(){},showStartupConferenceList(){},getValidApplicationTabIds:()=>[0,1,2,3,4,5,6],saveApplicationView(){},updateLogoText(){},refreshOrganizationMembersSection(){},getStoredLastTab:()=>0,getStoredSettingsInternalView:()=>'',getApplicationTabIdByName:n=>n==='settings'?6:null,saveLastTab:n=>events.push('tab:'+n),resetAdministrativeViewScroll(){},renderTab:n=>tabs.push(n),showSelectConferenceModal(){c.openStartupScreen({persistView:false});},showPostRestoreCloudReviewBanner(){},showPostRestoreCloudReviewModal(){}};
+  Object.assign(c,window);c.window=c;window=c;
+  vm.runInNewContext(['cloneApplicationStorageData','restoreSafeSingleCurrentConferenceSelection','initializeApplicationStorage'].map(n=>fn(stateSource,n)).join('\n'),c);
+  vm.runInNewContext(authorization,c);
+  vm.runInNewContext(['traceMemberActivation','getMemberActivationDiagnostics','runMemberActivationStep','activatePersistedConferenceById','updateStartupDateTime','setApplicationMode','openStartupScreen','getPlatformShellPathname','replacePlatformShellPathname','showPlatformModules','openConferenceWorkspace','getCanonicalConferenceRoute','isValidApplicationTab','restoreLastApplicationTab','switchTab','reconcileConferenceRoute','recordStartupStage','requireStartupResult','completeApplicationStartup','restoreAuthorizedApplicationView','traceRealtimeStartup','completeAuthorizedApplicationStartup'].map(n=>fn(script,n)).join('\n'),c);
+  window.reconcileConferenceRoute=c.reconcileConferenceRoute;
+  window.openWarehouseWorkspace=o=>events.push('warehouse:'+o.route);
+  vm.runInNewContext(gate,c);vm.runInNewContext(integration,c);
+  if(noConference){appData.currentConferenceId=null;appData.conferences=[];window.ConferenceActivationAuthorization.capturePersistedCandidate('','test');}else window.ConferenceActivationAuthorization.capturePersistedCandidate('local','test');
+  return {window,nodes,tabs,events,listeners,currentTab:()=>c.currentTab,activation:()=>c.getMemberActivationDiagnostics(),setRoute:r=>{route=r;},run:window.StartupAccessGate.run({completeApplicationStartup:c.completeAuthorizedApplicationStartup})};
 }
-
-function runtime(initialRoute,holdPipeline){
-  let route=initialRoute;
-  const calls=[];
-  const listeners={};
-  const ids=['startupAccessGate','applicationTopbar','applicationBody',
-    'startupScreen','globalConferenceHeader',
-    'device_authorization_administration_root','tab0','tab1','tab2','tab3',
-    'tab4','tab5','tab6'];
-  const nodes={};
-  ids.forEach(id=>{nodes[id]={style:{display:id==='startupAccessGate'
-    ?'flex':'none'},innerHTML:''};});
-  const window={document:{getElementById:id=>nodes[id],addEventListener(){}},
-    addEventListener(name,handler){listeners[name]=handler;},
-    ApplicationRouting:{getLogicalPathname:()=>route,
-      resolveLogicalRoute:value=>'#'+value},
-    history:{pushState(_state,_title,value){route=value.slice(1);}},
-    SupabaseAuth:{initialize:()=>Promise.resolve(),
-      getState:()=>({authenticated:true,user:{id:'approved-user'}})},
-    SupabaseClientLayer:{getClient:()=>({auth:{onAuthStateChange:()=>
-      ({data:{subscription:{}}})}})},
-    FirstSystemBootstrapService:{getStatus:()=>
-      Promise.resolve({ok:true,status:'completed'})},
-    SystemAccessService:{initialize:()=>Promise.resolve(),
-      refresh:()=>Promise.resolve(),getState:()=>
-      ({accountStatus:'approved',fresh:true})},
-    CurrentDeviceAuthorizationUI:{initialize:()=>Promise.resolve(),
-      refresh:()=>Promise.resolve(),getState:()=>({status:'approved'})},
-    reconcileConferenceRoute(){calls.push(['premature-conference',route]);},
-    openWarehouseWorkspace(options){calls.push(['premature-warehouse',options.route]);},
-    showPlatformModules(){calls.push(['premature-platform',route]);}};
-  const context={window,Promise,Date,Error,Object,JSON,String,
-    setTimeout:()=>0,clearTimeout(){}};
-  vm.runInNewContext(gateSource,context);
-  vm.runInNewContext(integrationSource,context);
-  const pipeline=holdPipeline?deferred():null;
-  const run=window.StartupAccessGate.run({completeApplicationStartup(){
-    calls.push(['restore',route]);
-    const render=()=>{
-      if(route.indexOf('/conference/app/')===0){
-        nodes.applicationBody.style.display='block';
-      }else{
-        nodes.startupScreen.style.display='flex';
-      }
-    };
-    if(!pipeline){render();return true;}
-    return pipeline.promise.then(()=>{calls.push(['restore-latest',route]);render();});
-  }});
-  return {window,nodes,calls,listeners,run,pipeline,
-    setRoute:value=>{route=value;}};
-}
-
-for(const route of conferenceRoutes){
-  test('cold refresh restores '+route+' only after authorization startup',async()=>{
-    const state=runtime(route);
-    const result=await state.run;
-    assert.strictEqual(result.status,'allowed');
-    assert.deepStrictEqual(state.calls,[['restore',route]]);
-    assert.strictEqual(state.window.StartupAccessGate.getState().pipelineState,
-      'completed');
-    assert.strictEqual(state.window.StartupAccessGate.getState().applicationVisible,
-      true);
-  });
-}
-
-test('Warehouse cold refresh waits for the authoritative startup restore',async()=>{
-  const state=runtime('/warehouse/approvals');
-  assert.strictEqual((await state.run).status,'allowed');
-  assert.deepStrictEqual(state.calls,[['restore','/warehouse/approvals']]);
-});
-
-test('rapid startup hash changes restore only the latest route',async()=>{
-  const state=runtime('/conference/app/accommodation',true);
-  await new Promise(resolve=>setImmediate(resolve));
-  state.setRoute('/conference/app/settings');
-  state.listeners.hashchange();
-  state.pipeline.resolve();
-  assert.strictEqual((await state.run).status,'allowed');
-  assert.deepStrictEqual(state.calls,[
-    ['restore','/conference/app/accommodation'],
-    ['restore-latest','/conference/app/settings']
-  ]);
-  assert.deepStrictEqual(Object.keys(state.listeners),['hashchange']);
-});
+test('d8e5c reproduces APPLICATION_VIEW_NOT_VISIBLE',async()=>{const x=runtime(baseline,'/');assert.equal((await x.run).status,'denied');assert.ok(x.window.StartupAccessGate.getState().trace.some(e=>e.stage==='pipeline'&&e.code==='APPLICATION_VIEW_NOT_VISIBLE'));});
+for(const route of ['/','/conference',...appRoutes.map(x=>'/conference/app/'+x),'/warehouse/approvals'])test('actual startup restores '+route,async()=>{const x=runtime(current,route),result=await x.run;assert.equal(result.status,'allowed',JSON.stringify(x.window.StartupAccessGate.getState().trace));if(route.startsWith('/conference/app/')){assert.ok(x.events.includes('tab:'+appRoutes.indexOf(route.split('/').pop())),JSON.stringify(x.events));assert.notEqual(x.nodes.applicationBody.style.display,'none');}else assert.equal(x.nodes.startupScreen.style.display,'flex');});
+test('invalid app route safely materializes Conference Home',async()=>{const x=runtime(current,'/conference/app/settings',true);assert.equal((await x.run).status,'allowed');assert.equal(x.nodes.startupScreen.style.display,'flex');});
+test('latest startup route wins and post-startup listener owns navigation',async()=>{const x=runtime(current,'/conference');x.setRoute('/conference/app/settings');assert.equal((await x.run).status,'allowed');assert.equal(x.nodes.tab6.style.display,'');x.setRoute('/conference/app/accounts');x.listeners.hashchange();assert.equal(x.nodes.tab2.style.display,'');assert.deepEqual(Object.keys(x.listeners),['hashchange']);assert.doesNotMatch(integration,/addEventListener\(['"]popstate/);});
