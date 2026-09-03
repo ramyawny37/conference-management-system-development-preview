@@ -1384,6 +1384,7 @@ var SETTINGS_INTERNAL_VIEW_KEY = browserStorageNamespace.key(
   'conference_manager_settings_internal_view'
 );
 var currentApplicationView = 'application';
+var conferenceModuleEntryLandingPending = false;
 
 function getValidApplicationTabIds(){
   return [0, 1, 2, 3, 4, 5, 6];
@@ -1418,7 +1419,9 @@ function getStoredLastTab(){
   try {
     var storedTab = localStorage.getItem(LAST_APPLICATION_TAB_KEY);
     var parsedTabId = parseInt(storedTab, 10);
-    return isValidApplicationTab(parsedTabId) ? parsedTabId : null;
+    if(isValidApplicationTab(parsedTabId))return parsedTabId;
+    var normalizedTabId=normalizeLegacyApplicationTabId(storedTab);
+    return isValidApplicationTab(normalizedTabId)?normalizedTabId:null;
   } catch (e) {
     return null;
   }
@@ -1463,6 +1466,11 @@ function saveSettingsInternalView(view){
 }
 
 function restoreLastApplicationTab(){
+  if(conferenceModuleEntryLandingPending){
+    if(!switchTab(0))return false;
+    conferenceModuleEntryLandingPending=false;
+    return true;
+  }
   var storedTab = getStoredLastTab();
   var restoredTab=storedTab===null?0:storedTab;
   var settingsTabId=getApplicationTabIdByName('settings');
@@ -1576,10 +1584,14 @@ function showPlatformModules(options){
   if(launcher)launcher.focus();
   return true;
 }
-function openConferenceWorkspace(){
+function openConferenceWorkspace(options){
+  options=options||{};
   var shell=ge('startupScreen');
   var workspace=ge('conferenceWorkspace');
   if(!shell||!workspace)return false;
+  if(options.explicitModuleEntry===true){
+    conferenceModuleEntryLandingPending=true;
+  }
   shell.classList.add('platform-conference-active');
   workspace.focus();
   return true;

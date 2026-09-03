@@ -35,7 +35,7 @@ function navigationRuntime(pathname,modules,contextFailure,basePath='/'){
         for(const listener of documentListeners.click||[])listener(event);
       }};
   }
-  const assigned=[];const listeners={};let workspaceOpens=0,moduleOpens=0;
+  const assigned=[];const listeners={};const workspaceOptions=[];let moduleOpens=0;
   const origin='https://example.test';
   const window={Promise,navigator:{platform:'test'},location:{pathname,origin,
     assign(route){assigned.push(route);}},fetch(){return Promise.resolve(contextFailure
@@ -46,14 +46,14 @@ function navigationRuntime(pathname,modules,contextFailure,basePath='/'){
       if(selector==='[data-platform-module="conference"] .platform-module-state-available')return cards.conference&&cards.conference.state;
       const match=selector.match(/data-platform-module="([^"]+)"/);
       return match?cards[match[1]]||null:null;}},
-    openConferenceWorkspace(){workspaceOpens+=1;},
+    openConferenceWorkspace(options){workspaceOptions.push(options);},
     showPlatformModules(){moduleOpens+=1;},history:{pushState(_state,_title,route){
       window.location.pathname=route;
     }},addEventListener(type,listener){(listeners[type]||(listeners[type]=[])).push(listener);}};
   vm.runInNewContext(applicationRouting,{window,URL,Error,Object,String});
   vm.runInNewContext(integration,{window,Promise,Object,Array,String,Error,JSON});
   return window.PlatformIntegration.initialize().then(()=>({window,cards,assigned,
-    workspaceOpens:()=>workspaceOpens,moduleOpens:()=>moduleOpens,
+    workspaceOptions,moduleOpens:()=>moduleOpens,
     popstate(){for(const listener of listeners.popstate||[])listener();}}));
 }
 
@@ -70,7 +70,8 @@ test('available cards use the hydrated registry route and unavailable cards rema
   runtime.cards.custody.click();
   assert.deepStrictEqual(runtime.assigned,['/warehouse','/custody']);
   assert.strictEqual(runtime.window.location.pathname,'/conference');
-  assert.strictEqual(runtime.workspaceOpens(),1);
+  assert.strictEqual(runtime.workspaceOptions.length,1);
+  assert.strictEqual(runtime.workspaceOptions[0].explicitModuleEntry,true);
   assert.strictEqual(runtime.cards.reservations.disabled,true);
   assert.strictEqual(runtime.cards.reservations.onclick,null);
   assert.strictEqual(runtime.cards.conference.onclick,null);
@@ -84,7 +85,7 @@ test('direct available Conference route activates its workspace without redirect
   const runtime=await navigationRuntime('/conference',[
     {id:'conference',routePrefix:'/conference',available:true}
   ]);
-  assert.strictEqual(runtime.workspaceOpens(),1);
+  assert.deepStrictEqual(runtime.workspaceOptions,[undefined]);
   assert.deepStrictEqual(runtime.assigned,[]);
 });
 
@@ -96,7 +97,8 @@ test('rendered available Conference card navigates even when initial context hyd
   assert.strictEqual(failed.cards.conference.disabled,false);
   assert.deepStrictEqual(failed.assigned,[]);
   assert.strictEqual(failed.window.location.pathname,'/preview/conference');
-  assert.strictEqual(failed.workspaceOpens(),1);
+  assert.strictEqual(failed.workspaceOptions.length,1);
+  assert.strictEqual(failed.workspaceOptions[0].explicitModuleEntry,true);
 });
 
 test('Conference navigation and popstate restore the repository-scoped SPA shell',async()=>{
@@ -111,7 +113,23 @@ test('Conference navigation and popstate restore the repository-scoped SPA shell
   assert.strictEqual(runtime.moduleOpens(),1);
   runtime.window.location.pathname='/preview/conference';
   runtime.popstate();
-  assert.strictEqual(runtime.workspaceOpens(),2);
+  assert.strictEqual(runtime.workspaceOptions.length,2);
+  assert.strictEqual(runtime.workspaceOptions[0].explicitModuleEntry,true);
+  assert.strictEqual(runtime.workspaceOptions[1],undefined);
+});
+
+test('Back to modules and a fresh Conference card click signal a fresh explicit entry',async()=>{
+  const runtime=await navigationRuntime('/preview/',[
+    {id:'conference',routePrefix:'/conference',available:true}
+  ],false,'/preview/');
+  runtime.cards.conference.click();
+  runtime.window.location.pathname='/preview/';
+  runtime.popstate();
+  runtime.cards.conference.click();
+  assert.strictEqual(runtime.window.location.pathname,'/preview/conference');
+  assert.strictEqual(runtime.workspaceOptions.length,2);
+  assert.strictEqual(runtime.workspaceOptions[0].explicitModuleEntry,true);
+  assert.strictEqual(runtime.workspaceOptions[1].explicitModuleEntry,true);
 });
 
 test('gateway is development locked and secret-bearing device credentials stay HttpOnly',()=>{

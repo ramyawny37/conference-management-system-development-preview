@@ -195,7 +195,7 @@
       if(routing&&routing.getLogicalPathname()!=='/conference'){
         global.history.pushState(null,'',resolved);
       }
-      global.openConferenceWorkspace();
+      global.openConferenceWorkspace({explicitModuleEntry:true});
       return true;
     }
     global.location.assign(resolved);
