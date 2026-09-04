@@ -14,15 +14,27 @@ function functionBody(name,next){
   return source.slice(start,end);
 }
 
-test('Items screen uses live master operations with create, edit, revision and empty-state UX',()=>{
+test('Items screen restores historical entity routes, guarded create/edit, and empty-state UX',()=>{
   const body=functionBody('masters','stores');
   assert.match(body,/invoke\('list_item_master'/);
   assert.match(source,/mutate\('upsert_item_master'/);
-  assert.match(source,/p_entity_id:r\.id,p_expected_revision:Number\(r\.revision\)/);
-  assert.match(body,/data-wh-master/);
-  assert.match(body,/data-wh-master-edit/);
-  assert.match(body,/warehouse-empty|empty\(\)/);
+  assert.match(source,/p_entity_id:current\.id\|\|null/);
+  assert.match(source,/p_expected_revision:current\.id\?Number\(current\.revision\):0/);
+  assert.match(source,/items\/categories/);
+  assert.match(source,/items\/units/);
+  assert.match(source,/أقسام بيانات الأصناف/);
+  assert.match(body,/data-wh-master-open/);
+  assert.match(source,/data-wh-master-edit/);
+  assert.match(body,/masterEmpty\(\)/);
   assert.match(body,/data-wh-filter-input/);
+  assert.match(body,/data-wh-category-filter/);
+  assert.match(body,/data-wh-status-filter/);
+  assert.match(source,/role="dialog"/);
+  assert.match(source,/defaultPurchasePrice/);
+  assert.match(source,/defaultIssuePrice/);
+  assert.match(source,/minimumStock/);
+  assert.match(source,/description:d\.description/);
+  assert.doesNotMatch(source,/p_entity_kind:d\.kind/);
   assert.doesNotMatch(body,/delete_item|create_category|create_unit/);
 });
 

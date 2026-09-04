@@ -12,14 +12,14 @@ function deferred(){
   return {promise,resolve,reject};
 }
 
-function runtime(beginFlights){
+function runtime(beginFlights,platformResponse){
   const calls=[];
   const record={state:'active',deviceId:'device-1',bindingId:'binding-1',
     publicKeyThumbprint:'thumbprint-1',privateKey:{}};
   const client={functions:{invoke(name,request){
     calls.push({name,body:request.body});
     if(name==='platform-device-operation')
-      return Promise.resolve({data:{ok:true,data:{operation:request.body.operation}}});
+      return Promise.resolve(platformResponse||{data:{ok:true,data:{operation:request.body.operation}}});
     if(request.body.action==='begin')return beginFlights.shift().promise;
     if(request.body.action==='establish')return Promise.resolve({data:{ok:true,data:{
       sessionId:'session-1',token:'secret-token',userId:'user-1',deviceId:'device-1',
@@ -111,4 +111,20 @@ test('rejected establishment clears the flight and permits a later retry',async(
 test('session token remains tab-memory only',()=>{
   assert.doesNotMatch(source,/localStorage|sessionStorage|document\.cookie|BroadcastChannel/);
   assert.match(source,/var memorySession=null,expiryTimer=null,ensureFlight=null/);
+});
+
+test('protected HTTP errors preserve safe status and server code without leaking arbitrary fields',async()=>{
+  const begin=deferred();
+  const context={status:422,json(){return Promise.resolve({error:{code:'WAREHOUSE_VALIDATION_FAILED',message:'قيمة غير صالحة',details:'راجع الحقول',token:'must-not-leak'}});}};
+  const state=runtime([begin],{error:{context,message:'Edge Function returned a non-2xx status code'}});
+  const request=state.api.invokeModuleProtected('warehouse','upsert_item_master',{});
+  await drain();successfulBegin(begin);
+  await assert.rejects(request,error=>{
+    assert.equal(error.code,'WAREHOUSE_VALIDATION_FAILED');
+    assert.equal(error.status,422);
+    assert.equal(error.message,'قيمة غير صالحة');
+    assert.equal(error.details,'راجع الحقول');
+    assert.equal(error.token,undefined);
+    return true;
+  });
 });
