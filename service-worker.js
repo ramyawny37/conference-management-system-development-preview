@@ -132,7 +132,7 @@ const CORE_ASSETS = [
   './cards.js',
   './libs/xlsx.full.min.js',
   './js/ui-icons.js?rev=warehouse-original-shell-round1-v1',
-  './js/warehouse/workspace.js?rev=warehouse-original-items-secure-restoration-v1',
+  './js/warehouse/workspace.js?rev=warehouse-category-code-runtime-reconciliation-v1',
   './script.js?rev=delayed-warehouse-route-override-v1',
   './version.js',
   './pwa.js?rev=organization-membership-operation-key-v1',
