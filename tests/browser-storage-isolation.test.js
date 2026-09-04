@@ -146,6 +146,7 @@ const activeSources=[
   'js/supabase/device-identity.js',
   'js/supabase/runtime-config.js',
   'js/supabase/system-access-service.js',
+  'js/warehouse/current-store-context.js',
   'js/sync/automatic-sync-preferences.js',
   'js/sync/conference-link-store.js',
   'js/sync/conference-linking-attempt-store.js',
