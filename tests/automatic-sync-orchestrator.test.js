@@ -11,6 +11,13 @@ function delay(milliseconds){
   return new Promise(function(resolve){setTimeout(resolve,milliseconds);});
 }
 
+async function waitForEvaluationToFinish(environment){
+  while(environment.window.AutomaticSyncOrchestrator
+    .getState().evaluationInProgress){
+    await new Promise(function(resolve){setImmediate(resolve);});
+  }
+}
+
 function load(options){
   options=options||{};
   var handlers={};
@@ -344,6 +351,10 @@ async function run(){
   var maximumConcurrentChecks=0;
   var followUpRunnerCalls=0;
   var runnerReasons=[];
+  var followUpRunnerResolve;
+  var followUpRunnerObserved=new Promise(function(resolve){
+    followUpRunnerResolve=resolve;
+  });
   var followUpRemoteId='11111111-1111-4111-8111-111111111111';
   var followUpLink={
     localConferenceId:'local-follow-up',
@@ -387,6 +398,7 @@ async function run(){
     queueRunner:{run:function(options){
       followUpRunnerCalls++;
       runnerReasons.push(Array.from(options.reasons));
+      followUpRunnerResolve();
       return Promise.resolve({ok:true,status:'empty'});
     }}
   };
@@ -434,7 +446,8 @@ async function run(){
     null
   );
   firstConnectivityResolve({available:false});
-  await delay(15);
+  await followUpRunnerObserved;
+  await waitForEvaluationToFinish(followUp);
   assert.strictEqual(connectivityChecks,2);
   assert.strictEqual(maximumConcurrentChecks,1);
   assert.strictEqual(followUpRunnerCalls,1);
