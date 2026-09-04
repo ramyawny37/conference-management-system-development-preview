@@ -74,7 +74,7 @@ test('responsive structure and coherent active runtime cache revision are explic
   assert.match(css,/\.warehouse-issue-layout\{display:grid;grid-template-columns:minmax\(0,1fr\) 320px/);
   assert.match(css,/@media\(max-width:1200px\)[\s\S]*?\.warehouse-issue-layout\{grid-template-columns:1fr\}[\s\S]*?\.warehouse-issue-line-grid\{grid-template-columns:repeat\(2/);
   assert.match(css,/@media\(max-width:760px\)[\s\S]*?\.warehouse-issue-line-grid\{grid-template-columns:1fr\}/);
-  const revision='warehouse-historical-operations-v1';
+  const revision='warehouse-party-management-v1';
   assert.ok(index.includes('js/warehouse/historical-operations.js?rev='+revision));
   assert.ok(index.includes('js/warehouse/workspace.js?rev='+revision));
   assert.ok(index.includes('style.css?rev='+revision));
