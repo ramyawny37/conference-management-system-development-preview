@@ -7,14 +7,14 @@ const CACHE_NAMESPACE = IS_DEVELOPMENT
   : '';
 const CACHE_PREFIX = CACHE_NAMESPACE + 'conference-manager-core-';
 const CACHE_REVISION = IS_DEVELOPMENT
-  ? 'development-3-4-0-warehouse-original-shell-round1-v1'
+  ? 'development-3-4-0-warehouse-rtl-sidebar-position-v1'
   : 'production-integrated-3-3-0-main-6d0c1e1-develop-80653ca-v1';
 const CACHE_NAME = CACHE_PREFIX + 'v' + APP_VERSION + '-' + CACHE_REVISION;
 const CORE_ASSETS = [
   './',
   './index.html',
   './shared-design-tokens.css?rev=platform-shell-phase2b-v1',
-  './style.css?rev=warehouse-original-shell-round1-v1',
+  './style.css?rev=warehouse-rtl-sidebar-position-v1',
   './js/application-routing.js?rev=canonical-conference-routing-v1',
   './js/storage/environment-namespace.js',
   './js/storage/snapshot-payload-diagnostics.js?rev=snapshot-payload-diagnostics-v1',

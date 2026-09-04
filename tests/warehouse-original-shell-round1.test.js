@@ -116,3 +116,10 @@ test('restored shell keeps historical geometry without server dependencies',()=>
   assert.match(css,/@media\(max-width:900px\)[\s\S]*?\.warehouse-drawer-backdrop/);
   assert.doesNotMatch(source,/next\/|\bReact\b|from\s+['"]react|vercel|gateway|document\.cookie|fetch\s*\(/i);
 });
+
+test('RTL Warehouse shell keeps the sidebar physically right of the main workspace',()=>{
+  assert.match(css,/\.warehouse-app\{[\s\S]*?grid-template-areas:"main sidebar"[\s\S]*?direction:ltr/);
+  assert.match(css,/\.warehouse-sidebar\{grid-area:sidebar;[\s\S]*?direction:rtl/);
+  assert.match(css,/\.warehouse-main\{grid-area:main;[\s\S]*?direction:rtl/);
+  assert.match(css,/@media\(max-width:900px\)[\s\S]*?\.warehouse-sidebar\{[\s\S]*?inset:0 0 0 auto[\s\S]*?transform:translateX\(105%\)/);
+});
