@@ -38,6 +38,24 @@ test('Items screen restores historical entity routes, guarded create/edit, and e
   assert.doesNotMatch(body,/delete_item|create_category|create_unit/);
 });
 
+test('Item Master sub-routes resolve relative and full paths without falling back to Items',()=>{
+  const masterView=Function('global','return ('+functionBody('masterView','masterRoute')+')')({
+    ApplicationRouting:{getLogicalPathname:()=>'/warehouse/items'}
+  });
+  const masterRoute=Function('return ('+functionBody('masterRoute','masterTabs')+')')();
+  for(const [route,view] of [
+    ['items','item'],
+    ['items/categories','category'],
+    ['items/units','unit'],
+    ['/warehouse/items','item'],
+    ['/warehouse/items/categories','category'],
+    ['/warehouse/items/units','unit']
+  ])assert.equal(masterView(route),view,route);
+  for(const view of ['item','category','unit','category','item','unit']){
+    assert.equal(masterView(masterRoute(view)),view,'switch to '+view);
+  }
+});
+
 test('Stores screen preserves discover/create/update and revision-aware editing only',()=>{
   const body=functionBody('stores','kind');
   assert.match(body,/invoke\('discover_stores',\{p_include_inactive:true\}/);
