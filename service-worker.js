@@ -7,7 +7,7 @@ const CACHE_NAMESPACE = IS_DEVELOPMENT
   : '';
 const CACHE_PREFIX = CACHE_NAMESPACE + 'conference-manager-core-';
 const CACHE_REVISION = IS_DEVELOPMENT
-  ? 'development-3-4-0-warehouse-original-items-secure-restoration-v1'
+  ? 'development-3-4-0-warehouse-party-finance-v1'
   : 'production-integrated-3-3-0-main-6d0c1e1-develop-80653ca-v1';
 const CACHE_NAME = CACHE_PREFIX + 'v' + APP_VERSION + '-' + CACHE_REVISION;
 const CORE_ASSETS = [
@@ -33,7 +33,7 @@ const CORE_ASSETS = [
   './js/supabase/runtime-config.js',
   './js/supabase/device-session.js?rev=warehouse-original-items-secure-restoration-v1',
   './js/supabase/conference-device-operation-contract.js?rev=phase1c-v1',
-  './js/supabase/warehouse-device-operation-contract.js?rev=phase-w1-v1',
+  './js/supabase/warehouse-device-operation-contract.js?rev=party-finance-v1',
   './js/supabase/platform-device-operation-contract.js?rev=phase-w1-v1',
   './js/supabase/warehouse-transport.js?rev=phase-w1-v1',
   './js/supabase/client.js?rev=phase1c-v1',

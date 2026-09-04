@@ -1,6 +1,10 @@
 (function(global){
   'use strict';
   var rows=[
+    ['discover_parties','warehouse.discover_parties(uuid,text,boolean)','read',['p_role','p_include_inactive'],false,false,'global',true],
+    ['get_beneficiary_balance','warehouse.get_beneficiary_balance(uuid,uuid)','read',['p_party_id'],false,false,'global',true],
+    ['create_party','warehouse.create_party(uuid,uuid,jsonb)','mutation',['p_operation_id','p_payload'],true,false,'global',true],
+    ['update_party','warehouse.update_party(uuid,uuid,uuid,bigint,jsonb)','mutation',['p_operation_id','p_party_id','p_expected_revision','p_payload'],true,true,'global',true],
     ['list_stores','warehouse.list_stores(uuid,uuid)','read',['p_store_id'],false,false,'optional_store',true],
     ['list_item_master','warehouse.list_item_master(uuid)','read',[],false,false,'none',true],
     ['view_stock','warehouse.view_stock(uuid,uuid)','read',['p_store_id'],false,false,'required_store',true],
