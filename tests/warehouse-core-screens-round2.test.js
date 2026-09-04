@@ -3,6 +3,7 @@ const fs=require('node:fs');
 const test=require('node:test');
 
 const source=fs.readFileSync('js/warehouse/workspace.js','utf8');
+const historical=fs.readFileSync('js/warehouse/historical-operations.js','utf8');
 const css=fs.readFileSync('style.css','utf8');
 const contract=fs.readFileSync('js/supabase/warehouse-device-operation-contract.js','utf8');
 
@@ -58,34 +59,38 @@ test('Item Master sub-routes resolve relative and full paths without falling bac
 
 test('Stores screen preserves discover/create/update and revision-aware editing only',()=>{
   const body=functionBody('stores','kind');
-  assert.match(body,/invoke\('discover_stores',\{p_include_inactive:true\}/);
-  assert.match(body,/data-wh-store/);
-  assert.match(body,/data-wh-store-edit/);
-  assert.match(source,/mutate\('create_store'/);
-  assert.match(source,/mutate\('update_store'/);
-  assert.match(source,/p_expected_revision:Number\(r\.revision\)/);
-  assert.match(body,/statusBadge\(s\.status\)/);
-  assert.doesNotMatch(body,/delete_store/);
+  assert.match(body,/WarehouseHistoricalOperations\.stores/);
+  assert.match(historical,/invoke\('discover_stores',\{p_include_inactive:true\}/);
+  assert.match(historical,/data-wh-store-open/);
+  assert.match(historical,/data-wh-historical-store/);
+  assert.match(historical,/mutate\('create_store'/);
+  assert.match(historical,/mutate\('update_store'/);
+  assert.match(historical,/args\.p_expected_revision=Number\(current\.revision\)/);
+  assert.match(historical,/statusBadge\(store\.status\)/);
+  assert.doesNotMatch(historical,/delete_store/);
 });
 
-test('Receipts screen uses the exact live document lifecycle without supplier or payment APIs',()=>{
-  const body=functionBody('documents','draftPayload');
-  assert.match(body,/invoke\('list_documents'/);
-  assert.match(source,/invoke\('get_document'/);
-  assert.match(source,/name='create_receipt_draft'/);
-  assert.match(source,/mutate\('update_document_draft'/);
-  assert.match(source,/receipts:'post_receipt'/);
-  assert.match(source,/p_document_kind:kind\(s\)/);
-  assert.match(source,/p_expected_revision:Number\(update\.dataset\.rev\)/);
-  assert.doesNotMatch(source,/supplierReference|supplier_id|payment|accounting/i);
+test('Receipts screen uses the secure Party-backed lifecycle',()=>{
+  assert.match(historical,/invoke\('list_documents'/);
+  assert.match(historical,/invoke\('get_document'/);
+  assert.match(historical,/mutate\('create_receipt_draft'/);
+  assert.match(historical,/mutate\('update_document_draft'/);
+  assert.match(historical,/mutate\('post_receipt'/);
+  assert.match(historical,/mutate\('create_reversal_request'/);
+  assert.match(historical,/supplierPartyId:data\.supplierId/);
+  assert.match(historical,/p_document_kind:'receipt'/);
+  assert.match(historical,/p_expected_revision:Number\(form\.dataset\.rev\)/);
 });
 
-test('Issues screen uses the exact live document lifecycle without people or campaign integration',()=>{
-  assert.match(source,/name='create_issue_draft'/);
-  assert.match(source,/issues:'post_issue'/);
-  assert.match(source,/payload\.sourceStoreId=d\.storeId/);
-  assert.match(source,/payload\.purpose=d\.reason\|\|'صرف تشغيلي'/);
-  assert.doesNotMatch(source,/beneficiary|campaign|giftRecipient|paidNow|subsidized/i);
+test('Issues screen uses secure current-store and Party-backed create/post orchestration',()=>{
+  assert.match(historical,/getCurrentWarehouseStoreId\(\)/);
+  assert.match(historical,/invoke\('create_issue_draft'/);
+  assert.match(historical,/invoke\('post_issue'/);
+  assert.match(historical,/beneficiaryPartyId:issueState\.beneficiaryId/);
+  assert.match(historical,/giftRecipientMode/);
+  assert.match(historical,/paidNow/);
+  assert.match(historical,/subsidized/);
+  assert.doesNotMatch(historical,/campaign|auth users|conference members/i);
 });
 
 test('Round 2 remains transport-only and renders only live or explicit empty/error states',()=>{
@@ -96,8 +101,8 @@ test('Round 2 remains transport-only and renders only live or explicit empty/err
   });
   assert.match(source,/WarehouseTransport\.invoke/);
   assert.match(source,/لم تُستخدم بيانات بديلة/);
-  assert.doesNotMatch(source,/demo|sample|mock|\.rpc\(|\.schema\(|SupabaseClientLayer|fetch\s*\(|document\.cookie/i);
-  assert.doesNotMatch(source,/next\/|\bReact\b|vercel|gateway/i);
+  assert.doesNotMatch(source+historical,/demo|sample|mock|\.rpc\(|\.schema\(|SupabaseClientLayer|fetch\s*\(|document\.cookie/i);
+  assert.doesNotMatch(source+historical,/next\/|\bReact\b|vercel|gateway/i);
 });
 
 test('Core screen layout is keyboard, touch and mobile responsive without page-level overflow',()=>{
