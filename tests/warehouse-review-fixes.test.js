@@ -128,7 +128,8 @@ test('History uses authorized document numbers, Arabic directions, and actual au
   const movement=env.window.document.querySelector('.warehouse-table-card tbody tr');
   assert.match(movement.textContent,/خصم/);assert.match(movement.textContent,/OPE-2026-00000081/);assert.doesNotMatch(movement.textContent,new RegExp(DOCUMENT_ID));
   const audit=env.window.document.querySelector('.warehouse-audit');
-  for(const expected of ['2026-09-05T09:01:00Z','document.posted','opening_balance','OPE-2026-00000081','اختبار'])assert.match(audit.textContent,new RegExp(expected));
+  for(const expected of ['document.posted','opening_balance','OPE-2026-00000081','اختبار'])assert.match(audit.textContent,new RegExp(expected));
+  assert.doesNotMatch(audit.textContent,/T09:01:00Z/);
   assert.doesNotMatch(audit.textContent,/المنفذ/);
 });
 

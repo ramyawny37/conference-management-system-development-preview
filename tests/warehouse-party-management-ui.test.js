@@ -75,7 +75,7 @@ test('Party runtime asset loads before workspace and is precached',()=>{
   assert.ok(index.includes(asset));
   assert.ok(index.indexOf(asset)<index.indexOf('js/warehouse/workspace.js'));
   assert.ok(worker.includes('./'+asset));
-  assert.match(worker,/development-3-4-0-warehouse-review-fixes-v1/);
+  assert.match(worker,/development-3-4-0-warehouse-operational-ux-v1/);
 });
 
 test('Party list and dialog are responsive within Warehouse styling',()=>{

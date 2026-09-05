@@ -23,6 +23,7 @@
     ['create_transfer_draft','warehouse.create_transfer_draft(uuid,uuid,jsonb)','mutation',['p_operation_id','p_payload'],true,false,'payload_store',true],
     ['create_adjustment_draft','warehouse.create_adjustment_draft(uuid,uuid,text,jsonb)','mutation',['p_operation_id','p_adjustment_kind','p_payload'],true,false,'payload_store',true],
     ['update_document_draft','warehouse.update_document_draft(uuid,uuid,text,uuid,bigint,jsonb)','mutation',['p_operation_id','p_document_kind','p_document_id','p_expected_revision','p_payload'],true,true,'document_store',true],
+    ['cancel_document_draft','warehouse.cancel_document_draft(uuid,uuid,text,uuid,bigint,text)','mutation',['p_operation_id','p_document_kind','p_document_id','p_expected_revision','p_reason'],true,true,'document_store',true],
     ['submit_adjustment_for_approval','warehouse.submit_adjustment_for_approval(uuid,uuid,uuid,bigint)','mutation',['p_operation_id','p_document_id','p_expected_revision'],true,true,'document_store',true],
     ['decide_adjustment_approval','warehouse.decide_adjustment_approval(uuid,uuid,uuid,bigint,text,text)','mutation',['p_operation_id','p_document_id','p_expected_revision','p_decision','p_reason'],true,true,'document_store',true],
     ['post_receipt','warehouse.post_receipt(uuid,uuid,uuid,bigint)','mutation',['p_operation_id','p_document_id','p_expected_revision'],true,true,'document_store',true],

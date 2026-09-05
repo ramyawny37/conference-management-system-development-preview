@@ -42,7 +42,7 @@ test('active state follows route and adjustment mode exactly',()=>{
 });
 
 test('navigation assets and Development cache use one coherent revision',()=>{
-  const revision='warehouse-review-fixes-v1';
+  const revision='warehouse-operational-ux-v1';
   for(const file of ['historical-operations.js','remaining-operations.js','workspace.js']){
     assert.ok(index.includes('js/warehouse/'+file+'?rev='+revision));
     assert.ok(worker.includes('./js/warehouse/'+file+'?rev='+revision));
