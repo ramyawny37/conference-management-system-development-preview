@@ -13,6 +13,7 @@ const contract=fs.readFileSync('js/supabase/warehouse-device-operation-contract.
 const edge=fs.readFileSync('supabase/functions/platform-device-operation/index.ts','utf8');
 const ambiguityFix=fs.readFileSync('supabase/migrations/20260905193000_warehouse_item_unit_upsert_ambiguity_fix.sql','utf8');
 const statusAmbiguityFix=fs.readFileSync('supabase/migrations/20260905200000_warehouse_item_unit_status_ambiguity_fix.sql','utf8');
+const draftCostFix=fs.readFileSync('supabase/migrations/20260905203000_warehouse_unit_conversion_draft_wrapper_and_cost_fix.sql','utf8');
 
 test('item-unit relation is item-specific, guarded, revisioned and not globally attached to units',()=>{
   assert.match(sql,/create table warehouse\.item_units/);
@@ -180,4 +181,21 @@ test('item-unit failure remains masked and preserves the open form while success
   assert.doesNotMatch(workspace,/catch\(function\(e\)\{host\.innerHTML=''/);
   assert.match(workspace,/function mutate\(name,args,s\)[\s\S]*return load\(s\)\.then/);
   assert.deepEqual({...(()=>{const start=edge.indexOf('function classified('),end=edge.indexOf('\nDeno.serve',start),sandbox={Set,String};vm.runInNewContext(edge.slice(start,end).replace('error:unknown','error').replace(/error as \{code\?:unknown,message\?:unknown\}/g,'error'),sandbox);return sandbox.classified({code:'42702',message:'column reference unit_id is ambiguous'});})()},{status:500,code:'PLATFORM_DEVICE_OPERATION_FAILED'});
+});
+
+test('draft wrapper uses an unambiguous created document identifier in every family',()=>{
+  assert.match(draftCostFix,/created_document_id uuid/);
+  assert.doesNotMatch(draftCostFix,/\bdocument_id uuid;/);
+  for(const table of ['receipt_documents','issue_documents','transfer_documents','adjustment_documents'])assert.match(draftCostFix,new RegExp('warehouse\\.'+table+' where id=created_document_id'));
+  assert.equal((draftCostFix.match(/l\.document_id=created_document_id/g)||[]).length,4);
+  assert.doesNotMatch(draftCostFix,/l\.document_id=document_id|where id=document_id/);
+});
+
+test('adjustment inbound cost is canonicalized independently from receipt unit cost',()=>{
+  assert.match(draftCostFix,/uses_inbound_cost:=source_line \? 'inboundUnitCost'/);
+  assert.match(draftCostFix,/when uses_inbound_cost then nullif\(source_line->>'inboundUnitCost',''\)::numeric else nullif\(source_line->>'unitCost',''\)::numeric/);
+  assert.match(draftCostFix,/jsonb_build_object\('selectedUnitCost',selected_cost,'inboundUnitCost',round\(selected_cost\/relation\.conversion_factor,6\)\)/);
+  assert.match(draftCostFix,/jsonb_build_object\('selectedUnitCost',selected_cost,'unitCost',round\(selected_cost\/relation\.conversion_factor,6\)\)/);
+  assert.deepEqual({enteredQuantity:1,factor:10,quantity:10,selectedUnitCost:100,inboundUnitCost:10,total:100},{enteredQuantity:1,factor:10,quantity:10,selectedUnitCost:100,inboundUnitCost:10,total:100});
+  assert.doesNotMatch(draftCostFix,/delete from|update warehouse\.stock_movements|update warehouse\.stock_balances|update warehouse\.beneficiary_/i);
 });
