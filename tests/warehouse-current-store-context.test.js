@@ -64,7 +64,7 @@ test('Issue helper blocks without context while Receipt retains its explicit des
   assert.match(workspace,/if\(s==='receipts'\)\{payload\.destinationStoreId=d\.storeId/);
   assert.match(workspace,/field\(storeLabel,'<select name="storeId" required>/);
   assert.ok(index.indexOf('js/warehouse/current-store-context.js')<index.indexOf('js/warehouse/workspace.js'));
-  assert.match(index,/style\.css\?rev=warehouse-party-management-v1/);
-  assert.match(worker,/\.\/style\.css\?rev=warehouse-party-management-v1/);
+  assert.match(index,/style\.css\?rev=warehouse-remaining-operations-v1/);
+  assert.match(worker,/\.\/style\.css\?rev=warehouse-remaining-operations-v1/);
   assert.match(worker,/\.\/js\/warehouse\/current-store-context\.js\?rev=warehouse-current-store-context-v1/);
 });

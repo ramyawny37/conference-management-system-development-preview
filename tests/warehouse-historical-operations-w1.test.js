@@ -60,7 +60,7 @@ test('single Issue save maps idempotently to create then post and renders server
   assert.match(source,/p_operation_id:pending\.postOperationId/);
   assert.match(source,/p_expected_revision:pending\.revision/);
   assert.match(workspace,/if\(entry\.operationIdRequired&&!copy\.p_operation_id\)/);
-  assert.match(workspace,/if\(state\.section==='issues'\)\{load\('issues'\);return;\}/);
+  assert.match(workspace,/\['issues','history','balances','reports'\]\.indexOf\(state\.section\)>=0/);
   for(const key of ['previousBalance','operationTotal','paidNow','remaining','resultingBalance'])assert.match(source,new RegExp('posted\\.'+key));
   assert.doesNotMatch(source+workspace,/\.from\s*\(|\.insert\s*\(|\.update\s*\(|\.delete\s*\(|\.rpc\s*\(/);
 });
@@ -74,14 +74,15 @@ test('responsive structure and coherent active runtime cache revision are explic
   assert.match(css,/\.warehouse-issue-layout\{display:grid;grid-template-columns:minmax\(0,1fr\) 320px/);
   assert.match(css,/@media\(max-width:1200px\)[\s\S]*?\.warehouse-issue-layout\{grid-template-columns:1fr\}[\s\S]*?\.warehouse-issue-line-grid\{grid-template-columns:repeat\(2/);
   assert.match(css,/@media\(max-width:760px\)[\s\S]*?\.warehouse-issue-line-grid\{grid-template-columns:1fr\}/);
-  const revision='warehouse-party-management-v1';
-  assert.ok(index.includes('js/warehouse/historical-operations.js?rev='+revision));
-  assert.ok(index.includes('js/warehouse/workspace.js?rev='+revision));
-  assert.ok(index.includes('style.css?rev='+revision));
-  assert.ok(worker.includes("development-3-4-0-"+revision));
-  assert.ok(worker.includes("./js/warehouse/historical-operations.js?rev="+revision));
-  assert.ok(worker.includes("./js/warehouse/workspace.js?rev="+revision));
-  assert.ok(worker.includes("./style.css?rev="+revision));
+  const historicalRevision='warehouse-party-management-v1';
+  const activeRevision='warehouse-remaining-operations-v1';
+  assert.ok(index.includes('js/warehouse/historical-operations.js?rev='+historicalRevision));
+  assert.ok(index.includes('js/warehouse/workspace.js?rev='+activeRevision));
+  assert.ok(index.includes('style.css?rev='+activeRevision));
+  assert.ok(worker.includes("development-3-4-0-"+activeRevision));
+  assert.ok(worker.includes("./js/warehouse/historical-operations.js?rev="+historicalRevision));
+  assert.ok(worker.includes("./js/warehouse/workspace.js?rev="+activeRevision));
+  assert.ok(worker.includes("./style.css?rev="+activeRevision));
   assert.ok(index.indexOf('current-store-context.js')<index.indexOf('historical-operations.js')&&index.indexOf('historical-operations.js')<index.indexOf('workspace.js'));
 });
 
