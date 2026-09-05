@@ -53,8 +53,8 @@ test('Receipts horizontal navigation performs a real DOM click into Opening Bala
   assert.equal(window.WarehouseRemainingOperations.getAdjustmentMode(),'opening_balance');
   const text=window.document.getElementById('warehouseWorkspace').textContent;
   for(const expected of ['الأرصدة الافتتاحية','المخزن','التاريخ','السبب','الملاحظات','الصنف','الكمية الافتتاحية','تكلفة الوحدة الافتتاحية','قيمة السطر','إضافة صنف'])assert.match(text,new RegExp(expected));
-  assert.equal(window.document.querySelectorAll('[data-wh-operation-line]').length,2);
-  assert.equal(window.document.querySelectorAll('[data-wh-remove-line]').length,2);
+  assert.equal(window.document.querySelectorAll('[data-wh-operation-line]').length,1);
+  assert.equal(window.document.querySelectorAll('[data-wh-remove-line]').length,1);
   assert.doesNotMatch(text,/إرسال للاعتماد/);
 });
 

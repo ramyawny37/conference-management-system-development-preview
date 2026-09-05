@@ -3,6 +3,7 @@ const assert=require('node:assert/strict');
 const fs=require('node:fs');
 
 const migration=fs.readFileSync('supabase/migrations/20260905133000_warehouse_draft_cancellation.sql','utf8');
+const openingBalanceMigration=fs.readFileSync('supabase/migrations/20260905150000_opening_balance_reason_normalization.sql','utf8');
 const historical=fs.readFileSync('js/warehouse/historical-operations.js','utf8');
 const remaining=fs.readFileSync('js/warehouse/remaining-operations.js','utf8');
 const workspace=fs.readFileSync('js/warehouse/workspace.js','utf8');
@@ -81,4 +82,22 @@ test('timestamps and issue completion summary are operationally readable',()=>{
   assert.match(remaining,/readableTimestamp\(value\(row,\['occurred_at'/);
   for(const label of ['رقم المستند','المستفيد','المخزن','الأصناف','المدفوع الآن','المتبقي'])assert.match(historical,new RegExp(label));
   assert.match(historical,/lineSummary:payload\.lines\.map/);
+});
+
+test('opening balance reason is normalized before idempotency, insert and audit',()=>{
+  const normalization=openingBalanceMigration.indexOf("if p_kind='opening_balance' then");
+  const idempotency=openingBalanceMigration.indexOf('warehouse_private.begin_operation');
+  const insertion=openingBalanceMigration.indexOf('insert into warehouse.adjustment_documents');
+  const audit=openingBalanceMigration.indexOf('warehouse_private.write_audit');
+  assert.ok(normalization>-1&&normalization<idempotency&&idempotency<insertion&&insertion<audit);
+  assert.match(openingBalanceMigration,/jsonb_set\([\s\S]*?\{reason\}[\s\S]*?coalesce\(nullif\(btrim\(p_payload->>'reason'\),''\),'رصيد افتتاحي'\)/);
+  assert.match(openingBalanceMigration,/adjustment_documents[\s\S]*?p_payload->>'reason'/);
+  assert.match(openingBalanceMigration,/write_audit[\s\S]*?p_payload->>'reason'/);
+});
+
+test('reason normalization is narrowly scoped and does not rewrite warehouse data',()=>{
+  assert.match(openingBalanceMigration,/if p_kind='opening_balance' then/);
+  assert.doesNotMatch(openingBalanceMigration,/alter\s+table|drop\s+constraint|update\s+warehouse\.stock_balances|insert\s+into\s+warehouse\.stock_movements|delete\s+from/i);
+  assert.match(remaining,/name="reason"'\+\(opening\?'':' required'\)/);
+  assert.match(remaining,/deps\.field\('السبب',[\s\S]*?,!opening\)/);
 });
