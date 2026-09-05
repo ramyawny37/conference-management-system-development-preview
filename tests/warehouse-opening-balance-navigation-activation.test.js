@@ -42,10 +42,12 @@ test('active state follows route and adjustment mode exactly',()=>{
 });
 
 test('navigation assets and Development cache use one coherent revision',()=>{
-  const revision='opening-balance-ux-correction-v1';
-  for(const file of ['historical-operations.js','remaining-operations.js','workspace.js']){
-    assert.ok(index.includes('js/warehouse/'+file+'?rev='+revision));
-    assert.ok(worker.includes('./js/warehouse/'+file+'?rev='+revision));
+  const operationRevision='opening-balance-ux-correction-v1',workspaceRevision='item-unit-dialog-v1';
+  for(const file of ['historical-operations.js','remaining-operations.js']){
+    assert.ok(index.includes('js/warehouse/'+file+'?rev='+operationRevision));
+    assert.ok(worker.includes('./js/warehouse/'+file+'?rev='+operationRevision));
   }
-  assert.ok(worker.includes('development-3-4-0-'+revision));
+  assert.ok(index.includes('js/warehouse/workspace.js?rev='+workspaceRevision));
+  assert.ok(worker.includes('./js/warehouse/workspace.js?rev='+workspaceRevision));
+  assert.ok(worker.includes('development-3-4-0-'+workspaceRevision));
 });

@@ -11,6 +11,7 @@ const historical=fs.readFileSync('js/warehouse/historical-operations.js','utf8')
 const workspace=fs.readFileSync('js/warehouse/workspace.js','utf8');
 const contract=fs.readFileSync('js/supabase/warehouse-device-operation-contract.js','utf8');
 const edge=fs.readFileSync('supabase/functions/platform-device-operation/index.ts','utf8');
+const ambiguityFix=fs.readFileSync('supabase/migrations/20260905193000_warehouse_item_unit_upsert_ambiguity_fix.sql','utf8');
 
 test('item-unit relation is item-specific, guarded, revisioned and not globally attached to units',()=>{
   assert.match(sql,/create table warehouse\.item_units/);
@@ -129,4 +130,39 @@ test('dual quantity display uses immutable line snapshots and suppresses factor-
     assert.match(source,/entered_quantity/);
     assert.match(source,/factor!==1/);
   }
+});
+
+test('item-unit upsert ambiguity fix preserves guards, idempotency, revision and audit',()=>{
+  assert.match(ambiguityFix,/target_unit_id uuid/);
+  assert.doesNotMatch(ambiguityFix,/\bunit_id uuid;/);
+  assert.match(ambiguityFix,/on conflict\(item_id,unit_id\) do update/);
+  assert.match(ambiguityFix,/warehouse_private\.require_permission\(p_device_id,'warehouse\.item\.update'\)/);
+  assert.match(ambiguityFix,/warehouse_private\.begin_operation/);
+  assert.match(ambiguityFix,/warehouse_private\.write_audit/);
+  assert.match(ambiguityFix,/warehouse_private\.complete_operation/);
+  assert.match(ambiguityFix,/update warehouse\.items set revision=revision\+1/);
+  assert.doesNotMatch(ambiguityFix,/delete from|stock_movements|stock_balances|beneficiary_financial/i);
+});
+
+test('item-unit dialog separates the generated base relation and submits the authoritative list',()=>{
+  assert.match(workspace,/warehouse-item-unit-base/);
+  assert.match(workspace,/هذه هي وحدة المخزون الأساسية للصنف/);
+  assert.match(workspace,/الوحدات الإضافية/);
+  assert.match(workspace,/\+ إضافة وحدة أخرى/);
+  assert.match(workspace,/حفظ التغييرات/);
+  assert.match(workspace,/units=\[\{unitId:baseId,conversionFactor:1,status:'active'\}\]\.concat/);
+  assert.match(workspace,/button\[data-wh-item-units\]/);
+  assert.match(workspace,/String\(unit\.id\)!==String\(baseId\)/);
+  assert.match(workspace,/option\.disabled=.*selected\.indexOf\(option\.value\)>=0/);
+  assert.match(workspace,/if\(unitRow\.dataset\.whPersisted\)/);
+  assert.match(workspace,/querySelector\('\[name="status"\]'\)\.value='inactive'/);
+  assert.doesNotMatch(workspace,/عدد الوحدات الأساسية/);
+});
+
+test('item-unit failure remains masked and preserves the open form while success reloads it',()=>{
+  assert.match(workspace,/mutate\('upsert_item_units'[\s\S]*\.catch\(function\(e\)\{error\.textContent=remainingWarehouseError\(e\)/);
+  assert.match(workspace,/error\.hidden=false/);
+  assert.doesNotMatch(workspace,/catch\(function\(e\)\{host\.innerHTML=''/);
+  assert.match(workspace,/function mutate\(name,args,s\)[\s\S]*return load\(s\)\.then/);
+  assert.deepEqual({...(()=>{const start=edge.indexOf('function classified('),end=edge.indexOf('\nDeno.serve',start),sandbox={Set,String};vm.runInNewContext(edge.slice(start,end).replace('error:unknown','error').replace(/error as \{code\?:unknown,message\?:unknown\}/g,'error'),sandbox);return sandbox.classified({code:'42702',message:'column reference unit_id is ambiguous'});})()},{status:500,code:'PLATFORM_DEVICE_OPERATION_FAILED'});
 });

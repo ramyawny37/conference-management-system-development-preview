@@ -75,14 +75,14 @@ test('responsive structure and coherent active runtime cache revision are explic
   assert.match(css,/@media\(max-width:1200px\)[\s\S]*?\.warehouse-issue-layout\{grid-template-columns:1fr\}[\s\S]*?\.warehouse-issue-line-grid\{grid-template-columns:repeat\(2/);
   assert.match(css,/@media\(max-width:760px\)[\s\S]*?\.warehouse-issue-line-grid\{grid-template-columns:1fr\}/);
   const historicalRevision='opening-balance-ux-correction-v1';
-  const activeRevision='opening-balance-ux-correction-v1';
+  const activeRevision='item-unit-dialog-v1';
   assert.ok(index.includes('js/warehouse/historical-operations.js?rev='+historicalRevision));
   assert.ok(index.includes('js/warehouse/workspace.js?rev='+activeRevision));
-  assert.ok(index.includes('style.css?rev=warehouse-remaining-operations-v1'));
+  assert.ok(index.includes('style.css?rev=item-unit-dialog-v1'));
   assert.ok(worker.includes("development-3-4-0-"+activeRevision));
   assert.ok(worker.includes("./js/warehouse/historical-operations.js?rev="+historicalRevision));
   assert.ok(worker.includes("./js/warehouse/workspace.js?rev="+activeRevision));
-  assert.ok(worker.includes("./style.css?rev=warehouse-remaining-operations-v1"));
+  assert.ok(worker.includes("./style.css?rev=item-unit-dialog-v1"));
   assert.ok(index.indexOf('current-store-context.js')<index.indexOf('historical-operations.js')&&index.indexOf('historical-operations.js')<index.indexOf('workspace.js'));
 });
 
