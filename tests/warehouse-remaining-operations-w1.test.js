@@ -81,9 +81,9 @@ test('Current Store strip stays synchronized without first-store fallback or cro
   assert.match(workspace,/peer\.value=selector\.value/);
   assert.doesNotMatch(workspace+source,/state\.stores\[0\]/);
   assert.match(context,/KEY_PREFIX\+user\+'\:'\+device/);
-  assert.match(index,/remaining-operations\.js\?rev=warehouse-remaining-operations-v1/);
-  assert.match(worker,/development-3-4-0-warehouse-remaining-operations-v1/);
-  assert.match(worker,/remaining-operations\.js\?rev=warehouse-remaining-operations-v1/);
+  assert.match(index,/remaining-operations\.js\?rev=warehouse-opening-balance-navigation-v1/);
+  assert.match(worker,/development-3-4-0-warehouse-opening-balance-navigation-v1/);
+  assert.match(worker,/remaining-operations\.js\?rev=warehouse-opening-balance-navigation-v1/);
 });
 
 test('security boundaries remain transport-only with no delete or local business persistence',()=>{
