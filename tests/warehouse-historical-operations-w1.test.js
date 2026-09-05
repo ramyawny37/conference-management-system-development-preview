@@ -25,7 +25,7 @@ test('historical Receipt restores Party supplier, one line, filters, totals, and
   for(const text of ['الاستلام والمشتريات','إثبات استلام الأصناف وتكلفتها دون حسابات موردين.','إنشاء مستند استلام','رقم المستند','التاريخ','البنود','القيمة','الحالة','إجراء','كل الحالات','مسودة','مرحّل','معكوس','PUR-2026-000001','المورد','المخزن','بند المستند','سعر الشراء','سعر الوحدة','إجمالي الاستلام'])assert.ok(source.includes(text),text);
   assert.match(source,/discover_parties',\{p_role:'supplier'/);
   assert.match(source,/supplierPartyId:data\.supplierId/);
-  assert.match(source,/lines:\[\{itemId:data\.itemId,quantity:Number\(data\.quantity\),unitCost:Number\(data\.unitCost\),unitPrice:Number\(data\.unitPrice\)\}\]/);
+  assert.match(source,/lines:\[\{itemId:data\.itemId,unitId:data\.unitId,quantity:Number\(data\.quantity\),unitCost:Number\(data\.unitCost\),unitPrice:Number\(data\.unitPrice\)\}\]/);
   assert.match(source,/رقم المستند سيُولد تلقائيًا عند الحفظ/);
   for(const operation of ['list_documents','get_document','create_receipt_draft','update_document_draft','post_receipt','create_reversal_request'])assert.ok(source.includes(operation),operation);
   assert.match(source,/data-wh-receipt-search/);

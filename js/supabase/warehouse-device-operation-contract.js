@@ -18,6 +18,7 @@
     ['create_store','warehouse.create_store(uuid,uuid,text,text,text,text)','mutation',['p_operation_id','p_name','p_type','p_address','p_notes'],true,false,'global',true],
     ['update_store','warehouse.update_store(uuid,uuid,uuid,bigint,text,text,text,text,text)','mutation',['p_operation_id','p_store_id','p_expected_revision','p_name','p_type','p_address','p_status','p_notes'],true,true,'required_store',true],
     ['upsert_item_master','warehouse.upsert_item_master(uuid,uuid,text,uuid,bigint,jsonb)','mutation',['p_operation_id','p_entity_kind','p_entity_id','p_expected_revision','p_payload'],true,true,'global',true],
+    ['upsert_item_units','warehouse.upsert_item_units(uuid,uuid,uuid,bigint,jsonb)','mutation',['p_operation_id','p_item_id','p_expected_revision','p_units'],true,true,'global',true],
     ['create_receipt_draft','warehouse.create_receipt_draft(uuid,uuid,jsonb)','mutation',['p_operation_id','p_payload'],true,false,'payload_store',true],
     ['create_issue_draft','warehouse.create_issue_draft(uuid,uuid,jsonb)','mutation',['p_operation_id','p_payload'],true,false,'payload_store',true],
     ['create_transfer_draft','warehouse.create_transfer_draft(uuid,uuid,jsonb)','mutation',['p_operation_id','p_payload'],true,false,'payload_store',true],
