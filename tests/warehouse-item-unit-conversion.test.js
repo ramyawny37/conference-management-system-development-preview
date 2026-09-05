@@ -12,6 +12,7 @@ const workspace=fs.readFileSync('js/warehouse/workspace.js','utf8');
 const contract=fs.readFileSync('js/supabase/warehouse-device-operation-contract.js','utf8');
 const edge=fs.readFileSync('supabase/functions/platform-device-operation/index.ts','utf8');
 const ambiguityFix=fs.readFileSync('supabase/migrations/20260905193000_warehouse_item_unit_upsert_ambiguity_fix.sql','utf8');
+const statusAmbiguityFix=fs.readFileSync('supabase/migrations/20260905200000_warehouse_item_unit_status_ambiguity_fix.sql','utf8');
 
 test('item-unit relation is item-specific, guarded, revisioned and not globally attached to units',()=>{
   assert.match(sql,/create table warehouse\.item_units/);
@@ -142,6 +143,20 @@ test('item-unit upsert ambiguity fix preserves guards, idempotency, revision and
   assert.match(ambiguityFix,/warehouse_private\.complete_operation/);
   assert.match(ambiguityFix,/update warehouse\.items set revision=revision\+1/);
   assert.doesNotMatch(ambiguityFix,/delete from|stock_movements|stock_balances|beneficiary_financial/i);
+});
+
+test('second item-unit ambiguity fix renames status comprehensively without broad changes',()=>{
+  assert.match(statusAmbiguityFix,/target_status text/);
+  assert.doesNotMatch(statusAmbiguityFix,/\bstatus text;/);
+  assert.match(statusAmbiguityFix,/target_status:=coalesce\(entry->>'status','active'\)/);
+  assert.match(statusAmbiguityFix,/target_status<>'active'/);
+  assert.match(statusAmbiguityFix,/factor,target_status,actor,actor/);
+  assert.match(statusAmbiguityFix,/on conflict\(item_id,unit_id\) do update/);
+  assert.match(statusAmbiguityFix,/warehouse_private\.require_permission/);
+  assert.match(statusAmbiguityFix,/warehouse_private\.begin_operation/);
+  assert.match(statusAmbiguityFix,/warehouse_private\.write_audit/);
+  assert.match(statusAmbiguityFix,/warehouse_private\.complete_operation/);
+  assert.doesNotMatch(statusAmbiguityFix,/delete from|stock_movements|stock_balances|beneficiary_financial/i);
 });
 
 test('item-unit dialog separates the generated base relation and submits the authoritative list',()=>{
