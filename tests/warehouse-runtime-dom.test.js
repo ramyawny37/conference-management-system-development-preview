@@ -15,12 +15,13 @@ const master={
 };
 const stores=[{id:STORE_ID,name:'المخزن الرئيسي',status:'active'}];
 
-function result(name){
+function result(name,args){
   if(name==='discover_stores')return stores;
   if(name==='list_item_master')return master;
-  if(name==='discover_parties'||name==='list_documents'||name==='list_approval_queue')return [];
+  if(name==='discover_parties'||name==='list_approval_queue')return [];
+  if(name==='list_documents')return args&&args.p_document_kind?[]:[{id:'document-41',document_number:'OB-41'}];
   if(name==='list_balances')return [{item_id:ITEM_ID,quantity_on_hand:12,weighted_average_unit_cost:7.5,inventory_value:90,calculated_at:'2026-09-05T10:00:00Z',last_movement_sequence:41}];
-  if(name==='list_history')return {movements:[{sequence:41,occurred_at:'2026-09-05T10:00:00Z',item_id:ITEM_ID,direction:'in',movement_type:'opening',quantity:12,unit_cost:7.5,inventory_value:90,document_number:'OB-41'}],audit:[{created_at:'2026-09-05T10:01:00Z',action:'posted',actor_name:'مدير المخزن',document_id:'OB-41'}]};
+  if(name==='list_history')return {movements:[{sequence:41,occurred_at:'2026-09-05T10:00:00Z',item_id:ITEM_ID,direction:'in',movement_type:'opening',quantity:12,unit_cost:7.5,inventory_value:90,document_id:'document-41'}],audit:[{occurred_at:'2026-09-05T10:01:00Z',event_type:'posted',document_kind:'opening_balance',document_id:'document-41'}]};
   if(name==='authorize_report_export')return {authorized:true};
   return [];
 }
@@ -36,7 +37,7 @@ function boot(){
   window.BrowserStorageNamespace={key:name=>'cms:development:test:'+name};
   window.ApplicationRouting={resolveLogicalRoute:route=>'/conference-management-system-development-preview/#'+route,getLogicalPathname:()=>String(window.location.hash||'#/').slice(1)};
   window.WarehouseDeviceOperationContract={get:()=>({operationIdRequired:false})};
-  window.WarehouseTransport={invoke:name=>Promise.resolve(result(name))};
+  window.WarehouseTransport={invoke:(name,args)=>Promise.resolve(result(name,args))};
   for(const file of ['js/warehouse/current-store-context.js','js/warehouse/historical-operations.js','js/warehouse/party-management.js','js/warehouse/remaining-operations.js','js/warehouse/workspace.js'])window.eval(fs.readFileSync(file,'utf8'));
   return {dom,window,api:window.WarehouseWorkspace};
 }
@@ -76,7 +77,7 @@ test('History DOM is detailed, translated, metadata-resolved, and separates audi
   const audit=window.document.querySelector('.warehouse-audit');
   assert.ok(audit);
   assert.match(audit.textContent,/سجل التدقيق التشغيلي/);
-  assert.match(audit.textContent,/مدير المخزن/);
+  assert.match(audit.textContent,/opening_balance/);
   assert.ok(window.document.querySelector('[name="documentId"]'));
   assert.ok(window.document.querySelector('[name="itemId"]'));
   assert.ok(window.document.querySelector('[name="documentKind"]'));
@@ -92,7 +93,7 @@ test('Reports DOM has seven real entries and accurate authorization language',as
   assert.equal(grid.querySelectorAll(':scope > button[data-wh-route]').length,7);
   assert.doesNotMatch(grid.textContent,/WAREHOUSE_UI_BACKEND_GAP/);
   assert.match(grid.textContent,/قريبًا — لا يتوفر عقد قراءة آمن للسجل المالي بعد/);
-  assert.match(grid.textContent,/تفويض التصدير/);
+  assert.match(grid.textContent,/التحقق من صلاحية التصدير/);
   grid.querySelector('[data-wh-authorize-export]').click();
   await new Promise(resolve=>window.setTimeout(resolve,0));
   assert.match(grid.querySelector('[data-wh-export-result]').textContent,/تم التحقق من صلاحية التصدير/);

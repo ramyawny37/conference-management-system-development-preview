@@ -67,9 +67,10 @@ test('Balances are read-only server values enriched only with Item Master displa
   assert.doesNotMatch(source,/stock_balances|update_balance|quantity_on_hand\s*=/);
 });
 
-test('Reports use real secure sources, accurate authorization wording, and disable unsupported finance',()=>{
-  for(const key of ['list_balances','list_history','list_documents + get_document','inventory_value · weighted_average_unit_cost · quantity_on_hand','authorize_report_export'])assert.ok(source.includes(key),key);
-  assert.match(source,/تفويض التصدير/);
+test('Reports identify secure screen links accurately, keep authorization-only wording, and disable unsupported finance',()=>{
+  for(const key of ['يفتح شاشة الأرصدة الآمنة','يفتح سجل الحركات الآمن','يفتح شاشة الاستلام','يفتح شاشة الصرف','يفتح شاشة التحويلات','يفتح شاشة التسويات','authorize_report_export'])assert.ok(source.includes(key),key);
+  assert.match(source,/التحقق من صلاحية التصدير/);
+  assert.match(source,/لا ينشئ ملفًا/);
   assert.match(source,/تم التحقق من صلاحية التصدير/);
   assert.doesNotMatch(source,/تم تصدير الملف/);
   assert.match(source,/تقرير الحركة المالية للمستفيدين[\s\S]*قريبًا/);
@@ -81,9 +82,9 @@ test('Current Store strip stays synchronized without first-store fallback or cro
   assert.match(workspace,/peer\.value=selector\.value/);
   assert.doesNotMatch(workspace+source,/state\.stores\[0\]/);
   assert.match(context,/KEY_PREFIX\+user\+'\:'\+device/);
-  assert.match(index,/remaining-operations\.js\?rev=warehouse-runtime-authority-v1/);
-  assert.match(worker,/development-3-4-0-warehouse-runtime-authority-v1/);
-  assert.match(worker,/remaining-operations\.js\?rev=warehouse-runtime-authority-v1/);
+  assert.match(index,/remaining-operations\.js\?rev=warehouse-review-fixes-v1/);
+  assert.match(worker,/development-3-4-0-warehouse-review-fixes-v1/);
+  assert.match(worker,/remaining-operations\.js\?rev=warehouse-review-fixes-v1/);
 });
 
 test('security boundaries remain transport-only with no delete or local business persistence',()=>{
