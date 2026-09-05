@@ -136,7 +136,7 @@ const CORE_ASSETS = [
   './js/warehouse/historical-operations.js?rev=issue-selected-unit-v1',
   './js/warehouse/party-management.js?rev=warehouse-party-management-v1',
   './js/warehouse/remaining-operations.js?rev=adjustment-approval-state-v1',
-  './js/warehouse/workspace.js?rev=adjustment-approval-state-v1',
+  './js/warehouse/workspace.js?rev=pending-approval-count-v1',
   './script.js?rev=delayed-warehouse-route-override-v1',
   './version.js',
   './pwa.js?rev=organization-membership-operation-key-v1',

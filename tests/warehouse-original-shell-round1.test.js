@@ -96,14 +96,20 @@ test('dashboard renders only live WarehouseTransport values',async()=>{
     discover_stores:[{id:'s1',status:'active'},{id:'s2',status:'inactive'}],
     list_item_master:{categories:[],units:[],items:[
       {id:'i1',status:'active'},{id:'i2',status:'inactive'}]},
-    list_documents:[{id:'d1'},{id:'d2'}],list_approval_queue:[{id:'a1'}]
+    list_documents:[{id:'d1'},{id:'d2'}],list_approval_queue:[
+      {request_kind:'adjustment',approval_status:'approved'},
+      {request_kind:'adjustment',approval_status:'rejected'},
+      {request_kind:'adjustment',approval_status:'pending'},
+      {request_kind:'reversal',lifecycle_status:'pending'},
+      {request_kind:'reversal',lifecycle_status:'approved'},
+      {request_kind:'reversal',lifecycle_status:'rejected'}]
   });
   await state.window.openWarehouseWorkspace({route:'/warehouse'});
   assert.match(state.node.innerHTML,/لوحة التحكم/);
   assert.match(state.node.innerHTML,/الأصناف النشطة[\s\S]*?<strong>1<\/strong>/);
   assert.match(state.node.innerHTML,/المخازن المتاحة[\s\S]*?<strong>1<\/strong>/);
   assert.match(state.node.innerHTML,/المستندات الحديثة[\s\S]*?<strong>2<\/strong>/);
-  assert.match(state.node.innerHTML,/بانتظار الاعتماد[\s\S]*?<strong>1<\/strong>/);
+  assert.match(state.node.innerHTML,/بانتظار الاعتماد[\s\S]*?<strong>2<\/strong>/);
   assert.doesNotMatch(state.node.innerHTML,/تجريبية|demo|sample|mock/i);
   assert.match(source,/WarehouseTransport\.invoke/);
   assert.doesNotMatch(source,/\.rpc\(|\.schema\(|SupabaseClientLayer/);

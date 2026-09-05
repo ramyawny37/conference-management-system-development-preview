@@ -40,7 +40,7 @@ test('real Category create and edit renderer omits manual code while payload per
 });
 
 test('runtime and precache use the reconciled Warehouse workspace revision',()=>{
-  const asset='js/warehouse/workspace.js?rev=adjustment-approval-state-v1';
+  const asset='js/warehouse/workspace.js?rev=pending-approval-count-v1';
   assert.ok(index.includes('<script src="'+asset+'"></script>'));
   assert.ok(worker.includes("'./"+asset+"'"));
   assert.doesNotMatch(index,/workspace\.js\?rev=warehouse-original-items-secure-restoration-v1/);
