@@ -15,7 +15,7 @@ test('Opening Balance is multi-line inbound-only, requires cost, skips approval,
   assert.match(source,/mode==='opening_balance'\?'in'/);
   assert.match(source,/if\(direction==='in'\)item\.inboundUnitCost/);
   assert.match(source,/data-wh-add-line/);
-  assert.match(source,/opening\?'<button[^>]*data-wh-operation-action="post_adjustment"/);
+  assert.match(source,/else if\(opening\)buttons\+='<button[^>]*data-wh-operation-action="post_adjustment"/);
   assert.match(workspace,/WAREHOUSE_OPENING_BALANCE_EXISTING_HISTORY/);
 });
 
@@ -82,9 +82,9 @@ test('Current Store strip stays synchronized without first-store fallback or cro
   assert.match(workspace,/peer\.value=selector\.value/);
   assert.doesNotMatch(workspace+source,/state\.stores\[0\]/);
   assert.match(context,/KEY_PREFIX\+user\+'\:'\+device/);
-  assert.match(index,/remaining-operations\.js\?rev=opening-balance-ux-correction-v1/);
-  assert.match(worker,/development-3-4-0-issue-selected-unit-v1/);
-  assert.match(worker,/remaining-operations\.js\?rev=opening-balance-ux-correction-v1/);
+  assert.match(index,/remaining-operations\.js\?rev=adjustment-approval-state-v1/);
+  assert.match(worker,/development-3-4-0-adjustment-approval-state-v1/);
+  assert.match(worker,/remaining-operations\.js\?rev=adjustment-approval-state-v1/);
 });
 
 test('security boundaries remain transport-only with no delete or local business persistence',()=>{

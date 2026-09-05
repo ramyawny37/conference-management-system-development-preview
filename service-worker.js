@@ -7,7 +7,7 @@ const CACHE_NAMESPACE = IS_DEVELOPMENT
   : '';
 const CACHE_PREFIX = CACHE_NAMESPACE + 'conference-manager-core-';
 const CACHE_REVISION = IS_DEVELOPMENT
-  ? 'development-3-4-0-issue-selected-unit-v1'
+  ? 'development-3-4-0-adjustment-approval-state-v1'
   : 'production-integrated-3-3-0-main-6d0c1e1-develop-80653ca-v1';
 const CACHE_NAME = CACHE_PREFIX + 'v' + APP_VERSION + '-' + CACHE_REVISION;
 const CORE_ASSETS = [
@@ -135,8 +135,8 @@ const CORE_ASSETS = [
   './js/warehouse/current-store-context.js?rev=warehouse-current-store-context-v1',
   './js/warehouse/historical-operations.js?rev=issue-selected-unit-v1',
   './js/warehouse/party-management.js?rev=warehouse-party-management-v1',
-  './js/warehouse/remaining-operations.js?rev=opening-balance-ux-correction-v1',
-  './js/warehouse/workspace.js?rev=item-unit-dialog-v1',
+  './js/warehouse/remaining-operations.js?rev=adjustment-approval-state-v1',
+  './js/warehouse/workspace.js?rev=adjustment-approval-state-v1',
   './script.js?rev=delayed-warehouse-route-override-v1',
   './version.js',
   './pwa.js?rev=organization-membership-operation-key-v1',

@@ -62,5 +62,5 @@ test('mutation cleanup runs on both branches and leaves the form retryable',()=>
   assert.match(source,/removeAttribute\('aria-busy'\)/);
   assert.match(source,/button\.disabled=false/);
   assert.ok((source.match(/finishMutation\(\)/g)||[]).length>=3);
-  assert.match(source,/\.catch\(function\(e\)\{finishMutation\(\);feedback/);
+  assert.match(source,/\},function\(e\)\{finishMutation\(\);feedback/);
 });
