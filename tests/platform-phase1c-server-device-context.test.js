@@ -62,7 +62,7 @@ test("runtime handoff sources are removed and native enrollment contains no devi
     assert.doesNotMatch(fs.readFileSync(file,"utf8"),/f9306733-612d-433f-a38e-5d72855c2fe3/i,file);
 });
 
-test("DIRECT EDGE INTERNAL POLICY cardinalities remain 11/57/16/9 with 10 legacy mutation internals",()=>{
-  assert.deepEqual([contract.DIRECT_BROWSER_REQUIRED.length,contract.EDGE_ONLY_PROTECTED.length,contract.INTERNAL_ONLY.length,contract.POLICY_HELPER_BROWSER_READ.length],[11,57,16,9]);
+test("DIRECT EDGE INTERNAL POLICY cardinalities remain 10/57/16/9 with 10 legacy mutation internals",()=>{
+  assert.deepEqual([contract.DIRECT_BROWSER_REQUIRED.length,contract.EDGE_ONLY_PROTECTED.length,contract.INTERNAL_ONLY.length,contract.POLICY_HELPER_BROWSER_READ.length],[10,57,16,9]);
   assert.equal(contract.INTERNAL_ONLY.filter(x=>!/device_session|device_ownership_handoff|execute_(?:conference_)?device_operation|require_exact_jsonb_keys/.test(x)).length,10);
 });

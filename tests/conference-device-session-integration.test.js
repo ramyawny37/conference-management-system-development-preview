@@ -51,7 +51,7 @@ test("exact Phase 1C contract is identical in frontend, Edge, dispatcher, and re
 });
 test("live-discovered browser SECURITY DEFINER surface has no unclassified signature",()=>{
   const discovered=[
-    'platform.approve_device_authorization(uuid,text)','platform.approve_pending_device_authorization(uuid,uuid,text)','platform.block_device_authorization(uuid,text)','platform.get_my_access_context(text,text,uuid)','platform.get_my_device_authorization()','platform.grant_role_permission(text,text,text)','platform.grant_user_role(uuid,text,text,text,uuid)','platform.has_permission(text,text,uuid)','platform.list_pending_device_authorizations()','platform.register_current_device(text,text,text)','platform.revoke_device_authorization(uuid,text)','platform.revoke_role_permission(text,text,text)','platform.revoke_user_role(uuid)','platform.set_account_status(uuid,text,text)',
+    'platform.approve_device_authorization(uuid,text)','platform.approve_pending_device_authorization(uuid,uuid,text)','platform.block_device_authorization(uuid,text)','platform.get_my_device_authorization()','platform.grant_role_permission(text,text,text)','platform.grant_user_role(uuid,text,text,text,uuid)','platform.has_permission(text,text,uuid)','platform.list_pending_device_authorizations()','platform.register_current_device(text,text,text)','platform.revoke_device_authorization(uuid,text)','platform.revoke_role_permission(text,text,text)','platform.revoke_user_role(uuid)','platform.set_account_status(uuid,text,text)',
     'public.can_user_create_conferences(uuid)','public.grant_system_role(uuid,text)','public.has_conference_role(uuid,text[])','public.is_account_approved(uuid)','public.is_conference_member(uuid)','public.is_conference_owner(uuid)','public.is_current_user_organization_member(uuid)','public.is_system_admin(uuid)','public.is_system_owner(uuid)','public.list_module_permission_grants(uuid,text,uuid)','public.manage_foundation_module_grant(uuid,uuid,text,uuid,text,text,uuid,text)','public.recover_revoke_final_module_manager(uuid,uuid,text,uuid,uuid,text)','public.revoke_system_role(uuid,text)'
   ];
   const classified=new Set([].concat(contract.DIRECT_BROWSER_REQUIRED,[...contract.EDGE_ONLY_PROTECTED].map(row=>row.signature),contract.INTERNAL_ONLY,contract.POLICY_HELPER_BROWSER_READ));
@@ -60,10 +60,10 @@ test("live-discovered browser SECURITY DEFINER surface has no unclassified signa
     assert.ok(migration.includes(signature),"missing internal-only revoke: "+signature);
   }
   assert.equal(contract.POLICY_HELPER_BROWSER_READ.length,9);
-  assert.equal(contract.DIRECT_BROWSER_REQUIRED.length,11);
+  assert.equal(contract.DIRECT_BROWSER_REQUIRED.length,10);
   assert.equal(contract.EDGE_ONLY_PROTECTED.length,57);
   assert.equal(contract.INTERNAL_ONLY.filter(signature=>discovered.includes(signature)).length,10);
-  assert.equal(discovered.length,89-13-52+3);
+  assert.equal(discovered.length,89-13-52+2);
 });
 test("five former gateway operations have one Phase 1B/1C route and no gateway fallback",()=>{
   const operations=['list_pending_device_authorizations','approve_pending_device_authorization','list_module_permission_grants','manage_foundation_module_grant','recover_revoke_final_module_manager'];
