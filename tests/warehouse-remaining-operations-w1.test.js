@@ -40,8 +40,9 @@ test('Adjustment modes enforce direction and preserve explicit approval lifecycl
 });
 
 test('Approval Queue is authoritative, has both decisions, and never duplicates reversals',()=>{
-  assert.match(source,/invoke\('list_approval_queue'/);
-  assert.doesNotMatch(source,/invoke\('list_reversal_requests'/);
+  const approvalSource=source.slice(source.indexOf('function approvals'),source.indexOf('function history'));
+  assert.match(approvalSource,/invoke\('list_approval_queue'/);
+  assert.doesNotMatch(approvalSource,/invoke\('list_reversal_requests'/);
   assert.match(source,/decide_adjustment_approval/);
   assert.match(source,/decide_reversal_approval/);
   assert.match(workspace,/WAREHOUSE_CREATOR_SELF_APPROVAL_FORBIDDEN/);
@@ -82,9 +83,9 @@ test('Current Store strip stays synchronized without first-store fallback or cro
   assert.match(workspace,/peer\.value=selector\.value/);
   assert.doesNotMatch(workspace+source,/state\.stores\[0\]/);
   assert.match(context,/KEY_PREFIX\+user\+'\:'\+device/);
-  assert.match(index,/remaining-operations\.js\?rev=adjustment-approval-state-v1/);
-  assert.match(worker,/development-3-4-0-adjustment-approval-state-v1/);
-  assert.match(worker,/remaining-operations\.js\?rev=adjustment-approval-state-v1/);
+  assert.match(index,/remaining-operations\.js\?rev=reversal-ui-v1/);
+  assert.match(worker,/development-3-4-0-reversal-ui-v1/);
+  assert.match(worker,/remaining-operations\.js\?rev=reversal-ui-v1/);
 });
 
 test('security boundaries remain transport-only with no delete or local business persistence',()=>{

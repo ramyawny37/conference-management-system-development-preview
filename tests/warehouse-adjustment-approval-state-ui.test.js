@@ -13,7 +13,7 @@ function harness(documents,details){
   const dom=new JSDOM('<section id="warehouseWorkspace"></section>',{url:'https://example.test/',runScripts:'outside-only'}),window=dom.window,calls=[];
   window.prompt=()=>null;
   vm.runInContext(source,dom.getInternalVMContext());
-  const deps={state:{master:{items:[],units:[],itemUnits:[]},stores:[{id:'s1',name:'S1',status:'active'},{id:'s2',name:'S2',status:'active'}],storeContextValidated:false},esc:value=>String(value==null?'':value),field:(label,control)=>'<label>'+label+control+'</label>',heading:(title,text)=>'<h2>'+title+'</h2><p>'+text+'</p>',sectionHeading:(title,text)=>'<h3>'+title+'</h3><p>'+text+'</p>',statusBadge:badge,empty:()=>'<div>empty</div>',table:(headers,rows)=>'<table><tbody>'+rows+'</tbody></table>',render:(section,html)=>{window.document.getElementById('warehouseWorkspace').innerHTML=html;},data:()=>({}),feedback:()=>{},setBusy:()=>{},warehouseError:()=>'',mutate:(name,args,section)=>{calls.push({name,args,section});return Promise.resolve({});},invoke:(name,args)=>{if(name==='list_item_master')return Promise.resolve({items:[],units:[],itemUnits:[]});if(name==='list_documents')return Promise.resolve(documents);if(name==='get_document')return Promise.resolve(details[args.p_document_id]);if(name==='list_balances')return Promise.resolve([]);throw new Error('unexpected '+name);}};
+  const deps={state:{master:{items:[],units:[],itemUnits:[]},stores:[{id:'s1',name:'S1',status:'active'},{id:'s2',name:'S2',status:'active'}],storeContextValidated:false},esc:value=>String(value==null?'':value),field:(label,control)=>'<label>'+label+control+'</label>',heading:(title,text)=>'<h2>'+title+'</h2><p>'+text+'</p>',sectionHeading:(title,text)=>'<h3>'+title+'</h3><p>'+text+'</p>',statusBadge:badge,empty:()=>'<div>empty</div>',table:(headers,rows)=>'<table><tbody>'+rows+'</tbody></table>',render:(section,html)=>{window.document.getElementById('warehouseWorkspace').innerHTML=html;},data:()=>({}),feedback:()=>{},setBusy:()=>{},warehouseError:()=>'',reversalMap:()=>({}),reversalAction:(_request,create)=>create||'',bindReversalActions:()=>{},mutate:(name,args,section)=>{calls.push({name,args,section});return Promise.resolve({});},invoke:(name,args)=>{if(name==='list_item_master')return Promise.resolve({items:[],units:[],itemUnits:[]});if(name==='list_documents')return Promise.resolve(documents);if(name==='get_document')return Promise.resolve(details[args.p_document_id]);if(name==='list_balances'||name==='list_reversal_requests')return Promise.resolve([]);throw new Error('unexpected '+name);}};
   return {window,deps,calls,api:window.WarehouseRemainingOperations};
 }
 function row(window,id){return window.document.querySelector('[data-wh-operation-detail="'+id+'"]').closest('tr');}
@@ -67,9 +67,9 @@ test('successful mutation reload failure is not reclassified as a server failure
 
 test('runtime and service-worker revisions publish one coherent asset set',()=>{
   const index=fs.readFileSync('index.html','utf8'),worker=fs.readFileSync('service-worker.js','utf8');
-  assert.match(index,/remaining-operations\.js\?rev=adjustment-approval-state-v1/);
-  assert.match(index,/workspace\.js\?rev=adjustment-approval-state-v1/);
-  assert.match(worker,/development-3-4-0-adjustment-approval-state-v1/);
-  assert.match(worker,/remaining-operations\.js\?rev=adjustment-approval-state-v1/);
-  assert.match(worker,/workspace\.js\?rev=adjustment-approval-state-v1/);
+  assert.match(index,/remaining-operations\.js\?rev=reversal-ui-v1/);
+  assert.match(index,/workspace\.js\?rev=reversal-ui-v1/);
+  assert.match(worker,/development-3-4-0-reversal-ui-v1/);
+  assert.match(worker,/remaining-operations\.js\?rev=reversal-ui-v1/);
+  assert.match(worker,/workspace\.js\?rev=reversal-ui-v1/);
 });
