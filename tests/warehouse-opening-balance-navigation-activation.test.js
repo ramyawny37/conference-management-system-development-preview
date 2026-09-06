@@ -42,12 +42,12 @@ test('active state follows route and adjustment mode exactly',()=>{
 });
 
 test('navigation assets and Development cache use one coherent revision',()=>{
-  const historicalRevision='reversal-ui-v1',operationRevision='reversal-ui-v1',workspaceRevision='reversal-ui-v1';
+  const historicalRevision='reversal-ui-v1',operationRevision='adjustment-conversion-ux-v1',workspaceRevision='reversal-ui-v1';
   assert.ok(index.includes('js/warehouse/historical-operations.js?rev='+historicalRevision));
   assert.ok(worker.includes('./js/warehouse/historical-operations.js?rev='+historicalRevision));
   assert.ok(index.includes('js/warehouse/remaining-operations.js?rev='+operationRevision));
   assert.ok(worker.includes('./js/warehouse/remaining-operations.js?rev='+operationRevision));
   assert.ok(index.includes('js/warehouse/workspace.js?rev='+workspaceRevision));
   assert.ok(worker.includes('./js/warehouse/workspace.js?rev='+workspaceRevision));
-  assert.ok(worker.includes('development-3-4-0-reversal-ui-v1'));
+  assert.ok(worker.includes('development-3-4-0-adjustment-conversion-ux-v1'));
 });
