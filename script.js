@@ -2454,6 +2454,7 @@ function getAccommodationPersonDisplayName(person){
 }
 
 var userManagementAccessState={status:'idle',capabilities:null};
+var modulePermissionAdministrationAccessState={status:'idle',available:false};
 var organizationManagementAccessState={status:'idle',canOpen:false};
 function closeOrganizationManagementScreen(){
   var screen=ge('organizationManagementScreen');
@@ -2502,6 +2503,20 @@ function ensureUserManagementAccess(){
     renderSettings();
   }).catch(function(){
     userManagementAccessState={status:'error',capabilities:null};
+    renderSettings();
+  });
+}
+function ensureModulePermissionAdministrationAccess(){
+  if(modulePermissionAdministrationAccessState.status!=='idle'||
+    !window.ModulePermissionAdministrationService||
+    typeof window.ModulePermissionAdministrationService.probeAvailability!=='function')return;
+  modulePermissionAdministrationAccessState.status='loading';
+  window.ModulePermissionAdministrationService.probeAvailability().then(function(response){
+    modulePermissionAdministrationAccessState.status=response&&response.ok?'loaded':'denied';
+    modulePermissionAdministrationAccessState.available=!!(response&&response.ok);
+    renderSettings();
+  }).catch(function(){
+    modulePermissionAdministrationAccessState={status:'denied',available:false};
     renderSettings();
   });
 }
@@ -8205,6 +8220,7 @@ function renderSettings(){
   var current = getCurrentConference();
   var activeSettingsTab = settingsTab || 'general';
   ensureUserManagementAccess();
+  ensureModulePermissionAdministrationAccess();
   ensureOrganizationManagementAccess();
   if(activeSettingsTab==='organization-members'){
     var organizationMembersUi=window.OrganizationMembersUI;
@@ -8221,7 +8237,14 @@ function renderSettings(){
   var canOpenUserManagement=userManagementAccessState.status==='loaded'&&
     userManagementAccessState.capabilities&&
     userManagementAccessState.capabilities.canOpenUserManagement===true;
+  var canOpenModulePermissionAdministration=
+    modulePermissionAdministrationAccessState.status==='loaded'&&
+    modulePermissionAdministrationAccessState.available===true;
   if(activeSettingsTab==='users'&&!canOpenUserManagement){
+    activeSettingsTab='general';
+    settingsTab='general';
+  }
+  if(activeSettingsTab==='module-permissions'&&!canOpenModulePermissionAdministration){
     activeSettingsTab='general';
     settingsTab='general';
   }
@@ -8230,6 +8253,7 @@ function renderSettings(){
   h+='<button class="btn '+(activeSettingsTab==='general'?'btn-purple':'btn-gray')+' btn-sm" onclick="switchSettingsTab(\'general\')">⚙️ إعدادات الحدث</button>';
   h+='<button class="btn '+(activeSettingsTab==='houses'?'btn-purple':'btn-gray')+' btn-sm" onclick="switchSettingsTab(\'houses\')">🏠 بيوت المؤتمرات</button>';
   if(canOpenUserManagement)h+='<button class="btn '+(activeSettingsTab==='users'?'btn-purple':'btn-gray')+' btn-sm" onclick="switchSettingsTab(\'users\')">👥 إدارة المستخدمين</button>';
+  if(canOpenModulePermissionAdministration)h+='<button class="btn '+(activeSettingsTab==='module-permissions'?'btn-purple':'btn-gray')+' btn-sm" onclick="switchSettingsTab(\'module-permissions\')">صلاحيات الموديولات</button>';
   if(organizationManagementAccessState.status==='loaded'&&organizationManagementAccessState.canOpen)h+='<button class="btn btn-gray btn-sm" data-organization-management-entry onclick="OrganizationManagementUI.open({returnView:\'settings\'})">🏢 إدارة المؤسسات</button>';
   h+='</div>';
   if(activeSettingsTab==='general')h+='<div id="device_authorization_administration_root" style="display:none"></div>';
@@ -8250,6 +8274,21 @@ function renderSettings(){
     if(window.UserManagementUI&&
       typeof window.UserManagementUI.initialize==='function'){
       window.UserManagementUI.initialize();
+    }
+    return;
+  }
+  if(activeSettingsTab==='module-permissions'){
+    if(window.ModulePermissionAdministrationUI&&
+      typeof window.ModulePermissionAdministrationUI.renderSection==='function'){
+      h+=window.ModulePermissionAdministrationUI.renderSection();
+    }else{
+      h+='<div class="settings-empty-state">تعذر تحميل إدارة صلاحيات الموديولات.</div>';
+    }
+    h+='</div>';
+    ge('tab6').innerHTML=h;
+    if(window.ModulePermissionAdministrationUI&&
+      typeof window.ModulePermissionAdministrationUI.initialize==='function'){
+      window.ModulePermissionAdministrationUI.initialize();
     }
     return;
   }

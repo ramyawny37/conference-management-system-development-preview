@@ -7,7 +7,7 @@ const CACHE_NAMESPACE = IS_DEVELOPMENT
   : '';
 const CACHE_PREFIX = CACHE_NAMESPACE + 'conference-manager-core-';
 const CACHE_REVISION = IS_DEVELOPMENT
-  ? 'development-3-4-0-adjustment-conversion-ux-v1'
+  ? 'development-3-4-0-platform-round3g3-v1'
   : 'production-integrated-3-3-0-main-6d0c1e1-develop-80653ca-v1';
 const CACHE_NAME = CACHE_PREFIX + 'v' + APP_VERSION + '-' + CACHE_REVISION;
 const CORE_ASSETS = [
@@ -94,6 +94,8 @@ const CORE_ASSETS = [
   './js/supabase/account-administration-service.js?rev=user-account-administration-v1',
   './js/sync/user-management-read-service.js?rev=organization-archive-restore-v1',
   './js/sync/user-management-ui.js?rev=organization-membership-operation-key-v1',
+  './js/sync/module-permission-administration-service.js?rev=platform-round3g3-v1',
+  './js/sync/module-permission-administration-ui.js?rev=platform-round3g3-v1',
   './js/sync/conference-linking-attempt-store.js',
   './js/sync/conference-linking-service.js?rev=conference-organization-context-v1',
   './js/sync/conference-sync-ui.js?rev=conference-organization-context-v1',
