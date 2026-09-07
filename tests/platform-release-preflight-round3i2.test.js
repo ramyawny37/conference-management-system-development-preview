@@ -1,0 +1,41 @@
+'use strict';
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const path=require('node:path');
+const test=require('node:test');
+const root=path.resolve(__dirname,'..');
+const verifier=require('../tools/release-preflight/verify-release-evidence.cjs');
+const collector=require('../tools/release-preflight/collect-development-evidence.cjs');
+const sha='77e47cedca0f3bcca88956121ac19267e8c69da6';
+const edgeSource=fs.readFileSync(path.join(root,'supabase/functions/platform-device-operation/index.ts'),'utf8');
+const repositoryEdgeFiles={'index.ts':edgeSource};
+function valid(environment){const identity=verifier.ENVIRONMENTS[environment];return {environment,releaseSha:sha,publishedSourceSha:sha,repositorySourceSha:sha,project:{ref:identity.ref,name:identity.name,status:'ACTIVE_HEALTHY'},migrations:verifier.REQUIRED_MIGRATIONS.map(name=>({name,version:'different-live-prefix'})),edge:{slug:'platform-device-operation',status:'ACTIVE',verifyJwt:true,version:7,sourceFiles:{'index.ts':edgeSource}}};}
+function rejected(mutator,code,environment='development'){const evidence=valid(environment);mutator(evidence);assert.throws(()=>verifier.verifyReleaseEvidence(evidence,{repositoryEdgeFiles}),error=>error.code===code);}
+
+test('valid synthetic Development evidence passes',()=>assert.equal(verifier.verifyReleaseEvidence(valid('development'),{repositoryEdgeFiles}).ok,true));
+test('valid synthetic Production evidence passes offline',()=>assert.equal(verifier.verifyReleaseEvidence(valid('production'),{repositoryEdgeFiles}).ok,true));
+test('malformed release SHA fails',()=>rejected(e=>e.releaseSha='xyz','RELEASESHA_INVALID'));
+test('abbreviated release SHA fails',()=>rejected(e=>e.releaseSha=sha.slice(0,7),'RELEASESHA_INVALID'));
+test('mutable branch supplied as SHA fails',()=>rejected(e=>e.releaseSha='develop','RELEASESHA_INVALID'));
+test('published SHA mismatch fails',()=>rejected(e=>e.publishedSourceSha='a'.repeat(40),'PUBLISHED_SOURCE_SHA_MISMATCH'));
+test('repository SHA mismatch fails',()=>rejected(e=>e.repositorySourceSha='a'.repeat(40),'REPOSITORY_SOURCE_SHA_MISMATCH'));
+test('missing environment fails',()=>rejected(e=>delete e.environment,'ENVIRONMENT_REQUIRED'));
+test('unknown environment fails',()=>rejected(e=>e.environment='staging','ENVIRONMENT_UNKNOWN'));
+test('missing project ref fails',()=>rejected(e=>delete e.project.ref,'PROJECT_REF_REQUIRED'));
+test('wrong project ref fails',()=>rejected(e=>e.project.ref='x','PROJECT_REF_MISMATCH'));
+test('wrong project name fails',()=>rejected(e=>e.project.name='wrong','PROJECT_NAME_MISMATCH'));
+test('Development identity presented as Production fails',()=>{const evidence=valid('production');evidence.project=valid('development').project;assert.throws(()=>verifier.verifyReleaseEvidence(evidence,{repositoryEdgeFiles}),error=>error.code==='PROJECT_REF_MISMATCH');});
+test('Production identity presented as Development fails',()=>{const evidence=valid('development');evidence.project=valid('production').project;assert.throws(()=>verifier.verifyReleaseEvidence(evidence,{repositoryEdgeFiles}),error=>error.code==='PROJECT_REF_MISMATCH');});
+test('unhealthy and missing statuses fail closed',()=>{for(const status of ['INACTIVE','COMING_UP',undefined])rejected(e=>status===undefined?delete e.project.status:e.project.status=status,status===undefined?'PROJECT_STATUS_REQUIRED':'PROJECT_NOT_HEALTHY');});
+test('missing migration and substring false positive fail',()=>{rejected(e=>e.migrations.pop(),'REQUIRED_MIGRATION_MISSING');rejected(e=>e.migrations[0].name='prefix_'+e.migrations[0].name+'_suffix','REQUIRED_MIGRATION_MISSING');});
+test('malformed migration evidence fails',()=>rejected(e=>e.migrations=[{}],'MIGRATION_EVIDENCE_MALFORMED'));
+test('missing or wrong Edge identity fails',()=>{rejected(e=>delete e.edge,'EDGE_FUNCTION_MISSING');rejected(e=>e.edge.slug='other','EDGE_SLUG_MISMATCH');rejected(e=>e.edge.status='INACTIVE','EDGE_NOT_ACTIVE');rejected(e=>e.edge.verifyJwt=false,'EDGE_VERIFY_JWT_REQUIRED');});
+test('missing and mismatched Edge source fail',()=>{rejected(e=>delete e.edge.sourceFiles,'EDGE_SOURCE_MISSING');rejected(e=>e.edge.sourceFiles['index.ts']+='\n// drift','EDGE_SOURCE_MISMATCH');});
+test('required Edge operation removal fails even with matching source and version',()=>{const changed=edgeSource.replace("'manage_catalog_module_grant'","'removed_operation'");const evidence=valid('development');evidence.edge.version=999;evidence.edge.sourceFiles={'index.ts':changed};assert.throws(()=>verifier.verifyReleaseEvidence(evidence,{repositoryEdgeFiles:{'index.ts':changed}}),error=>error.code==='EDGE_REQUIRED_OPERATION_MISSING');});
+test('numeric Edge version cannot override source mismatch',()=>rejected(e=>{e.edge.version=7;e.edge.sourceFiles['index.ts']+=' drift';},'EDGE_SOURCE_MISMATCH'));
+test('PWA cache revision cannot substitute for published SHA',()=>rejected(e=>{delete e.publishedSourceSha;e.cacheRevision='development-3-4-0-platform-round3g3-v1';},'PUBLISHEDSOURCESHA_INVALID'));
+test('secret-bearing normalized evidence is rejected',()=>{for(const key of ['DATABASE_URL','serviceRoleKey','accessToken','Authorization'])rejected(e=>e[key]='secret','SECRET_FIELD_PROHIBITED');});
+test('historical migration tools are not identity authority',()=>{const source=fs.readFileSync(path.join(root,'tools/release-preflight/verify-release-evidence.cjs'),'utf8');assert.doesNotMatch(source,/recover-development-migration|run-development-migrations/);assert.equal(verifier.ENVIRONMENTS.production.ref,'mpezfbvcdfxpgflehuot');});
+test('collector DB contract is explicitly read-only metadata SELECT',()=>{assert.match(collector.MIGRATION_READ_ONLY_SQL,/^BEGIN READ ONLY;/);assert.match(collector.MIGRATION_READ_ONLY_SQL,/SELECT name FROM supabase_migrations\.schema_migrations/);assert.doesNotMatch(collector.MIGRATION_READ_ONLY_SQL,/\b(?:INSERT|UPDATE|DELETE|CREATE|ALTER|DROP|GRANT|REVOKE)\b/i);});
+test('collector redacts obvious credentials and derives repository SHA from Git',()=>{assert.doesNotMatch(collector.redact('postgresql://user:password@example.invalid Bearer abc token=xyz'),/user:password|abc|xyz/);const source=fs.readFileSync(path.join(root,'tools/release-preflight/collect-development-evidence.cjs'),'utf8');assert.match(source,/execFileSync\('git',\['rev-parse','HEAD'\]/);assert.doesNotMatch(source,/repositorySourceSha=argv\[shaFlag\+1\]/);});
+test('ordinary check and explicit adapter remain network and credential independent',()=>{const packageJson=JSON.parse(fs.readFileSync(path.join(root,'package.json'),'utf8'));assert.equal(packageJson.scripts.check,'node --test tests/platform-*.test.js');const collectorSource=fs.readFileSync(path.join(root,'tools/release-preflight/collect-development-evidence.cjs'),'utf8');assert.doesNotMatch(collectorSource,/require\(['"](?:node:)?https?|process\.env/);assert.match(packageJson.scripts['release:preflight:development'],/collect-development-evidence/);});

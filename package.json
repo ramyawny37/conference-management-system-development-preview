@@ -3,7 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "check": "node --test tests/platform-*.test.js"
+    "check": "node --test tests/platform-*.test.js",
+    "release:preflight:development": "node tools/release-preflight/collect-development-evidence.cjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "2.112.4"
