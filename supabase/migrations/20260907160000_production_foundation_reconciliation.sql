@@ -21,15 +21,6 @@ begin
 end;
 $$;
 
--- Establish identity-only rows for every auth identity that may appear in
--- legacy actor foreign keys. The Platform default remains pending and this
--- step grants no role, permission, approval, or device authorization.
-insert into platform.profiles(user_id,display_name)
-select users.id,nullif(btrim(coalesce(users.raw_user_meta_data->>'display_name',users.raw_user_meta_data->>'name','')),'')
-from auth.users users
-order by users.id
-on conflict(user_id) do nothing;
-
 do $$
 begin
   if exists(
@@ -57,6 +48,17 @@ begin
   end if;
 end;
 $$;
+
+-- Establish identity-only rows only after the contradiction guard has
+-- inspected the Platform profiles that pre-dated this reconciliation. The
+-- default remains pending and this grants no authority. Actor identities are
+-- therefore available before legacy approved_by/blocked_by foreign keys are
+-- projected without being mistaken for pre-existing Platform state.
+insert into platform.profiles(user_id,display_name)
+select users.id,nullif(btrim(coalesce(users.raw_user_meta_data->>'display_name',users.raw_user_meta_data->>'name','')),'')
+from auth.users users
+order by users.id
+on conflict(user_id) do nothing;
 
 insert into platform.profiles(
   user_id,account_status,status_changed_at,status_changed_by,
@@ -127,21 +129,21 @@ revoke all on platform_private.legacy_device_reconciliation_boundaries from publ
 
 do $$
 begin
-  if exists(select 1 from public.user_device_authorizations authorization left join auth.users users on users.id=authorization.user_id left join public.devices device on device.id=authorization.device_id and device.user_id=authorization.user_id where users.id is null or device.id is null or authorization.authorization_status not in ('registered','pending','approved','revoked') or (authorization.authorization_status='approved' and (authorization.approved_at is null or authorization.revoked_at is not null)) or (authorization.authorization_status in ('registered','pending') and authorization.revoked_at is not null) or (authorization.authorization_status='revoked' and authorization.revoked_at is null)) then
+  if exists(select 1 from public.user_device_authorizations legacy_authorization left join auth.users users on users.id=legacy_authorization.user_id left join public.devices device on device.id=legacy_authorization.device_id and device.user_id=legacy_authorization.user_id where users.id is null or device.id is null or legacy_authorization.authorization_status not in ('registered','pending','approved','revoked') or (legacy_authorization.authorization_status='approved' and (legacy_authorization.approved_at is null or legacy_authorization.revoked_at is not null)) or (legacy_authorization.authorization_status in ('registered','pending') and legacy_authorization.revoked_at is not null) or (legacy_authorization.authorization_status='revoked' and legacy_authorization.revoked_at is null)) then
     raise exception 'PRODUCTION_LEGACY_DEVICE_SOURCE_INVALID' using errcode='22023';
   end if;
-  if exists(select 1 from public.user_device_authorizations authorization join platform.devices device on device.id=authorization.device_id)
-     or exists(select 1 from public.user_device_authorizations legacy join platform.user_device_authorizations authorization on authorization.user_id=legacy.user_id and authorization.device_id=legacy.device_id) then
+  if exists(select 1 from public.user_device_authorizations legacy_authorization join platform.devices device on device.id=legacy_authorization.device_id)
+     or exists(select 1 from public.user_device_authorizations legacy join platform.user_device_authorizations platform_authorization on platform_authorization.user_id=legacy.user_id and platform_authorization.device_id=legacy.device_id) then
     raise exception 'LEGACY_PLATFORM_DEVICE_IDENTITY_CONFLICT' using errcode='55000';
   end if;
 end;
 $$;
 
 insert into platform_private.legacy_device_reconciliation_boundaries(legacy_user_id,legacy_device_id,legacy_authorization_status,reconciliation_state,usable_platform_credential)
-select authorization.user_id,authorization.device_id,authorization.authorization_status,
-  case authorization.authorization_status when 'approved' then 'requires_cryptographic_handoff' when 'revoked' then 'revoked' else 'pending_reenrollment' end,false
-from public.user_device_authorizations authorization
-order by authorization.user_id,authorization.device_id
+select legacy_authorization.user_id,legacy_authorization.device_id,legacy_authorization.authorization_status,
+  case legacy_authorization.authorization_status when 'approved' then 'requires_cryptographic_handoff' when 'revoked' then 'revoked' else 'pending_reenrollment' end,false
+from public.user_device_authorizations legacy_authorization
+order by legacy_authorization.user_id,legacy_authorization.device_id
 on conflict(legacy_user_id,legacy_device_id) do update set
   legacy_authorization_status=excluded.legacy_authorization_status,
   reconciliation_state=excluded.reconciliation_state,

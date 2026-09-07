@@ -205,8 +205,8 @@ create or replace function platform_private.hash_device_secret(p_secret text) re
 create or replace function platform_private.request_device_id() returns uuid language sql stable set search_path='' as $$
  select case when platform_private.request_header('x-platform-device-id')~*'^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$' then platform_private.request_header('x-platform-device-id')::uuid else null end; $$;
 create or replace function platform_private.current_device_authorization_id(p_user_id uuid) returns uuid language sql stable security definer set search_path='' as $$
- select authorization.id from platform.user_device_authorizations authorization join platform.devices device on device.id=authorization.device_id
- where authorization.user_id=p_user_id and authorization.status='approved' and device.lifecycle_status='active'
+ select device_authorization.id from platform.user_device_authorizations device_authorization join platform.devices device on device.id=device_authorization.device_id
+ where device_authorization.user_id=p_user_id and device_authorization.status='approved' and device.lifecycle_status='active'
  and device.id=platform_private.request_device_id() and device.secret_hash=platform_private.hash_device_secret(platform_private.request_header('x-platform-device-secret')); $$;
 create or replace function platform_private.is_account_approved(p_user_id uuid) returns boolean language sql stable security definer set search_path='' as $$
  select exists(select 1 from platform.profiles where user_id=p_user_id and account_status='approved'); $$;
@@ -240,9 +240,9 @@ returns boolean language sql stable security definer set search_path='' as $$
 create or replace function platform.get_my_access_context(p_domain text default 'inventory',p_scope_type text default 'inventory',p_scope_id uuid default null)
 returns jsonb language sql stable security definer set search_path='' as $$
  select case when auth.uid() is null then null else pg_catalog.jsonb_build_object('userId',auth.uid(),'displayName',profile.display_name,
- 'avatarUrl',profile.avatar_url,'accountStatus',coalesce(profile.account_status,'pending'),'deviceStatus',coalesce((select authorization.status
- from platform.user_device_authorizations authorization join platform.devices device on device.id=authorization.device_id
- where authorization.user_id=auth.uid() and device.id=platform_private.request_device_id()
+ 'avatarUrl',profile.avatar_url,'accountStatus',coalesce(profile.account_status,'pending'),'deviceStatus',coalesce((select device_authorization.status
+ from platform.user_device_authorizations device_authorization join platform.devices device on device.id=device_authorization.device_id
+ where device_authorization.user_id=auth.uid() and device.id=platform_private.request_device_id()
  and device.secret_hash=platform_private.hash_device_secret(platform_private.request_header('x-platform-device-secret'))),'missing'),
  'deviceLifecycle',coalesce((select device.lifecycle_status from platform.devices device where device.id=platform_private.request_device_id()
  and device.secret_hash=platform_private.hash_device_secret(platform_private.request_header('x-platform-device-secret'))),'unknown'),
@@ -253,7 +253,7 @@ returns jsonb language sql stable security definer set search_path='' as $$
  join platform.roles role on role.id=assignment.role_id join platform.role_permissions rp on rp.role_id=role.id join platform.permissions permission on permission.id=rp.permission_id
  where assignment.user_id=auth.uid() and assignment.scope_type=p_scope_type and assignment.scope_id is not distinct from p_scope_id
  and permission.domain=p_domain and assignment.revoked_at is null and (assignment.expires_at is null or assignment.expires_at>pg_catalog.now())
- and platform_private.current_device_authorization_id(auth.uid()) is not null),'[]'::jsonb))
+ and platform_private.current_device_authorization_id(auth.uid()) is not null),'[]'::jsonb)) end
  from (select 1) singleton left join platform.profiles profile on profile.user_id=auth.uid(); $$;
 
 create or replace function platform.register_current_device(p_display_name text default null,p_platform text default null,p_browser text default null)
@@ -263,8 +263,8 @@ begin
 end; $$;
 create or replace function platform.get_my_device_authorization() returns jsonb language sql stable security definer set search_path='' as $$
  select case when auth.uid() is null then null else pg_catalog.jsonb_build_object(
- 'status',coalesce((select authorization.status from platform.user_device_authorizations authorization
- join platform.devices device on device.id=authorization.device_id where authorization.user_id=auth.uid()
+ 'status',coalesce((select device_authorization.status from platform.user_device_authorizations device_authorization
+ join platform.devices device on device.id=device_authorization.device_id where device_authorization.user_id=auth.uid()
  and device.id=platform_private.request_device_id()
  and device.secret_hash=platform_private.hash_device_secret(platform_private.request_header('x-platform-device-secret'))),'missing'),
  'lifecycle',coalesce((select device.lifecycle_status from platform.devices device where device.id=platform_private.request_device_id()
@@ -311,7 +311,7 @@ create policy permissions_select_authorized on platform.permissions for select t
 create policy roles_select_authorized on platform.roles for select to authenticated using(platform.has_permission('platform.roles.view','platform',null));
 create policy role_permissions_select_authorized on platform.role_permissions for select to authenticated using(platform.has_permission('platform.roles.view','platform',null));
 create policy user_roles_select_self_or_platform_viewer on platform.user_roles for select to authenticated using(user_id=auth.uid() or platform.has_permission('platform.roles.view','platform',null));
-create policy devices_select_self_or_platform_viewer on platform.devices for select to authenticated using(exists(select 1 from platform.user_device_authorizations authorization where authorization.device_id=id and authorization.user_id=auth.uid()) or platform.has_permission('platform.devices.view','platform',null));
+create policy devices_select_self_or_platform_viewer on platform.devices for select to authenticated using(exists(select 1 from platform.user_device_authorizations device_authorization where device_authorization.device_id=id and device_authorization.user_id=auth.uid()) or platform.has_permission('platform.devices.view','platform',null));
 create policy device_authorizations_select_self_or_platform_viewer on platform.user_device_authorizations for select to authenticated using(user_id=auth.uid() or platform.has_permission('platform.devices.view','platform',null));
 create policy audit_events_select_platform_auditor on platform.audit_events for select to authenticated using(platform.has_permission('platform.audit.view','platform',null));
 create policy device_key_bindings_read_own on platform.device_key_bindings for select to authenticated using(user_id=(select auth.uid()));

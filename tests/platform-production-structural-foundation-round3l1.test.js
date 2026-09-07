@@ -137,3 +137,13 @@ test('28 active onboarding does not call the legacy Platform registration functi
   assert.doesNotMatch(service,/platform\.register_current_device|['"]register_current_device['"]/);
   assert.match(migrations.conference,/grant execute[^;]*platform\.register_current_device\(text,text,text\)/s);
 });
+test('29 reserved authorization keyword is never used as a relation alias',()=>{
+  assert.doesNotMatch(executable,/\b(?:from|join)\s+[^\s;(),]+\s+(?:as\s+)?authorization\b/i);
+  assert.doesNotMatch(executable,/\bauthorization\s*\./i);
+});
+test('30 get_my_access_context closes its outer CASE before FROM',()=>{
+  const start=sql.indexOf('create or replace function platform.get_my_access_context');
+  const end=sql.indexOf('create or replace function platform.register_current_device',start);
+  const body=sql.slice(start,end).replace(/\s+/g,' ');
+  assert.match(body,/select case when auth\.uid\(\) is null then null else pg_catalog\.jsonb_build_object\([\s\S]*\) end from \(select 1\) singleton left join platform\.profiles profile/);
+});
