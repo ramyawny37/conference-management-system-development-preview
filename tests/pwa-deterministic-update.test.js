@@ -14,7 +14,8 @@ const next='organization-membership-operation-key-v1';
 const mobileRoomInputRevision='anchored-glass-person-picker-v5';
 const appVersion='3.4.0';
 const shellRevision='development-3-4-0-platform-foundation-v1';
-const cacheRevision='development-3-4-0-adjustment-conversion-ux-v1';
+const previousCacheRevision='development-3-4-0-adjustment-conversion-ux-v1';
+const cacheRevision='development-3-4-0-platform-round3g3-v1';
 const startupTransportRevision='warehouse-original-items-secure-restoration-v1';
 const moduleRoutingRevision='warehouse-original-items-secure-restoration-v1';
 const priorAuthorizationCacheRevision='runtime-authorization-phase1-v1';
@@ -55,9 +56,14 @@ const conferenceSyncRevision='conference-organization-context-v1';
 const organizationMembersRevision='organization-membership-manual-retry-v1';
 const snapshotPayloadDiagnosticsRevision='snapshot-payload-diagnostics-v1';
 const postRestoreProofBoundaryRevision='post-restore-proof-boundary-v1';
-assert(worker.includes("? '"+cacheRevision+"'"));
+const cacheRevisionDeclaration=worker.match(
+  /const CACHE_REVISION = IS_DEVELOPMENT\s*\? '([^']+)'\s*:\s*'([^']+)'/
+);
+assert(cacheRevisionDeclaration,'missing environment-specific cache revision declaration');
+assert.strictEqual(cacheRevisionDeclaration[1],cacheRevision);
+assert.notStrictEqual(cacheRevisionDeclaration[1],previousCacheRevision);
+assert.strictEqual(cacheRevisionDeclaration[2],productionCacheRevision);
 assert(!worker.includes("? '"+priorAuthorizationCacheRevision+"'"));
-assert(worker.includes(": '"+productionCacheRevision+"'"));
 assert(worker.includes("const APP_VERSION = '"+appVersion+"';"));
 assert(index.includes("? '"+shellRevision+"'"));
 assert(index.includes(": '"+productionCacheRevision+"'"));
