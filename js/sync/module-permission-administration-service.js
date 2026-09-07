@@ -31,7 +31,7 @@
   function mutate(input,foundation){
     input=input||{};var target=uuid(input.targetUserId),grantId=input.action==='revoke'?uuid(input.grantId):null,id=operationId();
     if(!target||!id||['grant','revoke'].indexOf(input.action)<0||foundation&&['module.access','module.manage'].indexOf(input.permissionKey)<0||!foundation&&String(input.permissionKey||'').indexOf('warehouse.')!==0||input.action==='revoke'&&!grantId)return Promise.resolve(outcome(false,'invalid_input'));
-    var args={p_operation_id:id,p_action:input.action==='grant'?'create':'revoke',p_target_user_id:target,p_module_key:MODULE,p_permission_key:String(input.permissionKey),p_grant_id:grantId,p_revocation_reason:input.action==='revoke'?String(input.revocationReason||'إلغاء الصلاحية من شاشة إدارة صلاحيات الموديولات').slice(0,300):null};
+    var args={p_operation_id:id,p_action:foundation&&input.action==='grant'?'create':input.action,p_target_user_id:target,p_module_key:MODULE,p_permission_key:String(input.permissionKey),p_grant_id:grantId,p_revocation_reason:input.action==='revoke'?String(input.revocationReason||'إلغاء الصلاحية من شاشة إدارة صلاحيات الموديولات').slice(0,300):null};
     if(!foundation){args.p_resource_type=input.resourceType==null?null:String(input.resourceType);args.p_resource_id=input.resourceId==null?null:String(input.resourceId);}
     return run(function(){return invoke(foundation?'manage_foundation_module_grant':'manage_catalog_module_grant',args);},function(value){return value&&value.grantId?{result:value}:null;},'applied');
   }
