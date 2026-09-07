@@ -7,6 +7,7 @@ const migration=fs.readFileSync("supabase/migrations/20260903180000_unified_plat
 const partyFinanceMigration=fs.readFileSync("supabase/migrations/20260904160000_warehouse_party_financial_ledger.sql","utf8");
 const cancellationMigration=fs.readFileSync("supabase/migrations/20260905133000_warehouse_draft_cancellation.sql","utf8");
 const itemUnitMigration=fs.readFileSync("supabase/migrations/20260905170000_warehouse_item_unit_conversion.sql","utf8");
+const moduleAdministrationMigration=fs.readFileSync("supabase/migrations/20260907150000_module_permission_administration_backend_surface.sql","utf8");
 const edge=fs.readFileSync("supabase/functions/platform-device-operation/index.ts","utf8");
 const session=fs.readFileSync("js/supabase/device-session.js","utf8");
 const transport=fs.readFileSync("js/supabase/warehouse-transport.js","utf8");
@@ -16,17 +17,21 @@ vm.runInNewContext(conferenceSource,sandbox);vm.runInNewContext(warehouseSource,
 const conference=sandbox.window.ConferenceDeviceOperationContract,warehouse=sandbox.window.WarehouseDeviceOperationContract,platform=sandbox.window.PlatformDeviceOperationContract;
 
 test("unified catalogs include the approved guarded Warehouse operations",()=>{
-  assert.equal(conference.EDGE_ONLY_PROTECTED.length,57);
-  assert.equal(warehouse.PROTECTED.length,36);
-  assert.equal(warehouse.DISPATCHABLE.length,35);
+  assert.equal(conference.EDGE_ONLY_PROTECTED.length,60);
+  assert.equal(warehouse.PROTECTED.length,37);
+  assert.equal(warehouse.DISPATCHABLE.length,36);
   assert.equal(warehouse.DEFERRED.length,1);
   assert.equal(warehouse.DEFERRED[0].signature,"warehouse.stage_import(uuid,uuid,jsonb)");
-  assert.equal(platform.DISPATCHABLE.length,92);
+  assert.equal(platform.DISPATCHABLE.length,96);
 });
 
 test("generic Edge and SQL dispatchers expose exactly the dispatchable catalogs",()=>{
   const edgeConference=new Set(edge.match(/const conference=new Set\(\[([\s\S]*?)\]\);/)[1].match(/'([a-z0-9_]+)'/g).map(x=>x.slice(1,-1)));
   const edgeWarehouse=new Set(edge.match(/const warehouse=new Set\(\[([\s\S]*?)\]\);/)[1].match(/'([a-z0-9_]+)'/g).map(x=>x.slice(1,-1)));
+  for(const match of edge.matchAll(/conference\.add\('([a-z0-9_]+)'\)|for\(const operation of \[([^\]]+)\]\)conference\.add/g)){
+    if(match[1])edgeConference.add(match[1]); else for(const value of match[2].match(/'([a-z0-9_]+)'/g)||[])edgeConference.add(value.slice(1,-1));
+  }
+  for(const match of edge.matchAll(/warehouse\.add\('([a-z0-9_]+)'\)/g))edgeWarehouse.add(match[1]);
   assert.equal(JSON.stringify([...edgeConference].sort()),JSON.stringify(conference.EDGE_ONLY_PROTECTED.map(x=>x.operation).sort()));
   assert.equal(JSON.stringify([...edgeWarehouse].sort()),JSON.stringify(warehouse.DISPATCHABLE.map(x=>x.operation).sort()));
   assert.doesNotMatch(edge,/stage_import/);
@@ -37,7 +42,7 @@ test("generic Edge and SQL dispatchers expose exactly the dispatchable catalogs"
 
 test("all Warehouse RPCs lose browser EXECUTE and only dispatchable operations gain service dispatch",()=>{
   for(const entry of warehouse.PROTECTED){
-    assert.ok((migration+partyFinanceMigration+cancellationMigration+itemUnitMigration).includes(entry.signature),"missing protected signature: "+entry.signature);
+    assert.ok((migration+partyFinanceMigration+cancellationMigration+itemUnitMigration+moduleAdministrationMigration).includes(entry.signature),"missing protected signature: "+entry.signature);
   }
   function loopEntries(action){const end=migration.indexOf("loop execute format('"+action);const start=migration.lastIndexOf('foreach signature in array array[',end);return migration.slice(start,end);}
   const revokes=loopEntries('revoke execute');
