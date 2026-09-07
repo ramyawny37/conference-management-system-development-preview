@@ -410,11 +410,11 @@
         "commitsExplicitly": true,
         "safeOuterAtomicWrap": false
       },
-      "preconditionSql": "select (not (to_regclass('public.module_permission_grants') is not null and to_regclass('public.module_grant_operations') is not null))::text",
+      "preconditionSql": "select (to_regclass('public.system_user_access') is not null and to_regclass('public.module_permission_grants') is null and to_regclass('public.module_grant_operations') is null)::text",
       "verificationSql": "select (to_regclass('public.module_permission_grants') is not null and to_regclass('public.module_grant_operations') is not null)::text",
       "prerequisites": [
         "exact preceding controlled history tail",
-        "body-specific NOT_APPLIED detector"
+        "explicit body-specific predecessor-state detector"
       ],
       "expectedPostconditions": [
         "semantic verifier independently succeeds",
@@ -432,11 +432,11 @@
         "commitsExplicitly": true,
         "safeOuterAtomicWrap": false
       },
-      "preconditionSql": "select (not (to_regclass('public.module_permission_catalog') is not null and to_regclass('public.module_permission_grants') is not null))::text",
+      "preconditionSql": "select (to_regclass('public.module_permission_grants') is not null and to_regclass('public.module_permission_catalog') is null)::text",
       "verificationSql": "select (to_regclass('public.module_permission_catalog') is not null and to_regclass('public.module_permission_grants') is not null)::text",
       "prerequisites": [
         "exact preceding controlled history tail",
-        "body-specific NOT_APPLIED detector"
+        "explicit body-specific predecessor-state detector"
       ],
       "expectedPostconditions": [
         "semantic verifier independently succeeds",
@@ -454,11 +454,11 @@
         "commitsExplicitly": true,
         "safeOuterAtomicWrap": false
       },
-      "preconditionSql": "select (not (exists(select 1 from public.module_permission_catalog where module_key='warehouse')))::text",
+      "preconditionSql": "select (to_regclass('public.module_permission_catalog') is not null and not exists(select 1 from public.module_permission_catalog where module_key='warehouse'))::text",
       "verificationSql": "select (exists(select 1 from public.module_permission_catalog where module_key='warehouse'))::text",
       "prerequisites": [
         "exact preceding controlled history tail",
-        "body-specific NOT_APPLIED detector"
+        "explicit body-specific predecessor-state detector"
       ],
       "expectedPostconditions": [
         "semantic verifier independently succeeds",
@@ -476,11 +476,11 @@
         "commitsExplicitly": true,
         "safeOuterAtomicWrap": false
       },
-      "preconditionSql": "select (not (to_regclass('warehouse.stores') is not null))::text",
+      "preconditionSql": "select (exists(select 1 from public.module_permission_catalog where module_key='warehouse') and to_regclass('warehouse.stores') is null)::text",
       "verificationSql": "select (to_regclass('warehouse.stores') is not null)::text",
       "prerequisites": [
         "exact preceding controlled history tail",
-        "body-specific NOT_APPLIED detector"
+        "explicit body-specific predecessor-state detector"
       ],
       "expectedPostconditions": [
         "semantic verifier independently succeeds",
@@ -498,11 +498,11 @@
         "commitsExplicitly": true,
         "safeOuterAtomicWrap": false
       },
-      "preconditionSql": "select (not (to_regprocedure('warehouse.list_stores(uuid,uuid)') is not null and to_regprocedure('warehouse_private.canonical_intent_hash(text,jsonb)') is not null))::text",
+      "preconditionSql": "select (to_regclass('warehouse.stores') is not null and to_regprocedure('warehouse.list_stores(uuid,uuid)') is null)::text",
       "verificationSql": "select (to_regprocedure('warehouse.list_stores(uuid,uuid)') is not null and to_regprocedure('warehouse_private.canonical_intent_hash(text,jsonb)') is not null)::text",
       "prerequisites": [
         "exact preceding controlled history tail",
-        "body-specific NOT_APPLIED detector"
+        "explicit body-specific predecessor-state detector"
       ],
       "expectedPostconditions": [
         "semantic verifier independently succeeds",
@@ -520,11 +520,11 @@
         "commitsExplicitly": true,
         "safeOuterAtomicWrap": false
       },
-      "preconditionSql": "select (not (position('document_row warehouse.receipt_headers%rowtype' in pg_get_functiondef(to_regprocedure('warehouse_private.post_document(uuid,uuid,text,uuid,bigint)'))) > 0))::text",
+      "preconditionSql": "select (to_regprocedure('warehouse_private.post_document(uuid,uuid,text,uuid,bigint)') is not null and position('document_row warehouse.receipt_headers%rowtype' in pg_get_functiondef(to_regprocedure('warehouse_private.post_document(uuid,uuid,text,uuid,bigint)'))) = 0 and position('header_record' in pg_get_functiondef(to_regprocedure('warehouse_private.post_document(uuid,uuid,text,uuid,bigint)'))) > 0)::text",
       "verificationSql": "select (position('document_row warehouse.receipt_headers%rowtype' in pg_get_functiondef(to_regprocedure('warehouse_private.post_document(uuid,uuid,text,uuid,bigint)'))) > 0)::text",
       "prerequisites": [
         "exact preceding controlled history tail",
-        "body-specific NOT_APPLIED detector"
+        "explicit body-specific predecessor-state detector"
       ],
       "expectedPostconditions": [
         "semantic verifier independently succeeds",
@@ -542,11 +542,11 @@
         "commitsExplicitly": true,
         "safeOuterAtomicWrap": false
       },
-      "preconditionSql": "select (not (position('request_row warehouse.reversal_requests%rowtype' in pg_get_functiondef(to_regprocedure('warehouse.post_reversal(uuid,uuid,uuid,bigint)'))) > 0))::text",
+      "preconditionSql": "select (to_regprocedure('warehouse.post_reversal(uuid,uuid,uuid,bigint)') is not null and position('request_row warehouse.reversal_requests%rowtype' in pg_get_functiondef(to_regprocedure('warehouse.post_reversal(uuid,uuid,uuid,bigint)'))) = 0 and position('reversal_request' in pg_get_functiondef(to_regprocedure('warehouse.post_reversal(uuid,uuid,uuid,bigint)'))) > 0)::text",
       "verificationSql": "select (position('request_row warehouse.reversal_requests%rowtype' in pg_get_functiondef(to_regprocedure('warehouse.post_reversal(uuid,uuid,uuid,bigint)'))) > 0)::text",
       "prerequisites": [
         "exact preceding controlled history tail",
-        "body-specific NOT_APPLIED detector"
+        "explicit body-specific predecessor-state detector"
       ],
       "expectedPostconditions": [
         "semantic verifier independently succeeds",
@@ -564,11 +564,11 @@
         "commitsExplicitly": true,
         "safeOuterAtomicWrap": false
       },
-      "preconditionSql": "select (not (position('WAREHOUSE_POSTED_DOCUMENT_IMMUTABLE' in pg_get_functiondef(to_regprocedure('warehouse_private.protect_posted_header()'))) > 0))::text",
+      "preconditionSql": "select (to_regprocedure('warehouse_private.protect_posted_header()') is not null and position('WAREHOUSE_POSTED_DOCUMENT_IMMUTABLE' in pg_get_functiondef(to_regprocedure('warehouse_private.protect_posted_header()'))) = 0 and position('old.status' in lower(pg_get_functiondef(to_regprocedure('warehouse_private.protect_posted_header()')))) > 0)::text",
       "verificationSql": "select (position('WAREHOUSE_POSTED_DOCUMENT_IMMUTABLE' in pg_get_functiondef(to_regprocedure('warehouse_private.protect_posted_header()'))) > 0)::text",
       "prerequisites": [
         "exact preceding controlled history tail",
-        "body-specific NOT_APPLIED detector"
+        "explicit body-specific predecessor-state detector"
       ],
       "expectedPostconditions": [
         "semantic verifier independently succeeds",
@@ -586,11 +586,11 @@
         "commitsExplicitly": true,
         "safeOuterAtomicWrap": false
       },
-      "preconditionSql": "select (not (position('reversed' in pg_get_functiondef(to_regprocedure('warehouse_private.protect_posted_header()'))) > 0))::text",
+      "preconditionSql": "select (to_regprocedure('warehouse_private.protect_posted_header()') is not null and position('WAREHOUSE_POSTED_DOCUMENT_IMMUTABLE' in pg_get_functiondef(to_regprocedure('warehouse_private.protect_posted_header()'))) > 0 and position('reversed' in pg_get_functiondef(to_regprocedure('warehouse_private.protect_posted_header()'))) = 0)::text",
       "verificationSql": "select (position('reversed' in pg_get_functiondef(to_regprocedure('warehouse_private.protect_posted_header()'))) > 0)::text",
       "prerequisites": [
         "exact preceding controlled history tail",
-        "body-specific NOT_APPLIED detector"
+        "explicit body-specific predecessor-state detector"
       ],
       "expectedPostconditions": [
         "semantic verifier independently succeeds",
@@ -608,11 +608,11 @@
         "commitsExplicitly": true,
         "safeOuterAtomicWrap": false
       },
-      "preconditionSql": "select (not (position('generated' in pg_get_functiondef(to_regprocedure('warehouse_private.protect_posted_header()'))) > 0))::text",
+      "preconditionSql": "select (to_regprocedure('warehouse_private.protect_posted_header()') is not null and position('reversed' in pg_get_functiondef(to_regprocedure('warehouse_private.protect_posted_header()'))) > 0 and position('generated' in pg_get_functiondef(to_regprocedure('warehouse_private.protect_posted_header()'))) = 0)::text",
       "verificationSql": "select (position('generated' in pg_get_functiondef(to_regprocedure('warehouse_private.protect_posted_header()'))) > 0)::text",
       "prerequisites": [
         "exact preceding controlled history tail",
-        "body-specific NOT_APPLIED detector"
+        "explicit body-specific predecessor-state detector"
       ],
       "expectedPostconditions": [
         "semantic verifier independently succeeds",
@@ -630,11 +630,11 @@
         "commitsExplicitly": true,
         "safeOuterAtomicWrap": false
       },
-      "preconditionSql": "select (not (to_regprocedure('warehouse_private.require_read_session(uuid)') is not null))::text",
+      "preconditionSql": "select (to_regprocedure('warehouse.list_stores(uuid,uuid)') is not null and to_regprocedure('warehouse_private.require_read_session(uuid)') is null)::text",
       "verificationSql": "select (to_regprocedure('warehouse_private.require_read_session(uuid)') is not null)::text",
       "prerequisites": [
         "exact preceding controlled history tail",
-        "body-specific NOT_APPLIED detector"
+        "explicit body-specific predecessor-state detector"
       ],
       "expectedPostconditions": [
         "semantic verifier independently succeeds",
@@ -652,11 +652,11 @@
         "commitsExplicitly": true,
         "safeOuterAtomicWrap": false
       },
-      "preconditionSql": "select (not (to_regprocedure('warehouse.list_balances(uuid,uuid,uuid,integer)') is not null))::text",
+      "preconditionSql": "select (to_regprocedure('warehouse_private.require_read_session(uuid)') is not null and to_regprocedure('warehouse.list_balances(uuid,uuid,uuid,integer)') is null)::text",
       "verificationSql": "select (to_regprocedure('warehouse.list_balances(uuid,uuid,uuid,integer)') is not null)::text",
       "prerequisites": [
         "exact preceding controlled history tail",
-        "body-specific NOT_APPLIED detector"
+        "explicit body-specific predecessor-state detector"
       ],
       "expectedPostconditions": [
         "semantic verifier independently succeeds",
@@ -674,11 +674,11 @@
         "commitsExplicitly": true,
         "safeOuterAtomicWrap": false
       },
-      "preconditionSql": "select (not (exists(select 1 from public.platform_modules where module_key='warehouse')))::text",
+      "preconditionSql": "select (to_regprocedure('warehouse.list_balances(uuid,uuid,uuid,integer)') is not null and not exists(select 1 from public.platform_modules where module_key='warehouse'))::text",
       "verificationSql": "select (exists(select 1 from public.platform_modules where module_key='warehouse'))::text",
       "prerequisites": [
         "exact preceding controlled history tail",
-        "body-specific NOT_APPLIED detector"
+        "explicit body-specific predecessor-state detector"
       ],
       "expectedPostconditions": [
         "semantic verifier independently succeeds",
@@ -696,11 +696,11 @@
         "commitsExplicitly": true,
         "safeOuterAtomicWrap": false
       },
-      "preconditionSql": "select (not (to_regclass('platform.profiles') is not null and to_regclass('platform.device_key_bindings') is not null))::text",
+      "preconditionSql": "select (exists(select 1 from public.platform_modules where module_key='warehouse') and to_regclass('platform.profiles') is null and to_regclass('platform.device_key_bindings') is null)::text",
       "verificationSql": "select (to_regclass('platform.profiles') is not null and to_regclass('platform.device_key_bindings') is not null)::text",
       "prerequisites": [
         "exact preceding controlled history tail",
-        "body-specific NOT_APPLIED detector"
+        "explicit body-specific predecessor-state detector"
       ],
       "expectedPostconditions": [
         "semantic verifier independently succeeds",
@@ -718,11 +718,11 @@
         "commitsExplicitly": true,
         "safeOuterAtomicWrap": false
       },
-      "preconditionSql": "select (not (to_regclass('platform_private.legacy_device_reconciliation_boundaries') is not null))::text",
+      "preconditionSql": "select (to_regclass('platform.profiles') is not null and to_regclass('platform_private.legacy_device_reconciliation_boundaries') is null)::text",
       "verificationSql": "select (to_regclass('platform_private.legacy_device_reconciliation_boundaries') is not null)::text",
       "prerequisites": [
         "exact preceding controlled history tail",
-        "body-specific NOT_APPLIED detector"
+        "explicit body-specific predecessor-state detector"
       ],
       "expectedPostconditions": [
         "semantic verifier independently succeeds",
@@ -782,11 +782,11 @@
         "commitsExplicitly": true,
         "safeOuterAtomicWrap": false
       },
-      "preconditionSql": "select (not (to_regprocedure('platform.list_pending_device_authorizations()') is not null))::text",
+      "preconditionSql": "select (to_regclass('platform_private.legacy_device_reconciliation_boundaries') is not null and to_regprocedure('platform.list_pending_device_authorizations()') is null)::text",
       "verificationSql": "select (to_regprocedure('platform.list_pending_device_authorizations()') is not null)::text",
       "prerequisites": [
         "exact preceding controlled history tail",
-        "body-specific NOT_APPLIED detector"
+        "explicit body-specific predecessor-state detector"
       ],
       "expectedPostconditions": [
         "semantic verifier independently succeeds",
@@ -825,11 +825,11 @@
         "commitsExplicitly": true,
         "safeOuterAtomicWrap": false
       },
-      "preconditionSql": "select (not (has_schema_privilege('anon','warehouse','USAGE') and has_schema_privilege('authenticated','warehouse','USAGE')))::text",
+      "preconditionSql": "select (to_regprocedure('platform.list_pending_device_authorizations()') is not null and not has_schema_privilege('anon','warehouse','USAGE') and not has_schema_privilege('authenticated','warehouse','USAGE'))::text",
       "verificationSql": "select (has_schema_privilege('anon','warehouse','USAGE') and has_schema_privilege('authenticated','warehouse','USAGE'))::text",
       "prerequisites": [
         "exact preceding controlled history tail",
-        "body-specific NOT_APPLIED detector"
+        "explicit body-specific predecessor-state detector"
       ],
       "expectedPostconditions": [
         "semantic verifier independently succeeds",
@@ -847,11 +847,11 @@
         "commitsExplicitly": false,
         "safeOuterAtomicWrap": true
       },
-      "preconditionSql": "select (not (has_schema_privilege('service_role','platform','USAGE')))::text",
+      "preconditionSql": "select (has_schema_privilege('anon','warehouse','USAGE') and has_schema_privilege('authenticated','warehouse','USAGE') and not has_schema_privilege('service_role','platform','USAGE'))::text",
       "verificationSql": "select (has_schema_privilege('service_role','platform','USAGE'))::text",
       "prerequisites": [
         "exact preceding controlled history tail",
-        "body-specific NOT_APPLIED detector"
+        "explicit body-specific predecessor-state detector"
       ],
       "expectedPostconditions": [
         "semantic verifier independently succeeds",
@@ -869,11 +869,11 @@
         "commitsExplicitly": false,
         "safeOuterAtomicWrap": true
       },
-      "preconditionSql": "select (not (to_regclass('platform_private.device_sessions') is not null))::text",
+      "preconditionSql": "select (has_schema_privilege('service_role','platform','USAGE') and to_regclass('platform_private.device_sessions') is null)::text",
       "verificationSql": "select (to_regclass('platform_private.device_sessions') is not null)::text",
       "prerequisites": [
         "exact preceding controlled history tail",
-        "body-specific NOT_APPLIED detector"
+        "explicit body-specific predecessor-state detector"
       ],
       "expectedPostconditions": [
         "semantic verifier independently succeeds",
@@ -891,11 +891,11 @@
         "commitsExplicitly": false,
         "safeOuterAtomicWrap": true
       },
-      "preconditionSql": "select (not (position('binding.id' in pg_get_functiondef(to_regprocedure('platform.get_device_session_challenge_context(uuid,uuid)'))) > 0))::text",
+      "preconditionSql": "select (to_regclass('platform_private.device_sessions') is not null and to_regprocedure('platform.get_device_session_challenge_context(uuid,uuid)') is not null and position('binding.id' in pg_get_functiondef(to_regprocedure('platform.get_device_session_challenge_context(uuid,uuid)'))) = 0 and position('binding.binding_id' in pg_get_functiondef(to_regprocedure('platform.get_device_session_challenge_context(uuid,uuid)'))) > 0)::text",
       "verificationSql": "select (position('binding.id' in pg_get_functiondef(to_regprocedure('platform.get_device_session_challenge_context(uuid,uuid)'))) > 0)::text",
       "prerequisites": [
         "exact preceding controlled history tail",
-        "body-specific NOT_APPLIED detector"
+        "explicit body-specific predecessor-state detector"
       ],
       "expectedPostconditions": [
         "semantic verifier independently succeeds",
@@ -913,11 +913,11 @@
         "commitsExplicitly": false,
         "safeOuterAtomicWrap": true
       },
-      "preconditionSql": "select (not (to_regprocedure('platform.execute_conference_device_operation(uuid,uuid,bytea,text,jsonb)') is not null))::text",
+      "preconditionSql": "select (position('binding.id' in pg_get_functiondef(to_regprocedure('platform.get_device_session_challenge_context(uuid,uuid)'))) > 0 and to_regprocedure('platform.execute_conference_device_operation(uuid,uuid,bytea,text,jsonb)') is null)::text",
       "verificationSql": "select (to_regprocedure('platform.execute_conference_device_operation(uuid,uuid,bytea,text,jsonb)') is not null)::text",
       "prerequisites": [
         "exact preceding controlled history tail",
-        "body-specific NOT_APPLIED detector"
+        "explicit body-specific predecessor-state detector"
       ],
       "expectedPostconditions": [
         "semantic verifier independently succeeds",
@@ -935,11 +935,11 @@
         "commitsExplicitly": true,
         "safeOuterAtomicWrap": false
       },
-      "preconditionSql": "select (not (to_regprocedure('platform.execute_conference_device_operation_phase1c_core(uuid,uuid,bytea,text,jsonb)') is not null))::text",
+      "preconditionSql": "select (to_regprocedure('platform.execute_conference_device_operation(uuid,uuid,bytea,text,jsonb)') is not null and to_regprocedure('platform.execute_conference_device_operation_phase1c_core(uuid,uuid,bytea,text,jsonb)') is null)::text",
       "verificationSql": "select (to_regprocedure('platform.execute_conference_device_operation_phase1c_core(uuid,uuid,bytea,text,jsonb)') is not null)::text",
       "prerequisites": [
         "exact preceding controlled history tail",
-        "body-specific NOT_APPLIED detector"
+        "explicit body-specific predecessor-state detector"
       ],
       "expectedPostconditions": [
         "semantic verifier independently succeeds",
@@ -999,11 +999,11 @@
         "commitsExplicitly": false,
         "safeOuterAtomicWrap": true
       },
-      "preconditionSql": "select (not (to_regprocedure('platform_private.resolve_startup_device_authorization_status(uuid,uuid)') is not null))::text",
+      "preconditionSql": "select (to_regprocedure('platform.execute_conference_device_operation_phase1c_core(uuid,uuid,bytea,text,jsonb)') is not null and to_regprocedure('platform_private.resolve_startup_device_authorization_status(uuid,uuid)') is null)::text",
       "verificationSql": "select (to_regprocedure('platform_private.resolve_startup_device_authorization_status(uuid,uuid)') is not null)::text",
       "prerequisites": [
         "exact preceding controlled history tail",
-        "body-specific NOT_APPLIED detector"
+        "explicit body-specific predecessor-state detector"
       ],
       "expectedPostconditions": [
         "semantic verifier independently succeeds",
@@ -1021,11 +1021,11 @@
         "commitsExplicitly": false,
         "safeOuterAtomicWrap": true
       },
-      "preconditionSql": "select (not (to_regprocedure('platform.enroll_new_device_key(uuid,uuid,text,text,jsonb,text,text,text,text)') is not null))::text",
+      "preconditionSql": "select (to_regprocedure('platform_private.resolve_startup_device_authorization_status(uuid,uuid)') is not null and to_regprocedure('platform.enroll_new_device_key(uuid,uuid,text,text,jsonb,text,text,text,text)') is null)::text",
       "verificationSql": "select (to_regprocedure('platform.enroll_new_device_key(uuid,uuid,text,text,jsonb,text,text,text,text)') is not null)::text",
       "prerequisites": [
         "exact preceding controlled history tail",
-        "body-specific NOT_APPLIED detector"
+        "explicit body-specific predecessor-state detector"
       ],
       "expectedPostconditions": [
         "semantic verifier independently succeeds",
@@ -1064,11 +1064,11 @@
         "commitsExplicitly": false,
         "safeOuterAtomicWrap": true
       },
-      "preconditionSql": "select (not (to_regprocedure('platform.execute_device_operation(uuid,uuid,bytea,text,text,jsonb)') is not null))::text",
+      "preconditionSql": "select (to_regprocedure('platform.enroll_new_device_key(uuid,uuid,text,text,jsonb,text,text,text,text)') is not null and to_regprocedure('platform.execute_device_operation(uuid,uuid,bytea,text,text,jsonb)') is null)::text",
       "verificationSql": "select (to_regprocedure('platform.execute_device_operation(uuid,uuid,bytea,text,text,jsonb)') is not null)::text",
       "prerequisites": [
         "exact preceding controlled history tail",
-        "body-specific NOT_APPLIED detector"
+        "explicit body-specific predecessor-state detector"
       ],
       "expectedPostconditions": [
         "semantic verifier independently succeeds",
@@ -1086,11 +1086,11 @@
         "commitsExplicitly": true,
         "safeOuterAtomicWrap": false
       },
-      "preconditionSql": "select (not (to_regprocedure('warehouse.list_item_master(uuid)') is not null))::text",
+      "preconditionSql": "select (to_regprocedure('platform.execute_device_operation(uuid,uuid,bytea,text,text,jsonb)') is not null and to_regprocedure('warehouse.list_item_master(uuid)') is null)::text",
       "verificationSql": "select (to_regprocedure('warehouse.list_item_master(uuid)') is not null)::text",
       "prerequisites": [
         "exact preceding controlled history tail",
-        "body-specific NOT_APPLIED detector"
+        "explicit body-specific predecessor-state detector"
       ],
       "expectedPostconditions": [
         "semantic verifier independently succeeds",
@@ -1108,11 +1108,11 @@
         "commitsExplicitly": true,
         "safeOuterAtomicWrap": false
       },
-      "preconditionSql": "select (not (to_regprocedure('warehouse_private.next_category_code()') is not null))::text",
+      "preconditionSql": "select (to_regprocedure('warehouse.list_item_master(uuid)') is not null and to_regprocedure('warehouse_private.next_category_code()') is null)::text",
       "verificationSql": "select (to_regprocedure('warehouse_private.next_category_code()') is not null)::text",
       "prerequisites": [
         "exact preceding controlled history tail",
-        "body-specific NOT_APPLIED detector"
+        "explicit body-specific predecessor-state detector"
       ],
       "expectedPostconditions": [
         "semantic verifier independently succeeds",
@@ -1130,11 +1130,11 @@
         "commitsExplicitly": true,
         "safeOuterAtomicWrap": false
       },
-      "preconditionSql": "select (not (to_regclass('warehouse.parties') is not null and to_regclass('warehouse.beneficiary_financial_entries') is not null))::text",
+      "preconditionSql": "select (to_regprocedure('warehouse_private.next_category_code()') is not null and to_regclass('warehouse.parties') is null and to_regclass('warehouse.beneficiary_financial_entries') is null)::text",
       "verificationSql": "select (to_regclass('warehouse.parties') is not null and to_regclass('warehouse.beneficiary_financial_entries') is not null)::text",
       "prerequisites": [
         "exact preceding controlled history tail",
-        "body-specific NOT_APPLIED detector"
+        "explicit body-specific predecessor-state detector"
       ],
       "expectedPostconditions": [
         "semantic verifier independently succeeds",
@@ -1152,11 +1152,11 @@
         "commitsExplicitly": true,
         "safeOuterAtomicWrap": false
       },
-      "preconditionSql": "select (not (position('new.financial_total' in lower(pg_get_functiondef(to_regprocedure('warehouse_private.protect_posted_header()')))) > 0))::text",
+      "preconditionSql": "select (to_regclass('warehouse.beneficiary_financial_entries') is not null and position('new.financial_total' in lower(pg_get_functiondef(to_regprocedure('warehouse_private.protect_posted_header()')))) = 0 and position('party_extension_version' in pg_get_functiondef(to_regprocedure('warehouse_private.protect_posted_header()'))) > 0)::text",
       "verificationSql": "select (position('new.financial_total' in lower(pg_get_functiondef(to_regprocedure('warehouse_private.protect_posted_header()')))) > 0)::text",
       "prerequisites": [
         "exact preceding controlled history tail",
-        "body-specific NOT_APPLIED detector"
+        "explicit body-specific predecessor-state detector"
       ],
       "expectedPostconditions": [
         "semantic verifier independently succeeds",
@@ -1174,11 +1174,11 @@
         "commitsExplicitly": true,
         "safeOuterAtomicWrap": false
       },
-      "preconditionSql": "select (not (to_regprocedure('warehouse.cancel_document_draft(uuid,uuid,text,uuid,bigint,text)') is not null))::text",
+      "preconditionSql": "select (position('new.financial_total' in lower(pg_get_functiondef(to_regprocedure('warehouse_private.protect_posted_header()')))) > 0 and to_regprocedure('warehouse.cancel_document_draft(uuid,uuid,text,uuid,bigint,text)') is null)::text",
       "verificationSql": "select (to_regprocedure('warehouse.cancel_document_draft(uuid,uuid,text,uuid,bigint,text)') is not null)::text",
       "prerequisites": [
         "exact preceding controlled history tail",
-        "body-specific NOT_APPLIED detector"
+        "explicit body-specific predecessor-state detector"
       ],
       "expectedPostconditions": [
         "semantic verifier independently succeeds",
@@ -1196,11 +1196,11 @@
         "commitsExplicitly": true,
         "safeOuterAtomicWrap": false
       },
-      "preconditionSql": "select (not (position('opening_balance' in pg_get_functiondef(to_regprocedure('warehouse_private.create_document_draft(uuid,uuid,text,jsonb)'))) > 0))::text",
+      "preconditionSql": "select (to_regprocedure('warehouse.cancel_document_draft(uuid,uuid,text,uuid,bigint,text)') is not null and position('opening_balance' in pg_get_functiondef(to_regprocedure('warehouse_private.create_document_draft(uuid,uuid,text,jsonb)'))) = 0 and position('receipt' in pg_get_functiondef(to_regprocedure('warehouse_private.create_document_draft(uuid,uuid,text,jsonb)'))) > 0)::text",
       "verificationSql": "select (position('opening_balance' in pg_get_functiondef(to_regprocedure('warehouse_private.create_document_draft(uuid,uuid,text,jsonb)'))) > 0)::text",
       "prerequisites": [
         "exact preceding controlled history tail",
-        "body-specific NOT_APPLIED detector"
+        "explicit body-specific predecessor-state detector"
       ],
       "expectedPostconditions": [
         "semantic verifier independently succeeds",
@@ -1218,11 +1218,11 @@
         "commitsExplicitly": true,
         "safeOuterAtomicWrap": false
       },
-      "preconditionSql": "select (not (to_regclass('warehouse.item_units') is not null))::text",
+      "preconditionSql": "select (position('opening_balance' in pg_get_functiondef(to_regprocedure('warehouse_private.create_document_draft(uuid,uuid,text,jsonb)'))) > 0 and to_regclass('warehouse.item_units') is null)::text",
       "verificationSql": "select (to_regclass('warehouse.item_units') is not null)::text",
       "prerequisites": [
         "exact preceding controlled history tail",
-        "body-specific NOT_APPLIED detector"
+        "explicit body-specific predecessor-state detector"
       ],
       "expectedPostconditions": [
         "semantic verifier independently succeeds",
@@ -1240,11 +1240,11 @@
         "commitsExplicitly": true,
         "safeOuterAtomicWrap": false
       },
-      "preconditionSql": "select (not (position('item_row' in pg_get_functiondef(to_regprocedure('warehouse.upsert_item_units(uuid,uuid,uuid,bigint,jsonb)'))) > 0))::text",
+      "preconditionSql": "select (to_regclass('warehouse.item_units') is not null and to_regprocedure('warehouse.upsert_item_units(uuid,uuid,uuid,bigint,jsonb)') is not null and position('item_row' in pg_get_functiondef(to_regprocedure('warehouse.upsert_item_units(uuid,uuid,uuid,bigint,jsonb)'))) = 0 and position('target_item' in pg_get_functiondef(to_regprocedure('warehouse.upsert_item_units(uuid,uuid,uuid,bigint,jsonb)'))) > 0)::text",
       "verificationSql": "select (position('item_row' in pg_get_functiondef(to_regprocedure('warehouse.upsert_item_units(uuid,uuid,uuid,bigint,jsonb)'))) > 0)::text",
       "prerequisites": [
         "exact preceding controlled history tail",
-        "body-specific NOT_APPLIED detector"
+        "explicit body-specific predecessor-state detector"
       ],
       "expectedPostconditions": [
         "semantic verifier independently succeeds",
@@ -1262,11 +1262,11 @@
         "commitsExplicitly": true,
         "safeOuterAtomicWrap": false
       },
-      "preconditionSql": "select (not (position('unit_row' in pg_get_functiondef(to_regprocedure('warehouse.upsert_item_units(uuid,uuid,uuid,bigint,jsonb)'))) > 0))::text",
+      "preconditionSql": "select (position('item_row' in pg_get_functiondef(to_regprocedure('warehouse.upsert_item_units(uuid,uuid,uuid,bigint,jsonb)'))) > 0 and position('unit_row' in pg_get_functiondef(to_regprocedure('warehouse.upsert_item_units(uuid,uuid,uuid,bigint,jsonb)'))) = 0 and position('unit_record' in pg_get_functiondef(to_regprocedure('warehouse.upsert_item_units(uuid,uuid,uuid,bigint,jsonb)'))) > 0)::text",
       "verificationSql": "select (position('unit_row' in pg_get_functiondef(to_regprocedure('warehouse.upsert_item_units(uuid,uuid,uuid,bigint,jsonb)'))) > 0)::text",
       "prerequisites": [
         "exact preceding controlled history tail",
-        "body-specific NOT_APPLIED detector"
+        "explicit body-specific predecessor-state detector"
       ],
       "expectedPostconditions": [
         "semantic verifier independently succeeds",
@@ -1284,11 +1284,11 @@
         "commitsExplicitly": false,
         "safeOuterAtomicWrap": true
       },
-      "preconditionSql": "select (not (to_regprocedure('warehouse_private.canonicalize_unit_lines(jsonb)') is not null))::text",
-      "verificationSql": "select (to_regprocedure('warehouse_private.canonicalize_unit_lines(jsonb)') is not null)::text",
+      "preconditionSql": "select (position('unit_row' in pg_get_functiondef(to_regprocedure('warehouse.upsert_item_units(uuid,uuid,uuid,bigint,jsonb)'))) > 0 and to_regprocedure('warehouse_private.canonicalize_unit_lines(jsonb)') is not null and position('selected_unit_cost' in pg_get_functiondef(to_regprocedure('warehouse_private.canonicalize_unit_lines(jsonb)'))) = 0 and position('conversion_factor' in pg_get_functiondef(to_regprocedure('warehouse_private.canonicalize_unit_lines(jsonb)'))) > 0)::text",
+      "verificationSql": "select (position('selected_unit_cost' in pg_get_functiondef(to_regprocedure('warehouse_private.canonicalize_unit_lines(jsonb)'))) > 0)::text",
       "prerequisites": [
         "exact preceding controlled history tail",
-        "body-specific NOT_APPLIED detector"
+        "explicit body-specific predecessor-state detector"
       ],
       "expectedPostconditions": [
         "semantic verifier independently succeeds",
@@ -1306,11 +1306,11 @@
         "commitsExplicitly": false,
         "safeOuterAtomicWrap": true
       },
-      "preconditionSql": "select (not (position('selectedUnitId' in pg_get_functiondef(to_regprocedure('warehouse.create_issue_draft(uuid,uuid,jsonb)'))) > 0))::text",
+      "preconditionSql": "select (position('selected_unit_cost' in pg_get_functiondef(to_regprocedure('warehouse_private.canonicalize_unit_lines(jsonb)'))) > 0 and position('selectedUnitId' in pg_get_functiondef(to_regprocedure('warehouse.create_issue_draft(uuid,uuid,jsonb)'))) = 0 and position('financial_total' in pg_get_functiondef(to_regprocedure('warehouse.create_issue_draft(uuid,uuid,jsonb)'))) > 0)::text",
       "verificationSql": "select (position('selectedUnitId' in pg_get_functiondef(to_regprocedure('warehouse.create_issue_draft(uuid,uuid,jsonb)'))) > 0)::text",
       "prerequisites": [
         "exact preceding controlled history tail",
-        "body-specific NOT_APPLIED detector"
+        "explicit body-specific predecessor-state detector"
       ],
       "expectedPostconditions": [
         "semantic verifier independently succeeds",
@@ -1328,11 +1328,11 @@
         "commitsExplicitly": false,
         "safeOuterAtomicWrap": true
       },
-      "preconditionSql": "select (not (position('is_system_owner' in pg_get_functiondef(to_regprocedure('warehouse.decide_adjustment_approval(uuid,uuid,uuid,bigint,text,text)'))) > 0))::text",
+      "preconditionSql": "select (position('selectedUnitId' in pg_get_functiondef(to_regprocedure('warehouse.create_issue_draft(uuid,uuid,jsonb)'))) > 0 and position('is_system_owner' in pg_get_functiondef(to_regprocedure('warehouse.decide_adjustment_approval(uuid,uuid,uuid,bigint,text,text)'))) = 0 and position('requester_id' in pg_get_functiondef(to_regprocedure('warehouse.decide_adjustment_approval(uuid,uuid,uuid,bigint,text,text)'))) > 0)::text",
       "verificationSql": "select (position('is_system_owner' in pg_get_functiondef(to_regprocedure('warehouse.decide_adjustment_approval(uuid,uuid,uuid,bigint,text,text)'))) > 0)::text",
       "prerequisites": [
         "exact preceding controlled history tail",
-        "body-specific NOT_APPLIED detector"
+        "explicit body-specific predecessor-state detector"
       ],
       "expectedPostconditions": [
         "semantic verifier independently succeeds",
@@ -1350,11 +1350,11 @@
         "commitsExplicitly": false,
         "safeOuterAtomicWrap": true
       },
-      "preconditionSql": "select (not (exists(select 1 from pg_constraint where conrelid=to_regclass('warehouse.adjustment_approvals') and pg_get_constraintdef(oid) like '%approved_by%')))::text",
+      "preconditionSql": "select (position('is_system_owner' in pg_get_functiondef(to_regprocedure('warehouse.decide_adjustment_approval(uuid,uuid,uuid,bigint,text,text)'))) > 0 and not exists(select 1 from pg_constraint where conrelid=to_regclass('warehouse.adjustment_approvals') and pg_get_constraintdef(oid) like '%approved_by%') and exists(select 1 from pg_constraint where conrelid=to_regclass('warehouse.adjustment_approvals') and pg_get_constraintdef(oid) like '%decision%'))::text",
       "verificationSql": "select (exists(select 1 from pg_constraint where conrelid=to_regclass('warehouse.adjustment_approvals') and pg_get_constraintdef(oid) like '%approved_by%'))::text",
       "prerequisites": [
         "exact preceding controlled history tail",
-        "body-specific NOT_APPLIED detector"
+        "explicit body-specific predecessor-state detector"
       ],
       "expectedPostconditions": [
         "semantic verifier independently succeeds",
@@ -1372,11 +1372,11 @@
         "commitsExplicitly": true,
         "safeOuterAtomicWrap": false
       },
-      "preconditionSql": "select (not (to_regprocedure('platform_private.reconcile_system_user_access_profile(public.system_user_access)') is not null))::text",
+      "preconditionSql": "select (exists(select 1 from pg_constraint where conrelid=to_regclass('warehouse.adjustment_approvals') and pg_get_constraintdef(oid) like '%approved_by%') and to_regprocedure('platform_private.reconcile_system_user_access_profile(public.system_user_access)') is null)::text",
       "verificationSql": "select (to_regprocedure('platform_private.reconcile_system_user_access_profile(public.system_user_access)') is not null)::text",
       "prerequisites": [
         "exact preceding controlled history tail",
-        "body-specific NOT_APPLIED detector"
+        "explicit body-specific predecessor-state detector"
       ],
       "expectedPostconditions": [
         "semantic verifier independently succeeds",
@@ -1394,11 +1394,11 @@
         "commitsExplicitly": true,
         "safeOuterAtomicWrap": false
       },
-      "preconditionSql": "select (not (to_regprocedure('platform_private.reconcile_system_owner_platform_owner(uuid)') is not null))::text",
+      "preconditionSql": "select (to_regprocedure('platform_private.reconcile_system_user_access_profile(public.system_user_access)') is not null and to_regprocedure('platform_private.reconcile_system_owner_platform_owner(uuid)') is null)::text",
       "verificationSql": "select (to_regprocedure('platform_private.reconcile_system_owner_platform_owner(uuid)') is not null)::text",
       "prerequisites": [
         "exact preceding controlled history tail",
-        "body-specific NOT_APPLIED detector"
+        "explicit body-specific predecessor-state detector"
       ],
       "expectedPostconditions": [
         "semantic verifier independently succeeds",
@@ -1416,11 +1416,11 @@
         "commitsExplicitly": true,
         "safeOuterAtomicWrap": false
       },
-      "preconditionSql": "select (not (not exists(select 1 from platform.roles where domain='inventory' and code in ('inventory_manager','inventory_operator','viewer') and is_assignable)))::text",
+      "preconditionSql": "select (to_regprocedure('platform_private.reconcile_system_owner_platform_owner(uuid)') is not null and exists(select 1 from platform.roles where domain='inventory' and code in ('inventory_manager','inventory_operator','viewer') and is_assignable) and position('validated_phase1c_device_authorization' in pg_get_functiondef(to_regprocedure('platform_private.has_permission_for(uuid,text,text,uuid)'))) > 0)::text",
       "verificationSql": "select (not exists(select 1 from platform.roles where domain='inventory' and code in ('inventory_manager','inventory_operator','viewer') and is_assignable))::text",
       "prerequisites": [
         "exact preceding controlled history tail",
-        "body-specific NOT_APPLIED detector"
+        "explicit body-specific predecessor-state detector"
       ],
       "expectedPostconditions": [
         "semantic verifier independently succeeds",
@@ -1459,11 +1459,11 @@
         "commitsExplicitly": false,
         "safeOuterAtomicWrap": true
       },
-      "preconditionSql": "select (not (to_regprocedure('public.require_effective_module_permission(uuid,text,text,text,text)') is not null))::text",
-      "verificationSql": "select (to_regprocedure('public.require_effective_module_permission(uuid,text,text,text,text)') is not null)::text",
+      "preconditionSql": "select (not exists(select 1 from platform.roles where domain='inventory' and code in ('inventory_manager','inventory_operator','viewer') and is_assignable) and to_regprocedure('public.require_effective_module_permission(uuid,text,text,text,text)') is not null and position('module.access' in pg_get_functiondef(to_regprocedure('public.require_effective_module_permission(uuid,text,text,text,text)'))) = 0 and position('module_permission_grants' in pg_get_functiondef(to_regprocedure('public.require_effective_module_permission(uuid,text,text,text,text)'))) > 0)::text",
+      "verificationSql": "select (position('module.access' in pg_get_functiondef(to_regprocedure('public.require_effective_module_permission(uuid,text,text,text,text)'))) > 0)::text",
       "prerequisites": [
         "exact preceding controlled history tail",
-        "body-specific NOT_APPLIED detector"
+        "explicit body-specific predecessor-state detector"
       ],
       "expectedPostconditions": [
         "semantic verifier independently succeeds",
@@ -1481,11 +1481,11 @@
         "commitsExplicitly": false,
         "safeOuterAtomicWrap": true
       },
-      "preconditionSql": "select (not (to_regprocedure('public.search_module_permission_candidates(uuid,text,text,integer)') is not null))::text",
+      "preconditionSql": "select (to_regprocedure('public.require_effective_module_permission(uuid,text,text,text,text)') is not null and position('module.access' in pg_get_functiondef(to_regprocedure('public.require_effective_module_permission(uuid,text,text,text,text)'))) > 0 and to_regprocedure('public.search_module_permission_candidates(uuid,text,text,integer)') is null and not has_function_privilege('service_role','public.manage_catalog_module_grant(uuid,uuid,text,uuid,text,text,text,text,uuid,text)','EXECUTE'))::text",
       "verificationSql": "select (to_regprocedure('public.search_module_permission_candidates(uuid,text,text,integer)') is not null)::text",
       "prerequisites": [
         "exact preceding controlled history tail",
-        "body-specific NOT_APPLIED detector"
+        "explicit body-specific predecessor-state detector"
       ],
       "expectedPostconditions": [
         "semantic verifier independently succeeds",
