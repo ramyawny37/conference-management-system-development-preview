@@ -433,7 +433,7 @@
         "safeOuterAtomicWrap": false
       },
       "preconditionSql": "select (to_regclass('public.module_permission_grants') is not null and to_regclass('public.module_permission_catalog') is null)::text",
-      "verificationSql": "select (to_regclass('public.module_permission_catalog') is not null and to_regclass('public.module_permission_grants') is not null)::text",
+      "verificationSql": "select (to_regclass('public.module_permission_catalog') is not null and to_regprocedure('public.validate_module_permission_catalog(text,text,text,text,text)') is not null and to_regprocedure('public.require_effective_module_permission(uuid,text,text,text,text)') is not null and to_regprocedure('public.manage_catalog_module_grant(uuid,uuid,text,uuid,text,text,text,text,uuid,text)') is not null and to_regprocedure('public.recover_revoke_final_module_manager(uuid,uuid,text,uuid,uuid,text)') is not null)::text",
       "prerequisites": [
         "exact preceding controlled history tail",
         "explicit body-specific predecessor-state detector"
