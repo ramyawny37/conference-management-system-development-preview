@@ -124,7 +124,7 @@
       "filename": "supabase/migrations/20260829140200_warehouse_v1_guarded_rpc.sql",
       "sha256": "771a45e8efe93de910766495f42a8ab40fb70fb8e535e59afb11baafe060e763",
       "preconditionSql": "select (to_regclass('warehouse.stores') is not null and to_regprocedure('warehouse.list_stores(uuid,uuid)') is null)::text",
-      "verificationSql": "select (to_regprocedure('warehouse.list_stores(uuid,uuid)') is not null and to_regprocedure('warehouse_private.canonical_intent_hash(text,jsonb)') is not null)::text",
+      "verificationSql": "select (to_regprocedure('warehouse.list_stores(uuid,uuid)') is not null and to_regprocedure('warehouse_private.canonical_intent_hash(jsonb)') is not null)::text",
       "transaction": {
         "startsExplicitly": true,
         "commitsExplicitly": true,

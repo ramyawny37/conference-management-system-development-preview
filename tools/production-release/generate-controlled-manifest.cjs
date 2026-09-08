@@ -74,7 +74,7 @@ function semanticExpression(name){
     '20260829130000':"to_regclass('public.module_permission_catalog') is not null and to_regprocedure('public.validate_module_permission_catalog(text,text,text,text,text)') is not null and to_regprocedure('public.require_effective_module_permission(uuid,text,text,text,text)') is not null and to_regprocedure('public.manage_catalog_module_grant(uuid,uuid,text,uuid,text,text,text,text,uuid,text)') is not null and to_regprocedure('public.recover_revoke_final_module_manager(uuid,uuid,text,uuid,uuid,text)') is not null",
     '20260829140000':"exists(select 1 from public.module_permission_catalog where module_key='warehouse')",
     '20260829140100':"to_regclass('warehouse.stores') is not null",
-    '20260829140200':"to_regprocedure('warehouse.list_stores(uuid,uuid)') is not null and to_regprocedure('warehouse_private.canonical_intent_hash(text,jsonb)') is not null",
+    '20260829140200':"to_regprocedure('warehouse.list_stores(uuid,uuid)') is not null and to_regprocedure('warehouse_private.canonical_intent_hash(jsonb)') is not null",
     '20260829150000':"position('document_row warehouse.receipt_headers%rowtype' in pg_get_functiondef(to_regprocedure('warehouse_private.post_document(uuid,uuid,text,uuid,bigint)'))) > 0",
     '20260829150100':"position('request_row warehouse.reversal_requests%rowtype' in pg_get_functiondef(to_regprocedure('warehouse.post_reversal(uuid,uuid,uuid,bigint)'))) > 0",
     '20260829150200':"position('WAREHOUSE_POSTED_DOCUMENT_IMMUTABLE' in pg_get_functiondef(to_regprocedure('warehouse_private.protect_posted_header()'))) > 0",

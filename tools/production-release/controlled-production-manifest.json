@@ -499,7 +499,7 @@
         "safeOuterAtomicWrap": false
       },
       "preconditionSql": "select (to_regclass('warehouse.stores') is not null and to_regprocedure('warehouse.list_stores(uuid,uuid)') is null)::text",
-      "verificationSql": "select (to_regprocedure('warehouse.list_stores(uuid,uuid)') is not null and to_regprocedure('warehouse_private.canonical_intent_hash(text,jsonb)') is not null)::text",
+      "verificationSql": "select (to_regprocedure('warehouse.list_stores(uuid,uuid)') is not null and to_regprocedure('warehouse_private.canonical_intent_hash(jsonb)') is not null)::text",
       "prerequisites": [
         "exact preceding controlled history tail",
         "explicit body-specific predecessor-state detector"
