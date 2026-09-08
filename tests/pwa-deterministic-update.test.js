@@ -15,7 +15,7 @@ const mobileRoomInputRevision='anchored-glass-person-picker-v5';
 const appVersion='3.4.0';
 const shellRevision='development-3-4-0-platform-foundation-v1';
 const previousCacheRevision='development-3-4-0-platform-round3g3-v1';
-const cacheRevision='development-3-4-0-adjustment-conversion-ux-v1';
+const cacheRevision='development-3-4-0-pending-native-device-context-v1';
 const startupTransportRevision='project-device-storage-isolation-v1';
 const moduleRoutingRevision='warehouse-original-items-secure-restoration-v1';
 const priorAuthorizationCacheRevision='runtime-authorization-phase1-v1';
@@ -36,7 +36,7 @@ const memberDiagnosticsRevision='repository-rejection-diagnostics-v1';
 const legacyConferenceRevision='legacy-conference-preflight-v2';
 const privacyRevision='diagnostics-privacy-hardening-v1';
 const templateIsolationRevision='template-sync-isolation-v1';
-const startupRevision='platform-first-login-coordinator-v1';
+const startupRevision='pending-native-device-context-v1';
 const deviceOnboardingRevision='platform-first-login-coordinator-v1';
 const organizationTemplateRevision='shared-template-library-v1';
 const legacyTemplateAuthorizationRevision='legacy-template-adoption-authorization-v1';
@@ -210,17 +210,19 @@ assert(index.includes(readAsset));
 assert(worker.includes("'./"+readAsset+"'"));
 assert(index.includes('script.js?rev='+platformShellScriptRevision));
 assert(worker.includes("'./script.js?rev="+platformShellScriptRevision+"'"));
-[['js/platform-integration.js','cold-refresh-startup-ordering-v1'],
+[['js/platform-integration.js',startupRevision],
  ['js/supabase/device-session.js',startupTransportRevision]].forEach(([asset,revision])=>{
   const versioned=asset+'?rev='+revision;
   assert(index.includes(versioned),'index missing '+versioned);
   assert(worker.includes("'./"+versioned+"'"),'app shell missing '+versioned);
 });
-['js/supabase/device-storage-namespace.js','js/supabase/device-identity.js','js/supabase/device-enrollment.js'].forEach(asset=>{
+['js/supabase/device-storage-namespace.js','js/supabase/device-identity.js'].forEach(asset=>{
   const versioned=asset+'?rev='+startupTransportRevision;
   assert(index.includes(versioned),'index missing '+versioned);
   assert(worker.includes("'./"+versioned+"'"),'app shell missing '+versioned);
 });
+assert(index.includes('js/supabase/device-enrollment.js?rev='+startupRevision));
+assert(worker.includes("'./js/supabase/device-enrollment.js?rev="+startupRevision+"'"));
 [
   'js/sync/conference-permission-resolver.js',
   'core.js',
