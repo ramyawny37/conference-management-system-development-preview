@@ -263,8 +263,8 @@
         "commitsExplicitly": false,
         "safeOuterAtomicWrap": true
       },
-      "preconditionSql": "select (to_regprocedure('public.manage_foundation_module_grant(uuid,uuid,text,uuid,text,text,uuid,text)') is null)::text",
-      "verificationSql": "select (to_regprocedure('public.manage_foundation_module_grant(uuid,uuid,text,uuid,text,text,uuid,text)') is null)::text",
+      "preconditionSql": "select (to_regprocedure('public.manage_foundation_module_grant(uuid,uuid,text,uuid,text,text,uuid,text)') is null or to_regprocedure('public.manage_catalog_module_grant(uuid,uuid,text,uuid,text,text,text,text,uuid,text)') is not null)::text",
+      "verificationSql": "select (to_regprocedure('public.manage_foundation_module_grant(uuid,uuid,text,uuid,text,text,uuid,text)') is null or to_regprocedure('public.manage_catalog_module_grant(uuid,uuid,text,uuid,text,text,text,text,uuid,text)') is not null)::text",
       "prerequisites": [
         "approved exclusion or replacement state verified"
       ],
@@ -542,8 +542,8 @@
         "commitsExplicitly": true,
         "safeOuterAtomicWrap": false
       },
-      "preconditionSql": "select (to_regprocedure('warehouse.post_reversal(uuid,uuid,uuid,bigint)') is not null and position('select 1 from warehouse.stock_movements original join warehouse.stock_movements later on later.store_id=original.store_id and later.item_id=original.item_id and later.sequence>original.sequence where original.document_id=request.original_document_id' in pg_get_functiondef(to_regprocedure('warehouse.post_reversal(uuid,uuid,uuid,bigint)'))) > 0 and position('select 1 from warehouse.stock_movements original_movement join warehouse.stock_movements later on later.store_id=original_movement.store_id and later.item_id=original_movement.item_id and later.sequence>original_movement.sequence where original_movement.document_id=request.original_document_id' in pg_get_functiondef(to_regprocedure('warehouse.post_reversal(uuid,uuid,uuid,bigint)'))) = 0)::text",
-      "verificationSql": "select (to_regprocedure('warehouse.post_reversal(uuid,uuid,uuid,bigint)') is not null and position('select 1 from warehouse.stock_movements original_movement join warehouse.stock_movements later on later.store_id=original_movement.store_id and later.item_id=original_movement.item_id and later.sequence>original_movement.sequence where original_movement.document_id=request.original_document_id' in pg_get_functiondef(to_regprocedure('warehouse.post_reversal(uuid,uuid,uuid,bigint)'))) > 0 and position('select 1 from warehouse.stock_movements original join warehouse.stock_movements later on later.store_id=original.store_id and later.item_id=original.item_id and later.sequence>original.sequence where original.document_id=request.original_document_id' in pg_get_functiondef(to_regprocedure('warehouse.post_reversal(uuid,uuid,uuid,bigint)'))) = 0)::text",
+      "preconditionSql": "select (to_regprocedure('warehouse.post_reversal(uuid,uuid,uuid,bigint)') is not null and position('select 1 from warehouse.stock_movements original join warehouse.stock_movements later on later.store_id=original.store_id and later.item_id=original.item_id and later.sequence>original.sequence where original.document_id=request.original_document_id' in coalesce(pg_get_functiondef(to_regprocedure('warehouse.post_reversal(uuid,uuid,uuid,bigint)')),'')||coalesce(pg_get_functiondef(to_regprocedure('warehouse.post_reversal_inventory_core(uuid,uuid,uuid,bigint)')),'')) > 0 and position('select 1 from warehouse.stock_movements original_movement join warehouse.stock_movements later on later.store_id=original_movement.store_id and later.item_id=original_movement.item_id and later.sequence>original_movement.sequence where original_movement.document_id=request.original_document_id' in coalesce(pg_get_functiondef(to_regprocedure('warehouse.post_reversal(uuid,uuid,uuid,bigint)')),'')||coalesce(pg_get_functiondef(to_regprocedure('warehouse.post_reversal_inventory_core(uuid,uuid,uuid,bigint)')),'')) = 0)::text",
+      "verificationSql": "select (position('select 1 from warehouse.stock_movements original_movement join warehouse.stock_movements later on later.store_id=original_movement.store_id and later.item_id=original_movement.item_id and later.sequence>original_movement.sequence where original_movement.document_id=request.original_document_id' in coalesce(pg_get_functiondef(to_regprocedure('warehouse.post_reversal(uuid,uuid,uuid,bigint)')),'')||coalesce(pg_get_functiondef(to_regprocedure('warehouse.post_reversal_inventory_core(uuid,uuid,uuid,bigint)')),'')) > 0 and position('select 1 from warehouse.stock_movements original join warehouse.stock_movements later on later.store_id=original.store_id and later.item_id=original.item_id and later.sequence>original.sequence where original.document_id=request.original_document_id' in coalesce(pg_get_functiondef(to_regprocedure('warehouse.post_reversal(uuid,uuid,uuid,bigint)')),'')||coalesce(pg_get_functiondef(to_regprocedure('warehouse.post_reversal_inventory_core(uuid,uuid,uuid,bigint)')),'')) = 0)::text",
       "prerequisites": [
         "exact preceding controlled history tail",
         "explicit body-specific predecessor-state detector"
@@ -564,8 +564,8 @@
         "commitsExplicitly": true,
         "safeOuterAtomicWrap": false
       },
-      "preconditionSql": "select (to_regprocedure('warehouse_private.protect_posted_header()') is not null and position('WAREHOUSE_POSTED_DOCUMENT_IMMUTABLE' in pg_get_functiondef(to_regprocedure('warehouse_private.protect_posted_header()'))) = 0 and position('old.status' in lower(pg_get_functiondef(to_regprocedure('warehouse_private.protect_posted_header()')))) > 0)::text",
-      "verificationSql": "select (position('WAREHOUSE_POSTED_DOCUMENT_IMMUTABLE' in pg_get_functiondef(to_regprocedure('warehouse_private.protect_posted_header()'))) > 0)::text",
+      "preconditionSql": "select (to_regprocedure('warehouse_private.protect_posted_header()') is not null and position('old.status in (''posted'',''reversed'')' in pg_get_functiondef(to_regprocedure('warehouse_private.protect_posted_header()'))) > 0 and position('if old.status=''posted'' then' in pg_get_functiondef(to_regprocedure('warehouse_private.protect_posted_header()'))) = 0)::text",
+      "verificationSql": "select (position('if old.status=''posted'' then' in pg_get_functiondef(to_regprocedure('warehouse_private.protect_posted_header()'))) > 0 and position('old.status in (''posted'',''reversed'')' in pg_get_functiondef(to_regprocedure('warehouse_private.protect_posted_header()'))) = 0)::text",
       "prerequisites": [
         "exact preceding controlled history tail",
         "explicit body-specific predecessor-state detector"
@@ -586,8 +586,8 @@
         "commitsExplicitly": true,
         "safeOuterAtomicWrap": false
       },
-      "preconditionSql": "select (to_regprocedure('warehouse_private.protect_posted_header()') is not null and position('WAREHOUSE_POSTED_DOCUMENT_IMMUTABLE' in pg_get_functiondef(to_regprocedure('warehouse_private.protect_posted_header()'))) > 0 and position('reversed' in pg_get_functiondef(to_regprocedure('warehouse_private.protect_posted_header()'))) = 0)::text",
-      "verificationSql": "select (position('reversed' in pg_get_functiondef(to_regprocedure('warehouse_private.protect_posted_header()'))) > 0)::text",
+      "preconditionSql": "select (to_regprocedure('warehouse_private.protect_posted_header()') is not null and position('if old.status=''posted'' then' in pg_get_functiondef(to_regprocedure('warehouse_private.protect_posted_header()'))) > 0 and position('to_jsonb(new)-array[''status'',''reversed_at'',''updated_at'']' in pg_get_functiondef(to_regprocedure('warehouse_private.protect_posted_header()'))) > 0 and position('''status'',to_jsonb(old.status)' in pg_get_functiondef(to_regprocedure('warehouse_private.protect_posted_header()'))) = 0)::text",
+      "verificationSql": "select (position('''status'',to_jsonb(old.status)' in pg_get_functiondef(to_regprocedure('warehouse_private.protect_posted_header()'))) > 0 and position('to_jsonb(new)-array[''status'',''reversed_at'',''updated_at'']' in pg_get_functiondef(to_regprocedure('warehouse_private.protect_posted_header()'))) = 0)::text",
       "prerequisites": [
         "exact preceding controlled history tail",
         "explicit body-specific predecessor-state detector"
@@ -608,8 +608,8 @@
         "commitsExplicitly": true,
         "safeOuterAtomicWrap": false
       },
-      "preconditionSql": "select (to_regprocedure('warehouse_private.protect_posted_header()') is not null and position('reversed' in pg_get_functiondef(to_regprocedure('warehouse_private.protect_posted_header()'))) > 0 and position('generated' in pg_get_functiondef(to_regprocedure('warehouse_private.protect_posted_header()'))) = 0)::text",
-      "verificationSql": "select (position('generated' in pg_get_functiondef(to_regprocedure('warehouse_private.protect_posted_header()'))) > 0)::text",
+      "preconditionSql": "select (to_regprocedure('warehouse_private.protect_posted_header()') is not null and position('to_jsonb(new) || jsonb_build_object' in pg_get_functiondef(to_regprocedure('warehouse_private.protect_posted_header()'))) > 0 and position('when to_jsonb(old) ? ''document_kind''' in pg_get_functiondef(to_regprocedure('warehouse_private.protect_posted_header()'))) = 0)::text",
+      "verificationSql": "select (position('when to_jsonb(old) ? ''document_kind''' in pg_get_functiondef(to_regprocedure('warehouse_private.protect_posted_header()'))) > 0)::text",
       "prerequisites": [
         "exact preceding controlled history tail",
         "explicit body-specific predecessor-state detector"
@@ -674,8 +674,8 @@
         "commitsExplicitly": true,
         "safeOuterAtomicWrap": false
       },
-      "preconditionSql": "select (to_regprocedure('warehouse.list_balances(uuid,uuid,uuid,integer)') is not null and not exists(select 1 from public.platform_modules where module_key='warehouse'))::text",
-      "verificationSql": "select (exists(select 1 from public.platform_modules where module_key='warehouse'))::text",
+      "preconditionSql": "select (to_regprocedure('warehouse.list_balances(uuid,uuid,uuid,integer)') is not null and exists(select 1 from public.platform_modules where module_key='warehouse' and status='active') and not exists(select 1 from public.platform_modules where module_key in ('conference','reservations','custody')))::text",
+      "verificationSql": "select (not exists(select 1 from (values ('conference'),('warehouse'),('reservations'),('custody')) expected(module_key) left join public.platform_modules modules using(module_key) where modules.module_key is null or modules.status<>'active'))::text",
       "prerequisites": [
         "exact preceding controlled history tail",
         "explicit body-specific predecessor-state detector"
@@ -825,8 +825,8 @@
         "commitsExplicitly": true,
         "safeOuterAtomicWrap": false
       },
-      "preconditionSql": "select (to_regprocedure('platform.list_pending_device_authorizations()') is not null and not has_schema_privilege('anon','warehouse','USAGE') and not has_schema_privilege('authenticated','warehouse','USAGE'))::text",
-      "verificationSql": "select (has_schema_privilege('anon','warehouse','USAGE') and has_schema_privilege('authenticated','warehouse','USAGE'))::text",
+      "preconditionSql": "select (to_regprocedure('platform.list_pending_device_authorizations()') is not null and exists(select 1 from pg_roles roles cross join lateral unnest(coalesce(roles.rolconfig,array[]::text[])) setting where roles.rolname='authenticator' and setting='pgrst.db_schemas=public, graphql_public, platform') and not exists(select 1 from pg_roles roles cross join lateral unnest(coalesce(roles.rolconfig,array[]::text[])) setting where roles.rolname='authenticator' and setting='pgrst.db_schemas=public, graphql_public, platform, warehouse'))::text",
+      "verificationSql": "select (exists(select 1 from pg_roles roles cross join lateral unnest(coalesce(roles.rolconfig,array[]::text[])) setting where roles.rolname='authenticator' and setting='pgrst.db_schemas=public, graphql_public, platform, warehouse'))::text",
       "prerequisites": [
         "exact preceding controlled history tail",
         "explicit body-specific predecessor-state detector"
@@ -847,8 +847,8 @@
         "commitsExplicitly": false,
         "safeOuterAtomicWrap": true
       },
-      "preconditionSql": "select (has_schema_privilege('anon','warehouse','USAGE') and has_schema_privilege('authenticated','warehouse','USAGE') and not has_schema_privilege('service_role','platform','USAGE'))::text",
-      "verificationSql": "select (has_schema_privilege('service_role','platform','USAGE'))::text",
+      "preconditionSql": "select (exists(select 1 from pg_roles roles cross join lateral unnest(coalesce(roles.rolconfig,array[]::text[])) setting where roles.rolname='authenticator' and setting='pgrst.db_schemas=public, graphql_public, platform, warehouse') and not exists(select 1 from pg_namespace namespace cross join lateral aclexplode(coalesce(namespace.nspacl,acldefault('n',namespace.nspowner))) acl where namespace.nspname='platform' and acl.grantee='service_role'::regrole and acl.privilege_type='USAGE'))::text",
+      "verificationSql": "select (exists(select 1 from pg_namespace namespace cross join lateral aclexplode(coalesce(namespace.nspacl,acldefault('n',namespace.nspowner))) acl where namespace.nspname='platform' and acl.grantee='service_role'::regrole and acl.privilege_type='USAGE'))::text",
       "prerequisites": [
         "exact preceding controlled history tail",
         "explicit body-specific predecessor-state detector"
@@ -891,8 +891,8 @@
         "commitsExplicitly": false,
         "safeOuterAtomicWrap": true
       },
-      "preconditionSql": "select (to_regclass('platform_private.device_sessions') is not null and to_regprocedure('platform.get_device_session_challenge_context(uuid,uuid)') is not null and position('binding.id' in pg_get_functiondef(to_regprocedure('platform.get_device_session_challenge_context(uuid,uuid)'))) = 0 and position('binding.binding_id' in pg_get_functiondef(to_regprocedure('platform.get_device_session_challenge_context(uuid,uuid)'))) > 0)::text",
-      "verificationSql": "select (position('binding.id' in pg_get_functiondef(to_regprocedure('platform.get_device_session_challenge_context(uuid,uuid)'))) > 0)::text",
+      "preconditionSql": "select (to_regclass('platform_private.device_sessions') is not null and to_regprocedure('platform.get_device_session_challenge_context(uuid,uuid)') is not null and position('select challenge into v_challenge' in pg_get_functiondef(to_regprocedure('platform.get_device_session_challenge_context(uuid,uuid)'))) > 0 and position('select challenge.* into v_challenge' in pg_get_functiondef(to_regprocedure('platform.get_device_session_challenge_context(uuid,uuid)'))) = 0)::text",
+      "verificationSql": "select (position('select challenge.* into v_challenge' in pg_get_functiondef(to_regprocedure('platform.get_device_session_challenge_context(uuid,uuid)'))) > 0 and position('select challenge into v_challenge' in pg_get_functiondef(to_regprocedure('platform.get_device_session_challenge_context(uuid,uuid)'))) = 0)::text",
       "prerequisites": [
         "exact preceding controlled history tail",
         "explicit body-specific predecessor-state detector"
@@ -1086,8 +1086,8 @@
         "commitsExplicitly": true,
         "safeOuterAtomicWrap": false
       },
-      "preconditionSql": "select (to_regprocedure('platform.execute_device_operation(uuid,uuid,bytea,text,text,jsonb)') is not null and to_regprocedure('warehouse.list_item_master(uuid)') is null)::text",
-      "verificationSql": "select (to_regprocedure('warehouse.list_item_master(uuid)') is not null)::text",
+      "preconditionSql": "select (to_regprocedure('platform.execute_device_operation(uuid,uuid,bytea,text,text,jsonb)') is not null and to_regprocedure('warehouse.list_item_master(uuid)') is not null and to_regclass('warehouse.item_sku_sequence') is null and to_regclass('warehouse.unit_code_sequence') is null and to_regprocedure('warehouse_private.require_master_payload(jsonb,text[],text[])') is null)::text",
+      "verificationSql": "select (to_regclass('warehouse.item_sku_sequence') is not null and to_regclass('warehouse.unit_code_sequence') is not null and to_regprocedure('warehouse_private.require_master_payload(jsonb,text[],text[])') is not null)::text",
       "prerequisites": [
         "exact preceding controlled history tail",
         "explicit body-specific predecessor-state detector"
@@ -1152,8 +1152,8 @@
         "commitsExplicitly": true,
         "safeOuterAtomicWrap": false
       },
-      "preconditionSql": "select (to_regclass('warehouse.beneficiary_financial_entries') is not null and position('new.financial_total' in lower(pg_get_functiondef(to_regprocedure('warehouse_private.protect_posted_header()')))) = 0 and position('party_extension_version' in pg_get_functiondef(to_regprocedure('warehouse_private.protect_posted_header()'))) > 0)::text",
-      "verificationSql": "select (position('new.financial_total' in lower(pg_get_functiondef(to_regprocedure('warehouse_private.protect_posted_header()')))) > 0)::text",
+      "preconditionSql": "select (to_regclass('warehouse.beneficiary_financial_entries') is not null and position('and (to_jsonb(new)||jsonb_build_object(' in pg_get_functiondef(to_regprocedure('warehouse_private.protect_posted_header()'))) > 0 and position(E'to_jsonb(new)\\n         || jsonb_build_object(' in pg_get_functiondef(to_regprocedure('warehouse_private.protect_posted_header()'))) = 0)::text",
+      "verificationSql": "select (position(E'to_jsonb(new)\\n         || jsonb_build_object(' in pg_get_functiondef(to_regprocedure('warehouse_private.protect_posted_header()'))) > 0)::text",
       "prerequisites": [
         "exact preceding controlled history tail",
         "explicit body-specific predecessor-state detector"
@@ -1174,7 +1174,7 @@
         "commitsExplicitly": true,
         "safeOuterAtomicWrap": false
       },
-      "preconditionSql": "select (position('new.financial_total' in lower(pg_get_functiondef(to_regprocedure('warehouse_private.protect_posted_header()')))) > 0 and to_regprocedure('warehouse.cancel_document_draft(uuid,uuid,text,uuid,bigint,text)') is null)::text",
+      "preconditionSql": "select (position(E'to_jsonb(new)\\n         || jsonb_build_object(' in pg_get_functiondef(to_regprocedure('warehouse_private.protect_posted_header()'))) > 0 and to_regprocedure('warehouse.cancel_document_draft(uuid,uuid,text,uuid,bigint,text)') is null)::text",
       "verificationSql": "select (to_regprocedure('warehouse.cancel_document_draft(uuid,uuid,text,uuid,bigint,text)') is not null)::text",
       "prerequisites": [
         "exact preceding controlled history tail",
@@ -1196,8 +1196,8 @@
         "commitsExplicitly": true,
         "safeOuterAtomicWrap": false
       },
-      "preconditionSql": "select (to_regprocedure('warehouse.cancel_document_draft(uuid,uuid,text,uuid,bigint,text)') is not null and position('opening_balance' in pg_get_functiondef(to_regprocedure('warehouse_private.create_document_draft(uuid,uuid,text,jsonb)'))) = 0 and position('receipt' in pg_get_functiondef(to_regprocedure('warehouse_private.create_document_draft(uuid,uuid,text,jsonb)'))) > 0)::text",
-      "verificationSql": "select (position('opening_balance' in pg_get_functiondef(to_regprocedure('warehouse_private.create_document_draft(uuid,uuid,text,jsonb)'))) > 0)::text",
+      "preconditionSql": "select (to_regprocedure('warehouse.cancel_document_draft(uuid,uuid,text,uuid,bigint,text)') is not null and position('to_jsonb(coalesce(nullif(btrim(p_payload->>''reason''),'''')' in coalesce(pg_get_functiondef(to_regprocedure('warehouse_private.create_document_draft(uuid,uuid,text,jsonb)')),'')||coalesce(pg_get_functiondef(to_regprocedure('warehouse_private.create_document_draft_pre_unit_conversion(uuid,uuid,text,jsonb)')),'')) = 0)::text",
+      "verificationSql": "select (position('to_jsonb(coalesce(nullif(btrim(p_payload->>''reason''),'''')' in coalesce(pg_get_functiondef(to_regprocedure('warehouse_private.create_document_draft(uuid,uuid,text,jsonb)')),'')||coalesce(pg_get_functiondef(to_regprocedure('warehouse_private.create_document_draft_pre_unit_conversion(uuid,uuid,text,jsonb)')),'')) > 0)::text",
       "prerequisites": [
         "exact preceding controlled history tail",
         "explicit body-specific predecessor-state detector"
@@ -1240,8 +1240,8 @@
         "commitsExplicitly": true,
         "safeOuterAtomicWrap": false
       },
-      "preconditionSql": "select (to_regclass('warehouse.item_units') is not null and to_regprocedure('warehouse.upsert_item_units(uuid,uuid,uuid,bigint,jsonb)') is not null and position('item_row' in pg_get_functiondef(to_regprocedure('warehouse.upsert_item_units(uuid,uuid,uuid,bigint,jsonb)'))) = 0 and position('target_item' in pg_get_functiondef(to_regprocedure('warehouse.upsert_item_units(uuid,uuid,uuid,bigint,jsonb)'))) > 0)::text",
-      "verificationSql": "select (position('item_row' in pg_get_functiondef(to_regprocedure('warehouse.upsert_item_units(uuid,uuid,uuid,bigint,jsonb)'))) > 0)::text",
+      "preconditionSql": "select (to_regclass('warehouse.item_units') is not null and to_regprocedure('warehouse.upsert_item_units(uuid,uuid,uuid,bigint,jsonb)') is not null and position('; unit_id uuid;' in pg_get_functiondef(to_regprocedure('warehouse.upsert_item_units(uuid,uuid,uuid,bigint,jsonb)'))) > 0 and position('; target_unit_id uuid;' in pg_get_functiondef(to_regprocedure('warehouse.upsert_item_units(uuid,uuid,uuid,bigint,jsonb)'))) = 0)::text",
+      "verificationSql": "select (position('; target_unit_id uuid;' in pg_get_functiondef(to_regprocedure('warehouse.upsert_item_units(uuid,uuid,uuid,bigint,jsonb)'))) > 0 and position('; unit_id uuid;' in pg_get_functiondef(to_regprocedure('warehouse.upsert_item_units(uuid,uuid,uuid,bigint,jsonb)'))) = 0)::text",
       "prerequisites": [
         "exact preceding controlled history tail",
         "explicit body-specific predecessor-state detector"
@@ -1262,8 +1262,8 @@
         "commitsExplicitly": true,
         "safeOuterAtomicWrap": false
       },
-      "preconditionSql": "select (position('item_row' in pg_get_functiondef(to_regprocedure('warehouse.upsert_item_units(uuid,uuid,uuid,bigint,jsonb)'))) > 0 and position('unit_row' in pg_get_functiondef(to_regprocedure('warehouse.upsert_item_units(uuid,uuid,uuid,bigint,jsonb)'))) = 0 and position('unit_record' in pg_get_functiondef(to_regprocedure('warehouse.upsert_item_units(uuid,uuid,uuid,bigint,jsonb)'))) > 0)::text",
-      "verificationSql": "select (position('unit_row' in pg_get_functiondef(to_regprocedure('warehouse.upsert_item_units(uuid,uuid,uuid,bigint,jsonb)'))) > 0)::text",
+      "preconditionSql": "select (position('; target_unit_id uuid;' in pg_get_functiondef(to_regprocedure('warehouse.upsert_item_units(uuid,uuid,uuid,bigint,jsonb)'))) > 0 and position('; status text;' in pg_get_functiondef(to_regprocedure('warehouse.upsert_item_units(uuid,uuid,uuid,bigint,jsonb)'))) > 0 and position('; target_status text;' in pg_get_functiondef(to_regprocedure('warehouse.upsert_item_units(uuid,uuid,uuid,bigint,jsonb)'))) = 0)::text",
+      "verificationSql": "select (position('; target_status text;' in pg_get_functiondef(to_regprocedure('warehouse.upsert_item_units(uuid,uuid,uuid,bigint,jsonb)'))) > 0 and position('; status text;' in pg_get_functiondef(to_regprocedure('warehouse.upsert_item_units(uuid,uuid,uuid,bigint,jsonb)'))) = 0)::text",
       "prerequisites": [
         "exact preceding controlled history tail",
         "explicit body-specific predecessor-state detector"
@@ -1284,8 +1284,8 @@
         "commitsExplicitly": false,
         "safeOuterAtomicWrap": true
       },
-      "preconditionSql": "select (position('unit_row' in pg_get_functiondef(to_regprocedure('warehouse.upsert_item_units(uuid,uuid,uuid,bigint,jsonb)'))) > 0 and to_regprocedure('warehouse_private.canonicalize_unit_lines(jsonb)') is not null and position('selected_unit_cost' in pg_get_functiondef(to_regprocedure('warehouse_private.canonicalize_unit_lines(jsonb)'))) = 0 and position('conversion_factor' in pg_get_functiondef(to_regprocedure('warehouse_private.canonicalize_unit_lines(jsonb)'))) > 0)::text",
-      "verificationSql": "select (position('selected_unit_cost' in pg_get_functiondef(to_regprocedure('warehouse_private.canonicalize_unit_lines(jsonb)'))) > 0)::text",
+      "preconditionSql": "select (position('target_status text' in pg_get_functiondef(to_regprocedure('warehouse.upsert_item_units(uuid,uuid,uuid,bigint,jsonb)'))) > 0 and position('uses_inbound_cost boolean' in pg_get_functiondef(to_regprocedure('warehouse_private.canonicalize_unit_lines(jsonb)'))) = 0 and position('; document_id uuid;' in pg_get_functiondef(to_regprocedure('warehouse_private.create_document_draft(uuid,uuid,text,jsonb)'))) > 0 and position('; created_document_id uuid;' in pg_get_functiondef(to_regprocedure('warehouse_private.create_document_draft(uuid,uuid,text,jsonb)'))) = 0)::text",
+      "verificationSql": "select (position('uses_inbound_cost boolean' in pg_get_functiondef(to_regprocedure('warehouse_private.canonicalize_unit_lines(jsonb)'))) > 0 and position('created_document_id uuid' in pg_get_functiondef(to_regprocedure('warehouse_private.create_document_draft(uuid,uuid,text,jsonb)'))) > 0)::text",
       "prerequisites": [
         "exact preceding controlled history tail",
         "explicit body-specific predecessor-state detector"
@@ -1306,8 +1306,8 @@
         "commitsExplicitly": false,
         "safeOuterAtomicWrap": true
       },
-      "preconditionSql": "select (position('selected_unit_cost' in pg_get_functiondef(to_regprocedure('warehouse_private.canonicalize_unit_lines(jsonb)'))) > 0 and position('selectedUnitId' in pg_get_functiondef(to_regprocedure('warehouse.create_issue_draft(uuid,uuid,jsonb)'))) = 0 and position('financial_total' in pg_get_functiondef(to_regprocedure('warehouse.create_issue_draft(uuid,uuid,jsonb)'))) > 0)::text",
-      "verificationSql": "select (position('selectedUnitId' in pg_get_functiondef(to_regprocedure('warehouse.create_issue_draft(uuid,uuid,jsonb)'))) > 0)::text",
+      "preconditionSql": "select (position('uses_inbound_cost boolean' in pg_get_functiondef(to_regprocedure('warehouse_private.canonicalize_unit_lines(jsonb)'))) > 0 and to_regprocedure('warehouse.create_issue_draft(uuid,uuid,jsonb)') is not null and position('selected_actual numeric' in pg_get_functiondef(to_regprocedure('warehouse.create_issue_draft(uuid,uuid,jsonb)'))) = 0)::text",
+      "verificationSql": "select (position('selected_actual numeric' in pg_get_functiondef(to_regprocedure('warehouse.create_issue_draft(uuid,uuid,jsonb)'))) > 0 and position('selected_reference numeric' in pg_get_functiondef(to_regprocedure('warehouse.create_issue_draft(uuid,uuid,jsonb)'))) > 0)::text",
       "prerequisites": [
         "exact preceding controlled history tail",
         "explicit body-specific predecessor-state detector"
@@ -1328,7 +1328,7 @@
         "commitsExplicitly": false,
         "safeOuterAtomicWrap": true
       },
-      "preconditionSql": "select (position('selectedUnitId' in pg_get_functiondef(to_regprocedure('warehouse.create_issue_draft(uuid,uuid,jsonb)'))) > 0 and position('is_system_owner' in pg_get_functiondef(to_regprocedure('warehouse.decide_adjustment_approval(uuid,uuid,uuid,bigint,text,text)'))) = 0 and position('requester_id' in pg_get_functiondef(to_regprocedure('warehouse.decide_adjustment_approval(uuid,uuid,uuid,bigint,text,text)'))) > 0)::text",
+      "preconditionSql": "select (position('selected_actual numeric' in pg_get_functiondef(to_regprocedure('warehouse.create_issue_draft(uuid,uuid,jsonb)'))) > 0 and position('if actor=d.creator_user_id then raise exception ''WAREHOUSE_CREATOR_SELF_APPROVAL_FORBIDDEN''' in pg_get_functiondef(to_regprocedure('warehouse.decide_adjustment_approval(uuid,uuid,uuid,bigint,text,text)'))) > 0 and position('is_system_owner' in pg_get_functiondef(to_regprocedure('warehouse.decide_adjustment_approval(uuid,uuid,uuid,bigint,text,text)'))) = 0)::text",
       "verificationSql": "select (position('is_system_owner' in pg_get_functiondef(to_regprocedure('warehouse.decide_adjustment_approval(uuid,uuid,uuid,bigint,text,text)'))) > 0)::text",
       "prerequisites": [
         "exact preceding controlled history tail",
@@ -1350,8 +1350,8 @@
         "commitsExplicitly": false,
         "safeOuterAtomicWrap": true
       },
-      "preconditionSql": "select (position('is_system_owner' in pg_get_functiondef(to_regprocedure('warehouse.decide_adjustment_approval(uuid,uuid,uuid,bigint,text,text)'))) > 0 and not exists(select 1 from pg_constraint where conrelid=to_regclass('warehouse.adjustment_approvals') and pg_get_constraintdef(oid) like '%approved_by%') and exists(select 1 from pg_constraint where conrelid=to_regclass('warehouse.adjustment_approvals') and pg_get_constraintdef(oid) like '%decision%'))::text",
-      "verificationSql": "select (exists(select 1 from pg_constraint where conrelid=to_regclass('warehouse.adjustment_approvals') and pg_get_constraintdef(oid) like '%approved_by%'))::text",
+      "preconditionSql": "select (position('is_system_owner' in pg_get_functiondef(to_regprocedure('warehouse.decide_adjustment_approval(uuid,uuid,uuid,bigint,text,text)'))) > 0 and not exists(select 1 from pg_constraint where conrelid=to_regclass('warehouse.approval_records') and conname='approval_records_check' and pg_get_constraintdef(oid) like '%warehouse_approval_policy_v2_system_owner_self_approval%') and exists(select 1 from pg_constraint where conrelid=to_regclass('warehouse.approval_records') and conname='approval_records_check'))::text",
+      "verificationSql": "select (exists(select 1 from pg_constraint where conrelid=to_regclass('warehouse.approval_records') and conname='approval_records_check' and pg_get_constraintdef(oid) like '%warehouse_approval_policy_v2_system_owner_self_approval%') and exists(select 1 from pg_constraint where conrelid=to_regclass('warehouse.approval_records') and conname='approval_records_policy_version_check' and pg_get_constraintdef(oid) like '%warehouse_approval_policy_v2_system_owner_self_approval%'))::text",
       "prerequisites": [
         "exact preceding controlled history tail",
         "explicit body-specific predecessor-state detector"
@@ -1372,7 +1372,7 @@
         "commitsExplicitly": true,
         "safeOuterAtomicWrap": false
       },
-      "preconditionSql": "select (exists(select 1 from pg_constraint where conrelid=to_regclass('warehouse.adjustment_approvals') and pg_get_constraintdef(oid) like '%approved_by%') and to_regprocedure('platform_private.reconcile_system_user_access_profile(public.system_user_access)') is null)::text",
+      "preconditionSql": "select (exists(select 1 from pg_constraint where conrelid=to_regclass('warehouse.approval_records') and conname='approval_records_check' and pg_get_constraintdef(oid) like '%warehouse_approval_policy_v2_system_owner_self_approval%') and to_regprocedure('platform_private.reconcile_system_user_access_profile(public.system_user_access)') is null)::text",
       "verificationSql": "select (to_regprocedure('platform_private.reconcile_system_user_access_profile(public.system_user_access)') is not null)::text",
       "prerequisites": [
         "exact preceding controlled history tail",
@@ -1416,8 +1416,8 @@
         "commitsExplicitly": true,
         "safeOuterAtomicWrap": false
       },
-      "preconditionSql": "select (to_regprocedure('platform_private.reconcile_system_owner_platform_owner(uuid)') is not null and exists(select 1 from platform.roles where domain='inventory' and code in ('inventory_manager','inventory_operator','viewer') and is_assignable) and position('validated_phase1c_device_authorization' in pg_get_functiondef(to_regprocedure('platform_private.has_permission_for(uuid,text,text,uuid)'))) > 0)::text",
-      "verificationSql": "select (not exists(select 1 from platform.roles where domain='inventory' and code in ('inventory_manager','inventory_operator','viewer') and is_assignable))::text",
+      "preconditionSql": "select (to_regprocedure('platform_private.reconcile_system_owner_platform_owner(uuid)') is not null and not exists(select 1 from platform.roles where domain='inventory' and code in ('inventory_manager','inventory_operator','viewer')) and position('p_scope_type in (''platform'',''inventory'')' in pg_get_functiondef(to_regprocedure('platform_private.has_permission_for(uuid,text,text,uuid)'))) > 0 and position('p_scope_type=''platform''' in pg_get_functiondef(to_regprocedure('platform_private.has_permission_for(uuid,text,text,uuid)'))) = 0)::text",
+      "verificationSql": "select ((select count(*) from platform.roles where domain='inventory' and code in ('inventory_manager','inventory_operator','viewer') and not is_assignable)=3 and position('p_scope_type=''platform''' in pg_get_functiondef(to_regprocedure('platform_private.has_permission_for(uuid,text,text,uuid)'))) > 0 and position('p_scope_type in (''platform'',''inventory'')' in pg_get_functiondef(to_regprocedure('platform_private.has_permission_for(uuid,text,text,uuid)'))) = 0)::text",
       "prerequisites": [
         "exact preceding controlled history tail",
         "explicit body-specific predecessor-state detector"
