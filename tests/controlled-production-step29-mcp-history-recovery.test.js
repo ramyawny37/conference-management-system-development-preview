@@ -2,6 +2,7 @@
 const test=require('node:test'),assert=require('node:assert/strict');
 const executor=require('../tools/production-release/controlled-production-executor.cjs');
 const manifest=require('../tools/production-release/controlled-production-manifest.json');
+const fs=require('node:fs');
 const baseline=()=>[{version:manifest.baseline.version,name:manifest.baseline.name,statements:['existing'],created_by:null,idempotency_key:null,rollback:null}];
 const prefix=count=>baseline().concat(manifest.entries.slice(0,count).map(executor.expectedHistory));
 const artifact=()=>structuredClone(executor.acceptedMcpStep29Artifact().row);
@@ -29,10 +30,20 @@ test('Step 30 becomes the exact next NOT_APPLIED entry after recovery',()=>{
 });
 
 test('artifact is exact, one-time, sequence-bound, and cannot hide other drift',()=>{
-  for(const [key,value] of [['name','wrong'],['created_by','wrong'],['idempotency_key','wrong'],['rollback','wrong'],['statements',['wrong']]]){const row=artifact();row[key]=value;assert.throws(()=>executor.assertHistoryTail(prefix(28).concat(row)),/UNEXPECTED_PRODUCTION_HISTORY_DRIFT/);}
+  const expected=artifact();
+  assert.equal(expected.statement_length,17399);
+  assert.equal(expected.statement_sha256,'2dd7b67dbe6b48c0a60adeea0d96fae493cfb031e545d255c70708d940ab6b00');
+  assert.notEqual(expected.statement_sha256,manifest.entries[28].sha256);
+  for(const [key,value] of [['name','wrong'],['created_by','wrong'],['idempotency_key','wrong'],['rollback','wrong'],['statement_count',2],['statement_length',17400],['statement_sha256','3dd7b67dbe6b48c0a60adeea0d96fae493cfb031e545d255c70708d940ab6b00']]){const row=artifact();row[key]=value;assert.throws(()=>executor.assertHistoryTail(prefix(28).concat(row)),/UNEXPECTED_PRODUCTION_HISTORY_DRIFT/);}
+  const canonical=fs.readFileSync(manifest.entries[28].filename,'utf8');
+  assert.throws(()=>executor.assertHistoryTail(prefix(28).concat({...artifact(),statements:[canonical]})),/UNEXPECTED_PRODUCTION_HISTORY_DRIFT/);
+  const sameLength='x'.repeat(17399);
+  assert.throws(()=>executor.assertHistoryTail(prefix(28).concat({...artifact(),statements:[sameLength]})),/UNEXPECTED_PRODUCTION_HISTORY_DRIFT/);
+  assert.throws(()=>executor.assertHistoryTail(prefix(28).concat({...artifact(),statements:[`${sameLength.slice(0,-1)}y`]})),/UNEXPECTED_PRODUCTION_HISTORY_DRIFT/);
   assert.throws(()=>executor.assertHistoryTail(prefix(27).concat(artifact())),/MCP_STEP29_ARTIFACT_SEQUENCE_MISMATCH/);
   assert.throws(()=>executor.assertHistoryTail(prefix(28).concat(artifact(),artifact())),/DUPLICATE_ACCEPTED_HISTORY_ARTIFACT/);
   assert.throws(()=>executor.assertHistoryTail(prefix(28).concat({...artifact(),version:'20260908104229'})),/UNEXPECTED_PRODUCTION_HISTORY_DRIFT/);
+  assert.throws(()=>executor.assertHistoryTail(prefix(28).concat({...artifact(),version:'20260908104229',name:'unrelated'})),/UNEXPECTED_PRODUCTION_HISTORY_DRIFT/);
 });
 
 test('strict final history accepts all controlled rows plus the preserved exact artifact',()=>{
