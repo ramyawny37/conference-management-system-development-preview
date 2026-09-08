@@ -16,7 +16,7 @@ const appVersion='3.4.0';
 const shellRevision='development-3-4-0-platform-foundation-v1';
 const previousCacheRevision='development-3-4-0-platform-round3g3-v1';
 const cacheRevision='development-3-4-0-adjustment-conversion-ux-v1';
-const startupTransportRevision='warehouse-original-items-secure-restoration-v1';
+const startupTransportRevision='project-device-storage-isolation-v1';
 const moduleRoutingRevision='warehouse-original-items-secure-restoration-v1';
 const priorAuthorizationCacheRevision='runtime-authorization-phase1-v1';
 const productionCacheRevision='production-integrated-3-3-0-main-6d0c1e1-develop-80653ca-v1';
@@ -213,6 +213,11 @@ assert(worker.includes("'./script.js?rev="+platformShellScriptRevision+"'"));
 [['js/platform-integration.js','cold-refresh-startup-ordering-v1'],
  ['js/supabase/device-session.js',startupTransportRevision]].forEach(([asset,revision])=>{
   const versioned=asset+'?rev='+revision;
+  assert(index.includes(versioned),'index missing '+versioned);
+  assert(worker.includes("'./"+versioned+"'"),'app shell missing '+versioned);
+});
+['js/supabase/device-storage-namespace.js','js/supabase/device-identity.js','js/supabase/device-enrollment.js'].forEach(asset=>{
+  const versioned=asset+'?rev='+startupTransportRevision;
   assert(index.includes(versioned),'index missing '+versioned);
   assert(worker.includes("'./"+versioned+"'"),'app shell missing '+versioned);
 });

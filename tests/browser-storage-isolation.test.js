@@ -82,13 +82,15 @@ const idSandbox={
   localStorage:idStorage,
   SupabaseAuth:{getSession:()=>({user:{id:'55555555-5555-4555-8555-555555555555'}})},
   crypto:{randomUUID:()=> '44444444-4444-4444-8444-444444444444'},
-  navigator:{platform:'test'},JSON,Object,String,Date,Uint8Array,Array
+  navigator:{platform:'test'},URL,JSON,Object,String,Date,Uint8Array,Array
 };
 idSandbox.window=idSandbox;
+idSandbox.SUPABASE_RUNTIME_CONFIG={url:'https://gppwltrifgfxrkzvvxoe.supabase.co'};
+vm.runInNewContext(read('js/supabase/device-storage-namespace.js'),idSandbox);
 vm.runInNewContext(read('js/supabase/device-identity.js'),idSandbox);
 assert.strictEqual(idSandbox.SupabaseDeviceIdentity.getOrCreate().id,
   '44444444-4444-4444-8444-444444444444');
-assert.ok(idStorage.values[prefix+'device-identity:55555555-5555-4555-8555-555555555555']);
+assert.ok(idStorage.values['device-identity:gppwltrifgfxrkzvvxoe:55555555-5555-4555-8555-555555555555']);
 assert.ok(idStorage.values.conference_manager_device_identity.includes(
   '33333333-3333-4333-8333-333333333333'
 ));

@@ -40,6 +40,7 @@ function runtime(beginFlights,platformResponse){
     exportKey(){return Promise.reject(new Error('non-exportable'));},
     sign(){return Promise.resolve(new Uint8Array([1,2,3]).buffer);}
   }},SupabaseClientLayer:{getClient(){return client;}},
+  PlatformDeviceStorageNamespace:{databaseName(){return 'platform-device-ownership-v1:test-project';}},
   SupabaseDeviceIdentity:{getOrCreate(){return {id:'device-1'};}},
   SupabaseAuth:{initialize(){return Promise.resolve({authenticated:true,user:{id:'user-1'}});}},
   document:{dispatchEvent(){}},setTimeout(){return 1;},clearTimeout(){}};

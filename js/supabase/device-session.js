@@ -1,12 +1,12 @@
 (function(global){
   'use strict';
-  var DATABASE='platform-device-ownership-v1',STORE='keys';
+  var STORE='keys';
   var PURPOSE='PLATFORM_DEVICE_SESSION_ESTABLISH';
   var ORIGIN='https://ramyawny37.github.io';
   var memorySession=null,expiryTimer=null,ensureFlight=null;
 
   function encoded(value){return btoa(String.fromCharCode.apply(null,new Uint8Array(value))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');}
-  function database(){return new Promise(function(resolve,reject){var opening=indexedDB.open(DATABASE,1);opening.onsuccess=function(){resolve(opening.result);};opening.onerror=function(){reject(opening.error);};});}
+  function database(){var namespace=global.PlatformDeviceStorageNamespace;if(!namespace) return Promise.reject(new Error('DEVICE_STORAGE_NAMESPACE_REQUIRED'));return new Promise(function(resolve,reject){var opening=indexedDB.open(namespace.databaseName(),1);opening.onsuccess=function(){resolve(opening.result);};opening.onerror=function(){reject(opening.error);};});}
   function loadKey(deviceId){return database().then(function(db){return new Promise(function(resolve,reject){var tx=db.transaction(STORE,'readonly'),request=tx.objectStore(STORE).getAll();request.onsuccess=function(){db.close();var rows=Array.isArray(request.result)?request.result:[];resolve(rows.find(function(row){return row&&row.state==='active'&&row.deviceId===deviceId;})||null);};request.onerror=function(){db.close();reject(request.error);};});});}
   function verifyNonExportable(key){return global.crypto.subtle.exportKey('jwk',key).then(function(){throw new Error('PRIVATE_KEY_EXPORT_SUCCEEDED');},function(){return true;});}
   function safeCode(value){var code=value&&value.error&&value.error.code;return typeof code==='string'&&/^[A-Z][A-Z0-9_]{0,95}$/.test(code)?code:null;}

@@ -1,8 +1,6 @@
 (function(global){
   'use strict';
 
-  var namespace=global.BrowserStorageNamespace||{key:function(name){return name;}};
-  var LEGACY_STORAGE_KEY=namespace.key('conference_manager_device_identity');
   var memoryIdentities={};
 
   function createUuid(){
@@ -22,7 +20,8 @@
     var auth=options.auth||global.SupabaseAuth,session=auth&&auth.getSession&&auth.getSession(),state=auth&&auth.getState&&auth.getState(),value=session&&session.user&&session.user.id||state&&state.user&&state.user.id;
     return isUuid(value)?String(value):'';
   }
-  function storageKey(value){return namespace.key('device-identity:'+String(value||''));}
+  function storageNamespace(){return global.PlatformDeviceStorageNamespace;}
+  function storageKey(value){var namespace=storageNamespace();if(!namespace)throw new Error('DEVICE_STORAGE_NAMESPACE_REQUIRED');return namespace.identityKey(value);}
   function createIdentity(options){options=options&&typeof options==='object'?options:{};return {id:createUuid(),deviceName:String(options.deviceName||'').trim(),platform:String(options.platform||(global.navigator&&global.navigator.platform)||'').trim(),createdAt:new Date().toISOString()};}
   function getStorage(options){if(options&&options.storage)return options.storage;try{return global.localStorage||null;}catch(error){return null;}}
   function read(key,options){var storage=getStorage(options);if(!storage)return null;try{var value=JSON.parse(storage.getItem(key)||'null');return isValidIdentity(value)?value:null;}catch(error){return null;}}
@@ -38,13 +37,15 @@
     if(memoryIdentities[currentUserId])return memoryIdentities[currentUserId];
     var existing=read(storageKey(currentUserId),options);
     if(existing){memoryIdentities[currentUserId]=existing;return existing;}
-    if(read(LEGACY_STORAGE_KEY,options)&&options.legacyOwnershipResolved!==true)return null;
+    var namespace=storageNamespace(),legacy=namespace&&namespace.canAdoptLegacy()?read(namespace.legacyIdentityKey(),options):null;
+    if(legacy&&options.legacyOwnershipResolved!==true)return null;
     var identity=createIdentity(options);memoryIdentities[currentUserId]=identity;write(storageKey(currentUserId),identity,options);return identity;
   }
-  function getLegacyCandidate(options){return read(LEGACY_STORAGE_KEY,options);}
+  function getLegacyCandidate(options){var namespace=storageNamespace();return namespace&&namespace.canAdoptLegacy()?read(namespace.legacyIdentityKey(),options):null;}
   function adoptLegacyForCurrentUser(identity,options){
     options=options&&typeof options==='object'?options:{};var currentUserId=userId(options);
-    if(!currentUserId||!isValidIdentity(identity))return {success:false,reason:'DEVICE_IDENTITY_ADOPTION_INVALID'};
+    var namespace=storageNamespace();
+    if(!namespace||!namespace.canAdoptLegacy()||!currentUserId||!isValidIdentity(identity))return {success:false,reason:'DEVICE_IDENTITY_ADOPTION_INVALID'};
     var existing=read(storageKey(currentUserId),options);
     if(existing){memoryIdentities[currentUserId]=existing;return {success:true,identity:existing,status:'preserved'};}
     memoryIdentities[currentUserId]=identity;
