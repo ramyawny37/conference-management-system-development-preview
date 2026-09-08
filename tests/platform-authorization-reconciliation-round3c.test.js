@@ -31,7 +31,8 @@ test('current System Access client reads the public access and role foundations'
 });
 
 test('current account administration remains legacy System Access administration',()=>{
-  assert.match(accountAdministration,/\.rpc\('device_guarded_manage_system_user'/);
+  assert.match(accountAdministration,/invokeProtected\('device_guarded_manage_system_user'/);
+  assert.doesNotMatch(accountAdministration,/\.rpc\s*\(/);
   assert.match(accountAdministration,/setConferenceCreationPermission:function/);
   assert.match(accountAdministration,/mutate\('set_conference_creation_permission'/);
   assert.match(accountAdministrationSql,/create or replace function public\.device_guarded_manage_system_user/i);

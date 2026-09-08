@@ -18,6 +18,7 @@
     return {clientLayer:options.clientLayer||global.SupabaseClientLayer,
       auth:options.auth||global.SupabaseAuth,
       deviceIdentity:options.deviceIdentity||global.SupabaseDeviceIdentity,
+      deviceSession:options.deviceSession||global.PlatformDeviceSession,
       organizations:options.organizations||global.OrganizationAdministrationService,
       organizationManagement:options.organizationManagement||global.OrganizationManagementService,
       devices:options.devices||global.DeviceAuthorizationAdministrationService};
@@ -29,24 +30,20 @@
       session=d.auth&&d.auth.getSession();
       identity=d.deviceIdentity&&d.deviceIdentity.getOrCreate();
     }catch(error){return {error:'UNAVAILABLE'};}
-    if(!client||typeof client.rpc!=='function'||
+    if(!client||!d.deviceSession||typeof d.deviceSession.invokeProtected!=='function'||
       !isUuid(String(session&&session.user&&session.user.id||''))||
       !isUuid(String(identity&&identity.id||''))){
       return {error:'UNAVAILABLE'};
     }
     return {client:client,actorUserId:String(session.user.id),
-      actorDeviceId:String(identity.id),organizations:d.organizations,
+      actorDeviceId:String(identity.id),deviceSession:d.deviceSession,organizations:d.organizations,
       organizationManagement:d.organizationManagement,devices:d.devices};
   }
   function rpc(ctx,name,args){
-    return Promise.resolve(ctx.client.rpc(name,args)).then(function(response){
-      if(response&&response.error){
-        return result(false,'rpc_error',null,{
-          code:String(response.error.code||'READ_FAILED')});
-      }
-      return result(true,'received',response&&response.data);
-    }).catch(function(){
-      return result(false,'network_error',null,{code:'NETWORK_ERROR'});
+    return Promise.resolve(ctx.deviceSession.invokeProtected(name,args||{})).then(function(data){
+      return result(true,'received',data);
+    }).catch(function(error){
+      return result(false,'rpc_error',null,{code:String(error&&error.code||error&&error.message||'READ_FAILED')});
     });
   }
   function normalizeUser(row){
@@ -82,9 +79,7 @@
     if(actorCapabilities&&actorCapabilitiesActorId===ctx.actorUserId)return Promise.resolve(result(true,'loaded',
       {capabilities:actorCapabilities}));
     if(actorCapabilitiesFlight)return actorCapabilitiesFlight;
-    actorCapabilitiesFlight=rpc(ctx,'get_user_management_actor_capabilities',{
-      p_actor_device_id:ctx.actorDeviceId
-    }).then(function(response){
+    actorCapabilitiesFlight=rpc(ctx,'get_user_management_actor_capabilities',{}).then(function(response){
       if(!response.ok||!response.data||response.data.status!=='success')return response;
       actorCapabilities=normalizeCapabilities(response.data);
       actorCapabilitiesActorId=ctx.actorUserId;
@@ -102,7 +97,6 @@
       return Promise.resolve(result(false,'invalid_input'));
     }
     return rpc(ctx,'search_user_management_users',{
-      p_actor_device_id:ctx.actorDeviceId,
       p_query:String(input.query||''),
       p_account_status:status,p_limit:50
     }).then(function(response){
@@ -147,7 +141,7 @@
     if(!isUuid(targetUserId))return Promise.resolve(result(false,'invalid_input'));
     if(ctx.error)return Promise.resolve(result(false,'unavailable'));
     return rpc(ctx,'get_user_management_overview',{
-      p_actor_device_id:ctx.actorDeviceId,p_target_user_id:targetUserId
+      p_target_user_id:targetUserId
     }).then(function(response){
       if(!response.ok)return response;
       var view=normalizeOverview(response.data,targetUserId);
@@ -157,7 +151,7 @@
         view.devices={status:'hidden',data:{items:[]}};
       }else view.devices.status='loading';
       var devicesRead=view.capabilities.canViewDevices?rpc(ctx,'get_user_management_devices',{
-        p_actor_device_id:ctx.actorDeviceId,p_target_user_id:targetUserId
+        p_target_user_id:targetUserId
       }):Promise.resolve(result(true,'received',{status:'success',devices:[]}));
       return devicesRead.then(function(devices){
         if(!view.capabilities.canViewDevices){
@@ -259,7 +253,7 @@
     if(!isUuid(targetUserId))return Promise.resolve(result(false,'invalid_input'));
     if(ctx.error)return Promise.resolve(result(false,'unavailable'));
     return rpc(ctx,'get_user_management_account',{
-      p_actor_device_id:ctx.actorDeviceId,p_target_user_id:targetUserId
+      p_target_user_id:targetUserId
     }).then(function(response){
       var data=response.data||{},account=data.account;
       if(!response.ok||data.status!=='success'||!account||

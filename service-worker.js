@@ -7,7 +7,7 @@ const CACHE_NAMESPACE = IS_DEVELOPMENT
   : '';
 const CACHE_PREFIX = CACHE_NAMESPACE + 'conference-manager-core-';
 const CACHE_REVISION = IS_DEVELOPMENT
-  ? 'development-3-4-0-platform-owner-administration-context-v1'
+  ? 'development-3-4-0-admin-session-boundary-v1'
   : 'production-integrated-3-3-0-main-6d0c1e1-develop-80653ca-v1';
 const CACHE_NAME = CACHE_PREFIX + 'v' + APP_VERSION + '-' + CACHE_REVISION;
 const CORE_ASSETS = [
@@ -45,10 +45,10 @@ const CORE_ASSETS = [
   './js/sync/organization-administration-utils.js',
   './js/sync/access-diagnostics-ui.js?rev=platform-first-login-coordinator-v1',
   './js/sync/organization-membership-operation-repository.js?rev=organization-membership-retention-safe-v1',
-  './js/supabase/organization-administration-service.js?rev=organization-membership-manual-retry-v1',
+  './js/supabase/organization-administration-service.js?rev=admin-session-boundary-v1',
   './js/sync/organization-members-ui.js?rev=organization-membership-manual-retry-v1',
   './js/sync/organization-management-attempt-store.js?rev=organization-management-v1',
-  './js/supabase/organization-management-service.js?rev=organization-archive-restore-v1',
+  './js/supabase/organization-management-service.js?rev=admin-session-boundary-v1',
   './js/sync/organization-management-ui.js?rev=startup-device-admin-lifecycle-v1',
   './js/supabase/device-identity.js?rev=project-device-storage-isolation-v1',
   './js/supabase/device-enrollment.js?rev=pending-native-device-context-v1',
@@ -92,8 +92,8 @@ const CORE_ASSETS = [
   './js/supabase/legacy-conference-organization-assignment-service.js?rev=legacy-conference-preflight-v2',
   './js/sync/legacy-conference-organization-assignment-ui.js?rev=legacy-conference-preflight-v2',
   './js/sync/system-access-administration-attempt-store.js?rev=user-account-administration-v1',
-  './js/supabase/account-administration-service.js?rev=user-account-administration-v1',
-  './js/sync/user-management-read-service.js?rev=organization-archive-restore-v1',
+  './js/supabase/account-administration-service.js?rev=admin-session-boundary-v1',
+  './js/sync/user-management-read-service.js?rev=admin-session-boundary-v1',
   './js/sync/user-management-ui.js?rev=organization-membership-operation-key-v1',
   './js/sync/module-permission-administration-service.js?rev=platform-round3g3-v1',
   './js/sync/module-permission-administration-ui.js?rev=platform-round3g3-v1',

@@ -49,5 +49,5 @@ test('navigation assets and Development cache use one coherent revision',()=>{
   assert.ok(worker.includes('./js/warehouse/remaining-operations.js?rev='+operationRevision));
   assert.ok(index.includes('js/warehouse/workspace.js?rev='+workspaceRevision));
   assert.ok(worker.includes('./js/warehouse/workspace.js?rev='+workspaceRevision));
-  assert.ok(worker.includes('development-3-4-0-platform-owner-administration-context-v1'));
+  assert.ok(worker.includes('development-3-4-0-admin-session-boundary-v1'));
 });

@@ -15,7 +15,7 @@ const mobileRoomInputRevision='anchored-glass-person-picker-v5';
 const appVersion='3.4.0';
 const shellRevision='development-3-4-0-platform-foundation-v1';
 const previousCacheRevision='development-3-4-0-platform-round3g3-v1';
-const cacheRevision='development-3-4-0-platform-owner-administration-context-v1';
+const cacheRevision='development-3-4-0-admin-session-boundary-v1';
 const startupTransportRevision='project-device-storage-isolation-v1';
 const moduleRoutingRevision='warehouse-original-items-secure-restoration-v1';
 const priorAuthorizationCacheRevision='runtime-authorization-phase1-v1';
@@ -45,7 +45,7 @@ const sharedTemplateReadOnlyRevision='shared-house-template-read-only-v1';
 const bootstrapRevision='first-owner-bootstrap-hardening-v1';
 const userManagementUiRevision=next;
 const userManagementStyleRevision='item-unit-dialog-v1';
-const userManagementReadRevision='organization-archive-restore-v1';
+const userManagementReadRevision='admin-session-boundary-v1';
 const conferenceRoleRevision=privacyRevision;
 const houseTemplateRevision='template-floor-conference-sync-v1';
 const pwaAssetRevision=next;
@@ -139,7 +139,7 @@ assert(worker.includes("'./js/sync/orphaned-conference-cleanup.js?rev=orphaned-l
 });
 {
   const versioned='js/supabase/organization-administration-service.js?rev='+
-    'organization-membership-manual-retry-v1';
+    'admin-session-boundary-v1';
   assert(index.includes(versioned),'index missing '+versioned);
   assert(worker.includes("'./"+versioned+"'"),'app shell missing '+versioned);
 }
@@ -306,7 +306,7 @@ assert(index.includes(multiDeviceAsset),'index missing '+multiDeviceAsset);
 assert(worker.includes("'./"+multiDeviceAsset+"'"),'app shell missing '+multiDeviceAsset);
 [
   ['js/sync/organization-management-attempt-store.js','organization-management-v1'],
-  ['js/supabase/organization-management-service.js','organization-archive-restore-v1'],
+  ['js/supabase/organization-management-service.js','admin-session-boundary-v1'],
   ['js/sync/organization-management-ui.js','startup-device-admin-lifecycle-v1']
 ].forEach(([asset,revision])=>{const versioned=asset+'?rev='+revision;assert(index.includes(versioned));assert(worker.includes("'./"+versioned+"'"));});
 assert(index.includes('conference-edit-lock-manager.js?rev='+appAssetRevision));

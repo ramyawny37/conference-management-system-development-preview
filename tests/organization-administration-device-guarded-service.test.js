@@ -1,1 +1,13 @@
-'use strict';var assert=require('assert'),fs=require('fs'),path=require('path');var source=fs.readFileSync(path.resolve(__dirname,'../js/supabase/organization-administration-service.js'),'utf8');['device_guarded_list_my_organizations','device_guarded_get_my_organization_access','device_guarded_list_organization_members','device_guarded_lookup_organization_candidate_by_email','device_guarded_add_organization_member','device_guarded_remove_organization_member','device_guarded_change_organization_role'].forEach(function(name){assert.ok(source.includes(name),'missing '+name);});assert.match(source,/deviceGuarded/);assert.match(source,/p_actor_device_id/);assert.match(source,/SupabaseDeviceIdentity/);console.log('organization administration guarded service tests: passed');
+'use strict';
+const assert=require('assert');
+const fs=require('fs');
+const path=require('path');
+const source=fs.readFileSync(path.resolve(__dirname,'../js/supabase/organization-administration-service.js'),'utf8');
+for(const name of ['device_guarded_list_my_organizations','device_guarded_get_my_organization_access','device_guarded_list_organization_members','device_guarded_lookup_organization_candidate_by_email','device_guarded_get_organization_membership_operation','device_guarded_add_organization_member','device_guarded_remove_organization_member','device_guarded_change_organization_role'])assert.ok(source.includes(name),'missing '+name);
+assert.match(source,/deviceGuarded/);
+assert.match(source,/PlatformDeviceSession/);
+assert.match(source,/invokeProtected/);
+assert.doesNotMatch(source,/p_actor_device_id\s*:/);
+assert.doesNotMatch(source,/\.rpc\s*\(/);
+assert.match(source,/SupabaseDeviceIdentity/);
+console.log('organization administration guarded service tests: passed');

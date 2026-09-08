@@ -88,6 +88,6 @@ var activeSource=jsFiles(path.join(root,'js')).map(function(file){return read(pa
 });
 assert.match(activeSource,/\.rpc\(['"]device_guarded_apply_conference_snapshot['"]/);
 assert.match(activeSource,/\.rpc\(['"]device_guarded_resolve_sync_conflict['"]/);
-assert.match(activeSource,/\.rpc\(['"]device_guarded_manage_system_user['"]/);
+assert.match(activeSource,/invokeProtected\(['"]device_guarded_manage_system_user['"]/);
 
 console.log('snapshot/sync and account authorization hardening tests: passed');

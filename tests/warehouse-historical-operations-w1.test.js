@@ -79,7 +79,7 @@ test('responsive structure and coherent active runtime cache revision are explic
   assert.ok(index.includes('js/warehouse/historical-operations.js?rev='+historicalRevision));
   assert.ok(index.includes('js/warehouse/workspace.js?rev='+activeRevision));
   assert.ok(index.includes('style.css?rev=item-unit-dialog-v1'));
-  assert.ok(worker.includes('development-3-4-0-platform-owner-administration-context-v1'));
+  assert.ok(worker.includes('development-3-4-0-admin-session-boundary-v1'));
   assert.ok(worker.includes("./js/warehouse/historical-operations.js?rev="+historicalRevision));
   assert.ok(worker.includes("./js/warehouse/workspace.js?rev="+activeRevision));
   assert.ok(worker.includes("./style.css?rev=item-unit-dialog-v1"));

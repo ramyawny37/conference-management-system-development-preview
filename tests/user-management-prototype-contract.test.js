@@ -14,7 +14,7 @@ assert.ok(source.includes('initialize'));
 assert.doesNotMatch(source,/prototype-user-|example\.test|var\s+USERS/);
 assert.doesNotMatch(source,/\.rpc\s*\(|\.from\s*\(|\.insert\s*\(|\.update\s*\(|\.delete\s*\(/);
 var asset='js/sync/user-management-ui.js?rev=organization-membership-operation-key-v1';
-var serviceAsset='js/sync/user-management-read-service.js?rev=organization-archive-restore-v1';
+var serviceAsset='js/sync/user-management-read-service.js?rev=admin-session-boundary-v1';
 assert.ok(index.includes('src="'+asset+'"'));assert.ok(worker.includes("'./"+asset+"'"));
 assert.ok(index.includes('src="'+serviceAsset+'"'));assert.ok(worker.includes("'./"+serviceAsset+"'"));
 assert.ok(index.indexOf(serviceAsset)<index.indexOf(asset));

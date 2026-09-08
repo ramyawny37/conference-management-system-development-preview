@@ -35,7 +35,7 @@ test('historical payload semantics stay exact and category description is bounde
 
 test('validation, authorization, conflict, and server errors have distinct safe HTTP classes',()=>{
   assert.match(edge,/sqlState\.startsWith\('22'\)\|\|sqlState\.startsWith\('23'\)/);
-  assert.match(edge,/status:422,code:'WAREHOUSE_VALIDATION_FAILED'/);
+  assert.match(edge,/status:422,code:module==='warehouse'\?'WAREHOUSE_VALIDATION_FAILED'/);
   assert.match(edge,/sqlState==='42501'/);
   assert.match(edge,/status:403/);
   assert.match(edge,/sqlState==='40001'/);
