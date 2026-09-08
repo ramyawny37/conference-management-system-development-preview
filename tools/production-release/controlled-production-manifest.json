@@ -818,15 +818,15 @@
     {
       "version": "20260902010000",
       "filename": "supabase/migrations/20260902010000_warehouse_postgrest_exposed_schema_reconciliation.sql",
-      "sha256": "760301a678694eee67ece6e334f6e9a728e736fd974a481620a35a9ac3797cc9",
+      "sha256": "44a3f52ca3bca57605f7cb69a47ae6adb2806f5960855600b5e466050ba3156e",
       "action": "APPLY",
       "transaction": {
         "startsExplicitly": true,
         "commitsExplicitly": true,
         "safeOuterAtomicWrap": false
       },
-      "preconditionSql": "select (to_regprocedure('platform.list_pending_device_authorizations()') is not null and exists(select 1 from pg_roles roles cross join lateral unnest(coalesce(roles.rolconfig,array[]::text[])) setting where roles.rolname='authenticator' and setting='pgrst.db_schemas=public, graphql_public, platform') and not exists(select 1 from pg_roles roles cross join lateral unnest(coalesce(roles.rolconfig,array[]::text[])) setting where roles.rolname='authenticator' and setting='pgrst.db_schemas=public, graphql_public, platform, warehouse'))::text",
-      "verificationSql": "select (exists(select 1 from pg_roles roles cross join lateral unnest(coalesce(roles.rolconfig,array[]::text[])) setting where roles.rolname='authenticator' and setting='pgrst.db_schemas=public, graphql_public, platform, warehouse'))::text",
+      "preconditionSql": "select (to_regprocedure('platform.list_pending_device_authorizations()') is not null and exists(select 1 from pg_roles where rolname='authenticator') and not exists(select 1 from pg_roles roles cross join lateral unnest(coalesce(roles.rolconfig,array[]::text[])) setting where roles.rolname='authenticator' and setting like 'pgrst.db_schemas=%' and setting<>'pgrst.db_schemas=public, graphql_public, platform') and not exists(select 1 from pg_roles roles cross join lateral unnest(coalesce(roles.rolconfig,array[]::text[])) setting where roles.rolname='authenticator' and setting='pgrst.db_schemas=public, graphql_public, platform, warehouse'))::text",
+      "verificationSql": "select ((select count(*)=1 from pg_roles roles cross join lateral unnest(coalesce(roles.rolconfig,array[]::text[])) setting where roles.rolname='authenticator' and setting like 'pgrst.db_schemas=%' and setting='pgrst.db_schemas=public, graphql_public, platform, warehouse') and not exists(select 1 from pg_roles roles cross join lateral unnest(coalesce(roles.rolconfig,array[]::text[])) setting where roles.rolname='authenticator' and setting like 'pgrst.db_schemas=%' and setting<>'pgrst.db_schemas=public, graphql_public, platform, warehouse'))::text",
       "prerequisites": [
         "exact preceding controlled history tail",
         "explicit body-specific predecessor-state detector"
