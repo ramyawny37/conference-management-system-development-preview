@@ -68,9 +68,9 @@ test('repository-scoped Conference restores workspace and return home restores a
 });
 
 test('Conference route correction invalidates the Development runtime cache',()=>{
-  assert.match(html,/script\.js\?rev=delayed-warehouse-route-override-v1/);
-  assert.match(worker,/development-3-4-0-pending-native-device-context-v1/);
-  assert.match(worker,/script\.js\?rev=delayed-warehouse-route-override-v1/);
+  assert.match(html,/script\.js\?rev=platform-owner-administration-context-v1/);
+  assert.match(worker,/development-3-4-0-platform-owner-administration-context-v1/);
+  assert.match(worker,/script\.js\?rev=platform-owner-administration-context-v1/);
 });
 
 test('authorized async restoration cannot override an explicit Conference home route',()=>{

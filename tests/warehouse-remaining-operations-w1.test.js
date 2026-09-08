@@ -84,7 +84,7 @@ test('Current Store strip stays synchronized without first-store fallback or cro
   assert.doesNotMatch(workspace+source,/state\.stores\[0\]/);
   assert.match(context,/KEY_PREFIX\+user\+'\:'\+device/);
   assert.match(index,/remaining-operations\.js\?rev=adjustment-conversion-ux-v1/);
-  assert.match(worker,/development-3-4-0-pending-native-device-context-v1/);
+  assert.match(worker,/development-3-4-0-platform-owner-administration-context-v1/);
   assert.match(worker,/remaining-operations\.js\?rev=adjustment-conversion-ux-v1/);
 });
 

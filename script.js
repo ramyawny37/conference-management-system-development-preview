@@ -2453,9 +2453,9 @@ function getAccommodationPersonDisplayName(person){
   return resolved&&resolved.fullName?resolved.fullName:(person.name||'');
 }
 
-var userManagementAccessState={status:'idle',capabilities:null};
-var modulePermissionAdministrationAccessState={status:'idle',available:false};
-var organizationManagementAccessState={status:'idle',canOpen:false};
+var userManagementAccessState={status:'idle',capabilities:null,flight:null};
+var modulePermissionAdministrationAccessState={status:'idle',available:false,flight:null};
+var organizationManagementAccessState={status:'idle',canOpen:false,flight:null};
 function closeOrganizationManagementScreen(){
   var screen=ge('organizationManagementScreen');
   if(screen)screen.style.display='none';
@@ -2469,12 +2469,13 @@ function applyOrganizationManagementEntryVisibility(){
   });
 }
 function ensureOrganizationManagementAccess(){
-  if(organizationManagementAccessState.status!=='idle'||
-    !window.OrganizationManagementService||
-    typeof window.OrganizationManagementService.list!=='function')return;
+  if(organizationManagementAccessState.flight)return organizationManagementAccessState.flight;
+  if(organizationManagementAccessState.status!=='idle')return Promise.resolve(organizationManagementAccessState);
+  if(!window.OrganizationManagementService||
+    typeof window.OrganizationManagementService.list!=='function')return Promise.resolve(organizationManagementAccessState);
   organizationManagementAccessState.status='loading';
   applyOrganizationManagementEntryVisibility();
-  window.OrganizationManagementService.list().then(function(response){
+  organizationManagementAccessState.flight=window.OrganizationManagementService.list().then(function(response){
     var data=response&&response.ok&&response.data?response.data:null;
     organizationManagementAccessState.status=response&&response.ok?'loaded':'error';
     organizationManagementAccessState.canOpen=!!(data&&(
@@ -2486,39 +2487,66 @@ function ensureOrganizationManagementAccess(){
     ));
     applyOrganizationManagementEntryVisibility();
     if(ge('tab6')&&ge('tab6').style.display!=='none')renderSettings();
+    organizationManagementAccessState.flight=null;
+    return organizationManagementAccessState;
   }).catch(function(){
-    organizationManagementAccessState={status:'error',canOpen:false};
+    organizationManagementAccessState.status='error';
+    organizationManagementAccessState.canOpen=false;
+    organizationManagementAccessState.flight=null;
     applyOrganizationManagementEntryVisibility();
+    return organizationManagementAccessState;
   });
+  return organizationManagementAccessState.flight;
 }
 function ensureUserManagementAccess(){
-  if(userManagementAccessState.status!=='idle'||
-    !window.UserManagementReadService||
-    typeof window.UserManagementReadService.getActorCapabilities!=='function')return;
+  if(userManagementAccessState.flight)return userManagementAccessState.flight;
+  if(userManagementAccessState.status!=='idle')return Promise.resolve(userManagementAccessState);
+  if(!window.UserManagementReadService||
+    typeof window.UserManagementReadService.getActorCapabilities!=='function')return Promise.resolve(userManagementAccessState);
   userManagementAccessState.status='loading';
-  window.UserManagementReadService.getActorCapabilities().then(function(response){
+  userManagementAccessState.flight=window.UserManagementReadService.getActorCapabilities().then(function(response){
     userManagementAccessState.status=response&&response.ok?'loaded':'error';
     userManagementAccessState.capabilities=response&&response.ok
       ?response.data.capabilities:null;
-    renderSettings();
+    userManagementAccessState.flight=null;
+    if(ge('tab6')&&ge('tab6').style.display!=='none')renderSettings();
+    return userManagementAccessState;
   }).catch(function(){
-    userManagementAccessState={status:'error',capabilities:null};
-    renderSettings();
+    userManagementAccessState.status='error';
+    userManagementAccessState.capabilities=null;
+    userManagementAccessState.flight=null;
+    if(ge('tab6')&&ge('tab6').style.display!=='none')renderSettings();
+    return userManagementAccessState;
   });
+  return userManagementAccessState.flight;
 }
 function ensureModulePermissionAdministrationAccess(){
-  if(modulePermissionAdministrationAccessState.status!=='idle'||
-    !window.ModulePermissionAdministrationService||
-    typeof window.ModulePermissionAdministrationService.probeAvailability!=='function')return;
+  if(modulePermissionAdministrationAccessState.flight)return modulePermissionAdministrationAccessState.flight;
+  if(modulePermissionAdministrationAccessState.status!=='idle')return Promise.resolve(modulePermissionAdministrationAccessState);
+  if(!window.ModulePermissionAdministrationService||
+    typeof window.ModulePermissionAdministrationService.probeAvailability!=='function')return Promise.resolve(modulePermissionAdministrationAccessState);
   modulePermissionAdministrationAccessState.status='loading';
-  window.ModulePermissionAdministrationService.probeAvailability().then(function(response){
+  modulePermissionAdministrationAccessState.flight=window.ModulePermissionAdministrationService.probeAvailability().then(function(response){
     modulePermissionAdministrationAccessState.status=response&&response.ok?'loaded':'denied';
     modulePermissionAdministrationAccessState.available=!!(response&&response.ok);
-    renderSettings();
+    modulePermissionAdministrationAccessState.flight=null;
+    if(ge('tab6')&&ge('tab6').style.display!=='none')renderSettings();
+    return modulePermissionAdministrationAccessState;
   }).catch(function(){
-    modulePermissionAdministrationAccessState={status:'denied',available:false};
-    renderSettings();
+    modulePermissionAdministrationAccessState.status='denied';
+    modulePermissionAdministrationAccessState.available=false;
+    modulePermissionAdministrationAccessState.flight=null;
+    if(ge('tab6')&&ge('tab6').style.display!=='none')renderSettings();
+    return modulePermissionAdministrationAccessState;
   });
+  return modulePermissionAdministrationAccessState.flight;
+}
+function initializePlatformAdministrationContext(){
+  return Promise.all([
+    ensureUserManagementAccess(),
+    ensureOrganizationManagementAccess(),
+    ensureModulePermissionAdministrationAccess()
+  ]);
 }
 
 function canEditCurrentConferenceData(){
@@ -10078,6 +10106,8 @@ function completeAuthorizedApplicationStartup(){
   recordStartupStage('device','passed');
   var cloudReviewPending=false;
   return Promise.resolve(completeApplicationStartup()).then(function(){
+    return initializePlatformAdministrationContext();
+  }).then(function(){
     try{
       cloudReviewPending=!!(window.FullBackupService&&typeof window.FullBackupService.isFullRestoreCloudReviewPending==='function'&&window.FullBackupService.isFullRestoreCloudReviewPending());
     }catch(error){
