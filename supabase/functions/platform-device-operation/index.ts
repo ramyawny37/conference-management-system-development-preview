@@ -24,7 +24,7 @@ Deno.serve(async(request)=>{
     if(module!=='conference'&&module!=='warehouse'&&module!=='reservations')throw new Error('PLATFORM_MODULE_NOT_ALLOWED');
     if(!(module==='conference'?conference:module==='warehouse'?warehouse:reservations).has(operation))throw new Error('PLATFORM_OPERATION_NOT_ALLOWED');
     if(!args||typeof args!=='object'||Array.isArray(args))throw new Error('PLATFORM_OPERATION_ARGUMENTS_INVALID');
-    if(Object.prototype.hasOwnProperty.call(args,'p_actor_device_id')||Object.prototype.hasOwnProperty.call(args,'p_actor_user_id')||(module==='warehouse'&&Object.prototype.hasOwnProperty.call(args,'p_device_id'))||(module==='reservations'&&Object.prototype.hasOwnProperty.call(args,'p_device_id')))throw new Error('ACTOR_DEVICE_OVERRIDE_DENIED');
+    if(Object.prototype.hasOwnProperty.call(args,'p_actor_device_id')||Object.prototype.hasOwnProperty.call(args,'p_actor_user_id')||(module==='warehouse'&&Object.prototype.hasOwnProperty.call(args,'p_device_id'))||(module==='reservations'&&(Object.prototype.hasOwnProperty.call(args,'p_device_id')||Object.prototype.hasOwnProperty.call(args,'p_organization_id')||Object.prototype.hasOwnProperty.call(args,'organization_id'))))throw new Error('ACTOR_DEVICE_OVERRIDE_DENIED');
     stage='session_validation';
     const sessionId=String(body.sessionId||'');
     if(!/^[0-9a-f-]{36}$/i.test(sessionId))throw new Error('SESSION_ID_INVALID');
