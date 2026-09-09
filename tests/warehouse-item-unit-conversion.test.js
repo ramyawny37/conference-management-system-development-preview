@@ -14,6 +14,7 @@ const edge=fs.readFileSync('supabase/functions/platform-device-operation/index.t
 const ambiguityFix=fs.readFileSync('supabase/migrations/20260905193000_warehouse_item_unit_upsert_ambiguity_fix.sql','utf8');
 const statusAmbiguityFix=fs.readFileSync('supabase/migrations/20260905200000_warehouse_item_unit_status_ambiguity_fix.sql','utf8');
 const draftCostFix=fs.readFileSync('supabase/migrations/20260905203000_warehouse_unit_conversion_draft_wrapper_and_cost_fix.sql','utf8');
+const hierarchy=fs.readFileSync('supabase/migrations/20260909210000_warehouse_item_unit_hierarchy.sql','utf8');
 
 test('item-unit relation is item-specific, guarded, revisioned and not globally attached to units',()=>{
   assert.match(sql,/create table warehouse\.item_units/);
@@ -166,13 +167,62 @@ test('item-unit dialog separates the generated base relation and submits the aut
   assert.match(workspace,/الوحدات الإضافية/);
   assert.match(workspace,/\+ إضافة وحدة أخرى/);
   assert.match(workspace,/حفظ التغييرات/);
-  assert.match(workspace,/units=\[\{unitId:baseId,conversionFactor:1,status:'active'\}\]\.concat/);
+  assert.match(workspace,/units=\[\{unitId:baseId,referenceUnitId:null,referenceQuantity:null,status:'active'\}\]\.concat/);
+  assert.match(workspace,/referenceUnitId:unitRow\.querySelector/);
+  assert.match(workspace,/referenceQuantity:Number\(unitRow\.querySelector/);
+  assert.doesNotMatch(workspace,/conversionFactor:Number\(unitRow\.querySelector/);
   assert.match(workspace,/button\[data-wh-item-units\]/);
   assert.match(workspace,/String\(unit\.id\)!==String\(baseId\)/);
   assert.match(workspace,/option\.disabled=.*selected\.indexOf\(option\.value\)>=0/);
   assert.match(workspace,/if\(unitRow\.dataset\.whPersisted\)/);
   assert.match(workspace,/querySelector\('\[name="status"\]'\)\.value='inactive'/);
   assert.doesNotMatch(workspace,/عدد الوحدات الأساسية/);
+});
+
+test('hierarchical relationships are item-specific and effective factors are server-derived',()=>{
+  assert.match(hierarchy,/add column reference_unit_id uuid/);
+  assert.match(hierarchy,/add column reference_quantity numeric\(20,6\)/);
+  assert.match(hierarchy,/foreign key\(item_id,reference_unit_id\)[\s\S]*references warehouse\.item_units\(item_id,unit_id\)/);
+  assert.match(hierarchy,/create or replace function warehouse_private\.validate_and_derive_item_unit_graph/);
+  assert.match(hierarchy,/resolved\.factor\*child\.reference_quantity/);
+  assert.match(hierarchy,/update warehouse\.item_units iu set conversion_factor=resolved\.factor/);
+  assert.match(hierarchy,/x \?\| array\['conversionFactor','conversion_factor'\]/);
+  assert.doesNotMatch(workspace,/name="factor"/);
+});
+
+test('base and non-base invariants are enforced without weakening history protection',()=>{
+  assert.match(hierarchy,/reference_unit_id is null and reference_quantity is null/);
+  assert.match(hierarchy,/reference_quantity>0/);
+  assert.match(hierarchy,/reference_unit_id<>unit_id/);
+  assert.match(hierarchy,/iu\.unit_id=v_base_unit_id[\s\S]*iu\.conversion_factor=1/);
+  assert.match(hierarchy,/WAREHOUSE_BASE_UNIT_CHANGE_WITH_HISTORY|create or replace function warehouse_private\.sync_item_base_unit/);
+  assert.match(sql,/WAREHOUSE_BASE_UNIT_CHANGE_WITH_HISTORY/);
+});
+
+test('cycle, disconnected, malformed, and overflow graphs fail atomically',()=>{
+  assert.match(hierarchy,/not child\.unit_id=any\(resolved\.path\)/);
+  assert.match(hierarchy,/v_resolved_count<>v_relation_count/);
+  assert.match(hierarchy,/left join warehouse\.item_units parent/);
+  assert.match(hierarchy,/target_reference_unit_id=target_unit_id/);
+  assert.match(hierarchy,/target_reference_quantity<=0/);
+  assert.match(hierarchy,/when invalid_text_representation or numeric_value_out_of_range/);
+  assert.match(hierarchy,/factor>=100000000000000::numeric/);
+  assert.match(hierarchy,/begin;[\s\S]*commit;/);
+});
+
+test('piece-pack-carton-pallet derivation and descendant recalculation are exact',()=>{
+  const derive=(nodes)=>{const factors={piece:1};for(let changed=true;changed;){changed=false;for(const node of nodes)if(factors[node.reference]!=null&&factors[node.id]==null){factors[node.id]=node.quantity*factors[node.reference];changed=true;}}return factors;};
+  assert.deepEqual(derive([{id:'pack',reference:'piece',quantity:10},{id:'carton',reference:'pack',quantity:10},{id:'pallet',reference:'carton',quantity:20}]),{piece:1,pack:10,carton:100,pallet:2000});
+  assert.deepEqual(derive([{id:'pack',reference:'piece',quantity:12},{id:'carton',reference:'pack',quantity:10},{id:'pallet',reference:'carton',quantity:20}]),{piece:1,pack:12,carton:120,pallet:2400});
+  assert.equal(2*100,200);
+});
+
+test('master read exposes relationship metadata while document snapshots remain immutable',()=>{
+  assert.match(sql,/to_jsonb\(iu\)/);
+  assert.match(hierarchy,/reference_unit_id/);
+  assert.match(hierarchy,/reference_quantity/);
+  assert.doesNotMatch(hierarchy,/update warehouse\.(receipt_lines|issue_lines|transfer_lines|adjustment_lines|stock_movements)/);
+  assert.match(sql,/conversion_factor_snapshot/);
 });
 
 test('item-unit failure remains masked and preserves the open form while success reloads it',()=>{
