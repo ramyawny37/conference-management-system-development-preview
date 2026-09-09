@@ -179,6 +179,30 @@ test('item-unit dialog separates the generated base relation and submits the aut
   assert.doesNotMatch(workspace,/عدد الوحدات الأساسية/);
 });
 
+test('add-unit control creates hierarchical editable rows and submits relationship inputs only',async()=>{
+  const item='22222222-2222-4222-8222-222222222222',base='33333333-3333-4333-8333-333333333333',pack='44444444-4444-4444-8444-444444444444',carton='55555555-5555-4555-8555-555555555555',calls=[];
+  const master={categories:[],items:[{id:item,name:'كشكول',sku:'PRD-1',base_unit_id:base,status:'active',revision:7}],units:[{id:base,name:'قطعة',symbol:'قطعة',status:'active'},{id:pack,name:'باكو',symbol:'باكو',status:'active'},{id:carton,name:'كرتونة',symbol:'كرتونة',status:'active'}],itemUnits:[{item_id:item,unit_id:base,conversion_factor:1,status:'active'}]};
+  const dom=new JSDOM('<main id="startupScreen"></main><section id="warehouseWorkspace"></section>',{url:'https://example.test/warehouse/items',runScripts:'outside-only'}),window=dom.window;
+  window.AppIcons={icon:()=>''};window.showPlatformModules=()=>{};window.prompt=()=>'';window.SupabaseAuth={getAccountIdentity:()=>({authenticated:true,userId:'a'})};window.SupabaseDeviceIdentity={getCurrent:()=>({id:'b'})};window.BrowserStorageNamespace={key:x=>x};window.ApplicationRouting={resolveLogicalRoute:x=>x,getLogicalPathname:()=>'/warehouse/items'};window.WarehouseDeviceOperationContract={get:()=>({operationIdRequired:false,dispatchable:true})};window.WarehouseTransport={invoke:(name,args)=>{calls.push({name,args});return Promise.resolve(name==='discover_stores'?[]:name==='list_item_master'?master:{});}};
+  for(const file of ['js/warehouse/current-store-context.js','js/warehouse/historical-operations.js','js/warehouse/party-management.js','js/warehouse/remaining-operations.js','js/warehouse/workspace.js'])window.eval(fs.readFileSync(file,'utf8'));
+  await window.WarehouseWorkspace.load('items');
+  window.document.querySelector('button[data-wh-item-units]').click();
+  const add=window.document.querySelector('[data-wh-item-unit-add]'),form=window.document.querySelector('[data-wh-item-units-form]');
+  assert.equal(form.querySelectorAll('[data-wh-item-unit-row]').length,0);
+  add.click();
+  assert.equal(form.querySelectorAll('[data-wh-item-unit-row]').length,1);
+  add.click();
+  assert.equal(form.querySelectorAll('[data-wh-item-unit-row]').length,2);
+  const rows=form.querySelectorAll('[data-wh-item-unit-row]');
+  rows[0].querySelector('[name="unitId"]').value=pack;rows[0].querySelector('[name="unitId"]').dispatchEvent(new window.Event('change',{bubbles:true}));rows[0].querySelector('[name="referenceQuantity"]').value='10';rows[0].querySelector('[name="referenceUnitId"]').value=base;
+  rows[1].querySelector('[name="unitId"]').value=carton;rows[1].querySelector('[name="unitId"]').dispatchEvent(new window.Event('change',{bubbles:true}));rows[1].querySelector('[name="referenceQuantity"]').value='10';rows[1].querySelector('[name="referenceUnitId"]').value=pack;
+  form.dispatchEvent(new window.Event('submit',{bubbles:true,cancelable:true}));
+  await new Promise(resolve=>window.setTimeout(resolve,0));
+  const save=calls.find(call=>call.name==='upsert_item_units');
+  assert.deepEqual(Array.from(save.args.p_units,unit=>({...unit})),[{unitId:base,referenceUnitId:null,referenceQuantity:null,status:'active'},{unitId:pack,referenceUnitId:base,referenceQuantity:10,status:'active'},{unitId:carton,referenceUnitId:pack,referenceQuantity:10,status:'active'}]);
+  assert.equal(save.args.p_units.some(unit=>Object.hasOwn(unit,'conversionFactor')||Object.hasOwn(unit,'conversion_factor')),false);
+});
+
 test('hierarchical relationships are item-specific and effective factors are server-derived',()=>{
   assert.match(hierarchy,/add column reference_unit_id uuid/);
   assert.match(hierarchy,/add column reference_quantity numeric\(20,6\)/);
