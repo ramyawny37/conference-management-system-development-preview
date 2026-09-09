@@ -1,6 +1,7 @@
 "use strict";
 const assert=require("node:assert/strict"),fs=require("node:fs"),test=require("node:test"),vm=require("node:vm");
 const migration=fs.readFileSync("supabase/migrations/20260903090000_conference_device_session_execution_boundary.sql","utf8");
+const finalizationCorrection=fs.readFileSync("supabase/migrations/20260909220000_device_session_finalization_audit_retention.sql","utf8");
 const edge=fs.readFileSync("supabase/functions/conference-device-operation/index.ts","utf8");
 const session=fs.readFileSync("js/supabase/device-session.js","utf8");
 const client=fs.readFileSync("js/supabase/client.js","utf8");
@@ -15,11 +16,13 @@ test("dispatcher is service-role-only, verifies all authority dimensions, and de
   assert.doesNotMatch(migration,/grant execute on function platform\.execute_conference_device_operation[^;]+to (anon|authenticated)/);
   for(const value of ["session.token_hash=p_token_hash","profile.account_status='approved'","uda.status='approved'","device.lifecycle_status='active'","binding.lifecycle_status='active'","v_session.device_id","ACTOR_DEVICE_OVERRIDE_DENIED"])assert.ok(migration.includes(value),value);
 });
-test("multi-tab sessions coexist and expired rows are bounded",()=>{
+test("multi-tab sessions coexist and historical audited sessions are retained",()=>{
   assert.match(migration,/drop index if exists platform_private\.device_sessions_one_active_binding_idx/);
   assert.doesNotMatch(migration,/update platform_private\.device_sessions set revoked_at/);
-  assert.match(migration,/delete from platform_private\.device_sessions where expires_at<v_now-interval '7 days'/);
   assert.match(migration,/device_sessions_active_binding_lookup_idx/);
+  assert.doesNotMatch(finalizationCorrection,/delete\s+from\s+platform_private\.device_sessions/i);
+  assert.doesNotMatch(finalizationCorrection,/update\s+platform_private\.device_sessions\s+set\s+revoked_at/i);
+  assert.match(finalizationCorrection,/insert into platform_private\.device_sessions/);
 });
 test("Edge validates auth, hashes bearer, rejects actor override and never logs secrets",()=>{
   for(const value of ["auth.getUser()","SHA-256","execute_conference_device_operation","p_actor_device_id","p_device_id","PAYLOAD_TOO_LARGE","CONFERENCE_OPERATION_NOT_ALLOWED"])assert.ok(edge.includes(value),value);
