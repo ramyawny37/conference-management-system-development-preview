@@ -31,29 +31,49 @@ jobs:
         with:
           path: controller
 
-      - name: Checkout develop source
+      - name: Checkout Platform develop source
         uses: actions/checkout@v4
         with:
           repository: ramyawny37/conference-management-system-v1
           ref: develop
-          path: source
+          path: source/platform
           fetch-depth: 0
 
-      - name: Capture deployed source SHA
+      - name: Checkout Reservations develop source
+        uses: actions/checkout@v4
+        with:
+          repository: ramyawny37/reservation-management-system
+          ref: develop
+          path: source/reservations
+          fetch-depth: 0
+
+      - name: Capture deployed source SHAs
         id: source_meta
-        run: echo "sha=$(git -C source rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+        run: |
+          echo "platform_sha=$(git -C source/platform rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          echo "reservations_sha=$(git -C source/reservations rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
       - name: Validate Development source contracts
         run: |
-          node --check source/js/storage/environment-namespace.js
-          node --check source/service-worker.js
-          node source/tests/browser-storage-isolation.test.js
-          node source/tests/pwa-deterministic-update.test.js
+          node --check source/platform/js/storage/environment-namespace.js
+          node --check source/platform/service-worker.js
+          node source/platform/tests/browser-storage-isolation.test.js
+          node source/platform/tests/pwa-deterministic-update.test.js
+
+      - name: Build Reservations module from source
+        working-directory: source/reservations
+        run: |
+          npm ci --legacy-peer-deps
+          npm run build:platform-module
+          test -f dist/platform-module/reservations-module.js
+          test -f dist/platform-module/reservations-module.css
+          cmp dist/platform-module/reservations-module.js ../platform/modules/reservations/reservations-module.js
+          cmp dist/platform-module/reservations-module.css ../platform/modules/reservations/reservations-module.css
 
       - name: Prepare isolated preview artifact
         run: |
           mkdir site
-          rsync -a source/ site/ \
+          rsync -a source/platform/ site/ \
             --exclude='/.git/' \
             --exclude='/.github/' \
             --exclude='/.audit/' \
@@ -64,6 +84,23 @@ jobs:
             --exclude='/tools/' \
             --exclude='/package.json' \
             --exclude='/package-lock.json'
+          mkdir -p site/modules/reservations
+          cp source/reservations/dist/platform-module/reservations-module.js site/modules/reservations/reservations-module.js
+          cp source/reservations/dist/platform-module/reservations-module.css site/modules/reservations/reservations-module.css
+          node <<'NODE'
+          const fs = require('fs');
+          const sources = {
+            platform: process.env.PLATFORM_SOURCE_SHA,
+            reservations: process.env.RESERVATIONS_SOURCE_SHA
+          };
+          if (!Object.values(sources).every(value => /^[0-9a-f]{40}$/.test(value || ''))) {
+            throw new Error('Preview source SHA is invalid');
+          }
+          fs.writeFileSync('site/development-preview-sources.json', JSON.stringify(sources, null, 2) + '\n');
+          NODE
+        env:
+          PLATFORM_SOURCE_SHA: ${{ steps.source_meta.outputs.platform_sha }}
+          RESERVATIONS_SOURCE_SHA: ${{ steps.source_meta.outputs.reservations_sha }}
 
       - name: Generate Development Supabase public config in artifact
         env:
@@ -109,6 +146,18 @@ jobs:
           grep -Fq "DEVELOPMENT_PROJECT_REF='gppwltrifgfxrkzvvxoe'" site/js/storage/environment-namespace.js
           grep -Fq "cms:development:' + DEVELOPMENT_PROJECT_REF + ':'" site/service-worker.js
           grep -Fq "'cms:development:'+DEVELOPMENT_PROJECT_REF+':'" site/js/storage/environment-namespace.js
+          grep -Fq "js/platform-integration.js?rev=reservations-module-integration-v1" site/index.html
+          grep -Fq "./js/platform-integration.js?rev=reservations-module-integration-v1" site/service-worker.js
+          grep -Fq "modules/reservations/reservations-module.js?rev=mountable-bundle-v1" site/index.html
+          grep -Fq "modules/reservations/reservations-module.css?rev=mountable-bundle-v1" site/index.html
+          grep -Fq "./modules/reservations/reservations-module.js?rev=mountable-bundle-v1" site/service-worker.js
+          grep -Fq "./modules/reservations/reservations-module.css?rev=mountable-bundle-v1" site/service-worker.js
+          cmp source/reservations/dist/platform-module/reservations-module.js site/modules/reservations/reservations-module.js
+          cmp source/reservations/dist/platform-module/reservations-module.css site/modules/reservations/reservations-module.css
+          if grep -E "createClient\(|platform-device-session|supabase\\.co" site/modules/reservations/reservations-module.js; then
+            echo "Standalone Reservations auth/session configuration found in Preview artifact"
+            exit 1
+          fi
           node --check site/js/supabase/public-config.js
           node --check site/js/storage/environment-namespace.js
           node --check site/service-worker.js
@@ -117,7 +166,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          git -C source push --force \
+          git -C source/platform push --force \
             "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" \
             HEAD:refs/heads/development-preview-source
 
@@ -134,7 +183,7 @@ jobs:
         id: deployment
         env:
           ARTIFACT_ID: ${{ steps.artifact.outputs.artifact_id }}
-          BUILD_VERSION: ${{ steps.source_meta.outputs.sha }}
+          BUILD_VERSION: ${{ steps.source_meta.outputs.platform_sha }}
           GH_TOKEN: ${{ github.token }}
           REPOSITORY: ${{ github.repository }}
         run: |
