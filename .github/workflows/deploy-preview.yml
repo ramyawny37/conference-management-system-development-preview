@@ -43,7 +43,7 @@ jobs:
         id: source_meta
         run: |
           echo "platform_sha=$(git -C source/platform rev-parse HEAD)" >> "$GITHUB_OUTPUT"
-          test "$(git -C source/platform rev-parse HEAD)" = "debab82198b34103375def7b897e973d0b5ea384"
+          test "$(git -C source/platform rev-parse HEAD)" = "3bd59f5554d174ae33327d4a6d2cf1710922a2d6"
 
       - name: Validate Development source contracts
         run: |
@@ -54,7 +54,7 @@ jobs:
           node source/platform/tests/pwa-deterministic-update.test.js
           test -f source/platform/modules/reservations/reservations-module.js
           test -f source/platform/modules/reservations/reservations-module.css
-          echo "591c6d0d05ca24d3818a4ccbb10b5192d0514e99a4d43a0e43fa6f17a506f58c  source/platform/modules/reservations/reservations-module.js" | sha256sum --check --strict
+          echo "005474ca7616295cdabb5b23c7011c632e1771b7a8129984144eaa3026879437  source/platform/modules/reservations/reservations-module.js" | sha256sum --check --strict
           echo "1d4e98e842f0e8c896c6c3b67e363056270f79a3867558c5ba2567be82f441cd  source/platform/modules/reservations/reservations-module.css" | sha256sum --check --strict
 
       - name: Prepare isolated preview artifact
@@ -81,9 +81,9 @@ jobs:
             },
             reservations: {
               repository: 'ramyawny37/reservation-management-system',
-              source_sha: '48e3613d9fa53ebffc6adc6f6db08c80f9a2641e',
+              source_sha: 'dfaedd85553991baae8f87f6df812e079eff21e8',
               delivery: 'approved-bundle-embedded-in-platform',
-              javascript_sha256: '591c6d0d05ca24d3818a4ccbb10b5192d0514e99a4d43a0e43fa6f17a506f58c',
+              javascript_sha256: '005474ca7616295cdabb5b23c7011c632e1771b7a8129984144eaa3026879437',
               css_sha256: '1d4e98e842f0e8c896c6c3b67e363056270f79a3867558c5ba2567be82f441cd'
             }
           };
@@ -151,11 +151,11 @@ jobs:
           grep -Fq "'cms:development:'+DEVELOPMENT_PROJECT_REF+':'" site/js/storage/environment-namespace.js
           grep -Fq "js/platform-integration.js?rev=reservations-module-integration-v1" site/index.html
           grep -Fq "./js/platform-integration.js?rev=reservations-module-integration-v1" site/service-worker.js
-          grep -Fq "modules/reservations/reservations-module.js?rev=mountable-bundle-v1" site/index.html
-          grep -Fq "modules/reservations/reservations-module.css?rev=mountable-bundle-v1" site/index.html
-          grep -Fq "./modules/reservations/reservations-module.js?rev=mountable-bundle-v1" site/service-worker.js
-          grep -Fq "./modules/reservations/reservations-module.css?rev=mountable-bundle-v1" site/service-worker.js
-          echo "591c6d0d05ca24d3818a4ccbb10b5192d0514e99a4d43a0e43fa6f17a506f58c  site/modules/reservations/reservations-module.js" | sha256sum --check --strict
+          grep -Fq "modules/reservations/reservations-module.js?rev=mountable-bundle-v2" site/index.html
+          grep -Fq "modules/reservations/reservations-module.css?rev=mountable-bundle-v2" site/index.html
+          grep -Fq "./modules/reservations/reservations-module.js?rev=mountable-bundle-v2" site/service-worker.js
+          grep -Fq "./modules/reservations/reservations-module.css?rev=mountable-bundle-v2" site/service-worker.js
+          echo "005474ca7616295cdabb5b23c7011c632e1771b7a8129984144eaa3026879437  site/modules/reservations/reservations-module.js" | sha256sum --check --strict
           echo "1d4e98e842f0e8c896c6c3b67e363056270f79a3867558c5ba2567be82f441cd  site/modules/reservations/reservations-module.css" | sha256sum --check --strict
           grep -Fq 'data-platform-module="reservations" class="platform-module-card platform-module-card-available"' site/index.html
           grep -Fq 'id="reservationsWorkspace"' site/index.html
