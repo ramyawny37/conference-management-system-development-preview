@@ -12,6 +12,7 @@
 <title>منظومة الإدارة المتكاملة</title>
 <link rel="stylesheet" href="shared-design-tokens.css?rev=platform-shell-phase2b-v1">
 <link rel="stylesheet" href="style.css?rev=item-unit-dialog-v1">
+<link rel="stylesheet" href="modules/reservations/reservations-module.css?rev=mountable-bundle-v1">
 </head>
 <body>
 
@@ -102,10 +103,10 @@
             <span class="platform-module-copy"><strong>إدارة المخازن</strong><small>Warehouse Management</small></span>
             <span class="platform-module-state platform-module-state-available">متاحة</span>
           </button>
-          <button type="button" data-platform-module="reservations" class="platform-module-card platform-module-card-unavailable" aria-disabled="true" disabled>
+          <button type="button" data-platform-module="reservations" class="platform-module-card platform-module-card-available" aria-label="فتح وحدة الحجوزات">
             <span class="platform-module-icon" data-app-icon="note"></span>
             <span class="platform-module-copy"><strong>الحجوزات</strong><small>Reservations</small></span>
-            <span class="platform-module-state">غير متكاملة بعد</span>
+            <span class="platform-module-state platform-module-state-available">متاحة</span>
           </button>
           <button type="button" data-platform-module="custody" class="platform-module-card platform-module-card-unavailable" aria-disabled="true" disabled>
             <span class="platform-module-icon" data-app-icon="money"></span>
@@ -173,6 +174,7 @@
     </section>
     </div>
     <div id="warehouseWorkspace" class="conference-workspace" tabindex="-1"></div>
+    <div id="reservationsWorkspace" class="conference-workspace" tabindex="-1"></div>
   </div>
   <div id="appVersionLabel" class="startup-version"></div>
 </div>
@@ -549,7 +551,8 @@
 <script src="js/supabase/warehouse-transport.js?rev=phase-w1-v1"></script>
 <script src="js/supabase/client.js?rev=phase1c-v1"></script>
 <script src="js/supabase/auth.js?rev=account-session-identity-v1"></script>
-<script src="js/platform-integration.js?rev=pending-native-device-context-v1"></script>
+<script src="js/platform-integration.js?rev=reservations-module-integration-v1"></script>
+<script src="modules/reservations/reservations-module.js?rev=mountable-bundle-v1"></script>
 <script src="js/supabase/system-access-service.js?rev=conference-create-authorization-v1"></script>
 <script src="js/sync/diagnostics-privacy-policy.js?rev=diagnostics-privacy-hardening-v1"></script>
 <script src="js/supabase/first-system-bootstrap-service.js?rev=first-owner-bootstrap-hardening-v1"></script>

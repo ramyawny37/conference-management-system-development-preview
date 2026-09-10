@@ -18,8 +18,8 @@ assert.match(css,/@media\(max-width:600px\)[\s\S]*?grid-template-areas:"brand br
 assert.match(css,/@media\(max-width:600px\)[\s\S]*?\.startup-dashboard:not\(\.platform-conference-active\) \.startup-home-header\{grid-template-areas:"brand brand" "auth auth"\}/);
 assert.match(css,/@media\(max-width:600px\)[\s\S]*?\.platform-module-switcher\{width:auto;min-height:var\(--platform-touch-target\)/);
 assert.match(css,/@media\(max-width:600px\)[\s\S]*?\.startup-auth-signed-in button,#install-app-btn\{flex:0 0 auto/);
-assert.match(css,/\.platform-conference-active \.platform-home,\.platform-warehouse-active \.platform-home\{display:none\}/);
-assert.match(css,/\.platform-conference-active \.platform-module-switcher,\.platform-warehouse-active \.platform-module-switcher\{display:flex\}/);
+assert.match(css,/\.platform-conference-active \.platform-home,\.platform-warehouse-active \.platform-home,\.platform-reservations-active \.platform-home\{display:none\}/);
+assert.match(css,/\.platform-conference-active \.platform-module-switcher,\.platform-warehouse-active \.platform-module-switcher,\.platform-reservations-active \.platform-module-switcher\{display:flex\}/);
 assert.match(css,/\.platform-conference-active #conferenceWorkspace\{display:flex\}/);
 assert.match(css,/\.platform-warehouse-active #warehouseWorkspace\{display:flex\}/);
 assert.match(tokens,/--platform-touch-target:44px/);
@@ -29,8 +29,9 @@ assert.match(html,/<meta name="viewport" content="width=device-width,initial-sca
 assert.match(css,/@media\(max-width:600px\)[\s\S]*?\.startup-dashboard\{min-height:100svh;padding:var\(--app-space-3\);padding-bottom:calc\(var\(--platform-safe-area-bottom\) \+ var\(--platform-mobile-bottom-breathing\)\)\}/);
 assert.match(css,/@media\(max-width:600px\)[\s\S]*?\.startup-version\{width:100%;margin-top:var\(--app-space-6\);padding-block:/);
 assert.match(html,/<button[^>]+platform-module-card-available[^>]+aria-label="فتح وحدة إدارة المؤتمرات"/);
+assert.match(html,/<button[^>]+data-platform-module="reservations"[^>]+platform-module-card-available[^>]+aria-label="فتح وحدة الحجوزات"/);
 assert.doesNotMatch(html,/data-platform-module="conference"[^>]+onclick=/);
-assert.strictEqual((html.match(/platform-module-card-unavailable/g)||[]).length,2);
+assert.strictEqual((html.match(/platform-module-card-unavailable/g)||[]).length,1);
 assert.doesNotMatch(html,/platform-module-card-unavailable[^>]+onclick=/);
 assert.match(html,/data-startup-auth-account-name/);
 assert.match(html,/SyncSettingsUI\.signOut\(\)/);

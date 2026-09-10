@@ -37,6 +37,7 @@ const legacyConferenceRevision='legacy-conference-preflight-v2';
 const privacyRevision='diagnostics-privacy-hardening-v1';
 const templateIsolationRevision='template-sync-isolation-v1';
 const startupRevision='pending-native-device-context-v1';
+const platformIntegrationRevision='reservations-module-integration-v1';
 const deviceOnboardingRevision='platform-first-login-coordinator-v1';
 const organizationTemplateRevision='shared-template-library-v1';
 const legacyTemplateAuthorizationRevision='legacy-template-adoption-authorization-v1';
@@ -210,7 +211,7 @@ assert(index.includes(readAsset));
 assert(worker.includes("'./"+readAsset+"'"));
 assert(index.includes('script.js?rev='+platformShellScriptRevision));
 assert(worker.includes("'./script.js?rev="+platformShellScriptRevision+"'"));
-[['js/platform-integration.js',startupRevision],
+[['js/platform-integration.js',platformIntegrationRevision],
  ['js/supabase/device-session.js',startupTransportRevision]].forEach(([asset,revision])=>{
   const versioned=asset+'?rev='+revision;
   assert(index.includes(versioned),'index missing '+versioned);

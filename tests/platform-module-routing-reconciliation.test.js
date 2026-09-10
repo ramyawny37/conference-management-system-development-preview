@@ -17,7 +17,14 @@ function integrationRuntime(initialRoute){
   let route=initialRoute;
   const calls=[];
   const listeners={};
-  const window={document:{addEventListener(){}},ApplicationRouting:{
+  const shellClasses=classList();
+  const elements={
+    startupScreen:{classList:shellClasses},
+    conferenceWorkspace:{id:'conferenceWorkspace'},
+    warehouseWorkspace:{id:'warehouseWorkspace'},
+    reservationsWorkspace:{id:'reservationsWorkspace'}
+  };
+  const window={document:{addEventListener(){},getElementById:id=>elements[id]||null},ApplicationRouting:{
     getLogicalPathname:()=>route,resolveLogicalRoute:value=>'/preview/#'+value
   },history:{pushState(_state,_title,value){calls.push(['push',value]);route=value.split('#')[1];}},
   addEventListener(name,handler){listeners[name]=handler;},
@@ -26,7 +33,7 @@ function integrationRuntime(initialRoute){
   openConferenceWorkspace(){calls.push(['conference-open']);},
   openWarehouseWorkspace(options){calls.push(['warehouse',options.route]);}};
   vm.runInNewContext(integrationSource,{window,Promise,Object,JSON,String});
-  return {window,calls,listeners,setRoute:value=>{route=value;}};
+  return {window,calls,listeners,shellClasses,elements,setRoute:value=>{route=value;}};
 }
 
 test('module cards use static-safe hash routes and open peer modules',()=>{
@@ -69,6 +76,24 @@ test('routing has one hashchange owner and no competing popstate owner',()=>{
   const state=integrationRuntime('/');
   assert.deepStrictEqual(Object.keys(state.listeners),['hashchange']);
   assert.doesNotMatch(integrationSource,/addEventListener\(['"]popstate/);
+});
+
+test('generic module routes receive their container and unmount when switching modules',()=>{
+  const state=integrationRuntime('/reservations');
+  const lifecycle=[];
+  state.window.PlatformIntegration.registerModule({
+    id:'reservations',
+    mount(context){lifecycle.push(['mount',context.container&&context.container.id]);return true;},
+    unmount(context){lifecycle.push(['unmount',context.nextModuleId]);}
+  });
+  assert.strictEqual(state.window.PlatformIntegration.reconcileRoute(),true);
+  assert.deepStrictEqual(lifecycle,[['mount','reservationsWorkspace']]);
+  assert.strictEqual(state.shellClasses.values.has('platform-reservations-active'),true);
+  state.setRoute('/warehouse');
+  state.listeners.hashchange();
+  assert.deepStrictEqual(lifecycle,[['mount','reservationsWorkspace'],['unmount','warehouse']]);
+  assert.strictEqual(state.shellClasses.values.has('platform-reservations-active'),false);
+  assert.strictEqual(state.window.PlatformIntegration.openModule('unknown'),false);
 });
 
 function warehouseRuntime(route){

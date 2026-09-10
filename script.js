@@ -1655,9 +1655,10 @@ function showPlatformModules(options){
   if(options.preservePathname!==true&&getPlatformShellPathname()!=='/'){
     replacePlatformShellPathname('/');
   }
-  shell.classList.remove('platform-conference-active','platform-warehouse-active');
+  shell.classList.remove('platform-conference-active','platform-warehouse-active','platform-reservations-active');
   var launcher=ge('platformLauncherTitle');
   if(launcher)launcher.focus();
+  if(options.fromIntegration!==true&&window.PlatformIntegration&&typeof window.PlatformIntegration.reconcileRoute==='function')window.PlatformIntegration.reconcileRoute();
   return true;
 }
 function openConferenceWorkspace(options){
