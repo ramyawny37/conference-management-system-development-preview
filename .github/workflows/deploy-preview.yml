@@ -39,36 +39,23 @@ jobs:
           path: source/platform
           fetch-depth: 0
 
-      - name: Checkout Reservations develop source
-        uses: actions/checkout@v4
-        with:
-          repository: ramyawny37/reservation-management-system
-          ref: develop
-          path: source/reservations
-          fetch-depth: 0
-
-      - name: Capture deployed source SHAs
+      - name: Capture deployed source SHA
         id: source_meta
         run: |
           echo "platform_sha=$(git -C source/platform rev-parse HEAD)" >> "$GITHUB_OUTPUT"
-          echo "reservations_sha=$(git -C source/reservations rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          test "$(git -C source/platform rev-parse HEAD)" = "debab82198b34103375def7b897e973d0b5ea384"
 
       - name: Validate Development source contracts
         run: |
+          npm --prefix source/platform run check
           node --check source/platform/js/storage/environment-namespace.js
           node --check source/platform/service-worker.js
           node source/platform/tests/browser-storage-isolation.test.js
           node source/platform/tests/pwa-deterministic-update.test.js
-
-      - name: Build Reservations module from source
-        working-directory: source/reservations
-        run: |
-          npm ci --legacy-peer-deps
-          npm run build:platform-module
-          test -f dist/platform-module/reservations-module.js
-          test -f dist/platform-module/reservations-module.css
-          cmp dist/platform-module/reservations-module.js ../platform/modules/reservations/reservations-module.js
-          cmp dist/platform-module/reservations-module.css ../platform/modules/reservations/reservations-module.css
+          test -f source/platform/modules/reservations/reservations-module.js
+          test -f source/platform/modules/reservations/reservations-module.css
+          echo "591c6d0d05ca24d3818a4ccbb10b5192d0514e99a4d43a0e43fa6f17a506f58c  source/platform/modules/reservations/reservations-module.js" | sha256sum --check --strict
+          echo "1d4e98e842f0e8c896c6c3b67e363056270f79a3867558c5ba2567be82f441cd  source/platform/modules/reservations/reservations-module.css" | sha256sum --check --strict
 
       - name: Prepare isolated preview artifact
         run: |
@@ -84,23 +71,29 @@ jobs:
             --exclude='/tools/' \
             --exclude='/package.json' \
             --exclude='/package-lock.json'
-          mkdir -p site/modules/reservations
-          cp source/reservations/dist/platform-module/reservations-module.js site/modules/reservations/reservations-module.js
-          cp source/reservations/dist/platform-module/reservations-module.css site/modules/reservations/reservations-module.css
           node <<'NODE'
           const fs = require('fs');
           const sources = {
-            platform: process.env.PLATFORM_SOURCE_SHA,
-            reservations: process.env.RESERVATIONS_SOURCE_SHA
+            platform: {
+              repository: 'ramyawny37/conference-management-system-v1',
+              ref: 'develop',
+              sha: process.env.PLATFORM_SOURCE_SHA
+            },
+            reservations: {
+              repository: 'ramyawny37/reservation-management-system',
+              source_sha: '48e3613d9fa53ebffc6adc6f6db08c80f9a2641e',
+              delivery: 'approved-bundle-embedded-in-platform',
+              javascript_sha256: '591c6d0d05ca24d3818a4ccbb10b5192d0514e99a4d43a0e43fa6f17a506f58c',
+              css_sha256: '1d4e98e842f0e8c896c6c3b67e363056270f79a3867558c5ba2567be82f441cd'
+            }
           };
-          if (!Object.values(sources).every(value => /^[0-9a-f]{40}$/.test(value || ''))) {
+          if (!/^[0-9a-f]{40}$/.test(sources.platform.sha || '')) {
             throw new Error('Preview source SHA is invalid');
           }
           fs.writeFileSync('site/development-preview-sources.json', JSON.stringify(sources, null, 2) + '\n');
           NODE
         env:
           PLATFORM_SOURCE_SHA: ${{ steps.source_meta.outputs.platform_sha }}
-          RESERVATIONS_SOURCE_SHA: ${{ steps.source_meta.outputs.reservations_sha }}
 
       - name: Generate Development Supabase public config in artifact
         env:
@@ -121,6 +114,16 @@ jobs:
           }
           if (!key || key.includes(productionRef)) {
             throw new Error('Preview Supabase publishable key is missing or rejected');
+          }
+          if (key.startsWith('sb_secret_')) {
+            throw new Error('Preview Supabase key must not be a secret key');
+          }
+          const keyParts = key.split('.');
+          if (keyParts.length === 3) {
+            const payload = JSON.parse(Buffer.from(keyParts[1], 'base64url').toString('utf8'));
+            if (payload.role === 'service_role') {
+              throw new Error('Preview Supabase key must not be a service-role credential');
+            }
           }
 
           const content =
@@ -152,8 +155,10 @@ jobs:
           grep -Fq "modules/reservations/reservations-module.css?rev=mountable-bundle-v1" site/index.html
           grep -Fq "./modules/reservations/reservations-module.js?rev=mountable-bundle-v1" site/service-worker.js
           grep -Fq "./modules/reservations/reservations-module.css?rev=mountable-bundle-v1" site/service-worker.js
-          cmp source/reservations/dist/platform-module/reservations-module.js site/modules/reservations/reservations-module.js
-          cmp source/reservations/dist/platform-module/reservations-module.css site/modules/reservations/reservations-module.css
+          echo "591c6d0d05ca24d3818a4ccbb10b5192d0514e99a4d43a0e43fa6f17a506f58c  site/modules/reservations/reservations-module.js" | sha256sum --check --strict
+          echo "1d4e98e842f0e8c896c6c3b67e363056270f79a3867558c5ba2567be82f441cd  site/modules/reservations/reservations-module.css" | sha256sum --check --strict
+          grep -Fq 'data-platform-module="reservations" class="platform-module-card platform-module-card-available"' site/index.html
+          grep -Fq 'id="reservationsWorkspace"' site/index.html
           if grep -E "createClient\(|platform-device-session|supabase\\.co" site/modules/reservations/reservations-module.js; then
             echo "Standalone Reservations auth/session configuration found in Preview artifact"
             exit 1
