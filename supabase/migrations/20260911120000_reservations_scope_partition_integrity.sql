@@ -35,6 +35,7 @@ begin
 end $$;
 
 alter table reservations.events
+  alter column conference_id drop not null,
   alter column scope_type set not null,
   alter column scope_partition_id set not null,
   add constraint reservations_events_scope_type_check

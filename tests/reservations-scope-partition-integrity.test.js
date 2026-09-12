@@ -8,6 +8,8 @@ const sql=fs.readFileSync('supabase/migrations/20260911120000_reservations_scope
 test('Reservations uses an immutable internal scope partition with standalone null organization',()=>{
   assert.match(sql,/add column if not exists scope_type text/);
   assert.match(sql,/add column if not exists scope_partition_id uuid/);
+  assert.match(sql,/alter column conference_id drop not null/);
+  assert.match(sql,/scope_type='conference' and conference_id is not null and organization_id is not null/);
   assert.match(sql,/scope_type='standalone' and conference_id is null and organization_id is null/);
   assert.match(sql,/RESERVATIONS_EVENT_SCOPE_IMMUTABLE/);
   assert.match(sql,/reservations_one_canonical_event_per_conference_idx/);
