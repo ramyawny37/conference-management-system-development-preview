@@ -39,11 +39,25 @@ jobs:
           path: source/platform
           fetch-depth: 0
 
-      - name: Capture deployed source SHA
+      - name: Checkout Reservations develop source
+        uses: actions/checkout@v4
+        with:
+          repository: ramyawny37/reservation-management-system
+          ref: develop
+          path: source/reservations
+          fetch-depth: 0
+
+      - name: Capture deployed source SHAs and bundle hashes
         id: source_meta
         run: |
-          echo "platform_sha=$(git -C source/platform rev-parse HEAD)" >> "$GITHUB_OUTPUT"
-          test "$(git -C source/platform rev-parse HEAD)" = "3bd59f5554d174ae33327d4a6d2cf1710922a2d6"
+          PLATFORM_SHA="$(git -C source/platform rev-parse HEAD)"
+          RESERVATIONS_SHA="$(git -C source/reservations rev-parse HEAD)"
+          test "$PLATFORM_SHA" = "9688d55cb024c09414e4beec03e2c1a76c8a9d4c"
+          test "$RESERVATIONS_SHA" = "0530ab8c5c72fc77c273f8bea2d5bb27f0bff13e"
+          echo "platform_sha=$PLATFORM_SHA" >> "$GITHUB_OUTPUT"
+          echo "reservations_sha=$RESERVATIONS_SHA" >> "$GITHUB_OUTPUT"
+          echo "reservations_js_sha256=$(sha256sum source/platform/modules/reservations/reservations-module.js | awk '{print $1}')" >> "$GITHUB_OUTPUT"
+          echo "reservations_css_sha256=$(sha256sum source/platform/modules/reservations/reservations-module.css | awk '{print $1}')" >> "$GITHUB_OUTPUT"
 
       - name: Validate Development source contracts
         run: |
@@ -54,8 +68,8 @@ jobs:
           node source/platform/tests/pwa-deterministic-update.test.js
           test -f source/platform/modules/reservations/reservations-module.js
           test -f source/platform/modules/reservations/reservations-module.css
-          echo "005474ca7616295cdabb5b23c7011c632e1771b7a8129984144eaa3026879437  source/platform/modules/reservations/reservations-module.js" | sha256sum --check --strict
-          echo "1d4e98e842f0e8c896c6c3b67e363056270f79a3867558c5ba2567be82f441cd  source/platform/modules/reservations/reservations-module.css" | sha256sum --check --strict
+          test -n "${{ steps.source_meta.outputs.reservations_js_sha256 }}"
+          test -n "${{ steps.source_meta.outputs.reservations_css_sha256 }}"
 
       - name: Prepare isolated preview artifact
         run: |
@@ -81,19 +95,25 @@ jobs:
             },
             reservations: {
               repository: 'ramyawny37/reservation-management-system',
-              source_sha: 'dfaedd85553991baae8f87f6df812e079eff21e8',
+              source_sha: process.env.RESERVATIONS_SOURCE_SHA,
               delivery: 'approved-bundle-embedded-in-platform',
-              javascript_sha256: '005474ca7616295cdabb5b23c7011c632e1771b7a8129984144eaa3026879437',
-              css_sha256: '1d4e98e842f0e8c896c6c3b67e363056270f79a3867558c5ba2567be82f441cd'
+              javascript_sha256: process.env.RESERVATIONS_JS_SHA256,
+              css_sha256: process.env.RESERVATIONS_CSS_SHA256
             }
           };
-          if (!/^[0-9a-f]{40}$/.test(sources.platform.sha || '')) {
+          if (!/^[0-9a-f]{40}$/.test(sources.platform.sha || '') || !/^[0-9a-f]{40}$/.test(sources.reservations.source_sha || '')) {
             throw new Error('Preview source SHA is invalid');
+          }
+          if (!/^[0-9a-f]{64}$/.test(sources.reservations.javascript_sha256 || '') || !/^[0-9a-f]{64}$/.test(sources.reservations.css_sha256 || '')) {
+            throw new Error('Reservations bundle SHA-256 is invalid');
           }
           fs.writeFileSync('site/development-preview-sources.json', JSON.stringify(sources, null, 2) + '\n');
           NODE
         env:
           PLATFORM_SOURCE_SHA: ${{ steps.source_meta.outputs.platform_sha }}
+          RESERVATIONS_SOURCE_SHA: ${{ steps.source_meta.outputs.reservations_sha }}
+          RESERVATIONS_JS_SHA256: ${{ steps.source_meta.outputs.reservations_js_sha256 }}
+          RESERVATIONS_CSS_SHA256: ${{ steps.source_meta.outputs.reservations_css_sha256 }}
 
       - name: Generate Development Supabase public config in artifact
         env:
@@ -151,12 +171,12 @@ jobs:
           grep -Fq "'cms:development:'+DEVELOPMENT_PROJECT_REF+':'" site/js/storage/environment-namespace.js
           grep -Fq "js/platform-integration.js?rev=reservations-module-integration-v1" site/index.html
           grep -Fq "./js/platform-integration.js?rev=reservations-module-integration-v1" site/service-worker.js
-          grep -Fq "modules/reservations/reservations-module.js?rev=mountable-bundle-v2" site/index.html
-          grep -Fq "modules/reservations/reservations-module.css?rev=mountable-bundle-v2" site/index.html
-          grep -Fq "./modules/reservations/reservations-module.js?rev=mountable-bundle-v2" site/service-worker.js
-          grep -Fq "./modules/reservations/reservations-module.css?rev=mountable-bundle-v2" site/service-worker.js
-          echo "005474ca7616295cdabb5b23c7011c632e1771b7a8129984144eaa3026879437  site/modules/reservations/reservations-module.js" | sha256sum --check --strict
-          echo "1d4e98e842f0e8c896c6c3b67e363056270f79a3867558c5ba2567be82f441cd  site/modules/reservations/reservations-module.css" | sha256sum --check --strict
+          grep -Fq "modules/reservations/reservations-module.js?rev=mountable-bundle-v3" site/index.html
+          grep -Fq "modules/reservations/reservations-module.css?rev=mountable-bundle-v3" site/index.html
+          grep -Fq "./modules/reservations/reservations-module.js?rev=mountable-bundle-v3" site/service-worker.js
+          grep -Fq "./modules/reservations/reservations-module.css?rev=mountable-bundle-v3" site/service-worker.js
+          echo "${{ steps.source_meta.outputs.reservations_js_sha256 }}  site/modules/reservations/reservations-module.js" | sha256sum --check --strict
+          echo "${{ steps.source_meta.outputs.reservations_css_sha256 }}  site/modules/reservations/reservations-module.css" | sha256sum --check --strict
           grep -Fq 'data-platform-module="reservations" class="platform-module-card platform-module-card-available"' site/index.html
           grep -Fq 'id="reservationsWorkspace"' site/index.html
           if grep -E "createClient\(|platform-device-session|supabase\\.co" site/modules/reservations/reservations-module.js; then
