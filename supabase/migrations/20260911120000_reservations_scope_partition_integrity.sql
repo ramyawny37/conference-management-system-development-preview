@@ -188,12 +188,12 @@ returns text language sql immutable set search_path='' as $$
  select encode(extensions.digest(convert_to(jsonb_build_object('operation',p_operation,'scopePartitionId',p_organization_id,'args',p_args)::text,'UTF8'),'sha256'),'hex'
 ); $$;
 
-create or replace function reservations_private.allocate_booking_number(p_scope_partition_id uuid,p_year integer)
+create or replace function reservations_private.allocate_booking_number(p_organization_id uuid,p_year integer)
 returns text language plpgsql security definer set search_path='' as $$
 declare v_number bigint;
 begin
   insert into reservations.booking_number_counters(scope_partition_id,booking_year,next_value)
-  values(p_scope_partition_id,p_year,2)
+  values(p_organization_id,p_year,2)
   on conflict(scope_partition_id,booking_year) do update
     set next_value=reservations.booking_number_counters.next_value+1,updated_at=statement_timestamp()
   returning next_value-1 into v_number;
