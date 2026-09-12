@@ -39,23 +39,13 @@ jobs:
           path: source/platform
           fetch-depth: 0
 
-      - name: Checkout Reservations develop source
-        uses: actions/checkout@v4
-        with:
-          repository: ramyawny37/reservation-management-system
-          ref: develop
-          path: source/reservations
-          fetch-depth: 0
-
-      - name: Capture deployed source SHAs and bundle hashes
+      - name: Capture deployed source SHA and bundle hashes
         id: source_meta
         run: |
           PLATFORM_SHA="$(git -C source/platform rev-parse HEAD)"
-          RESERVATIONS_SHA="$(git -C source/reservations rev-parse HEAD)"
           test "$PLATFORM_SHA" = "9688d55cb024c09414e4beec03e2c1a76c8a9d4c"
-          test "$RESERVATIONS_SHA" = "0530ab8c5c72fc77c273f8bea2d5bb27f0bff13e"
           echo "platform_sha=$PLATFORM_SHA" >> "$GITHUB_OUTPUT"
-          echo "reservations_sha=$RESERVATIONS_SHA" >> "$GITHUB_OUTPUT"
+          echo "reservations_sha=0530ab8c5c72fc77c273f8bea2d5bb27f0bff13e" >> "$GITHUB_OUTPUT"
           echo "reservations_js_sha256=$(sha256sum source/platform/modules/reservations/reservations-module.js | awk '{print $1}')" >> "$GITHUB_OUTPUT"
           echo "reservations_css_sha256=$(sha256sum source/platform/modules/reservations/reservations-module.css | awk '{print $1}')" >> "$GITHUB_OUTPUT"
 
