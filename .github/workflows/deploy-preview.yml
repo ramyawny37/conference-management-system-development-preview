@@ -43,9 +43,9 @@ jobs:
         id: source_meta
         run: |
           PLATFORM_SHA="$(git -C source/platform rev-parse HEAD)"
-          test "$PLATFORM_SHA" = "50f913b69c701ef05d50dae8cc2c95c84e68aa4b"
+          test "$PLATFORM_SHA" = "2afa8efd95cbad208fbdc59b4d16b7b71916c35c"
           echo "platform_sha=$PLATFORM_SHA" >> "$GITHUB_OUTPUT"
-          echo "reservations_sha=f4863babd88ddc558bc2c13916a011b8be4861f2" >> "$GITHUB_OUTPUT"
+          echo "reservations_sha=56abefbf35eee8f7829493f6a765cf6414de0766" >> "$GITHUB_OUTPUT"
           echo "reservations_js_sha256=$(sha256sum source/platform/modules/reservations/reservations-module.js | awk '{print $1}')" >> "$GITHUB_OUTPUT"
           echo "reservations_css_sha256=$(sha256sum source/platform/modules/reservations/reservations-module.css | awk '{print $1}')" >> "$GITHUB_OUTPUT"
 
@@ -161,10 +161,10 @@ jobs:
           grep -Fq "'cms:development:'+DEVELOPMENT_PROJECT_REF+':'" site/js/storage/environment-namespace.js
           grep -Fq "js/platform-integration.js?rev=reservations-module-integration-v1" site/index.html
           grep -Fq "./js/platform-integration.js?rev=reservations-module-integration-v1" site/service-worker.js
-          grep -Fq "modules/reservations/reservations-module.js?rev=mountable-bundle-v5" site/index.html
-          grep -Fq "modules/reservations/reservations-module.css?rev=mountable-bundle-v5" site/index.html
-          grep -Fq "./modules/reservations/reservations-module.js?rev=mountable-bundle-v5" site/service-worker.js
-          grep -Fq "./modules/reservations/reservations-module.css?rev=mountable-bundle-v5" site/service-worker.js
+          grep -Fq "modules/reservations/reservations-module.js?rev=mountable-bundle-v6" site/index.html
+          grep -Fq "modules/reservations/reservations-module.css?rev=mountable-bundle-v6" site/index.html
+          grep -Fq "./modules/reservations/reservations-module.js?rev=mountable-bundle-v6" site/service-worker.js
+          grep -Fq "./modules/reservations/reservations-module.css?rev=mountable-bundle-v6" site/service-worker.js
           echo "${{ steps.source_meta.outputs.reservations_js_sha256 }}  site/modules/reservations/reservations-module.js" | sha256sum --check --strict
           echo "${{ steps.source_meta.outputs.reservations_css_sha256 }}  site/modules/reservations/reservations-module.css" | sha256sum --check --strict
           grep -Fq 'data-platform-module="reservations" class="platform-module-card platform-module-card-available"' site/index.html
