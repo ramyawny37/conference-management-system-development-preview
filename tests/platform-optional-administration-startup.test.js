@@ -18,7 +18,7 @@ assert.match(script,/function initializePlatformAdministrationContext\(\)[\s\S]*
 assert.match(authorizedStartup,/completeApplicationStartup\(\)[\s\S]*initializePlatformAdministrationContext\(\)[\s\S]*StartupConferenceDiscovery/);
 assert.match(script,/function ensureUserManagementAccess\(\)[\s\S]*UserManagementReadService\.getActorCapabilities\(\)/);
 assert.match(script,/function ensureOrganizationManagementAccess\(\)[\s\S]*OrganizationManagementService\.list\(\)/);
-assert.match(script,/function ensureModulePermissionAdministrationAccess\(\)[\s\S]*ModulePermissionAdministrationService\.probeAvailability\(\)/);
+assert.match(script,/function ensureModulePermissionAdministrationAccess\(\)[\s\S]*ModulePermissionAdministrationService\.probeAvailability\('warehouse'\)[\s\S]*ModulePermissionAdministrationService\.probeAvailability\('reservations'\)/);
 assert.match(deviceUi,/global\.DeviceAuthorizationAdministrationUI=Object\.freeze\(\{initialize:initialize/);
 assert.match(deviceService,/function administrationState\(options\)[\s\S]*get-administration-state/);
 assert.match(deviceUi,/function refreshPlatformPendingRequests\(\)[\s\S]*listPlatformPendingDevices/);

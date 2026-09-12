@@ -2527,9 +2527,13 @@ function ensureModulePermissionAdministrationAccess(){
   if(!window.ModulePermissionAdministrationService||
     typeof window.ModulePermissionAdministrationService.probeAvailability!=='function')return Promise.resolve(modulePermissionAdministrationAccessState);
   modulePermissionAdministrationAccessState.status='loading';
-  modulePermissionAdministrationAccessState.flight=window.ModulePermissionAdministrationService.probeAvailability().then(function(response){
-    modulePermissionAdministrationAccessState.status=response&&response.ok?'loaded':'denied';
-    modulePermissionAdministrationAccessState.available=!!(response&&response.ok);
+  modulePermissionAdministrationAccessState.flight=Promise.all([
+    window.ModulePermissionAdministrationService.probeAvailability('warehouse'),
+    window.ModulePermissionAdministrationService.probeAvailability('reservations')
+  ]).then(function(responses){
+    var available=responses.some(function(response){return response&&response.ok;});
+    modulePermissionAdministrationAccessState.status=available?'loaded':'denied';
+    modulePermissionAdministrationAccessState.available=available;
     modulePermissionAdministrationAccessState.flight=null;
     if(ge('tab6')&&ge('tab6').style.display!=='none')renderSettings();
     return modulePermissionAdministrationAccessState;
