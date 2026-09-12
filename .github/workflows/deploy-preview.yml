@@ -43,7 +43,7 @@ jobs:
         id: source_meta
         run: |
           PLATFORM_SHA="$(git -C source/platform rev-parse HEAD)"
-          test "$PLATFORM_SHA" = "2afa8efd95cbad208fbdc59b4d16b7b71916c35c"
+          test "$PLATFORM_SHA" = "16e6d55bfe5245328ff48324622d3e5cd4f6acf9"
           echo "platform_sha=$PLATFORM_SHA" >> "$GITHUB_OUTPUT"
           echo "reservations_sha=56abefbf35eee8f7829493f6a765cf6414de0766" >> "$GITHUB_OUTPUT"
           echo "reservations_js_sha256=$(sha256sum source/platform/modules/reservations/reservations-module.js | awk '{print $1}')" >> "$GITHUB_OUTPUT"
