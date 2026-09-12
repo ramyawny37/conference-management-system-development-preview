@@ -37,7 +37,7 @@ begin
   select session.* into verified_session
   from platform_private.device_sessions session
   join platform.device_key_bindings binding on binding.id=session.binding_id
-  join platform.user_device_authorizations authorization on authorization.id=session.device_authorization_id
+  join platform.user_device_authorizations device_authorization on device_authorization.id=session.device_authorization_id
   join platform.devices device on device.id=session.device_id
   join platform.profiles profile on profile.user_id=session.user_id
   where session.id=p_session_id and session.user_id=p_user_id and session.token_hash=p_token_hash
@@ -45,8 +45,8 @@ begin
     and binding.user_id=session.user_id and binding.device_id=session.device_id and binding.device_authorization_id=session.device_authorization_id
     and binding.public_key_thumbprint=session.public_key_thumbprint and binding.algorithm='ECDSA_P256_SHA256'
     and binding.lifecycle_status='active' and binding.revoked_at is null and binding.retired_at is null
-    and authorization.user_id=session.user_id and authorization.device_id=session.device_id
-    and authorization.status='approved' and authorization.revoked_at is null
+    and device_authorization.user_id=session.user_id and device_authorization.device_id=session.device_id
+    and device_authorization.status='approved' and device_authorization.revoked_at is null
     and device.lifecycle_status='active' and device.retired_at is null and device.compromised_at is null
     and profile.account_status='approved';
   if not found then
