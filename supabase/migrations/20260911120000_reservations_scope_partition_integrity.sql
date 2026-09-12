@@ -183,9 +183,9 @@ alter table reservations.booking_number_counters drop constraint if exists booki
 alter table reservations.booking_number_counters alter column organization_id drop not null;
 alter table reservations.booking_number_counters add primary key(scope_partition_id,booking_year);
 
-create or replace function reservations_private.intent(p_operation text,p_scope_partition_id uuid,p_args jsonb)
+create or replace function reservations_private.intent(p_operation text,p_organization_id uuid,p_args jsonb)
 returns text language sql immutable set search_path='' as $$
- select encode(extensions.digest(convert_to(jsonb_build_object('operation',p_operation,'scopePartitionId',p_scope_partition_id,'args',p_args)::text,'UTF8'),'sha256'),'hex'
+ select encode(extensions.digest(convert_to(jsonb_build_object('operation',p_operation,'scopePartitionId',p_organization_id,'args',p_args)::text,'UTF8'),'sha256'),'hex'
 ); $$;
 
 create or replace function reservations_private.allocate_booking_number(p_scope_partition_id uuid,p_year integer)

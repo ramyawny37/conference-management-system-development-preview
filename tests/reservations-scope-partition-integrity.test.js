@@ -29,7 +29,10 @@ test('all event dependents are backfilled and constrained to their Event partiti
 test('counter and idempotency namespaces move to partition without rewriting history',()=>{
   assert.match(sql,/primary key\(scope_partition_id,booking_year\)/);
   assert.match(sql,/allocate_booking_number\(p_scope_partition_id uuid,p_year integer\)/);
-  assert.match(sql,/'scopePartitionId'/);
+  const intent=sql.match(/create or replace function reservations_private\.intent\(p_operation text,p_organization_id uuid,p_args jsonb\)[\s\S]*?\); \$\$;/);
+  assert.ok(intent);
+  assert.match(intent[0],/jsonb_build_object\('operation',p_operation,'scopePartitionId',p_organization_id,'args',p_args\)/);
+  assert.doesNotMatch(intent[0],/'organizationId'/);
   assert.match(sql,/v_historical_intent/);
   assert.doesNotMatch(sql,/update reservations\.operations set intent_hash/i);
   assert.match(sql,/v_prior\.intent_hash=v_intent/);
