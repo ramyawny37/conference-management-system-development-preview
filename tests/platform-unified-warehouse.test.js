@@ -33,7 +33,7 @@ test("generic Edge and SQL dispatchers expose exactly the dispatchable catalogs"
   }
   for(const match of edge.matchAll(/warehouse\.add\('([a-z0-9_]+)'\)/g))edgeWarehouse.add(match[1]);
   assert.equal(JSON.stringify([...edgeConference].sort()),JSON.stringify(conference.EDGE_ONLY_PROTECTED.map(x=>x.operation).sort()));
-  assert.equal(JSON.stringify([...edgeWarehouse].sort()),JSON.stringify(warehouse.DISPATCHABLE.map(x=>x.operation).sort()));
+  assert.equal(JSON.stringify([...edgeWarehouse].sort()),JSON.stringify(warehouse.DISPATCHABLE.map(x=>x.operation).concat('check_module_access').sort()));
   assert.doesNotMatch(edge,/stage_import/);
   assert.match(migration,/execute_device_operation\(uuid,uuid,bytea,text,text,jsonb\)/);
   assert.match(migration,/WAREHOUSE_OPERATION_NOT_ALLOWED/);

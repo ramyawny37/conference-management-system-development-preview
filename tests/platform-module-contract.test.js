@@ -29,20 +29,20 @@ function runtime(initialRoute='/'){
     openWarehouseWorkspace(options){calls.push(['warehouse',options]);return true;},
     showPlatformModules(){calls.push(['modules']);return true;},
     SupabaseAuth:{getAccountIdentity:()=>({authenticated:true,userId:'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'})},
-    PlatformDeviceSession:{invokeModuleProtected:(module,operation,args)=>{calls.push(['protected',module,operation,args]);return Promise.resolve({ok:true});}},
+    PlatformDeviceSession:{invokeModuleProtected:(module,operation,args)=>{calls.push(['protected',module,operation,args]);return Promise.resolve(operation==='check_module_access'?{status:'allowed',moduleKey:module}:{ok:true});}},
     SyncSettingsUI:{signOut:()=>Promise.resolve(true)},
   };
   vm.runInNewContext(source,{window,Promise,Object,JSON,String,Error});
   return {window,calls,listeners,classes,elements,setRoute:value=>{route=value;}};
 }
 
-test('built-in modules remain registered and open through the common contract',()=>{
+test('built-in modules remain registered and open through the common contract',async()=>{
   const state=runtime('/');
   assert.deepStrictEqual(Array.from(state.window.PlatformIntegration.getRegisteredModules()),['conference','warehouse']);
   assert.strictEqual(state.window.PlatformIntegration.openModule('conference'),true);
   assert.strictEqual(state.window.PlatformIntegration.getActiveModuleId(),'conference');
   state.setRoute('/');
-  assert.strictEqual(state.window.PlatformIntegration.openModule('warehouse'),true);
+  assert.strictEqual(await state.window.PlatformIntegration.openModule('warehouse'),true);
   assert.strictEqual(state.window.PlatformIntegration.getActiveModuleId(),'warehouse');
 });
 
@@ -59,20 +59,21 @@ test('a feature module can mount, reconcile routes, and unmount without owning p
     unmount(context){lifecycle.push(['unmount',context.nextModuleId]);},
   });
 
-  assert.strictEqual(state.window.PlatformIntegration.openModule('reservations'),true);
-  await Promise.resolve();
+  assert.strictEqual(await state.window.PlatformIntegration.openModule('reservations'),true);
   assert.strictEqual(state.window.PlatformIntegration.getActiveModuleId(),'reservations');
   assert.deepStrictEqual(lifecycle[0],['mount','/reservations',true,'reservationsWorkspace']);
   assert.strictEqual(state.classes.has('platform-reservations-active'),true);
-  assert.deepStrictEqual(state.calls[0],['push','/preview/#/reservations']);
-  assert.deepStrictEqual(state.calls[1],['protected','reservations','list_conference_options',{}]);
+  assert.deepStrictEqual(state.calls[0].slice(0,3),['protected','reservations','check_module_access']);
+  assert.deepStrictEqual(Object.keys(state.calls[0][3]),[]);
+  assert.deepStrictEqual(state.calls[1],['push','/preview/#/reservations']);
+  assert.deepStrictEqual(state.calls[2],['protected','reservations','list_conference_options',{}]);
 
   state.setRoute('/reservations/reports');
-  state.listeners.hashchange();
+  await state.listeners.hashchange();
   assert.deepStrictEqual(lifecycle[1],['route','/reservations/reports']);
 
   state.setRoute('/warehouse');
-  state.listeners.hashchange();
+  await state.listeners.hashchange();
   assert.deepStrictEqual(lifecycle[2],['unmount','warehouse']);
   assert.strictEqual(state.window.PlatformIntegration.getActiveModuleId(),'warehouse');
   assert.strictEqual(state.classes.has('platform-reservations-active'),false);

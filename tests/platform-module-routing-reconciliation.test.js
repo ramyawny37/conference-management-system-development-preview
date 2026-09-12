@@ -31,23 +31,25 @@ function integrationRuntime(initialRoute){
   reconcileConferenceRoute(){calls.push(['conference-route',route]);},
   showPlatformModules(){calls.push(['platform']);},
   openConferenceWorkspace(){calls.push(['conference-open']);},
-  openWarehouseWorkspace(options){calls.push(['warehouse',options.route]);}};
+  openWarehouseWorkspace(options){calls.push(['warehouse',options.route]);},
+  PlatformDeviceSession:{invokeModuleProtected:(module,operation,args)=>{calls.push(['protected',module,operation,args]);return Promise.resolve({status:'allowed',moduleKey:module});}}};
   vm.runInNewContext(integrationSource,{window,Promise,Object,JSON,String});
   return {window,calls,listeners,shellClasses,elements,setRoute:value=>{route=value;}};
 }
 
-test('module cards use static-safe hash routes and open peer modules',()=>{
+test('module cards use static-safe hash routes and open peer modules',async()=>{
   const state=integrationRuntime('/');
   assert.strictEqual(state.window.PlatformIntegration.openModule('conference'),true);
   assert.deepStrictEqual(state.calls,[['push','/preview/#/conference'],['conference-open']]);
   state.calls.length=0;
   state.setRoute('/');
-  assert.strictEqual(state.window.PlatformIntegration.openModule('warehouse'),true);
-  assert.deepStrictEqual(state.calls,[['push','/preview/#/warehouse'],['warehouse',undefined]]);
+  assert.strictEqual(await state.window.PlatformIntegration.openModule('warehouse'),true);
+  assert.deepStrictEqual(state.calls.map(call=>call.slice(0,3)),[['protected','warehouse','check_module_access'],['push','/preview/#/warehouse'],['warehouse',undefined]]);
+  assert.deepStrictEqual(Object.keys(state.calls[0][3]),[]);
   assert.doesNotMatch(integrationSource,/location\.(?:assign|replace)|href\s*=\s*['"]\/(?:conference|warehouse)/);
 });
 
-test('one hash listener owns Back and Forward reconciliation',()=>{
+test('one hash listener owns Back and Forward reconciliation',async()=>{
   const state=integrationRuntime('/conference');
   assert.deepStrictEqual(Object.keys(state.listeners),['hashchange']);
   state.listeners.hashchange();
@@ -58,8 +60,9 @@ test('one hash listener owns Back and Forward reconciliation',()=>{
   assert.deepStrictEqual(state.calls,[['conference-route','/conference/app/reports']]);
   state.calls.length=0;
   state.setRoute('/warehouse/approvals');
-  state.listeners.hashchange();
-  assert.deepStrictEqual(state.calls,[['warehouse','/warehouse/approvals']]);
+  await state.listeners.hashchange();
+  assert.deepStrictEqual(state.calls.map(call=>call.slice(0,3)),[['protected','warehouse','check_module_access'],['warehouse','/warehouse/approvals']]);
+  assert.deepStrictEqual(Object.keys(state.calls[0][3]),[]);
   state.calls.length=0;
   state.setRoute('/');
   state.listeners.hashchange();
@@ -78,7 +81,7 @@ test('routing has one hashchange owner and no competing popstate owner',()=>{
   assert.doesNotMatch(integrationSource,/addEventListener\(['"]popstate/);
 });
 
-test('generic module routes receive their container and unmount when switching modules',()=>{
+test('generic module routes receive their container and unmount when switching modules',async()=>{
   const state=integrationRuntime('/reservations');
   const lifecycle=[];
   state.window.PlatformIntegration.registerModule({
@@ -86,11 +89,11 @@ test('generic module routes receive their container and unmount when switching m
     mount(context){lifecycle.push(['mount',context.container&&context.container.id]);return true;},
     unmount(context){lifecycle.push(['unmount',context.nextModuleId]);}
   });
-  assert.strictEqual(state.window.PlatformIntegration.reconcileRoute(),true);
+  assert.strictEqual(await state.window.PlatformIntegration.reconcileRoute(),true);
   assert.deepStrictEqual(lifecycle,[['mount','reservationsWorkspace']]);
   assert.strictEqual(state.shellClasses.values.has('platform-reservations-active'),true);
   state.setRoute('/warehouse');
-  state.listeners.hashchange();
+  await state.listeners.hashchange();
   assert.deepStrictEqual(lifecycle,[['mount','reservationsWorkspace'],['unmount','warehouse']]);
   assert.strictEqual(state.shellClasses.values.has('platform-reservations-active'),false);
   assert.strictEqual(state.window.PlatformIntegration.openModule('unknown'),false);
