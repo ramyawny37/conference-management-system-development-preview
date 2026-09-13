@@ -2,10 +2,12 @@ begin;
 
 -- Presentation-only localization for the module permission administration UI.
 -- Stable permission keys, scope rules, sensitivity, status, and authorization semantics are unchanged.
+-- catalog_version is incremented because catalog history protection requires versioning for label changes.
 
 update public.module_permission_catalog as catalog
 set display_name = labels.display_name,
-    description = labels.description
+    description = labels.description,
+    catalog_version = catalog.catalog_version + 1
 from (values
   ('reservations','reservations.assignment.manage','إدارة إسناد الحجوزات','إسناد الموارد المؤهلة مع منع تعارض الحجوزات.'),
   ('reservations','reservations.attendance.manage','إدارة الحضور','تسجيل الحضور للفعاليات وتصحيحه.'),
