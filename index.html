@@ -12,6 +12,7 @@
 <title>منظومة الإدارة المتكاملة</title>
 <link rel="stylesheet" href="shared-design-tokens.css?rev=platform-shell-phase2b-v1">
 <link rel="stylesheet" href="style.css?rev=item-unit-dialog-v1">
+<link rel="stylesheet" href="modules/reservations/reservations-module.css?rev=mountable-bundle-v6">
 </head>
 <body>
 
@@ -102,10 +103,10 @@
             <span class="platform-module-copy"><strong>إدارة المخازن</strong><small>Warehouse Management</small></span>
             <span class="platform-module-state platform-module-state-available">متاحة</span>
           </button>
-          <button type="button" data-platform-module="reservations" class="platform-module-card platform-module-card-unavailable" aria-disabled="true" disabled>
+          <button type="button" data-platform-module="reservations" class="platform-module-card platform-module-card-available" aria-label="فتح وحدة الحجوزات">
             <span class="platform-module-icon" data-app-icon="note"></span>
             <span class="platform-module-copy"><strong>الحجوزات</strong><small>Reservations</small></span>
-            <span class="platform-module-state">غير متكاملة بعد</span>
+            <span class="platform-module-state platform-module-state-available">متاحة</span>
           </button>
           <button type="button" data-platform-module="custody" class="platform-module-card platform-module-card-unavailable" aria-disabled="true" disabled>
             <span class="platform-module-icon" data-app-icon="money"></span>
@@ -173,6 +174,7 @@
     </section>
     </div>
     <div id="warehouseWorkspace" class="conference-workspace" tabindex="-1"></div>
+    <div id="reservationsWorkspace" class="conference-workspace" tabindex="-1"></div>
   </div>
   <div id="appVersionLabel" class="startup-version"></div>
 </div>
@@ -549,7 +551,8 @@
 <script src="js/supabase/warehouse-transport.js?rev=phase-w1-v1"></script>
 <script src="js/supabase/client.js?rev=phase1c-v1"></script>
 <script src="js/supabase/auth.js?rev=account-session-identity-v1"></script>
-<script src="js/platform-integration.js?rev=pending-native-device-context-v1"></script>
+<script src="js/platform-integration.js?rev=module-entry-access-gate-v1"></script>
+<script src="modules/reservations/reservations-module.js?rev=mountable-bundle-v6"></script>
 <script src="js/supabase/system-access-service.js?rev=conference-create-authorization-v1"></script>
 <script src="js/sync/diagnostics-privacy-policy.js?rev=diagnostics-privacy-hardening-v1"></script>
 <script src="js/supabase/first-system-bootstrap-service.js?rev=first-owner-bootstrap-hardening-v1"></script>
@@ -605,8 +608,8 @@
 <script src="js/supabase/account-administration-service.js?rev=production-admin-session-boundary-v1"></script>
 <script src="js/sync/user-management-read-service.js?rev=production-admin-session-boundary-v1"></script>
 <script src="js/sync/user-management-ui.js?rev=organization-membership-operation-key-v1"></script>
-<script src="js/sync/module-permission-administration-service.js?rev=platform-round3g3-v1"></script>
-<script src="js/sync/module-permission-administration-ui.js?rev=platform-round3g3-v1"></script>
+<script src="js/sync/module-permission-administration-service.js?rev=platform-multimodule-permissions-v1"></script>
+<script src="js/sync/module-permission-administration-ui.js?rev=platform-multimodule-permissions-v1"></script>
 <script src="js/sync/conference-linking-attempt-store.js"></script>
 <script src="js/sync/conference-linking-service.js?rev=conference-organization-context-v1"></script>
 <script src="js/sync/conference-sync-ui.js?rev=conference-organization-context-v1"></script>
@@ -651,7 +654,7 @@
 <script src="js/warehouse/party-management.js?rev=warehouse-party-management-v1"></script>
 <script src="js/warehouse/remaining-operations.js?rev=adjustment-conversion-ux-v1"></script>
 <script src="js/warehouse/workspace.js?rev=item-unit-add-ui-v1"></script>
-<script src="script.js?rev=production-platform-owner-administration-context-v1"></script>
+<script src="script.js?rev=platform-module-entry-gate-v1"></script>
 <script src="version.js"></script>
 <script>
   document.addEventListener('DOMContentLoaded', function() {

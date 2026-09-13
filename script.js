@@ -1655,9 +1655,10 @@ function showPlatformModules(options){
   if(options.preservePathname!==true&&getPlatformShellPathname()!=='/'){
     replacePlatformShellPathname('/');
   }
-  shell.classList.remove('platform-conference-active','platform-warehouse-active');
+  shell.classList.remove('platform-conference-active','platform-warehouse-active','platform-reservations-active');
   var launcher=ge('platformLauncherTitle');
   if(launcher)launcher.focus();
+  if(options.fromIntegration!==true&&window.PlatformIntegration&&typeof window.PlatformIntegration.reconcileRoute==='function')window.PlatformIntegration.reconcileRoute();
   return true;
 }
 function openConferenceWorkspace(options){
@@ -7070,8 +7071,8 @@ function openStartupScreen(options){
   if(platformRoute&&platformRoute.indexOf('/conference')===0){
     openConferenceWorkspace({explicitModuleEntry:true});
   }else if(platformRoute&&platformRoute.indexOf('/warehouse')===0&&
-    typeof window.openWarehouseWorkspace==='function'){
-    window.openWarehouseWorkspace({route:platformRoute});
+    window.PlatformIntegration&&typeof window.PlatformIntegration.reconcileRoute==='function'){
+    window.PlatformIntegration.reconcileRoute();
   }else{
     showPlatformModules({preservePathname:true});
   }
@@ -10040,9 +10041,7 @@ function restoreAuthorizedApplicationView(){
   }
   if(platformRoute&&platformRoute.indexOf('/warehouse')===0){
     setApplicationMode('startup');
-    if(typeof window.openWarehouseWorkspace==='function'){
-      window.openWarehouseWorkspace({route:platformRoute});
-    }
+    if(window.PlatformIntegration&&typeof window.PlatformIntegration.reconcileRoute==='function')window.PlatformIntegration.reconcileRoute();
     recordStartupStage('view_restore','completed','WAREHOUSE_ROUTE');
     return true;
   }
