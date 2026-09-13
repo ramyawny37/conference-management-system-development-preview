@@ -8,13 +8,14 @@ const ENVIRONMENTS=Object.freeze({
 const REQUIRED_MIGRATIONS=Object.freeze([
   'system_access_platform_profile_reconciliation','system_owner_platform_owner_reconciliation',
   'inventory_authority_retirement','module_access_delegation_enforcement',
-  'module_permission_administration_backend_surface'
+  'module_permission_administration_backend_surface','platform_module_entry_access_gate',
+  'platform_private_recovery_rls_hardening','module_permission_catalog_arabic_labels'
 ]);
 const REQUIRED_EDGE_OPERATIONS=Object.freeze([
   'search_module_permission_candidates','list_module_permission_catalog_for_administration',
   'manage_catalog_module_grant','list_permission_administration_stores',
   'list_module_permission_grants','manage_foundation_module_grant',
-  'recover_revoke_final_module_manager'
+  'recover_revoke_final_module_manager','check_module_access'
 ]);
 const SECRET_KEY=/(?:password|database_url|service.?role|access.?token|refresh.?token|authorization|api.?key|secret)/i;
 const SHA=/^[0-9a-f]{40}$/;
