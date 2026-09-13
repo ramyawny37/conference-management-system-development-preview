@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "check": "node --test tests/platform-*.test.js",
-    "release:preflight:development": "node tools/release-preflight/collect-development-evidence.cjs"
+    "release:preflight:development": "node tools/release-preflight/collect-development-evidence.cjs",
+    "release:preflight:promotion": "node tools/release-preflight/verify-promotion-readiness.cjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "2.112.4"

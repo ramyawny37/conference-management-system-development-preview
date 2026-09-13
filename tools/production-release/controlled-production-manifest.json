@@ -1493,5 +1493,36 @@
       ],
       "sourceReason": "Round 3L reviewed Production dependency order"
     }
-  ]
+  ],
+  "releaseRequirements": {
+    "requiredMigrationFiles": [
+      "supabase/migrations/20260908153405_reservations_v1_foundation.sql",
+      "supabase/migrations/20260908153406_reservations_v1_protected_dispatcher.sql",
+      "supabase/migrations/20260908171814_reservations_event_booking_domain_reconciliation.sql",
+      "supabase/migrations/20260908171822_reservations_event_booking_dispatcher.sql",
+      "supabase/migrations/20260909120000_reservations_platform_tenant_boundary_reconciliation.sql",
+      "supabase/migrations/20260909120555_production_validated_phase1c_variable_disambiguation.sql",
+      "supabase/migrations/20260909160000_reservations_conference_lifecycle_round1.sql",
+      "supabase/migrations/20260910120000_reservations_conference_scope_reconciliation.sql",
+      "supabase/migrations/20260910150000_reservations_legacy_organization_scope_retirement.sql",
+      "supabase/migrations/20260910160000_reservations_report_booking_pagination.sql",
+      "supabase/migrations/20260911120000_reservations_scope_partition_integrity.sql",
+      "supabase/migrations/20260912192000_platform_module_entry_access_gate.sql",
+      "supabase/migrations/20260913173000_module_permission_catalog_arabic_labels.sql"
+    ],
+    "developmentOnlyMigrationFiles": [
+      "supabase/migrations/20260831050000_one_time_stable_development_device_recovery.sql",
+      "supabase/migrations/20260831051000_stable_device_recovery_state_lookup.sql",
+      "supabase/migrations/20260831052000_stable_device_recovery_server_actor_resolution.sql",
+      "supabase/migrations/20260831054000_stable_device_recovery_state_volatility_reconciliation.sql",
+      "supabase/migrations/20260831210905_stable_device_recovery_expired_challenge_retry_reconciliation.sql",
+      "supabase/migrations/20260902020000_platform_device_ownership_handoff_1a.sql",
+      "supabase/migrations/20260913141000_platform_private_recovery_rls_hardening.sql"
+    ],
+    "edge": {
+      "slug": "platform-device-operation",
+      "sourceFile": "supabase/functions/platform-device-operation/index.ts",
+      "verifyJwt": true
+    }
+  }
 }

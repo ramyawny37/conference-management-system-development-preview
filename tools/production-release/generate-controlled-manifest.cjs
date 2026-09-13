@@ -66,6 +66,33 @@ const superseded={
   '20260903150000_phase1c_server_device_context_reconciliation.sql':'REPLACED_BY_20260907162000',
   '20260907130000_inventory_authority_retirement.sql':'REPLACED_BY_20260907163000'
 };
+const releaseRequirements=Object.freeze({
+  requiredMigrationFiles:[
+    '20260908153405_reservations_v1_foundation.sql',
+    '20260908153406_reservations_v1_protected_dispatcher.sql',
+    '20260908171814_reservations_event_booking_domain_reconciliation.sql',
+    '20260908171822_reservations_event_booking_dispatcher.sql',
+    '20260909120000_reservations_platform_tenant_boundary_reconciliation.sql',
+    '20260909120555_production_validated_phase1c_variable_disambiguation.sql',
+    '20260909160000_reservations_conference_lifecycle_round1.sql',
+    '20260910120000_reservations_conference_scope_reconciliation.sql',
+    '20260910150000_reservations_legacy_organization_scope_retirement.sql',
+    '20260910160000_reservations_report_booking_pagination.sql',
+    '20260911120000_reservations_scope_partition_integrity.sql',
+    '20260912192000_platform_module_entry_access_gate.sql',
+    '20260913173000_module_permission_catalog_arabic_labels.sql'
+  ].map(migration),
+  developmentOnlyMigrationFiles:[
+    '20260831050000_one_time_stable_development_device_recovery.sql',
+    '20260831051000_stable_device_recovery_state_lookup.sql',
+    '20260831052000_stable_device_recovery_server_actor_resolution.sql',
+    '20260831054000_stable_device_recovery_state_volatility_reconciliation.sql',
+    '20260831210905_stable_device_recovery_expired_challenge_retry_reconciliation.sql',
+    '20260902020000_platform_device_ownership_handoff_1a.sql',
+    '20260913141000_platform_private_recovery_rls_hardening.sql'
+  ].map(migration),
+  edge:{slug:'platform-device-operation',sourceFile:'supabase/functions/platform-device-operation/index.ts',verifyJwt:true}
+});
 const sha=file=>crypto.createHash('sha256').update(fs.readFileSync(path.join(root,file))).digest('hex');
 const version=name=>name.match(/^([0-9]{14})_/)[1];
 function semanticExpression(name){
@@ -196,9 +223,9 @@ const after={
 const entries=early.map(skipEntry);
 for(const name of apply){entries.push(applyEntry(name));for(const skipped of after[version(name)]||[])entries.push(skipEntry(skipped));}
 if(entries.length!==apply.length+Object.keys(superseded).length)throw new Error('INTERLEAVED_MANIFEST_INCOMPLETE');
-const manifest={schemaVersion:2,packageId:'conference-controlled-production-fa7d7ba-v1',checkpointSha:'fa7d7ba81058190602bdd215e71006576a49a6ce',productionProjectRef:'mpezfbvcdfxpgflehuot',forbiddenProjectRefs:['gppwltrifgfxrkzvvxoe'],baseline:{version:'20260828150000',name:'production_webauthn_privileged_device_final_activation'},historyContract:{columns:['version','statements','name','created_by','idempotency_key','rollback'],primaryKey:'version',unique:'idempotency_key'},executionOrder:entries.map(entry=>({version:entry.version,action:entry.action})),entries};
+const manifest={schemaVersion:2,packageId:'conference-controlled-production-fa7d7ba-v1',checkpointSha:'fa7d7ba81058190602bdd215e71006576a49a6ce',productionProjectRef:'mpezfbvcdfxpgflehuot',forbiddenProjectRefs:['gppwltrifgfxrkzvvxoe'],baseline:{version:'20260828150000',name:'production_webauthn_privileged_device_final_activation'},historyContract:{columns:['version','statements','name','created_by','idempotency_key','rollback'],primaryKey:'version',unique:'idempotency_key'},executionOrder:entries.map(entry=>({version:entry.version,action:entry.action})),entries,releaseRequirements};
 const output=path.join(__dirname,'controlled-production-manifest.json');
 fs.writeFileSync(output,JSON.stringify(manifest,null,2)+'\n');
 console.log(output);
 
-module.exports={apply,superseded};
+module.exports={apply,superseded,releaseRequirements};
