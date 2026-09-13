@@ -71,7 +71,9 @@ jobs:
             "const productionCacheRevision='production-3-4-0-item-unit-add-ui-v1';":
               "const productionCacheRevision='production-3-4-0-reservations-reconciliation-v1';",
             "const platformShellScriptRevision='production-platform-owner-administration-context-v1';":
-              "const platformShellScriptRevision='platform-module-entry-gate-v1';"
+              "const platformShellScriptRevision='platform-module-entry-gate-v1';",
+            "[['js/platform-integration.js',startupRevision],\n ['js/supabase/device-session.js',startupTransportRevision]]":
+              "[['js/platform-integration.js','module-entry-access-gate-v1'],\n ['js/supabase/device-session.js',startupTransportRevision]]"
           }
           for old,new in replacements.items():
               if s.count(old)!=1:
