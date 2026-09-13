@@ -1,0 +1,80 @@
+name: Reservations reconciliation shell patch
+
+on:
+  push:
+    branches:
+      - release/reservations-main-reconciliation
+
+permissions:
+  contents: write
+
+jobs:
+  reconcile-shell:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: release/reservations-main-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Apply selective Reservations shell reconciliation
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs=require('node:fs');
+          function patch(path,replacements){
+            let text=fs.readFileSync(path,'utf8');
+            for(const [before,after,label] of replacements){
+              const count=text.split(before).length-1;
+              if(count!==1) throw new Error(`${path}: ${label} expected once, found ${count}`);
+              text=text.replace(before,after);
+            }
+            fs.writeFileSync(path,text);
+          }
+
+          patch('index.html',[
+            ['<link rel="stylesheet" href="style.css?rev=item-unit-dialog-v1">','<link rel="stylesheet" href="style.css?rev=item-unit-dialog-v1">\n<link rel="stylesheet" href="modules/reservations/reservations-module.css?rev=mountable-bundle-v6">','reservations stylesheet'],
+            ['<button type="button" data-platform-module="reservations" class="platform-module-card platform-module-card-unavailable" aria-disabled="true" disabled>\n            <span class="platform-module-icon" data-app-icon="note"></span>\n            <span class="platform-module-copy"><strong>الحجوزات</strong><small>Reservations</small></span>\n            <span class="platform-module-state">غير متكاملة بعد</span>\n          </button>','<button type="button" data-platform-module="reservations" class="platform-module-card platform-module-card-available" aria-label="فتح وحدة الحجوزات">\n            <span class="platform-module-icon" data-app-icon="note"></span>\n            <span class="platform-module-copy"><strong>الحجوزات</strong><small>Reservations</small></span>\n            <span class="platform-module-state platform-module-state-available">متاحة</span>\n          </button>','reservations launcher card'],
+            ['    <div id="warehouseWorkspace" class="conference-workspace" tabindex="-1"></div>','    <div id="warehouseWorkspace" class="conference-workspace" tabindex="-1"></div>\n    <div id="reservationsWorkspace" class="conference-workspace" tabindex="-1"></div>','reservations workspace'],
+            ['<script src="js/platform-integration.js?rev=pending-native-device-context-v1"></script>','<script src="js/platform-integration.js?rev=module-entry-access-gate-v1"></script>\n<script src="modules/reservations/reservations-module.js?rev=mountable-bundle-v6"></script>','platform integration and reservations bundle'],
+            ['<script src="js/sync/module-permission-administration-service.js?rev=platform-round3g3-v1"></script>','<script src="js/sync/module-permission-administration-service.js?rev=platform-multimodule-permissions-v1"></script>','module permission service revision'],
+            ['<script src="js/sync/module-permission-administration-ui.js?rev=platform-round3g3-v1"></script>','<script src="js/sync/module-permission-administration-ui.js?rev=platform-multimodule-permissions-v1"></script>','module permission UI revision'],
+            ['<script src="script.js?rev=production-platform-owner-administration-context-v1"></script>','<script src="script.js?rev=platform-module-entry-gate-v1"></script>','script revision']
+          ]);
+
+          patch('style.css',[[
+            '.platform-conference-active .platform-home,.platform-warehouse-active .platform-home{display:none}.platform-conference-active .platform-module-switcher,.platform-warehouse-active .platform-module-switcher{display:flex}.platform-conference-active #conferenceWorkspace{display:flex}.platform-warehouse-active #warehouseWorkspace{display:flex}',
+            '.platform-conference-active .platform-home,.platform-warehouse-active .platform-home,.platform-reservations-active .platform-home{display:none}.platform-conference-active .platform-module-switcher,.platform-warehouse-active .platform-module-switcher,.platform-reservations-active .platform-module-switcher{display:flex}.platform-conference-active #conferenceWorkspace{display:flex}.platform-warehouse-active #warehouseWorkspace{display:flex}.platform-reservations-active #reservationsWorkspace{display:block}',
+            'reservations workspace shell state'
+          ]]);
+
+          patch('script.js',[
+            ["  shell.classList.remove('platform-conference-active','platform-warehouse-active');\n  var launcher=ge('platformLauncherTitle');\n  if(launcher)launcher.focus();\n  return true;","  shell.classList.remove('platform-conference-active','platform-warehouse-active','platform-reservations-active');\n  var launcher=ge('platformLauncherTitle');\n  if(launcher)launcher.focus();\n  if(options.fromIntegration!==true&&window.PlatformIntegration&&typeof window.PlatformIntegration.reconcileRoute==='function')window.PlatformIntegration.reconcileRoute();\n  return true;",'showPlatformModules integration ownership'],
+            ["  }else if(platformRoute&&platformRoute.indexOf('/warehouse')===0&&\n    typeof window.openWarehouseWorkspace==='function'){\n    window.openWarehouseWorkspace({route:platformRoute});","  }else if(platformRoute&&platformRoute.indexOf('/warehouse')===0&&\n    window.PlatformIntegration&&typeof window.PlatformIntegration.reconcileRoute==='function'){\n    window.PlatformIntegration.reconcileRoute();",'startup warehouse route gate'],
+            ["  if(platformRoute&&platformRoute.indexOf('/warehouse')===0){\n    setApplicationMode('startup');\n    if(typeof window.openWarehouseWorkspace==='function'){\n      window.openWarehouseWorkspace({route:platformRoute});\n    }\n    recordStartupStage('view_restore','completed','WAREHOUSE_ROUTE');","  if(platformRoute&&platformRoute.indexOf('/warehouse')===0){\n    setApplicationMode('startup');\n    if(window.PlatformIntegration&&typeof window.PlatformIntegration.reconcileRoute==='function')window.PlatformIntegration.reconcileRoute();\n    recordStartupStage('view_restore','completed','WAREHOUSE_ROUTE');",'authorized warehouse restore gate']
+          ]);
+
+          patch('service-worker.js',[
+            ["  : 'production-3-4-0-item-unit-add-ui-v1';","  : 'production-3-4-0-reservations-reconciliation-v1';",'production candidate cache revision'],
+            ["  './style.css?rev=item-unit-dialog-v1',","  './style.css?rev=item-unit-dialog-v1',\n  './modules/reservations/reservations-module.css?rev=mountable-bundle-v6',",'reservations stylesheet precache'],
+            ["  './js/platform-integration.js?rev=pending-native-device-context-v1',","  './js/platform-integration.js?rev=module-entry-access-gate-v1',\n  './modules/reservations/reservations-module.js?rev=mountable-bundle-v6',",'reservations integration precache'],
+            ["  './js/sync/module-permission-administration-service.js?rev=platform-round3g3-v1',","  './js/sync/module-permission-administration-service.js?rev=platform-multimodule-permissions-v1',",'module permission service precache revision'],
+            ["  './js/sync/module-permission-administration-ui.js?rev=platform-round3g3-v1',","  './js/sync/module-permission-administration-ui.js?rev=platform-multimodule-permissions-v1',",'module permission UI precache revision'],
+            ["  './script.js?rev=production-platform-owner-administration-context-v1',","  './script.js?rev=platform-module-entry-gate-v1',",'script precache revision']
+          ]);
+          NODE
+      - name: Run focused reconciliation tests
+        run: |
+          node --test tests/platform-module-entry-access-gate.test.js
+      - name: Remove one-time workflow and commit reconciled shell
+        shell: bash
+        run: |
+          rm .github/workflows/reservations-reconciliation-shell.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html style.css script.js service-worker.js .github/workflows/reservations-reconciliation-shell.yml
+          git commit -m "feat(release): integrate reservations into canonical production shell"
+          git push origin HEAD:release/reservations-main-reconciliation
