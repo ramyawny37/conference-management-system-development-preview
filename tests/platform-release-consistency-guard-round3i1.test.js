@@ -54,8 +54,8 @@ test('actor device overrides remain rejected at both client and Edge boundaries'
   assert.match(edge,/module==='warehouse'&&Object\.prototype\.hasOwnProperty\.call\(args,'p_device_id'\)/);
 });
 test('frontend entrypoint loads service before UI',()=>{
-  const serviceAsset='js/sync/module-permission-administration-service.js?rev=platform-round3g3-v1';
-  const uiAsset='js/sync/module-permission-administration-ui.js?rev=platform-round3g3-v1';
+  const serviceAsset='js/sync/module-permission-administration-service.js?rev=platform-multimodule-permissions-v1';
+  const uiAsset='js/sync/module-permission-administration-ui.js?rev=platform-multimodule-permissions-v1';
   assert.ok(index.includes(serviceAsset));assert.ok(index.includes(uiAsset));assert.ok(index.indexOf(serviceAsset)<index.indexOf(uiAsset));
 });
 test('business authority remains server-catalog driven',()=>{
@@ -66,11 +66,11 @@ test('business authority remains server-catalog driven',()=>{
 test('foundation and catalog paths remain separated from Organization and Inventory',()=>{
   assert.match(ui,/foundationRow\('module\.access'/);assert.match(ui,/foundationRow\('module\.manage'/);
   assert.match(service,/foundation\?'manage_foundation_module_grant':'manage_catalog_module_grant'/);
-  assert.match(service,/!foundation&&String\(input\.permissionKey\|\|''\)\.indexOf\('warehouse\.'\)!==0/);
+  assert.match(service,/!foundation&&permission\.indexOf\(selected\+'\.'\)!==0/);
   assert.doesNotMatch(service+ui,/organization|inventory\./i);
 });
-test('Round 3G frontend assets remain in the authoritative PWA shell',()=>{
-  for(const asset of ['module-permission-administration-service.js?rev=platform-round3g3-v1','module-permission-administration-ui.js?rev=platform-round3g3-v1']){assert.ok(index.includes(asset),'index missing '+asset);assert.ok(worker.includes(asset),'cache shell missing '+asset);}
+test('Module Administration frontend assets remain in the authoritative PWA shell',()=>{
+  for(const asset of ['module-permission-administration-service.js?rev=platform-multimodule-permissions-v1','module-permission-administration-ui.js?rev=platform-multimodule-permissions-v1']){assert.ok(index.includes(asset),'index missing '+asset);assert.ok(worker.includes(asset),'cache shell missing '+asset);}
 });
 test('required migration sources and dispatcher contracts remain present',()=>{
   assert.ok(fs.existsSync(path.join(root,'supabase/migrations/20260907140000_module_access_delegation_enforcement.sql')));
