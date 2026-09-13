@@ -38,7 +38,8 @@ Deno.serve(async(request)=>{
     return json(200,{ok:true,data:result.data});
   }catch(error){
     const safe=classified(error,requestedModule),candidate=error&&typeof error==='object'?error as {code?:unknown,message?:unknown}:{},sqlstate=typeof candidate.code==='string'&&/^[A-Z0-9]{5}$/.test(candidate.code)?candidate.code:null,raw=String(candidate.message||''),applicationCode=/^[A-Z][A-Z0-9_]{0,95}$/.test(raw)?raw:null;
-    console.error(JSON.stringify({module:requestedModule||null,operation:requestedOperation||null,stage:stage,sqlstate:sqlstate,applicationCode:applicationCode,code:safe.code,requestId:requestId,timestamp:new Date().toISOString()}));
-    return json(safe.status,{ok:false,error:{code:safe.code}});
+    const diagnostic={module:requestedModule||null,operation:requestedOperation||null,stage,sqlstate,applicationCode,requestId,timestamp:new Date().toISOString()};
+    console.error(JSON.stringify({...diagnostic,code:safe.code,status:safe.status}));
+    return json(safe.status,{ok:false,error:{code:safe.code},diagnostic});
   }
 });
