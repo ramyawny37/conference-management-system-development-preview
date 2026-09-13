@@ -33,18 +33,17 @@ jobs:
               raise SystemExit(f'expected one old production shell revision, found {s.count(old)}')
           p.write_text(s.replace(old,new))
           PY
-      - name: Materialize focused develop regression tests
+      - name: Materialize focused regression tests
         shell: bash
         run: |
           set -euo pipefail
-          tests=(
+          develop_tests=(
             tests/platform-module-contract.test.js
             tests/platform-module-routing-reconciliation.test.js
             tests/platform-shell-responsive-contract.test.js
             tests/platform-module-permission-administration-multimodule.test.js
             tests/module-permission-catalog-arabic-labels.test.js
             tests/platform-private-recovery-rls-hardening.test.js
-            tests/pwa-deterministic-update.test.js
             tests/platform-reservations-conference-lifecycle.test.js
             tests/platform-reservations-event-booking-realignment.test.js
             tests/reservations-conference-scope-reconciliation.test.js
@@ -60,18 +59,25 @@ jobs:
             tests/reservations-scope-resolvers-contract.test.js
             tests/reservations-standalone-create-idempotency.test.js
           )
-          for f in "${tests[@]}"; do
+          for f in "${develop_tests[@]}"; do
             git show origin/develop:"$f" > "$f"
           done
+          git show origin/main:tests/pwa-deterministic-update.test.js > tests/pwa-deterministic-update.test.js
           python - <<'PY'
           from pathlib import Path
           p=Path('tests/pwa-deterministic-update.test.js')
           s=p.read_text()
-          old="const productionCacheRevision='production-integrated-3-3-0-main-6d0c1e1-develop-80653ca-v1';"
-          new="const productionCacheRevision='production-3-4-0-reservations-reconciliation-v1';"
-          if s.count(old)!=1:
-              raise SystemExit(f'expected one stale production cache constant, found {s.count(old)}')
-          p.write_text(s.replace(old,new))
+          replacements={
+            "const productionCacheRevision='production-3-4-0-item-unit-add-ui-v1';":
+              "const productionCacheRevision='production-3-4-0-reservations-reconciliation-v1';",
+            "const platformShellScriptRevision='production-platform-owner-administration-context-v1';":
+              "const platformShellScriptRevision='platform-module-entry-gate-v1';"
+          }
+          for old,new in replacements.items():
+              if s.count(old)!=1:
+                  raise SystemExit(f'expected one candidate PWA baseline token, found {s.count(old)}: {old}')
+              s=s.replace(old,new)
+          p.write_text(s)
           PY
       - name: Run focused shell and Reservations regression
         shell: bash
