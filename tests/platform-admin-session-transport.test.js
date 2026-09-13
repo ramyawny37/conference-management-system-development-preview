@@ -31,8 +31,9 @@ for(const operation of [
 ])assert.match(combined,new RegExp(operation));
 
 for(const stage of ['origin_validation','authentication','request_validation','session_validation','operation_dispatch'])assert.match(edge,new RegExp("['\"]"+stage+"['\"]"));
-assert.match(edge,/module:requestedModule[^}]*operation:requestedOperation[^}]*stage:[^}]*sqlstate:[^}]*applicationCode:[^}]*code:safe\.code[^}]*requestId:[^}]*timestamp:/);
-assert.match(edge,/return json\(safe\.status,\{ok:false,error:\{code:safe\.code\}\}\)/);
+assert.match(edge,/const diagnostic=\{module:requestedModule\|\|null,operation:requestedOperation\|\|null,stage,sqlstate,applicationCode,requestId,timestamp:new Date\(\)\.toISOString\(\)\};/);
+assert.match(edge,/console\.error\(JSON\.stringify\(\{\.\.\.diagnostic,code:safe\.code,status:safe\.status\}\)\);/);
+assert.match(edge,/return json\(safe\.status,\{ok:false,error:\{code:safe\.code\},diagnostic\}\);/);
 assert.doesNotMatch(edge,/error:\{[^}]*message:/);
 
 console.log('Platform administration session transport contracts: passed');
