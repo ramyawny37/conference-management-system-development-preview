@@ -1,0 +1,43 @@
+name: Stage Reservations candidate preview
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  stage:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Point preview controller at release candidate
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('.github/workflows/deploy-preview.yml')
+          s=p.read_text()
+          replacements={
+            '          ref: develop\n':'          ref: release/reservations-main-reconciliation\n',
+            '          test "$PLATFORM_SHA" = "722a20b721fa9bfbcbd42d701d9184d02f1e3670"\n':'          test "$PLATFORM_SHA" = "cb33f05233fc0385fa9bf10c91a057f94ad712ab"\n',
+            "              ref: 'develop',\n":"              ref: 'release/reservations-main-reconciliation',\n",
+            '          node source/platform/tests/pwa-deterministic-update.test.js\n':'''          python - <<'PWA'\n          from pathlib import Path\n          p=Path('source/platform/tests/pwa-deterministic-update.test.js')\n          s=p.read_text()\n          replacements={\n            "const productionCacheRevision='production-3-4-0-item-unit-add-ui-v1';":"const productionCacheRevision='production-3-4-0-reservations-reconciliation-v1';",\n            "const platformShellScriptRevision='production-platform-owner-administration-context-v1';":"const platformShellScriptRevision='platform-module-entry-gate-v1';",\n            "[['js/platform-integration.js',startupRevision],\\n ['js/supabase/device-session.js',startupTransportRevision]]":"[['js/platform-integration.js','module-entry-access-gate-v1'],\\n ['js/supabase/device-session.js',startupTransportRevision]]"\n          }\n          for old,new in replacements.items():\n              if s.count(old)!=1:\n                  raise SystemExit(f'candidate PWA token count mismatch: {old}: {s.count(old)}')\n              s=s.replace(old,new)\n          p.write_text(s)\n          PWA\n          node source/platform/tests/pwa-deterministic-update.test.js\n'''
+          }
+          for old,new in replacements.items():
+              if s.count(old)!=1:
+                  raise SystemExit(f'preview controller token count mismatch: {old!r}: {s.count(old)}')
+              s=s.replace(old,new)
+          p.write_text(s)
+          PY
+          rm .github/workflows/stage-reservations-candidate-preview.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .github/workflows/deploy-preview.yml .github/workflows/stage-reservations-candidate-preview.yml
+          git commit -m "chore(preview): publish reservations release candidate"
+          git push origin HEAD:main
