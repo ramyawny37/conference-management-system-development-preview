@@ -31,11 +31,11 @@ jobs:
         with:
           path: controller
 
-      - name: Checkout Platform release candidate source
+      - name: Checkout Platform Development source
         uses: actions/checkout@v4
         with:
           repository: ramyawny37/conference-management-system-v1
-          ref: release/reservations-main-reconciliation
+          ref: develop
           path: source/platform
           fetch-depth: 0
 
@@ -43,7 +43,7 @@ jobs:
         id: source_meta
         run: |
           PLATFORM_SHA="$(git -C source/platform rev-parse HEAD)"
-          test "$PLATFORM_SHA" = "854b2e8299973b4cab9f842064507823f395999b"
+          test "$PLATFORM_SHA" = "68073f02eee008d5323195c18d7999186f4a8ff2"
           echo "platform_sha=$PLATFORM_SHA" >> "$GITHUB_OUTPUT"
           echo "reservations_sha=56abefbf35eee8f7829493f6a765cf6414de0766" >> "$GITHUB_OUTPUT"
           echo "reservations_js_sha256=$(sha256sum source/platform/modules/reservations/reservations-module.js | awk '{print $1}')" >> "$GITHUB_OUTPUT"
@@ -79,7 +79,7 @@ jobs:
           const sources = {
             platform: {
               repository: 'ramyawny37/conference-management-system-v1',
-              ref: 'release/reservations-main-reconciliation',
+              ref: 'develop',
               sha: process.env.PLATFORM_SOURCE_SHA
             },
             reservations: {
