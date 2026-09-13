@@ -61,6 +61,7 @@ begin
     'token_hash',encode(p_token_hash,'hex')
   )::text,true);
 
+  -- public.require_module_permission preserves module.manage as satisfying module.access.
   perform public.require_module_permission(verified_session.device_id,p_module,'module.access',null,null);
   return jsonb_build_object('status','allowed','moduleKey',p_module);
 end;
