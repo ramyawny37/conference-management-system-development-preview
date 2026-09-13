@@ -25,13 +25,13 @@ const expected={
   ]
 };
 
-test('Arabic permission-label migration is presentation-only and atomic',()=>{
+test('Arabic permission-label migration is presentation-only, versioned, and atomic',()=>{
   assert.match(migration,/^\s*begin\s*;/i);
   assert.match(migration,/commit\s*;\s*$/i);
   assert.match(migration,/update\s+public\.module_permission_catalog/i);
   assert.doesNotMatch(migration,/^\s*(insert\s+into|delete\s+from|alter\s+table|drop\s+(table|function|trigger|policy)|create\s+(table|function|trigger|policy)|grant\s+|revoke\s+)/im);
   assert.doesNotMatch(migration,/\b(status|sensitive_mutation|allowed_scope_mode|allowed_resource_type)\s*=/i);
-  assert.match(migration,/set\s+display_name\s*=\s*labels\.display_name\s*,\s*description\s*=\s*labels\.description/i);
+  assert.match(migration,/set\s+display_name\s*=\s*labels\.display_name\s*,\s*description\s*=\s*labels\.description\s*,\s*catalog_version\s*=\s*catalog\.catalog_version\s*\+\s*1/i);
 });
 
 test('all current Warehouse and Reservations catalog keys have Arabic labels',()=>{
