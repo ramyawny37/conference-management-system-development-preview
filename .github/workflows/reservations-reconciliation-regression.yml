@@ -1,0 +1,88 @@
+name: Reservations reconciliation regression
+
+on:
+  push:
+    branches:
+      - release/reservations-main-reconciliation
+
+permissions:
+  contents: write
+
+jobs:
+  regression:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: release/reservations-main-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Materialize focused develop regression tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          tests=(
+            tests/platform-module-contract.test.js
+            tests/platform-module-routing-reconciliation.test.js
+            tests/platform-shell-responsive-contract.test.js
+            tests/platform-module-permission-administration-multimodule.test.js
+            tests/module-permission-catalog-arabic-labels.test.js
+            tests/platform-private-recovery-rls-hardening.test.js
+            tests/pwa-deterministic-update.test.js
+            tests/platform-reservations-conference-lifecycle.test.js
+            tests/platform-reservations-event-booking-realignment.test.js
+            tests/reservations-conference-scope-reconciliation.test.js
+            tests/reservations-dispatch-contract.test.js
+            tests/reservations-legacy-organization-scope-retirement.test.js
+            tests/reservations-lifecycle.test.js
+            tests/reservations-overlap-protection.test.js
+            tests/reservations-permission-contract.test.js
+            tests/reservations-platform-tenant-boundary.test.js
+            tests/reservations-report-booking-pagination.test.js
+            tests/reservations-schema-contract.test.js
+            tests/reservations-scope-partition-integrity.test.js
+            tests/reservations-scope-resolvers-contract.test.js
+            tests/reservations-standalone-create-idempotency.test.js
+          )
+          for f in "${tests[@]}"; do
+            git show origin/develop:"$f" > "$f"
+          done
+      - name: Run focused shell and Reservations regression
+        shell: bash
+        run: |
+          node --test \
+            tests/platform-module-entry-access-gate.test.js \
+            tests/platform-module-contract.test.js \
+            tests/platform-module-routing-reconciliation.test.js \
+            tests/platform-shell-responsive-contract.test.js \
+            tests/platform-module-permission-administration-multimodule.test.js \
+            tests/module-permission-catalog-arabic-labels.test.js \
+            tests/platform-private-recovery-rls-hardening.test.js \
+            tests/pwa-deterministic-update.test.js \
+            tests/platform-reservations-conference-lifecycle.test.js \
+            tests/platform-reservations-event-booking-realignment.test.js \
+            tests/reservations-conference-scope-reconciliation.test.js \
+            tests/reservations-dispatch-contract.test.js \
+            tests/reservations-legacy-organization-scope-retirement.test.js \
+            tests/reservations-lifecycle.test.js \
+            tests/reservations-overlap-protection.test.js \
+            tests/reservations-permission-contract.test.js \
+            tests/reservations-platform-tenant-boundary.test.js \
+            tests/reservations-report-booking-pagination.test.js \
+            tests/reservations-schema-contract.test.js \
+            tests/reservations-scope-partition-integrity.test.js \
+            tests/reservations-scope-resolvers-contract.test.js \
+            tests/reservations-standalone-create-idempotency.test.js
+      - name: Remove one-time workflow
+        shell: bash
+        run: |
+          git reset --hard HEAD
+          rm .github/workflows/reservations-reconciliation-regression.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .github/workflows/reservations-reconciliation-regression.yml
+          git commit -m "chore(release): remove reconciliation regression workflow"
+          git push origin HEAD:release/reservations-main-reconciliation
