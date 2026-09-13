@@ -1,0 +1,35 @@
+name: Stage latest Reservations candidate
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  stage:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Update candidate SHA and remove helper
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('.github/workflows/deploy-preview.yml')
+          s=p.read_text()
+          old='cb33f05233fc0385fa9bf10c91a057f94ad712ab'
+          new='854b2e84f7b4e75f769e3f0c09bca2d7bb202fa7'
+          if s.count(old)!=1:
+              raise SystemExit(f'expected exactly one old candidate SHA, got {s.count(old)}')
+          p.write_text(s.replace(old,new))
+          PY
+          rm .github/workflows/stage-reservations-candidate-latest.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .github/workflows/deploy-preview.yml .github/workflows/stage-reservations-candidate-latest.yml
+          git commit -m "chore(preview): publish latest reservations candidate"
+          git push origin HEAD:main
