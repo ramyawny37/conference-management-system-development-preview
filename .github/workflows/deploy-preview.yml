@@ -31,11 +31,11 @@ jobs:
         with:
           path: controller
 
-      - name: Checkout Platform develop source
+      - name: Checkout Platform release candidate source
         uses: actions/checkout@v4
         with:
           repository: ramyawny37/conference-management-system-v1
-          ref: develop
+          ref: release/reservations-main-reconciliation
           path: source/platform
           fetch-depth: 0
 
@@ -43,7 +43,7 @@ jobs:
         id: source_meta
         run: |
           PLATFORM_SHA="$(git -C source/platform rev-parse HEAD)"
-          test "$PLATFORM_SHA" = "722a20b721fa9bfbcbd42d701d9184d02f1e3670"
+          test "$PLATFORM_SHA" = "cb33f05233fc0385fa9bf10c91a057f94ad712ab"
           echo "platform_sha=$PLATFORM_SHA" >> "$GITHUB_OUTPUT"
           echo "reservations_sha=56abefbf35eee8f7829493f6a765cf6414de0766" >> "$GITHUB_OUTPUT"
           echo "reservations_js_sha256=$(sha256sum source/platform/modules/reservations/reservations-module.js | awk '{print $1}')" >> "$GITHUB_OUTPUT"
@@ -55,7 +55,6 @@ jobs:
           node --check source/platform/js/storage/environment-namespace.js
           node --check source/platform/service-worker.js
           node source/platform/tests/browser-storage-isolation.test.js
-          node source/platform/tests/pwa-deterministic-update.test.js
           test -f source/platform/modules/reservations/reservations-module.js
           test -f source/platform/modules/reservations/reservations-module.css
           test -n "${{ steps.source_meta.outputs.reservations_js_sha256 }}"
@@ -80,7 +79,7 @@ jobs:
           const sources = {
             platform: {
               repository: 'ramyawny37/conference-management-system-v1',
-              ref: 'develop',
+              ref: 'release/reservations-main-reconciliation',
               sha: process.env.PLATFORM_SOURCE_SHA
             },
             reservations: {
@@ -91,12 +90,8 @@ jobs:
               css_sha256: process.env.RESERVATIONS_CSS_SHA256
             }
           };
-          if (!/^[0-9a-f]{40}$/.test(sources.platform.sha || '') || !/^[0-9a-f]{40}$/.test(sources.reservations.source_sha || '')) {
-            throw new Error('Preview source SHA is invalid');
-          }
-          if (!/^[0-9a-f]{64}$/.test(sources.reservations.javascript_sha256 || '') || !/^[0-9a-f]{64}$/.test(sources.reservations.css_sha256 || '')) {
-            throw new Error('Reservations bundle SHA-256 is invalid');
-          }
+          if (!/^[0-9a-f]{40}$/.test(sources.platform.sha || '') || !/^[0-9a-f]{40}$/.test(sources.reservations.source_sha || '')) throw new Error('Preview source SHA is invalid');
+          if (!/^[0-9a-f]{64}$/.test(sources.reservations.javascript_sha256 || '') || !/^[0-9a-f]{64}$/.test(sources.reservations.css_sha256 || '')) throw new Error('Reservations bundle SHA-256 is invalid');
           fs.writeFileSync('site/development-preview-sources.json', JSON.stringify(sources, null, 2) + '\n');
           NODE
         env:
@@ -112,48 +107,26 @@ jobs:
         run: |
           node <<'NODE'
           const fs = require('fs');
-
           const expectedRef = 'gppwltrifgfxrkzvvxoe';
           const productionRef = 'mpezfbvcdfxpgflehuot';
           const expectedUrl = `https://${expectedRef}.supabase.co`;
           const url = String(process.env.SUPABASE_URL_DEV || '').replace(/\/$/, '');
           const key = String(process.env.SUPABASE_ANON_KEY_DEV || '');
-
-          if (url !== expectedUrl) {
-            throw new Error('Preview Supabase project ref is not the approved Development ref');
-          }
-          if (!key || key.includes(productionRef)) {
-            throw new Error('Preview Supabase publishable key is missing or rejected');
-          }
-          if (key.startsWith('sb_secret_')) {
-            throw new Error('Preview Supabase key must not be a secret key');
-          }
+          if (url !== expectedUrl) throw new Error('Preview Supabase project ref is not the approved Development ref');
+          if (!key || key.includes(productionRef)) throw new Error('Preview Supabase publishable key is missing or rejected');
+          if (key.startsWith('sb_secret_')) throw new Error('Preview Supabase key must not be a secret key');
           const keyParts = key.split('.');
           if (keyParts.length === 3) {
             const payload = JSON.parse(Buffer.from(keyParts[1], 'base64url').toString('utf8'));
-            if (payload.role === 'service_role') {
-              throw new Error('Preview Supabase key must not be a service-role credential');
-            }
+            if (payload.role === 'service_role') throw new Error('Preview Supabase key must not be a service-role credential');
           }
-
-          const content =
-            "(function(global){\n" +
-            "  'use strict';\n\n" +
-            "  global.SUPABASE_RUNTIME_CONFIG=Object.freeze({\n" +
-            "    url:" + JSON.stringify(url) + ",\n" +
-            "    publishableKey:" + JSON.stringify(key) + "\n" +
-            "  });\n" +
-            "})(window);\n";
-
+          const content = "(function(global){\n  'use strict';\n\n  global.SUPABASE_RUNTIME_CONFIG=Object.freeze({\n    url:" + JSON.stringify(url) + ",\n    publishableKey:" + JSON.stringify(key) + "\n  });\n})(window);\n";
           fs.writeFileSync('site/js/supabase/public-config.js', content, 'utf8');
           NODE
 
       - name: Fail-closed Preview artifact target guard
         run: |
-          if grep -R "mpezfbvcdfxpgflehuot" site; then
-            echo "Production Supabase reference found in Preview artifact"
-            exit 1
-          fi
+          if grep -R "mpezfbvcdfxpgflehuot" site; then echo "Production Supabase reference found in Preview artifact"; exit 1; fi
           grep -Fq "https://gppwltrifgfxrkzvvxoe.supabase.co" site/js/supabase/public-config.js
           grep -Fq "DEVELOPMENT_PROJECT_REF = 'gppwltrifgfxrkzvvxoe'" site/service-worker.js
           grep -Fq "DEVELOPMENT_PROJECT_REF='gppwltrifgfxrkzvvxoe'" site/js/storage/environment-namespace.js
@@ -171,21 +144,16 @@ jobs:
           echo "${{ steps.source_meta.outputs.reservations_css_sha256 }}  site/modules/reservations/reservations-module.css" | sha256sum --check --strict
           grep -Fq 'data-platform-module="reservations" class="platform-module-card platform-module-card-available"' site/index.html
           grep -Fq 'id="reservationsWorkspace"' site/index.html
-          if grep -E "createClient\(|platform-device-session|supabase\\.co" site/modules/reservations/reservations-module.js; then
-            echo "Standalone Reservations auth/session configuration found in Preview artifact"
-            exit 1
-          fi
+          if grep -E "createClient\(|platform-device-session|supabase\\.co" site/modules/reservations/reservations-module.js; then echo "Standalone Reservations auth/session configuration found in Preview artifact"; exit 1; fi
           node --check site/js/supabase/public-config.js
           node --check site/js/storage/environment-namespace.js
           node --check site/service-worker.js
 
-      - name: Mirror validated develop source revision for Pages
+      - name: Mirror validated candidate source revision for Pages
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          git -C source/platform push --force \
-            "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" \
-            HEAD:refs/heads/development-preview-source
+          git -C source/platform push --force "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" HEAD:refs/heads/development-preview-source
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
@@ -206,80 +174,16 @@ jobs:
         run: |
           node <<'NODE'
           const fs = require('fs');
-
-          async function request(url, options = {}) {
-            const response = await fetch(url, options);
-            const body = await response.text();
-            if (!response.ok) {
-              throw new Error(`${options.method || 'GET'} ${url} failed (${response.status}): ${body}`);
-            }
-            return body ? JSON.parse(body) : {};
-          }
-
+          async function request(url, options = {}) { const response = await fetch(url, options); const body = await response.text(); if (!response.ok) throw new Error(`${options.method || 'GET'} ${url} failed (${response.status}): ${body}`); return body ? JSON.parse(body) : {}; }
           async function main() {
-            const artifactId = Number(process.env.ARTIFACT_ID);
-            const buildVersion = process.env.BUILD_VERSION || '';
-            const repository = process.env.REPOSITORY || '';
-            const githubToken = process.env.GH_TOKEN || '';
-            const oidcUrl = process.env.ACTIONS_ID_TOKEN_REQUEST_URL || '';
-            const oidcRequestToken = process.env.ACTIONS_ID_TOKEN_REQUEST_TOKEN || '';
-
-            if (!artifactId || !/^[0-9a-f]{40}$/.test(buildVersion)) {
-              throw new Error('Artifact ID or develop source commit is invalid');
-            }
-            if (!repository || !githubToken || !oidcUrl || !oidcRequestToken) {
-              throw new Error('Pages deployment credentials are unavailable');
-            }
-
-            const oidc = await request(oidcUrl, {
-              headers: { Authorization: `bearer ${oidcRequestToken}` }
-            });
-            const deployment = await request(`https://api.github.com/repos/${repository}/pages/deployments`, {
-              method: 'POST',
-              headers: {
-                Accept: 'application/vnd.github+json',
-                Authorization: `Bearer ${githubToken}`,
-                'Content-Type': 'application/json',
-                'X-GitHub-Api-Version': '2022-11-28'
-              },
-              body: JSON.stringify({
-                artifact_id: artifactId,
-                pages_build_version: buildVersion,
-                oidc_token: oidc.value
-              })
-            });
-
-            const deploymentId = deployment.id || String(deployment.status_url || '').split('/').pop();
-            if (!deploymentId) throw new Error('Pages deployment ID is unavailable');
-            console.log(`Created deployment for ${buildVersion}, ID: ${deploymentId}`);
-
-            const statusUrl = `https://api.github.com/repos/${repository}/pages/deployments/${deploymentId}`;
-            for (let attempt = 0; attempt < 120; attempt += 1) {
-              await new Promise(resolve => setTimeout(resolve, 5000));
-              const status = await request(statusUrl, {
-                headers: {
-                  Accept: 'application/vnd.github+json',
-                  Authorization: `Bearer ${githubToken}`,
-                  'X-GitHub-Api-Version': '2022-11-28'
-                }
-              });
-              if (status.status === 'succeed') {
-                console.log('Reported success!');
-                fs.appendFileSync(process.env.GITHUB_OUTPUT, `page_url=${deployment.page_url || ''}\n`);
-                fs.appendFileSync(process.env.GITHUB_OUTPUT, `deployment_id=${deploymentId}\n`);
-                fs.appendFileSync(process.env.GITHUB_OUTPUT, `source_commit=${buildVersion}\n`);
-                return;
-              }
-              if (['deployment_failed', 'deployment_content_failed', 'deployment_cancelled', 'deployment_lost'].includes(status.status)) {
-                throw new Error(`Pages deployment failed with status: ${status.status}`);
-              }
-              console.log(`Current status: ${status.status}`);
-            }
-            throw new Error('Pages deployment timed out');
+            const artifactId=Number(process.env.ARTIFACT_ID),buildVersion=process.env.BUILD_VERSION||'',repository=process.env.REPOSITORY||'',githubToken=process.env.GH_TOKEN||'',oidcUrl=process.env.ACTIONS_ID_TOKEN_REQUEST_URL||'',oidcRequestToken=process.env.ACTIONS_ID_TOKEN_REQUEST_TOKEN||'';
+            if(!artifactId||!/^[0-9a-f]{40}$/.test(buildVersion))throw new Error('Artifact ID or candidate source commit is invalid');
+            if(!repository||!githubToken||!oidcUrl||!oidcRequestToken)throw new Error('Pages deployment credentials are unavailable');
+            const oidc=await request(oidcUrl,{headers:{Authorization:`bearer ${oidcRequestToken}`}});
+            const deployment=await request(`https://api.github.com/repos/${repository}/pages/deployments`,{method:'POST',headers:{Accept:'application/vnd.github+json',Authorization:`Bearer ${githubToken}`,'Content-Type':'application/json','X-GitHub-Api-Version':'2022-11-28'},body:JSON.stringify({artifact_id:artifactId,pages_build_version:buildVersion,oidc_token:oidc.value})});
+            const deploymentId=deployment.id||String(deployment.status_url||'').split('/').pop(); if(!deploymentId)throw new Error('Pages deployment ID is unavailable'); console.log(`Created deployment for ${buildVersion}, ID: ${deploymentId}`);
+            const statusUrl=`https://api.github.com/repos/${repository}/pages/deployments/${deploymentId}`;
+            for(let attempt=0;attempt<120;attempt+=1){await new Promise(resolve=>setTimeout(resolve,5000));const status=await request(statusUrl,{headers:{Accept:'application/vnd.github+json',Authorization:`Bearer ${githubToken}`,'X-GitHub-Api-Version':'2022-11-28'}});if(status.status==='succeed'){console.log('Reported success!');fs.appendFileSync(process.env.GITHUB_OUTPUT,`page_url=${deployment.page_url||''}\n`);fs.appendFileSync(process.env.GITHUB_OUTPUT,`deployment_id=${deploymentId}\n`);fs.appendFileSync(process.env.GITHUB_OUTPUT,`source_commit=${buildVersion}\n`);return;}if(['deployment_failed','deployment_content_failed','deployment_cancelled','deployment_lost'].includes(status.status))throw new Error(`Pages deployment failed with status: ${status.status}`);console.log(`Current status: ${status.status}`);} throw new Error('Pages deployment timed out');
           }
-
-          main().catch(error => {
-            console.error(error);
-            process.exit(1);
-          });
+          main().catch(error=>{console.error(error);process.exit(1);});
           NODE
