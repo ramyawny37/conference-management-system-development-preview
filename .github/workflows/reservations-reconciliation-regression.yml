@@ -20,6 +20,19 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+      - name: Align release PWA shell revision
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('index.html')
+          s=p.read_text()
+          old=": 'production-3-4-0-item-unit-add-ui-v1';"
+          new=": 'production-3-4-0-reservations-reconciliation-v1';"
+          if s.count(old)!=1:
+              raise SystemExit(f'expected one old production shell revision, found {s.count(old)}')
+          p.write_text(s.replace(old,new))
+          PY
       - name: Materialize focused develop regression tests
         shell: bash
         run: |
@@ -50,6 +63,16 @@ jobs:
           for f in "${tests[@]}"; do
             git show origin/develop:"$f" > "$f"
           done
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('tests/pwa-deterministic-update.test.js')
+          s=p.read_text()
+          old="const productionCacheRevision='production-integrated-3-3-0-main-6d0c1e1-develop-80653ca-v1';"
+          new="const productionCacheRevision='production-3-4-0-reservations-reconciliation-v1';"
+          if s.count(old)!=1:
+              raise SystemExit(f'expected one stale production cache constant, found {s.count(old)}')
+          p.write_text(s.replace(old,new))
+          PY
       - name: Run focused shell and Reservations regression
         shell: bash
         run: |
@@ -76,13 +99,16 @@ jobs:
             tests/reservations-scope-partition-integrity.test.js \
             tests/reservations-scope-resolvers-contract.test.js \
             tests/reservations-standalone-create-idempotency.test.js
-      - name: Remove one-time workflow
+      - name: Commit PWA alignment and remove one-time workflow
         shell: bash
         run: |
+          git diff -- index.html > /tmp/index.patch
           git reset --hard HEAD
+          git clean -fd tests
+          git apply /tmp/index.patch
           rm .github/workflows/reservations-reconciliation-regression.yml
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add .github/workflows/reservations-reconciliation-regression.yml
-          git commit -m "chore(release): remove reconciliation regression workflow"
+          git add index.html .github/workflows/reservations-reconciliation-regression.yml
+          git commit -m "fix(release): align reservations PWA shell revision"
           git push origin HEAD:release/reservations-main-reconciliation
