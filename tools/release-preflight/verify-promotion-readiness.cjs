@@ -10,7 +10,9 @@ const forbiddenArchitecture=[/document\.write\s*\(/, /platform-integration-core\
 class ReadinessError extends Error{constructor(code){super(code);this.code=code;}}
 function fail(code){throw new ReadinessError(code);}
 function git(args){return childProcess.execFileSync('git',args,{cwd:root,encoding:'utf8'}).trim();}
+function gitRaw(args){return childProcess.execFileSync('git',args,{cwd:root});}
 function sourceAt(revision,file){try{return git(['show',`${revision}:${file}`]);}catch(error){fail(`SOURCE_UNAVAILABLE:${file}`);}}
+function sourceBytesAt(revision,file){try{return gitRaw(['show',`${revision}:${file}`]);}catch(error){fail(`SOURCE_UNAVAILABLE:${file}`);}}
 function extractMarkers(revision){
   const worker=sourceAt(revision,'service-worker.js');
   const version=sourceAt(revision,'version.js');
@@ -21,7 +23,6 @@ function extractMarkers(revision){
   const shellRevision=(index.match(/: '([^']+)';\n<\/script>\n<script src="pwa\.js/)||[])[1];
   if(!appVersion||!releaseVersion||!productionCacheRevision||!shellRevision)fail('CANONICAL_VERSION_MARKER_MISSING');
   if(appVersion!==releaseVersion)fail('APPLICATION_VERSION_MARKER_MISMATCH');
-  if(productionCacheRevision!==shellRevision)fail('PRODUCTION_SHELL_REVISION_MISMATCH');
   return {appVersion,productionCacheRevision,shellRevision};
 }
 function semver(value){const match=value.match(/^(\d+)\.(\d+)\.(\d+)$/);if(!match)fail('APPLICATION_VERSION_NOT_SEMVER');return match.slice(1).map(Number);}
@@ -34,12 +35,20 @@ function parseArgs(argv){const options={promotion:false};for(let index=0;index<a
   else fail(`UNSUPPORTED_ARGUMENT:${argument}`);
 }if(!options.candidate)fail('CANDIDATE_SHA_REQUIRED');return options;}
 function verifyManifest(revision){
-  const requirements=revision?JSON.parse(sourceAt(revision,'tools/production-release/controlled-production-manifest.json')).releaseRequirements:manifest.releaseRequirements;
+  const controlled=revision?JSON.parse(sourceAt(revision,'tools/production-release/controlled-production-manifest.json')):manifest;
+  const requirements=controlled.releaseRequirements;
   if(!requirements||!Array.isArray(requirements.requiredMigrationFiles)||!Array.isArray(requirements.developmentOnlyMigrationFiles))fail('RELEASE_REQUIREMENTS_MISSING');
   for(const file of requirements.requiredMigrationFiles){if(!file.startsWith('supabase/migrations/'))fail(`REQUIRED_PRODUCTION_MIGRATION_MISSING:${file}`);if(revision)sourceAt(revision,file);else if(!fs.existsSync(path.join(root,file)))fail(`REQUIRED_PRODUCTION_MIGRATION_MISSING:${file}`);}
   for(const file of requirements.developmentOnlyMigrationFiles){if(!file.startsWith('supabase/migrations/'))fail(`DEVELOPMENT_ONLY_MIGRATION_MISSING:${file}`);if(revision)sourceAt(revision,file);else if(!fs.existsSync(path.join(root,file)))fail(`DEVELOPMENT_ONLY_MIGRATION_MISSING:${file}`);if(requirements.requiredMigrationFiles.includes(file))fail(`DEVELOPMENT_ONLY_MIGRATION_INCLUDED:${file}`);}
   if(!requirements.edge||requirements.edge.slug!=='platform-device-operation'||requirements.edge.verifyJwt!==true)fail('EDGE_RELEASE_CONTRACT_MISSING');
   if(revision)sourceAt(revision,requirements.edge.sourceFile);else if(!fs.existsSync(path.join(root,requirements.edge.sourceFile)))fail('EDGE_RELEASE_CONTRACT_MISSING');
+  const model=controlled.packageModel;
+  if(!model||model.purpose!=='HISTORICAL_BOOTSTRAP_REPLAY_AND_INCREMENTAL_PROMOTION'||!Array.isArray(model.establishedProductionHistory)||!Array.isArray(model.futureIncrementalPromotion?.entries))fail('CONTROLLED_PACKAGE_MODEL_MISSING');
+  const establishedSources=model.establishedProductionHistory.filter(entry=>entry.sourceFile).map(entry=>entry.sourceFile);
+  for(const file of requirements.requiredMigrationFiles)if(!establishedSources.includes(file))fail(`APPROVED_PRODUCTION_HISTORY_UNREPRESENTED:${file}`);
+  for(const entry of model.establishedProductionHistory){if(entry.executable!==false)fail(`ESTABLISHED_PRODUCTION_HISTORY_MUST_NOT_EXECUTE:${entry.version}`);if(entry.sourceFile){const body=revision?sourceBytesAt(revision,entry.sourceFile):fs.readFileSync(path.join(root,entry.sourceFile));const digest=require('node:crypto').createHash('sha256').update(body).digest('hex');if(digest!==entry.sourceSha256)fail(`ESTABLISHED_PRODUCTION_SOURCE_HASH_MISMATCH:${entry.version}`);}}
+  const incrementalFiles=model.futureIncrementalPromotion.entries.map(entry=>entry.sourceFile);
+  for(const file of requirements.developmentOnlyMigrationFiles)if(incrementalFiles.includes(file))fail(`DEVELOPMENT_ONLY_MIGRATION_INCLUDED:${file}`);
 }
 function verifyArchitecture(revision){for(const file of ['index.html','js/platform-integration.js','js/sync/module-permission-administration-service.js','modules/reservations/reservations-module.js']){const source=sourceAt(revision,file);for(const pattern of forbiddenArchitecture)if(pattern.test(source))fail(`REJECTED_ARCHITECTURE_PRESENT:${file}`);}}
 function verifyRepository(candidate,base,promotion){
@@ -52,7 +61,8 @@ function verifyRepository(candidate,base,promotion){
     if(!isGreater(candidateMarkers.appVersion,baseMarkers.appVersion))fail('PROMOTION_APPLICATION_VERSION_NOT_ADVANCED');
     if(candidateMarkers.productionCacheRevision===baseMarkers.productionCacheRevision)fail('PROMOTION_CACHE_REVISION_NOT_ADVANCED');
     if(candidateMarkers.shellRevision===baseMarkers.shellRevision)fail('PROMOTION_SHELL_REVISION_NOT_ADVANCED');
-  }
+    if(candidateMarkers.productionCacheRevision!==candidateMarkers.shellRevision)fail('PRODUCTION_SHELL_REVISION_MISMATCH');
+  }else if(candidateMarkers.productionCacheRevision!==candidateMarkers.shellRevision)fail('PRODUCTION_SHELL_REVISION_MISMATCH');
   return {candidate,base,promotion,markers:candidateMarkers,versionAdvanced:promotion};
 }
 function runReleaseChecks(){
