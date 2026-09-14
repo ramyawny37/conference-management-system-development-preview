@@ -33,10 +33,11 @@ jobs:
                   raise SystemExit(f'missing expected marker: {old}')
               s = s.replace(old, new)
           p.write_text(s)
+          assert 'ce6c80236e2a92acadc4c46ca49a4e43037304f1' in s
+          assert '61eda9a0e25290d3ce9ecfbec6455338debbf737' in s
+          assert 'mountable-bundle-v11' in s
+          assert 'mountable-bundle-v10' not in s
           PY
-          grep -F "test \"$PLATFORM_SHA\" = \"ce6c80236e2a92acadc4c46ca49a4e43037304f1\"" .github/workflows/deploy-preview.yml
-          grep -F 'reservations_sha=61eda9a0e25290d3ce9ecfbec6455338debbf737' .github/workflows/deploy-preview.yml
-          grep -F 'mountable-bundle-v11' .github/workflows/deploy-preview.yml
       - name: Commit preview pin update
         run: |
           git config user.name 'github-actions[bot]'
