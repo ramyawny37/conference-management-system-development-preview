@@ -32,7 +32,7 @@ Deno.serve(async(request)=>{
     if(!/^[0-9a-f-]{36}$/i.test(sessionId))throw new Error('SESSION_ID_INVALID');
     const token=bytes(body.token),hash=new Uint8Array(await crypto.subtle.digest('SHA-256',token));
     stage='operation_dispatch';
-    const service=createClient(required('SUPABASE_URL'),required('SUPABASE_ANON_KEY'),{global:{headers:{Authorization:`Bearer ${required('SUPABASE_SERVICE_ROLE_KEY')}`}},auth:{persistSession:false,autoRefreshToken:false}});
+    const service=createClient(required('SUPABASE_URL'),required('SUPABASE_SERVICE_ROLE_KEY'),{auth:{persistSession:false,autoRefreshToken:false}});
     const result=await service.schema('platform').rpc('execute_device_operation',{p_user_id:user.data.user.id,p_session_id:sessionId,p_token_hash:bytea(hash),p_module:module,p_operation:operation,p_args:args});
     if(result.error)throw result.error;
     return json(200,{ok:true,data:result.data});
