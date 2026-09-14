@@ -69,7 +69,7 @@ const CORE_ASSETS = [
   './js/sync/partial-template-state-cleanup.js?rev=partial-template-state-cleanup-v1',
   './js/sync/rejected-shared-template-cleanup.js?rev=rejected-shared-template-cleanup-v1',
   './js/sync/local-template-copy-cleanup.js?rev=shared-template-copy-guard-v1',
-  './js/sync/legacy-template-adoption-ui.js?rev=legacy-template-adoption-authorization-v1',
+  './js/sync/legacy-template-adoption-ui.js?rev=legacy-conference-preflight-v2',
   './js/sync/sync-processor.js?rev=startup-queue-recovery-v1',
   './js/sync/realtime.js',
   './js/sync/conflict-resolution.js',
@@ -163,7 +163,7 @@ self.addEventListener('install', event => {
     caches.open(CACHE_NAME)
       .then(cache => {
         console.log('Opened cache');
-        return cache.addAll(CORE_ASSETS);
+        return cache.addAll(CORE_ASSETS.map(asset => new Request(asset, { cache: 'reload' })));
       })
       .catch(error => {
         return caches.delete(CACHE_NAME).then(() => {
