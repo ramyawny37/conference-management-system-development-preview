@@ -87,6 +87,6 @@ test('route restores use PlatformIntegration and deterministic assets remain ali
   assert.match(worker,/\.\/js\/platform-integration\.js\?rev=module-entry-access-gate-v1/);
   assert.match(index,/script\.js\?rev=platform-module-entry-gate-v1/);
   assert.match(worker,/\.\/script\.js\?rev=platform-module-entry-gate-v1/);
-  assert.match(index,/reservations-module\.js\?rev=mountable-bundle-v6/);
+  assert.match(index,/reservations-module\.js\?rev=mountable-bundle-v7/);
   assert.doesNotMatch(reservationsBundle,/check_module_access/);
 });
