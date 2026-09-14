@@ -13,7 +13,7 @@ function classList(){
     remove(...names){names.forEach(name=>values.delete(name));}};
 }
 
-function integrationRuntime(initialRoute){
+function integrationRuntime(initialRoute,options={}){
   let route=initialRoute;
   const calls=[];
   const listeners={};
@@ -24,17 +24,21 @@ function integrationRuntime(initialRoute){
     warehouseWorkspace:{id:'warehouseWorkspace'},
     reservationsWorkspace:{id:'reservationsWorkspace'}
   };
+  const timers=[];
+  const gateState=options.gateState||null;
   const window={document:{addEventListener(){},getElementById:id=>elements[id]||null},ApplicationRouting:{
     getLogicalPathname:()=>route,resolveLogicalRoute:value=>'/preview/#'+value
   },history:{pushState(_state,_title,value){calls.push(['push',value]);route=value.split('#')[1];}},
   addEventListener(name,handler){listeners[name]=handler;},
+  setTimeout(handler){timers.push(handler);return timers.length;},clearTimeout(){},
   reconcileConferenceRoute(){calls.push(['conference-route',route]);},
   showPlatformModules(){calls.push(['platform']);},
   openConferenceWorkspace(){calls.push(['conference-open']);},
   openWarehouseWorkspace(options){calls.push(['warehouse',options.route]);},
   PlatformDeviceSession:{invokeModuleProtected:(module,operation,args)=>{calls.push(['protected',module,operation,args]);return Promise.resolve({status:'allowed',moduleKey:module});}}};
+  if(gateState)window.StartupAccessGate={getState:()=>gateState,isAllowed:()=>gateState.allowed};
   vm.runInNewContext(integrationSource,{window,Promise,Object,JSON,String});
-  return {window,calls,listeners,shellClasses,elements,setRoute:value=>{route=value;}};
+  return {window,calls,listeners,shellClasses,elements,gateState,timers,setRoute:value=>{route=value;},runNextTimer(){const handler=timers.shift();if(handler)handler();}};
 }
 
 test('module cards use static-safe hash routes and open peer modules',async()=>{
@@ -73,6 +77,35 @@ test('delayed reconciliation delegates the current canonical Conference route',(
   const state=integrationRuntime('/conference/app/settings');
   state.window.PlatformIntegration.initialize();
   assert.deepStrictEqual(state.calls,[['conference-route','/conference/app/settings']]);
+});
+
+test('refresh replays a preserved Warehouse route only after startup access is ready',async()=>{
+  const gateState={pipelineState:'idle',applicationVisible:false,gateState:'loading',allowed:false};
+  const state=integrationRuntime('/warehouse/approvals',{gateState});
+  state.window.PlatformIntegration.initialize();
+  assert.deepStrictEqual(state.calls,[]);
+  assert.strictEqual(state.timers.length,1);
+  gateState.pipelineState='completed';
+  gateState.applicationVisible=true;
+  gateState.gateState='allowed';
+  gateState.allowed=true;
+  state.runNextTimer();
+  await Promise.resolve();
+  await Promise.resolve();
+  assert.deepStrictEqual(state.calls.map(call=>call.slice(0,3)),[['protected','warehouse','check_module_access'],['warehouse','/warehouse/approvals']]);
+  assert.strictEqual(state.timers.length,0);
+});
+
+test('route replay stops when startup gate resolves to a non-allowed state',()=>{
+  const gateState={pipelineState:'idle',applicationVisible:false,gateState:'loading',allowed:false};
+  const state=integrationRuntime('/warehouse',{gateState});
+  state.window.PlatformIntegration.initialize();
+  assert.strictEqual(state.timers.length,1);
+  gateState.pipelineState='idle';
+  gateState.gateState='device';
+  state.runNextTimer();
+  assert.deepStrictEqual(state.calls,[]);
+  assert.strictEqual(state.timers.length,0);
 });
 
 test('routing has one hashchange owner and no competing popstate owner',()=>{
