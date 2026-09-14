@@ -458,9 +458,25 @@
         }
         return;
       }
+      if(!Number.isInteger(event.observedRevision)||
+        event.observedRevision<1){
+        diagnostics.lastRealtimeListenerResult={
+          accepted:false,reason:'revision_invalid',
+          revision:event.observedRevision
+        };
+        if(typeof manager.recordListenerDecision==='function'){
+          manager.recordListenerDecision(Object.assign(
+            {stage:'orchestrator_listener'},
+            diagnostics.lastRealtimeListenerResult
+          ));
+        }
+        return;
+      }
       var deviceId=currentDeviceId(options);
-      if(event.classification==='self_update'||deviceId&&
-        String(event.sourceDeviceId||'')===deviceId){
+      var sameDevice=event.classification==='self_update'||deviceId&&
+        String(event.sourceDeviceId||'')===deviceId;
+      if(sameDevice&&Number.isInteger(link.knownRevision)&&
+        link.knownRevision>=event.observedRevision){
         diagnostics.lastRealtimeListenerResult={
           accepted:false,reason:'self_update',revision:event.observedRevision
         };
@@ -472,7 +488,8 @@
         }
         return;
       }
-      if(event.classification!=='remote_change_detected'){
+      if(event.classification!=='remote_change_detected'&&
+        !(sameDevice&&event.classification==='self_update')){
         diagnostics.lastRealtimeListenerResult={
           accepted:false,reason:'classification_not_supported',
           classification:event.classification,

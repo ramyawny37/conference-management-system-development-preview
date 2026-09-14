@@ -640,8 +640,10 @@ async function testProductionManagerSubscriberLifecycle(){
   var unsubscribeCount=0;
   var traces=[];
   var links={
-    'local-one':{linkStatus:'linked',remoteConferenceId:REMOTE_ONE},
-    'local-two':{linkStatus:'cloud_linked',remoteConferenceId:REMOTE_TWO}
+    'local-one':{linkStatus:'linked',remoteConferenceId:REMOTE_ONE,
+      knownRevision:3},
+    'local-two':{linkStatus:'cloud_linked',remoteConferenceId:REMOTE_TWO,
+      knownRevision:0}
   };
   var manager={
     subscribe:function(listener){

@@ -16,8 +16,10 @@ function load(manager){
   let current=LOCAL_A;
   const timers=[];
   const links={
-    [LOCAL_A]:{linkStatus:'linked',remoteConferenceId:CLOUD_A},
-    [LOCAL_B]:{linkStatus:'linked',remoteConferenceId:CLOUD_B}
+    [LOCAL_A]:{linkStatus:'linked',remoteConferenceId:CLOUD_A,
+      knownRevision:7},
+    [LOCAL_B]:{linkStatus:'linked',remoteConferenceId:CLOUD_B,
+      knownRevision:0}
   };
   const sandbox={window:null,Promise,Date,JSON,Object,String,Number,Math,
     structuredClone:value=>JSON.parse(JSON.stringify(value)),

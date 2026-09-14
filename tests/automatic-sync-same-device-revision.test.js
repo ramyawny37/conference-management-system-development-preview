@@ -54,6 +54,56 @@ function environment(knownRevision){
   return {sandbox,schedules,emit};
 }
 
+function managerEnvironment(knownRevision){
+  const listeners=[];
+  const decisions=[];
+  const traces=[];
+  const link={
+    linkStatus:'linked',remoteConferenceId:remoteId,
+    knownRevision:knownRevision
+  };
+  const manager={
+    subscribe(listener){listeners.push(listener);return function(){};},
+    recordListenerDecision(decision){decisions.push(decision);},
+    traceDiagnostic(stage,data){traces.push({stage,data});}
+  };
+  const sandbox={window:null,Promise,Date,JSON,Object,String,Number,Array,Math,
+    structuredClone:value=>JSON.parse(JSON.stringify(value)),
+    setTimeout(){return 1;},clearTimeout(){},
+    addEventListener(){},removeEventListener(){},navigator:{onLine:true},
+    getCurrentConference(){return {id:localId};},
+    ConferenceRealtimeManager:manager,
+    ConferenceLinkStore:{get(id){return id===localId?link:null;}},
+    SupabaseDeviceIdentity:{getOrCreate(){return {id:localDevice};}},
+    appData:{conferenceLifecycle:{records:{[localId]:{
+      localLifecycle:'active',cloudLifecycle:'cloud_linked'
+    }}}}
+  };
+  sandbox.window=sandbox;
+  ['js/sync/sync-scheduler-state.js','js/sync/automatic-sync-orchestrator.js']
+    .forEach(file=>vm.runInNewContext(
+      fs.readFileSync(path.join(root,file),'utf8'),sandbox,{filename:file}
+    ));
+  const options={debounceMs:60000,realtimeManager:manager,
+    linkStore:sandbox.ConferenceLinkStore,
+    deviceIdentity:sandbox.SupabaseDeviceIdentity,
+    getCurrentConference:sandbox.getCurrentConference,
+    preferences:{get(){return {cloudSyncEnabled:true};}}};
+  assert.strictEqual(
+    sandbox.AutomaticSyncOrchestrator.start(options).status,'started'
+  );
+  assert.strictEqual(listeners.length,1);
+  function emit(classification,deviceId,revision){
+    listeners[0]({}, {classification:classification,
+      sourceDeviceId:deviceId,observedRevision:revision,
+      cloudConferenceId:remoteId});
+  }
+  function scheduleCount(){
+    return traces.filter(item=>item.stage==='CHANGE_SCHEDULED').length;
+  }
+  return {link,decisions,emit,scheduleCount};
+}
+
 (function(){
   const current=environment(5);
   current.emit(localDevice,5);
@@ -78,4 +128,38 @@ function environment(knownRevision){
     'duplicate revision must schedule exactly once');
 
   console.log('same-device realtime revision tests passed');
+})();
+
+(function(){
+  const current=managerEnvironment(5);
+  current.emit('self_update',localDevice,5);
+  assert.strictEqual(current.scheduleCount(),0);
+  assert.strictEqual(current.decisions.at(-1).reason,'self_update');
+
+  const advanced=managerEnvironment(5);
+  advanced.emit('self_update',localDevice,6);
+  assert.strictEqual(advanced.scheduleCount(),1,
+    'manager must schedule an advanced same-device revision');
+  assert.strictEqual(advanced.decisions.at(-1).accepted,true);
+  advanced.link.knownRevision=6;
+  advanced.emit('self_update',localDevice,6);
+  assert.strictEqual(advanced.scheduleCount(),1,
+    'stale duplicate self revision must not schedule twice');
+
+  const remote=managerEnvironment(5);
+  remote.emit('remote_change_detected',otherDevice,6);
+  assert.strictEqual(remote.scheduleCount(),1,
+    'other-device remote behavior must remain unchanged');
+
+  const unsupported=managerEnvironment(5);
+  unsupported.emit('potential_conflict',otherDevice,6);
+  assert.strictEqual(unsupported.scheduleCount(),0);
+  assert.strictEqual(unsupported.decisions.at(-1).reason,
+    'classification_not_supported');
+  unsupported.emit('self_update',localDevice,'6');
+  assert.strictEqual(unsupported.scheduleCount(),0);
+  assert.strictEqual(unsupported.decisions.at(-1).reason,
+    'revision_invalid');
+
+  console.log('manager same-device realtime revision tests passed');
 })();
