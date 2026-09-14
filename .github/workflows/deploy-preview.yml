@@ -43,7 +43,7 @@ jobs:
         id: source_meta
         run: |
           PLATFORM_SHA="$(git -C source/platform rev-parse HEAD)"
-          test "$PLATFORM_SHA" = "9bb54f39e7db9cfef342de7cda74e120083ceb23"
+          test "$PLATFORM_SHA" = "b49786c30e8af27eace43dfe96f4f4c06e5a7dd1"
           echo "platform_sha=$PLATFORM_SHA" >> "$GITHUB_OUTPUT"
           echo "reservations_sha=1ed101c5d17cba699b6a6107f966f8db507824de" >> "$GITHUB_OUTPUT"
           echo "reservations_js_sha256=$(sha256sum source/platform/modules/reservations/reservations-module.js | awk '{print $1}')" >> "$GITHUB_OUTPUT"
@@ -134,6 +134,7 @@ jobs:
           grep -Fq "'cms:development:'+DEVELOPMENT_PROJECT_REF+':'" site/js/storage/environment-namespace.js
           grep -Fq "js/platform-integration.js?rev=module-entry-access-gate-v1" site/index.html
           grep -Fq "./js/platform-integration.js?rev=module-entry-access-gate-v1" site/service-worker.js
+          grep -Fq "cache.addAll(CORE_ASSETS.map(asset => new Request(asset, { cache: 'reload' })))" site/service-worker.js
           grep -Fq "script.js?rev=platform-module-entry-gate-v1" site/index.html
           grep -Fq "./script.js?rev=platform-module-entry-gate-v1" site/service-worker.js
           grep -Fq "modules/reservations/reservations-module.js?rev=mountable-bundle-v7" site/index.html
