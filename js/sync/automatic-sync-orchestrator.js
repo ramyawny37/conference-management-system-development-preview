@@ -335,7 +335,17 @@
       var localDeviceId=currentDeviceId(options);
       if(localDeviceId&&
         String(remoteEvent.deviceId||'')===localDeviceId){
-        return;
+        var links=options&&options.linkStore||global.ConferenceLinkStore;
+        var localId=currentLocalConferenceId(options);
+        var link=links&&typeof links.get==='function'&&localId
+          ?links.get(localId,options&&options.linkOptions):null;
+        if(link&&
+          String(link.remoteConferenceId||'')===
+            String(remoteEvent.conferenceId||'')&&
+          Number.isInteger(link.knownRevision)&&
+          link.knownRevision>=remoteEvent.revision){
+          return;
+        }
       }
       var dedupKey=[
         String(remoteEvent.conferenceId||''),
