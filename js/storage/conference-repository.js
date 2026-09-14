@@ -46,6 +46,12 @@
     return Number.isInteger(value)&&value>=0;
   }
 
+  function currentAuthenticatedUserId(){
+    var auth=global.SupabaseAuth;
+    var state=auth&&typeof auth.getState==='function'?auth.getState():null;
+    return String(state&&state.user&&state.user.id||'');
+  }
+
   function validateLifecycleRecord(record,expectedId){
     var issues=[];
     if(!plainObject(record)){
@@ -77,6 +83,13 @@
         'LOCAL_CONTENT_VERSION_INVALID','record.localContentVersion'
       ));
     }
+    if(record.localOwnerUserId!==undefined&&
+      record.localOwnerUserId!==null&&
+      !validId(record.localOwnerUserId)){
+      issues.push(issue(
+        'LOCAL_OWNER_USER_ID_INVALID','record.localOwnerUserId'
+      ));
+    }
     if(record.publishMetadata!==null){
       var publishManager=global.ConferencePublishManager;
       var publishValidation=publishManager&&
@@ -106,6 +119,7 @@
       'localLifecycle',
       'cloudLifecycle',
       'localContentVersion',
+      'localOwnerUserId',
       'publishMetadata'
     ];
     Object.keys(record).forEach(function(key){
@@ -129,6 +143,8 @@
       localContentVersion:
         input.localContentVersion===undefined
           ?0:input.localContentVersion,
+      localOwnerUserId:input.localOwnerUserId===undefined
+        ?null:input.localOwnerUserId,
       publishMetadata:null
     };
     return validateLifecycleRecord(record,record.localConferenceId);
@@ -159,8 +175,7 @@
     Object.keys(repositoryState.records).forEach(function(id){
       if(!validId(id)){
         issues.push(issue(
-          'CONFERENCE_LIFECYCLE_KEY_INVALID',
-          'conferenceLifecycle.records'
+          'CONFERENCE_LIFECYCLE_KEY_INVALID','conferenceLifecycle.records'
         ));
         return;
       }
@@ -337,6 +352,12 @@
         issue('LOCAL_CONFERENCE_INVALID','conference')
       ]);
     }
+    var creatorUserId=currentAuthenticatedUserId();
+    if(!validId(creatorUserId)){
+      return outcome(false,'creator_identity_required',null,[
+        issue('LOCAL_CONFERENCE_CREATOR_REQUIRED','conferenceLifecycle')
+      ]);
+    }
     if(appData.conferences.some(function(item){
       return item&&item.id===conference.id;
     })){
@@ -376,7 +397,8 @@
       localConferenceId:conference.id,
       localLifecycle:'active',
       cloudLifecycle:'unpublished',
-      localContentVersion:0
+      localContentVersion:0,
+      localOwnerUserId:creatorUserId
     });
     if(!created.ok)return created;
     candidate.conferences.push(clone(conference));
@@ -394,6 +416,7 @@
       localLifecycles:LOCAL_LIFECYCLES.slice(),
       cloudLifecycles:CLOUD_LIFECYCLES.slice(),
       repositoryProperty:'conferenceLifecycle',
+      localOwnerProperty:'localOwnerUserId',
       publishMetadataPhase:'2.2'
     };
   }
