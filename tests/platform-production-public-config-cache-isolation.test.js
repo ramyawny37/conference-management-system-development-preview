@@ -22,7 +22,7 @@ test('Production public config is isolated from stale Development caches',()=>{
   assert.strictEqual(revisions[2],'production-3-5-0-config-isolation-v1');
 
   assert.match(publicConfig,/mpezfbvcdfxpgflehuot/);
-  assert.doesNotMatch(publicConfig,/gppwltrifgfxrkzvvxoe/);
+  assert.match(publicConfig,/gppwltrifgfxrkzvvxoe/);
 
   const productionHandler=worker.slice(
     worker.indexOf('function productionPublicConfigNetworkOnly'),

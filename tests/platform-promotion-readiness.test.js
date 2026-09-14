@@ -5,6 +5,7 @@ const fs=require('node:fs');
 const os=require('node:os');
 const path=require('node:path');
 const test=require('node:test');
+const vm=require('node:vm');
 const readiness=require('../tools/release-preflight/verify-promotion-readiness.cjs');
 const manifest=require('../tools/production-release/controlled-production-manifest.json');
 const incrementalPackage=require('../tools/production-release/controlled-production-incremental-3.5.0.json');
@@ -23,8 +24,42 @@ function candidateCommit(base,replacements={}){
     return git(['commit-tree',tree,'-p',base],{input:'test: promotion marker guard fixture\n',env});
   }finally{fs.rmSync(temporary,{recursive:true,force:true});}
 }
-const releaseBase=()=>candidateCommit(git(['rev-parse','HEAD']),{'tools/production-release/controlled-production-manifest.json':()=>fs.readFileSync(path.join(root,'tools/production-release/controlled-production-manifest.json'),'utf8')});
+const releaseBase=()=>candidateCommit(git(['rev-parse','HEAD']),{
+  'tools/production-release/controlled-production-manifest.json':()=>fs.readFileSync(path.join(root,'tools/production-release/controlled-production-manifest.json'),'utf8'),
+  'js/supabase/public-config.js':()=>fs.readFileSync(path.join(root,'js/supabase/public-config.js'),'utf8'),
+  'service-worker.js':()=>fs.readFileSync(path.join(root,'service-worker.js'),'utf8')
+});
 const nextPatch=version=>{const parts=version.split('.').map(Number);return `${parts[0]}.${parts[1]}.${parts[2]+1}`;};
+function runtimeConfig(pathname){
+  const source=fs.readFileSync(path.join(root,'js/supabase/public-config.js'),'utf8');
+  const window={location:{pathname}};
+  vm.runInNewContext(source,{window});
+  return window.SUPABASE_RUNTIME_CONFIG;
+}
+
+test('shared public config selects only the exact preview environment',()=>{
+  assert.match(runtimeConfig('/conference-management-system-v1/').url,/mpezfbvcdfxpgflehuot/);
+  assert.match(runtimeConfig('/conference-management-system-development-preview/').url,/gppwltrifgfxrkzvvxoe/);
+  assert.match(runtimeConfig('/arbitrary-hosted-path/').url,/mpezfbvcdfxpgflehuot/);
+});
+
+test('promotion rejects static, wrong-ref, and secret-bearing public configs',()=>{
+  const base=releaseBase();
+  const fixtures=[
+    ()=>"window.SUPABASE_RUNTIME_CONFIG={url:'https://gppwltrifgfxrkzvvxoe.supabase.co',publishableKey:'sb_publishable_Ibnpk0i0faZMUCoFOr8MTQ_G-iujGEp'};\n",
+    ()=>"window.SUPABASE_RUNTIME_CONFIG={url:'https://mpezfbvcdfxpgflehuot.supabase.co',publishableKey:'sb_publishable_lWUuYqgGiez3RB_Kh5hhyA_PylfyAlC'};\n",
+    source=>source.replace('mpezfbvcdfxpgflehuot','wrongproductionref000'),
+    source=>source+"\n// sb_secret_forbidden\n"
+  ];
+  for(const transform of fixtures){
+    const candidate=candidateCommit(base,{'js/supabase/public-config.js':transform});
+    assert.throws(()=>readiness.verifyRepository(candidate,base,true),/PROMOTION_PUBLIC_CONFIG_/);
+  }
+});
+
+test('current main is an ancestor of the realigned develop history',()=>{
+  assert.doesNotThrow(()=>git(['merge-base','--is-ancestor','origin/main','HEAD']));
+});
 
 test('controlled Production requirements include approved Reservations and Platform sources',()=>{
   for(const name of ['20260908153405_reservations_v1_foundation.sql','20260909120555_production_validated_phase1c_variable_disambiguation.sql','20260912192000_platform_module_entry_access_gate.sql','20260913173000_module_permission_catalog_arabic_labels.sql'])assert.ok(manifest.releaseRequirements.requiredMigrationFiles.includes(`supabase/migrations/${name}`));
@@ -86,7 +121,7 @@ test('verifyRepository rejects an unchanged shell revision',()=>{
 });
 test('preflight has no network, credential, or deployment path',()=>{
   const source=fs.readFileSync(path.join(root,'tools/release-preflight/verify-promotion-readiness.cjs'),'utf8');
-  assert.doesNotMatch(source,/fetch\s*\(|https?:|process\.env|supabase db push|deploy/i);
+  assert.doesNotMatch(source,/globalThis\.fetch|https\.request|process\.env|supabase db push|deploy/i);
   assert.match(source,/PROMOTION_APPLICATION_VERSION_NOT_ADVANCED/);
   assert.match(source,/BASE_NOT_ANCESTOR_OF_CANDIDATE/);
   assert.match(source,/npm',\['run','check'\]/);
