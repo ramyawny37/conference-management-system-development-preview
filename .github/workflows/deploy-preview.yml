@@ -43,7 +43,7 @@ jobs:
         id: source_meta
         run: |
           PLATFORM_SHA="$(git -C source/platform rev-parse HEAD)"
-          test "$PLATFORM_SHA" = "d614031d894a5a70dfaf63bc841cffc25a9211db"
+          test "$PLATFORM_SHA" = "dac25e02558705d3e777f5ec97a05666fb5c3f61"
           echo "platform_sha=$PLATFORM_SHA" >> "$GITHUB_OUTPUT"
           echo "reservations_sha=1ed101c5d17cba699b6a6107f966f8db507824de" >> "$GITHUB_OUTPUT"
           echo "reservations_js_sha256=$(sha256sum source/platform/modules/reservations/reservations-module.js | awk '{print $1}')" >> "$GITHUB_OUTPUT"
@@ -137,6 +137,7 @@ jobs:
           grep -Fq "cache.addAll(CORE_ASSETS.map(asset => new Request(asset, { cache: 'reload' })))" site/service-worker.js
           grep -Fq "if (IS_DEVELOPMENT) return self.skipWaiting();" site/service-worker.js
           grep -Fq "event.respondWith(developmentNetworkFirst(request));" site/service-worker.js
+          grep -Fq "setStartupPeerRouteMask(true)" site/js/platform-integration.js
           grep -Fq "script.js?rev=platform-module-entry-gate-v1" site/index.html
           grep -Fq "./script.js?rev=platform-module-entry-gate-v1" site/service-worker.js
           grep -Fq "modules/reservations/reservations-module.js?rev=mountable-bundle-v7" site/index.html
