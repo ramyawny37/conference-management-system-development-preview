@@ -1,0 +1,46 @@
+name: Update Reservations Preview Pin Once
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/update-reservations-preview-once.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Update approved source pins
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('.github/workflows/deploy-preview.yml')
+          s = p.read_text()
+          replacements = {
+            '39c5dfb2e72ca49430ab161b4037d8938d51e54e': 'ce6c80236e2a92acadc4c46ca49a4e43037304f1',
+            '6d05c887009e69246e2a7f40b4d24a20257215f8': '61eda9a0e25290d3ce9ecfbec6455338debbf737',
+            'mountable-bundle-v10': 'mountable-bundle-v11',
+          }
+          for old, new in replacements.items():
+              if old not in s:
+                  raise SystemExit(f'missing expected marker: {old}')
+              s = s.replace(old, new)
+          p.write_text(s)
+          PY
+          grep -F "test \"$PLATFORM_SHA\" = \"ce6c80236e2a92acadc4c46ca49a4e43037304f1\"" .github/workflows/deploy-preview.yml
+          grep -F 'reservations_sha=61eda9a0e25290d3ce9ecfbec6455338debbf737' .github/workflows/deploy-preview.yml
+          grep -F 'mountable-bundle-v11' .github/workflows/deploy-preview.yml
+      - name: Commit preview pin update
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add .github/workflows/deploy-preview.yml
+          git commit -m 'chore(preview): deploy full-width reservations bundle'
+          git push origin HEAD:main
