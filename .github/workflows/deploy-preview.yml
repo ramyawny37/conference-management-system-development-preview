@@ -140,10 +140,10 @@ jobs:
           grep -Fq "setStartupPeerRouteMask(true)" site/js/platform-integration.js
           grep -Fq "script.js?rev=platform-module-entry-gate-v1" site/index.html
           grep -Fq "./script.js?rev=platform-module-entry-gate-v1" site/service-worker.js
-          grep -Fq "modules/reservations/reservations-module.js?rev=mountable-bundle-v10" site/index.html
-          grep -Fq "modules/reservations/reservations-module.css?rev=mountable-bundle-v10" site/index.html
-          grep -Fq "./modules/reservations/reservations-module.js?rev=mountable-bundle-v10" site/service-worker.js
-          grep -Fq "./modules/reservations/reservations-module.css?rev=mountable-bundle-v10" site/service-worker.js
+          grep -Fq "modules/reservations/reservations-module.js?rev=mountable-bundle-v11" site/index.html
+          grep -Fq "modules/reservations/reservations-module.css?rev=mountable-bundle-v11" site/index.html
+          grep -Fq "./modules/reservations/reservations-module.js?rev=mountable-bundle-v11" site/service-worker.js
+          grep -Fq "./modules/reservations/reservations-module.css?rev=mountable-bundle-v11" site/service-worker.js
           echo "${{ steps.source_meta.outputs.reservations_js_sha256 }}  site/modules/reservations/reservations-module.js" | sha256sum --check --strict
           echo "${{ steps.source_meta.outputs.reservations_css_sha256 }}  site/modules/reservations/reservations-module.css" | sha256sum --check --strict
           grep -Fq 'data-platform-module="reservations" class="platform-module-card platform-module-card-available"' site/index.html
