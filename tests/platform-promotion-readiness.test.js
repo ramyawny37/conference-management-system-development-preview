@@ -23,6 +23,7 @@ function candidateCommit(base,replacements={}){
   }finally{fs.rmSync(temporary,{recursive:true,force:true});}
 }
 const releaseBase=()=>candidateCommit(git(['rev-parse','HEAD']),{'tools/production-release/controlled-production-manifest.json':()=>fs.readFileSync(path.join(root,'tools/production-release/controlled-production-manifest.json'),'utf8')});
+const nextPatch=version=>{const parts=version.split('.').map(Number);return `${parts[0]}.${parts[1]}.${parts[2]+1}`;};
 
 test('controlled Production requirements include approved Reservations and Platform sources',()=>{
   for(const name of ['20260908153405_reservations_v1_foundation.sql','20260909120555_production_validated_phase1c_variable_disambiguation.sql','20260912192000_platform_module_entry_access_gate.sql','20260913173000_module_permission_catalog_arabic_labels.sql'])assert.ok(manifest.releaseRequirements.requiredMigrationFiles.includes(`supabase/migrations/${name}`));
@@ -52,7 +53,7 @@ test('verifyRepository rejects an application version that was not advanced',()=
   assert.throws(()=>readiness.verifyRepository(candidate,base,true),/PROMOTION_APPLICATION_VERSION_NOT_ADVANCED/);
 });
 test('verifyRepository rejects an unchanged Production cache revision',()=>{
-  const base=releaseBase(),markers=readiness.extractMarkers(base),next='3.4.1';
+  const base=releaseBase(),markers=readiness.extractMarkers(base),next=nextPatch(markers.appVersion);
   const candidate=candidateCommit(base,{
     'service-worker.js':source=>source.replace(`const APP_VERSION = '${markers.appVersion}';`,`const APP_VERSION = '${next}';`),
     'version.js':source=>source.replace(`version: '${markers.appVersion}'`,`version: '${next}'`)
@@ -60,7 +61,7 @@ test('verifyRepository rejects an unchanged Production cache revision',()=>{
   assert.throws(()=>readiness.verifyRepository(candidate,base,true),/PROMOTION_CACHE_REVISION_NOT_ADVANCED/);
 });
 test('verifyRepository rejects an unchanged shell revision',()=>{
-  const base=releaseBase(),markers=readiness.extractMarkers(base),next='3.4.1',nextCache=`${markers.productionCacheRevision}-next`;
+  const base=releaseBase(),markers=readiness.extractMarkers(base),next=nextPatch(markers.appVersion),nextCache=`${markers.productionCacheRevision}-next`;
   const candidate=candidateCommit(base,{
     'service-worker.js':source=>source.replace(`const APP_VERSION = '${markers.appVersion}';`,`const APP_VERSION = '${next}';`).replace(`: '${markers.productionCacheRevision}';\nconst CACHE_NAME`,`: '${nextCache}';\nconst CACHE_NAME`),
     'version.js':source=>source.replace(`version: '${markers.appVersion}'`,`version: '${next}'`)
