@@ -43,9 +43,9 @@ jobs:
         id: source_meta
         run: |
           PLATFORM_SHA="$(git -C source/platform rev-parse HEAD)"
-          test "$PLATFORM_SHA" = "34d4683e7615264c465988b2710ace18d435d077"
+          test "$PLATFORM_SHA" = "78a7f8379a01452fb41e25f66847073cf73552ce"
           echo "platform_sha=$PLATFORM_SHA" >> "$GITHUB_OUTPUT"
-          echo "reservations_sha=1ed101c5d17cba699b6a6107f966f8db507824de" >> "$GITHUB_OUTPUT"
+          echo "reservations_sha=8f0597f2afe5c97408eb75ff8fa9816d2c40436c" >> "$GITHUB_OUTPUT"
           echo "reservations_js_sha256=$(sha256sum source/platform/modules/reservations/reservations-module.js | awk '{print $1}')" >> "$GITHUB_OUTPUT"
           echo "reservations_css_sha256=$(sha256sum source/platform/modules/reservations/reservations-module.css | awk '{print $1}')" >> "$GITHUB_OUTPUT"
 
@@ -140,10 +140,10 @@ jobs:
           grep -Fq "setStartupPeerRouteMask(true)" site/js/platform-integration.js
           grep -Fq "script.js?rev=platform-module-entry-gate-v1" site/index.html
           grep -Fq "./script.js?rev=platform-module-entry-gate-v1" site/service-worker.js
-          grep -Fq "modules/reservations/reservations-module.js?rev=mountable-bundle-v7" site/index.html
-          grep -Fq "modules/reservations/reservations-module.css?rev=mountable-bundle-v7" site/index.html
-          grep -Fq "./modules/reservations/reservations-module.js?rev=mountable-bundle-v7" site/service-worker.js
-          grep -Fq "./modules/reservations/reservations-module.css?rev=mountable-bundle-v7" site/service-worker.js
+          grep -Fq "modules/reservations/reservations-module.js?rev=mountable-bundle-v8" site/index.html
+          grep -Fq "modules/reservations/reservations-module.css?rev=mountable-bundle-v8" site/index.html
+          grep -Fq "./modules/reservations/reservations-module.js?rev=mountable-bundle-v8" site/service-worker.js
+          grep -Fq "./modules/reservations/reservations-module.css?rev=mountable-bundle-v8" site/service-worker.js
           echo "${{ steps.source_meta.outputs.reservations_js_sha256 }}  site/modules/reservations/reservations-module.js" | sha256sum --check --strict
           echo "${{ steps.source_meta.outputs.reservations_css_sha256 }}  site/modules/reservations/reservations-module.css" | sha256sum --check --strict
           grep -Fq 'data-platform-module="reservations" class="platform-module-card platform-module-card-available"' site/index.html
