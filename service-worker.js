@@ -8,7 +8,7 @@ const CACHE_NAMESPACE = IS_DEVELOPMENT
 const CACHE_PREFIX = CACHE_NAMESPACE + 'conference-manager-core-';
 const CACHE_REVISION = IS_DEVELOPMENT
   ? 'development-3-4-0-warehouse-unit-hierarchy-v1'
-  : 'production-3-5-0-platform-integration-v1';
+  : 'production-3-5-0-config-isolation-v1';
 const CACHE_NAME = CACHE_PREFIX + 'v' + APP_VERSION + '-' + CACHE_REVISION;
 const CORE_ASSETS = [
   './',
@@ -165,10 +165,7 @@ self.addEventListener('install', event => {
         console.log('Opened cache');
         return cache.addAll(CORE_ASSETS.map(asset => new Request(asset, { cache: 'reload' })));
       })
-      .then(() => {
-        if (IS_DEVELOPMENT) return self.skipWaiting();
-        return undefined;
-      })
+      .then(() => self.skipWaiting())
       .catch(error => {
         return caches.delete(CACHE_NAME).then(() => {
           throw error;
@@ -215,6 +212,16 @@ function developmentNetworkFirst(request) {
     .catch(() => caches.open(CACHE_NAME).then(cache => cache.match(request)));
 }
 
+function productionPublicConfigNetworkOnly(request) {
+  return fetch(new Request(request,{cache:'no-store'}))
+    .then(response => response)
+    .catch(() => new Response('',{
+      status:503,
+      statusText:'Production configuration unavailable',
+      headers:{'Cache-Control':'no-store'}
+    }));
+}
+
 self.addEventListener('fetch', event => {
   const request = event.request;
   const requestUrl = new URL(request.url);
@@ -252,6 +259,11 @@ self.addEventListener('fetch', event => {
 
   if (IS_DEVELOPMENT) {
     event.respondWith(developmentNetworkFirst(request));
+    return;
+  }
+
+  if (requestUrl.pathname.endsWith('/js/supabase/public-config.js')) {
+    event.respondWith(productionPublicConfigNetworkOnly(request));
     return;
   }
 

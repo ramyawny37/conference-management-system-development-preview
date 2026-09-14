@@ -5,8 +5,8 @@ const test=require('node:test');
 
 const worker=fs.readFileSync('service-worker.js','utf8');
 
-test('Development worker auto-activates while Production keeps manual activation semantics',()=>{
-  assert.match(worker,/\.then\(\(\) => \{\s*if \(IS_DEVELOPMENT\) return self\.skipWaiting\(\);\s*return undefined;\s*\}\)/);
+test('this release promptly activates in Development and Production',()=>{
+  assert.match(worker,/\.then\(\(\) => self\.skipWaiting\(\)\)/);
   assert.match(worker,/if \(event\.data\.action === 'skipWaiting'\)/);
 });
 
