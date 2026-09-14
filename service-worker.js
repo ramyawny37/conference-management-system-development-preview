@@ -165,12 +165,15 @@ self.addEventListener('install', event => {
         console.log('Opened cache');
         return cache.addAll(CORE_ASSETS.map(asset => new Request(asset, { cache: 'reload' })));
       })
+      .then(() => {
+        if (IS_DEVELOPMENT) return self.skipWaiting();
+        return undefined;
+      })
       .catch(error => {
         return caches.delete(CACHE_NAME).then(() => {
           throw error;
         });
       })
-      // Do not call self.skipWaiting() here. Wait for user action.
   );
 });
 
@@ -197,6 +200,19 @@ function handleNavigationRequest(request) {
       return caches.open(CACHE_NAME)
         .then(cache => cache.match(homeCacheKey));
     });
+}
+
+function developmentNetworkFirst(request) {
+  return fetch(new Request(request,{cache:'no-store'}))
+    .then(response => {
+      if (!response || !response.ok) return response;
+      const responseToCache=response.clone();
+      return caches.open(CACHE_NAME)
+        .then(cache => cache.put(request,responseToCache))
+        .catch(() => null)
+        .then(() => response);
+    })
+    .catch(() => caches.open(CACHE_NAME).then(cache => cache.match(request)));
 }
 
 self.addEventListener('fetch', event => {
@@ -231,6 +247,11 @@ self.addEventListener('fetch', event => {
         headers: { 'Content-Type': 'application/manifest+json', 'Cache-Control': 'no-store' }
       }))
     );
+    return;
+  }
+
+  if (IS_DEVELOPMENT) {
+    event.respondWith(developmentNetworkFirst(request));
     return;
   }
 
