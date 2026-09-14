@@ -135,7 +135,7 @@ jobs:
           grep -Fq "js/platform-integration.js?rev=module-entry-access-gate-v1" site/index.html
           grep -Fq "./js/platform-integration.js?rev=module-entry-access-gate-v1" site/service-worker.js
           grep -Fq "cache.addAll(CORE_ASSETS.map(asset => new Request(asset, { cache: 'reload' })))" site/service-worker.js
-          grep -Fq "if (IS_DEVELOPMENT) return self.skipWaiting();" site/service-worker.js
+          grep -Fq ".then(() => self.skipWaiting())" site/service-worker.js
           grep -Fq "event.respondWith(developmentNetworkFirst(request));" site/service-worker.js
           grep -Fq "setStartupPeerRouteMask(true)" site/js/platform-integration.js
           grep -Fq "script.js?rev=platform-module-entry-gate-v1" site/index.html
