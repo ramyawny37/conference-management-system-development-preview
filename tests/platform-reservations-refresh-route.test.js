@@ -57,8 +57,6 @@ test('Reservations refresh survives a delayed Conference startup route override'
   assert.equal(state.timers.length,1);
   assert.deepEqual(state.calls,[]);
 
-  // Simulate the legacy Conference startup restoration overwriting the hash
-  // before the authorization pipeline becomes authoritative.
   state.setRoute('/conference');
   state.gateState.pipelineState='completed';
   state.gateState.applicationVisible=true;
@@ -75,6 +73,28 @@ test('Reservations refresh survives a delayed Conference startup route override'
     ['reservations-mount','/reservations/bookings/new']
   ]);
   assert.equal(state.timers.length,0);
+});
+
+test('Reservations route is captured before Conference can overwrite it ahead of initialize',async()=>{
+  const state=runtime('/reservations/bookings/new');
+
+  // platform-integration.js has already loaded and must capture the browser route now.
+  // Legacy Conference startup then overwrites the hash before initialize() is called.
+  state.setRoute('/conference');
+  state.gateState.pipelineState='completed';
+  state.gateState.applicationVisible=true;
+  state.gateState.gateState='allowed';
+  state.gateState.allowed=true;
+
+  state.window.PlatformIntegration.initialize();
+  await new Promise(resolve=>setImmediate(resolve));
+
+  assert.equal(state.getRoute(),'/reservations/bookings/new');
+  assert.deepEqual(state.calls.map(call=>call.slice(0,3)),[
+    ['replace','/preview/#/reservations/bookings/new'],
+    ['protected','reservations','check_module_access'],
+    ['reservations-mount','/reservations/bookings/new']
+  ]);
 });
 
 test('an explicit peer-module route wins over a stale captured startup route',()=>{
