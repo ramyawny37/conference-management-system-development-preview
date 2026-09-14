@@ -146,8 +146,112 @@
       }
     ],
     "futureIncrementalPromotion": {
-      "entries": [],
-      "executionPolicy": "Only entries explicitly added here by a future approved release are executable; establishedProductionHistory is verification-only and must never be replayed."
+      "releaseVersion": "3.5.0",
+      "releaseSha": "bb30244f309d3724dc9a93a652fab20566284bfc",
+      "packageId": "conference-controlled-production-3-5-0-bb30244-v1",
+      "entries": [
+        {
+          "order": 1,
+          "version": "20260914133000",
+          "name": "reservations_standalone_event_conference_link",
+          "sourceFile": "supabase/migrations/20260914133000_reservations_standalone_event_conference_link.sql",
+          "sourceSha256": "f189547a66fcd82f81c6a8cbd248b49865d52949afe3e86c8d8ddeadee718f1a",
+          "action": "APPLY_ONCE",
+          "executable": true,
+          "idempotencyKey": "cms-production-3-5-0:20260914133000_reservations_standalone_event_conference_link",
+          "transaction": {
+            "startsExplicitly": true,
+            "commitsExplicitly": true
+          },
+          "executionPolicy": "Exact canonical bytes; one ordered execution; refuse an existing logical migration name or idempotency key."
+        },
+        {
+          "order": 2,
+          "version": "20260914150000",
+          "name": "reservations_standalone_event_link_constraint_resolution_fix",
+          "sourceFile": "supabase/migrations/20260914150000_reservations_standalone_event_link_constraint_resolution_fix.sql",
+          "sourceSha256": "58f1803e8e5eea7b372b75eb0a83673474d313cdd182cc8dce05d317c86cab8a",
+          "action": "APPLY_ONCE",
+          "executable": true,
+          "idempotencyKey": "cms-production-3-5-0:20260914150000_reservations_standalone_event_link_constraint_resolution_fix",
+          "transaction": {
+            "startsExplicitly": true,
+            "commitsExplicitly": true
+          },
+          "executionPolicy": "Exact canonical bytes; one ordered execution; refuse an existing logical migration name or idempotency key."
+        },
+        {
+          "order": 3,
+          "version": "20260914151500",
+          "name": "reservations_payment_history_relink_guard_fix",
+          "sourceFile": "supabase/migrations/20260914151500_reservations_payment_history_relink_guard_fix.sql",
+          "sourceSha256": "02fc41a1885ca54055251333ab5768ea84e2794f11ebc9622fd9d3fd1000b227",
+          "action": "APPLY_ONCE",
+          "executable": true,
+          "idempotencyKey": "cms-production-3-5-0:20260914151500_reservations_payment_history_relink_guard_fix",
+          "transaction": {
+            "startsExplicitly": true,
+            "commitsExplicitly": true
+          },
+          "executionPolicy": "Exact canonical bytes; one ordered execution; refuse an existing logical migration name or idempotency key."
+        },
+        {
+          "order": 4,
+          "version": "20260914151500",
+          "name": "reservations_create_booking_conference_projection_fix",
+          "sourceFile": "supabase/migrations/20260914151500_reservations_create_booking_conference_projection_fix.sql",
+          "sourceSha256": "2fef0cc1fa8319602bc82366d19094c51ddf061f4eb53b0ca500352f1894ddd1",
+          "action": "APPLY_ONCE",
+          "executable": true,
+          "idempotencyKey": "cms-production-3-5-0:20260914151500_reservations_create_booking_conference_projection_fix",
+          "transaction": {
+            "startsExplicitly": true,
+            "commitsExplicitly": true
+          },
+          "executionPolicy": "Exact canonical bytes; one ordered execution; refuse an existing logical migration name or idempotency key."
+        },
+        {
+          "order": 5,
+          "version": "20260914152500",
+          "name": "reservations_booking_projection_self_heal",
+          "sourceFile": "supabase/migrations/20260914152500_reservations_booking_projection_self_heal.sql",
+          "sourceSha256": "25ee009f351be248badda9a6d6df0a4baea28d75d50582d3f162ae81be26966f",
+          "action": "APPLY_ONCE",
+          "executable": true,
+          "idempotencyKey": "cms-production-3-5-0:20260914152500_reservations_booking_projection_self_heal",
+          "transaction": {
+            "startsExplicitly": true,
+            "commitsExplicitly": true
+          },
+          "executionPolicy": "Exact canonical bytes; one ordered execution; refuse an existing logical migration name or idempotency key."
+        },
+        {
+          "order": 6,
+          "version": "20260914164500",
+          "name": "reservations_link_backfill_conference_people",
+          "sourceFile": "supabase/migrations/20260914164500_reservations_link_backfill_conference_people.sql",
+          "sourceSha256": "b9236078eb4f9f2d27a8a74007af80feb3f1d829eb0c669a791dc8cd7adcee86",
+          "action": "APPLY_ONCE",
+          "executable": true,
+          "idempotencyKey": "cms-production-3-5-0:20260914164500_reservations_link_backfill_conference_people",
+          "transaction": {
+            "startsExplicitly": true,
+            "commitsExplicitly": true
+          },
+          "executionPolicy": "Exact canonical bytes; one ordered execution; refuse an existing logical migration name or idempotency key."
+        }
+      ],
+      "edgeRelease": {
+        "slug": "platform-device-operation",
+        "sourceFile": "supabase/functions/platform-device-operation/index.ts",
+        "sourceSha256": "06b5410228b212d806c63e0c8e36d82ca694b5efefa8b6d7b1153d6112fc8d25",
+        "releaseSha": "bb30244f309d3724dc9a93a652fab20566284bfc",
+        "currentProductionVersion": 3,
+        "approvedDevelopmentVersion": 16,
+        "verifyJwt": true,
+        "promotionRequired": true
+      },
+      "executionPolicy": "Execute exactly these entries once in order after verification of establishedProductionHistory; establishedProductionHistory and historicalBootstrapReplay are verification-only for this incremental release and must never be replayed."
     }
   },
   "executionOrder": [
@@ -1653,7 +1757,12 @@
     "edge": {
       "slug": "platform-device-operation",
       "sourceFile": "supabase/functions/platform-device-operation/index.ts",
-      "verifyJwt": true
+      "sourceSha256": "06b5410228b212d806c63e0c8e36d82ca694b5efefa8b6d7b1153d6112fc8d25",
+      "releaseSha": "bb30244f309d3724dc9a93a652fab20566284bfc",
+      "currentProductionVersion": 3,
+      "approvedDevelopmentVersion": 16,
+      "verifyJwt": true,
+      "promotionRequired": true
     }
   }
 }

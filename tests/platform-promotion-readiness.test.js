@@ -7,6 +7,7 @@ const path=require('node:path');
 const test=require('node:test');
 const readiness=require('../tools/release-preflight/verify-promotion-readiness.cjs');
 const manifest=require('../tools/production-release/controlled-production-manifest.json');
+const incrementalPackage=require('../tools/production-release/controlled-production-incremental-3.5.0.json');
 const root=path.resolve(__dirname,'..');
 const git=(args,options={})=>childProcess.execFileSync('git',args,{cwd:root,encoding:'utf8',...options}).trim();
 function candidateCommit(base,replacements={}){
@@ -34,7 +35,22 @@ test('controlled Production requirements include approved Reservations and Platf
 test('controlled package separates bootstrap replay, established Production history, and future promotion',()=>{
   assert.deepEqual(manifest.packageModel.historicalBootstrapReplay,{entryCount:57,applyCount:43,supersededCount:14,terminalVersion:'20260907150000',executionSource:'entries'});
   assert.equal(manifest.packageModel.establishedProductionHistory.length,14);
-  assert.deepEqual(manifest.packageModel.futureIncrementalPromotion.entries,[]);
+  const incremental=manifest.packageModel.futureIncrementalPromotion;
+  assert.equal(incremental.releaseVersion,'3.5.0');
+  assert.equal(incremental.releaseSha,'bb30244f309d3724dc9a93a652fab20566284bfc');
+  assert.equal(incremental.entries.length,6);
+  assert.deepEqual(incremental.entries.map(entry=>entry.order),[1,2,3,4,5,6]);
+  assert.equal(new Set(incremental.entries.map(entry=>entry.sourceFile)).size,6);
+  assert.equal(new Set(incremental.entries.map(entry=>entry.idempotencyKey)).size,6);
+  for(const entry of incremental.entries){assert.equal(entry.executable,true);assert.equal(entry.action,'APPLY_ONCE');}
+  assert.equal(incremental.edgeRelease.verifyJwt,true);
+  assert.equal(incremental.edgeRelease.currentProductionVersion,3);
+  assert.equal(incremental.edgeRelease.approvedDevelopmentVersion,16);
+  assert.equal(incrementalPackage.productionProjectRef,'mpezfbvcdfxpgflehuot');
+  assert.deepEqual(incrementalPackage.forbiddenProjectRefs,['gppwltrifgfxrkzvvxoe']);
+  assert.deepEqual(incrementalPackage.executionEntries,incremental.entries);
+  assert.equal(incrementalPackage.executionEntries.length,6);
+  assert.equal(incrementalPackage.establishedProductionHistoryVerification.every(entry=>entry.executable===false),true);
   for(const entry of manifest.packageModel.establishedProductionHistory){assert.equal(entry.executable,false);assert.equal(manifest.entries.some(controlled=>controlled.version===entry.version),false);}
   const recovery=manifest.packageModel.establishedProductionHistory.find(entry=>entry.version==='20260913141000');
   assert.equal(recovery.representation,'ESTABLISHED_PRODUCTION_CONDITIONAL_RECONCILIATION');

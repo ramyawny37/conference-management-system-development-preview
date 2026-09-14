@@ -96,7 +96,7 @@ const releaseRequirements=Object.freeze({
     '20260909004500_phase1c_dispatch_context_reconciliation.sql',
     '20260913141000_platform_private_recovery_rls_hardening.sql'
   ].map(migration),
-  edge:{slug:'platform-device-operation',sourceFile:'supabase/functions/platform-device-operation/index.ts',verifyJwt:true}
+  edge:{slug:'platform-device-operation',sourceFile:'supabase/functions/platform-device-operation/index.ts',sourceSha256:sha('supabase/functions/platform-device-operation/index.ts'),releaseSha:'bb30244f309d3724dc9a93a652fab20566284bfc',currentProductionVersion:3,approvedDevelopmentVersion:16,verifyJwt:true,promotionRequired:true}
 });
 const establishedProductionHistory=[
   '20260908153405_reservations_v1_foundation.sql',
@@ -121,6 +121,44 @@ establishedProductionHistory.splice(12,0,{
   logicalMigrationSource:'supabase/migrations/20260913141000_platform_private_recovery_rls_hardening.sql',
   sourcePolicy:'Production used the live Production-aware conditional reconciliation under this logical migration name; the Development body remains excluded and is not replayable.'
 });
+const incrementalMigrationNames=[
+  '20260914133000_reservations_standalone_event_conference_link.sql',
+  '20260914150000_reservations_standalone_event_link_constraint_resolution_fix.sql',
+  '20260914151500_reservations_payment_history_relink_guard_fix.sql',
+  '20260914151500_reservations_create_booking_conference_projection_fix.sql',
+  '20260914152500_reservations_booking_projection_self_heal.sql',
+  '20260914164500_reservations_link_backfill_conference_people.sql'
+];
+function incrementalEntry(name,index){
+  const sourceFile=migration(name);
+  const body=fs.readFileSync(path.join(root,sourceFile),'utf8');
+  return {
+    order:index+1,
+    version:version(name),
+    name:name.replace(/^\d+_|\.sql$/g,''),
+    sourceFile,
+    sourceSha256:sha(sourceFile),
+    action:'APPLY_ONCE',
+    executable:true,
+    idempotencyKey:`cms-production-3-5-0:${name.replace(/\.sql$/,'')}`,
+    transaction:{
+      startsExplicitly:/^\s*begin\s*;/i.test(body),
+      commitsExplicitly:/commit\s*;\s*$/i.test(body)
+    },
+    executionPolicy:'Exact canonical bytes; one ordered execution; refuse an existing logical migration name or idempotency key.'
+  };
+}
+const incrementalEntries=incrementalMigrationNames.map(incrementalEntry);
+const edgeRelease={
+  slug:'platform-device-operation',
+  sourceFile:'supabase/functions/platform-device-operation/index.ts',
+  sourceSha256:sha('supabase/functions/platform-device-operation/index.ts'),
+  releaseSha:'bb30244f309d3724dc9a93a652fab20566284bfc',
+  currentProductionVersion:3,
+  approvedDevelopmentVersion:16,
+  verifyJwt:true,
+  promotionRequired:true
+};
 function semanticExpression(name){
   const checks={
     '20260829120000':'to_regclass(\'public.module_permission_grants\') is not null and to_regclass(\'public.module_grant_operations\') is not null',
@@ -253,11 +291,20 @@ const packageModel=Object.freeze({
   purpose:'HISTORICAL_BOOTSTRAP_REPLAY_AND_INCREMENTAL_PROMOTION',
   historicalBootstrapReplay:{entryCount:entries.length,applyCount:apply.length,supersededCount:Object.keys(superseded).length,terminalVersion:version(apply.at(-1)),executionSource:'entries'},
   establishedProductionHistory,
-  futureIncrementalPromotion:{entries:[],executionPolicy:'Only entries explicitly added here by a future approved release are executable; establishedProductionHistory is verification-only and must never be replayed.'}
+  futureIncrementalPromotion:{
+    releaseVersion:'3.5.0',
+    releaseSha:'bb30244f309d3724dc9a93a652fab20566284bfc',
+    packageId:'conference-controlled-production-3-5-0-bb30244-v1',
+    entries:incrementalEntries,
+    edgeRelease,
+    executionPolicy:'Execute exactly these entries once in order after verification of establishedProductionHistory; establishedProductionHistory and historicalBootstrapReplay are verification-only for this incremental release and must never be replayed.'
+  }
 });
 const manifest={schemaVersion:3,packageId:'conference-controlled-production-fa7d7ba-v1',checkpointSha:'fa7d7ba81058190602bdd215e71006576a49a6ce',productionProjectRef:'mpezfbvcdfxpgflehuot',forbiddenProjectRefs:['gppwltrifgfxrkzvvxoe'],baseline:{version:'20260828150000',name:'production_webauthn_privileged_device_final_activation'},historyContract:{columns:['version','statements','name','created_by','idempotency_key','rollback'],primaryKey:'version',unique:'idempotency_key'},packageModel,executionOrder:entries.map(entry=>({version:entry.version,action:entry.action})),entries,releaseRequirements};
 const output=path.join(__dirname,'controlled-production-manifest.json');
 fs.writeFileSync(output,JSON.stringify(manifest,null,2)+'\n');
+const incrementalPackage={schemaVersion:1,packageId:packageModel.futureIncrementalPromotion.packageId,releaseVersion:'3.5.0',releaseSha:packageModel.futureIncrementalPromotion.releaseSha,productionProjectRef:manifest.productionProjectRef,forbiddenProjectRefs:manifest.forbiddenProjectRefs,establishedProductionHistoryVerification:establishedProductionHistory.map(entry=>({version:entry.version,name:entry.name,executable:false})),executionEntries:incrementalEntries,edgeRelease};
+fs.writeFileSync(path.join(__dirname,'controlled-production-incremental-3.5.0.json'),JSON.stringify(incrementalPackage,null,2)+'\n');
 console.log(output);
 
-module.exports={apply,superseded,releaseRequirements,establishedProductionHistory,packageModel};
+module.exports={apply,superseded,releaseRequirements,establishedProductionHistory,incrementalMigrationNames,incrementalEntries,edgeRelease,packageModel};

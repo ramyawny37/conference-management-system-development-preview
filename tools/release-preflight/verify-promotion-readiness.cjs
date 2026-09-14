@@ -49,6 +49,18 @@ function verifyManifest(revision){
   for(const entry of model.establishedProductionHistory){if(entry.executable!==false)fail(`ESTABLISHED_PRODUCTION_HISTORY_MUST_NOT_EXECUTE:${entry.version}`);if(entry.sourceFile){const body=revision?sourceBytesAt(revision,entry.sourceFile):fs.readFileSync(path.join(root,entry.sourceFile));const digest=require('node:crypto').createHash('sha256').update(body).digest('hex');if(digest!==entry.sourceSha256)fail(`ESTABLISHED_PRODUCTION_SOURCE_HASH_MISMATCH:${entry.version}`);}}
   const incrementalFiles=model.futureIncrementalPromotion.entries.map(entry=>entry.sourceFile);
   for(const file of requirements.developmentOnlyMigrationFiles)if(incrementalFiles.includes(file))fail(`DEVELOPMENT_ONLY_MIGRATION_INCLUDED:${file}`);
+  const incrementalKeys=new Set();
+  for(const [index,entry] of model.futureIncrementalPromotion.entries.entries()){
+    if(entry.order!==index+1||entry.action!=='APPLY_ONCE'||entry.executable!==true||!entry.idempotencyKey||incrementalKeys.has(entry.idempotencyKey))fail(`INCREMENTAL_EXECUTION_CONTRACT_INVALID:${entry.sourceFile}`);
+    incrementalKeys.add(entry.idempotencyKey);
+    const body=revision?sourceBytesAt(revision,entry.sourceFile):fs.readFileSync(path.join(root,entry.sourceFile));
+    const digest=require('node:crypto').createHash('sha256').update(body).digest('hex');
+    if(digest!==entry.sourceSha256)fail(`INCREMENTAL_SOURCE_HASH_MISMATCH:${entry.sourceFile}`);
+  }
+  const edge=model.futureIncrementalPromotion.edgeRelease;
+  if(!edge||edge.slug!=='platform-device-operation'||edge.verifyJwt!==true||edge.releaseSha!==model.futureIncrementalPromotion.releaseSha||edge.currentProductionVersion!==3||edge.approvedDevelopmentVersion!==16)fail('INCREMENTAL_EDGE_CONTRACT_INVALID');
+  const edgeBody=revision?sourceBytesAt(revision,edge.sourceFile):fs.readFileSync(path.join(root,edge.sourceFile));
+  if(require('node:crypto').createHash('sha256').update(edgeBody).digest('hex')!==edge.sourceSha256)fail('INCREMENTAL_EDGE_SOURCE_HASH_MISMATCH');
 }
 function verifyArchitecture(revision){for(const file of ['index.html','js/platform-integration.js','js/sync/module-permission-administration-service.js','modules/reservations/reservations-module.js']){const source=sourceAt(revision,file);for(const pattern of forbiddenArchitecture)if(pattern.test(source))fail(`REJECTED_ARCHITECTURE_PRESENT:${file}`);}}
 function verifyRepository(candidate,base,promotion){
