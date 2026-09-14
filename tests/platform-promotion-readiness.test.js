@@ -10,7 +10,7 @@ const manifest=require('../tools/production-release/controlled-production-manife
 const root=path.resolve(__dirname,'..');
 const git=(args,options={})=>childProcess.execFileSync('git',args,{cwd:root,encoding:'utf8',...options}).trim();
 function candidateCommit(base,replacements={}){
-  const temporary=fs.mkdtempSync(path.join(os.tmpdir(),'promotion-readiness-')),indexFile=path.join(temporary,'index'),env={...process.env,GIT_INDEX_FILE:indexFile};
+  const temporary=fs.mkdtempSync(path.join(os.tmpdir(),'promotion-readiness-')),indexFile=path.join(temporary,'index'),env={...process.env,GIT_INDEX_FILE:indexFile,GIT_AUTHOR_NAME:'Promotion Readiness Test',GIT_AUTHOR_EMAIL:'promotion-readiness@example.invalid',GIT_COMMITTER_NAME:'Promotion Readiness Test',GIT_COMMITTER_EMAIL:'promotion-readiness@example.invalid'};
   try{
     git(['read-tree',base],{env});
     for(const [file,transform] of Object.entries(replacements)){
@@ -19,7 +19,7 @@ function candidateCommit(base,replacements={}){
       git(['update-index','--add','--cacheinfo','100644',object,file],{env});
     }
     const tree=git(['write-tree'],{env});
-    return git(['commit-tree',tree,'-p',base],{input:'test: promotion marker guard fixture\n'});
+    return git(['commit-tree',tree,'-p',base],{input:'test: promotion marker guard fixture\n',env});
   }finally{fs.rmSync(temporary,{recursive:true,force:true});}
 }
 const releaseBase=()=>candidateCommit(git(['rev-parse','HEAD']),{'tools/production-release/controlled-production-manifest.json':()=>fs.readFileSync(path.join(root,'tools/production-release/controlled-production-manifest.json'),'utf8')});
