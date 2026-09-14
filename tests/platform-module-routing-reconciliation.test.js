@@ -90,8 +90,7 @@ test('refresh replays a preserved Warehouse route only after startup access is r
   gateState.gateState='allowed';
   gateState.allowed=true;
   state.runNextTimer();
-  await Promise.resolve();
-  await Promise.resolve();
+  await new Promise(resolve=>setImmediate(resolve));
   assert.deepStrictEqual(state.calls.map(call=>call.slice(0,3)),[['protected','warehouse','check_module_access'],['warehouse','/warehouse/approvals']]);
   assert.strictEqual(state.timers.length,0);
 });
