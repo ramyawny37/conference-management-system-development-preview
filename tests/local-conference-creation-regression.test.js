@@ -18,7 +18,10 @@ const creationSource=scriptSource.slice(start,end);
 function repository(){
   const sandbox={
     console,JSON,Object,Array,String,Number,Date,
-    structuredClone:value=>structuredClone(value)
+    structuredClone:value=>structuredClone(value),
+    SupabaseAuth:{getState(){return {user:{
+      id:'22222222-2222-4222-8222-222222222222'
+    }};}}
   };
   sandbox.window=sandbox;
   vm.runInNewContext(fs.readFileSync(path.join(
@@ -177,6 +180,8 @@ function formEnvironment(overrides={}){
   assert.strictEqual(lifecycle.localLifecycle,'active');
   assert.strictEqual(lifecycle.cloudLifecycle,'unpublished');
   assert.strictEqual(lifecycle.localContentVersion,1);
+  assert.strictEqual(lifecycle.localOwnerUserId,
+    '22222222-2222-4222-8222-222222222222');
   assert.strictEqual(lifecycle.publishMetadata,null);
   assert.strictEqual(
     snapshot.conferenceLifecycle.records[

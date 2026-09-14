@@ -8,7 +8,7 @@ var links={cloud:{localConferenceId:'cloud',remoteConferenceId:'aaaaaaaa-aaaa-4a
 var sandbox={window:null,JSON:JSON,Promise:Promise,SupabaseAuth:{getState:function(){return {user:authUser?{id:authUser}:null};}}};
 sandbox.window=sandbox;vm.runInNewContext(source,sandbox);
 var gate=sandbox.ConferenceActivationAuthorization;
-var data={currentConferenceId:'cloud',conferences:[{id:'cloud',name:'ميمي ورامي'},{id:'legacy',name:'Legacy'},{id:'local',name:'Local'}],conferenceLifecycle:{records:{local:{localConferenceId:'local',localLifecycle:'active',cloudLifecycle:'local_only',localContentVersion:0,publishMetadata:{requestedByUserId:user}}}}};
+var data={currentConferenceId:'cloud',conferences:[{id:'cloud',name:'ميمي ورامي'},{id:'legacy',name:'Legacy'},{id:'local',name:'Local'}],conferenceLifecycle:{records:{local:{localConferenceId:'local',localLifecycle:'active',cloudLifecycle:'local_only',localContentVersion:0,localOwnerUserId:user,publishMetadata:null}}}};
 var linkStore={get:function(id){return links[id]||null;}};
 
 (async function(){

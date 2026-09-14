@@ -27,7 +27,10 @@ var sandbox={
     saveAppSnapshot:function(){
       throw new Error('UNEXPECTED_INDEXEDDB_WRITE');
     }
-  }
+  },
+  SupabaseAuth:{getState:function(){
+    return {user:{id:'11111111-1111-4111-8111-111111111111'}};
+  }}
 };
 sandbox.window=sandbox;
 
@@ -83,6 +86,7 @@ assert.deepStrictEqual(contract,{
     'sync_suspended'
   ],
   repositoryProperty:'conferenceLifecycle',
+  localOwnerProperty:'localOwnerUserId',
   publishMetadataPhase:'2.2'
 });
 
@@ -95,6 +99,7 @@ assert.deepStrictEqual(plain(created.data),{
   localLifecycle:'active',
   cloudLifecycle:'unpublished',
   localContentVersion:0,
+  localOwnerUserId:null,
   publishMetadata:null
 });
 
@@ -164,6 +169,7 @@ assert.deepStrictEqual(
     localLifecycle:'active',
     cloudLifecycle:'cloud_linked',
     localContentVersion:4,
+    localOwnerUserId:null,
     publishMetadata:null
   }
 );
@@ -174,6 +180,7 @@ assert.deepStrictEqual(
     localLifecycle:'archived',
     cloudLifecycle:'unpublished',
     localContentVersion:0,
+    localOwnerUserId:null,
     publishMetadata:null
   }
 );

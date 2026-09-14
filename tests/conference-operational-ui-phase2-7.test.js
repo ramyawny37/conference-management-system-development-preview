@@ -35,7 +35,8 @@ function lifecycle(cloudLifecycle,metadata=null){
 (async function(){
   const repositorySandbox={
     console,JSON,Object,Array,String,Number,Date,
-    structuredClone:value=>JSON.parse(JSON.stringify(value))
+    structuredClone:value=>JSON.parse(JSON.stringify(value)),
+    SupabaseAuth:{getState(){return {user:{id:USER}};}}
   };
   repositorySandbox.window=repositorySandbox;
   vm.runInNewContext(fs.readFileSync(path.join(
