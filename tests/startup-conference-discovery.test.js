@@ -75,8 +75,8 @@ function startupCards(options={}){
     JSON,Object,Array,String,
     ConferenceLinkStore:{get:id=>options.links&&options.links[id]||null},
     StartupConferenceDiscovery:{getRecords:()=>options.discovered||[]},
-    DiscoveredConferenceOpenService:{open:id=>{
-      remoteOpens.push(id);
+    DiscoveredConferenceOpenService:{open:(id,openOptions)=>{
+      remoteOpens.push({id,options:JSON.parse(JSON.stringify(openOptions))});
       return Promise.resolve({ok:true,status:'opened'});
     }},
     openConferenceFromStartup:id=>{localOpens.push(id);return true;},
@@ -204,7 +204,9 @@ function startupCards(options={}){
   );
   await linkedCards.click(linkedCards.render(linkedView));
   assert.deepStrictEqual(linkedCards.localOpens,[]);
-  assert.deepStrictEqual(linkedCards.remoteOpens,['remote-linked']);
+  assert.deepStrictEqual(linkedCards.remoteOpens,[{
+    id:'remote-linked',options:{enterApplication:true}
+  }]);
 
   const discoveredCards=startupCards({
     discovered:[{
@@ -215,7 +217,9 @@ function startupCards(options={}){
   const discoveredView=discoveredCards.viewModel();
   assert.strictEqual(discoveredView.length,1);
   await discoveredCards.click(discoveredCards.render(discoveredView));
-  assert.deepStrictEqual(discoveredCards.remoteOpens,['remote-only']);
+  assert.deepStrictEqual(discoveredCards.remoteOpens,[{
+    id:'remote-only',options:{enterApplication:true}
+  }]);
 
   assert.match(scriptSource,
     /openDiscoveredConferenceFromStartup\(\\''\+conf\.__startupDiscoveredRemoteId/);

@@ -1373,7 +1373,8 @@
           publishCloudAuthorization(d,prepared.localId,remoteId,ctx.role);
           activationOk=typeof d.activate==='function'&&
             d.activate(prepared.localId,{
-              alreadyPersisted:true,accessRole:ctx.role||null
+              alreadyPersisted:true,accessRole:ctx.role||null,
+              enterApplication:ctx.options.enterApplication===true
             })===true;
         }catch(error){activationOk=false;}
         if(!activationOk){

@@ -13,6 +13,7 @@ function environment(settings={}){
   let memory=clone(stored);
   let activated=0,downloads=0,inspects=0,configured=0,deactivations=0;
   let cloudAuthorizations=0;
+  const activationOptions=[];
   let manualRelinkChecks=[];
   const forbidden={queue:0,publication:0,rpc:0};
   const events=[];
@@ -184,8 +185,9 @@ function environment(settings={}){
       configured++;
       return settings.configureFailure?{ok:false}:{ok:true,status:'configured'};
     }},
-    activatePersistedConferenceById(){
+    activatePersistedConferenceById(_id,options){
       activated++;
+      activationOptions.push(clone(options||{}));
       if(settings.activationThrows)throw new Error('activation failed');
       return settings.activationFailure!==true;
     }
@@ -195,6 +197,7 @@ function environment(settings={}){
   return {api:sandbox.DiscoveredConferenceOpenService,events,links,
     stored:()=>clone(stored),memory:()=>clone(sandbox.appData),
     activated:()=>activated,configured:()=>configured,
+    activationOptions:()=>clone(activationOptions),
     cloudAuthorizations:()=>cloudAuthorizations,
     downloads:()=>downloads,inspects:()=>inspects,
     deactivations:()=>deactivations,
@@ -250,6 +253,13 @@ function environment(settings={}){
   assert.strictEqual(first.configured(),1);
   assert.strictEqual(Object.prototype.hasOwnProperty.call(
     Object.values(first.links)[0],'membershipRole'),false);
+
+  const explicitRemote=environment();
+  assert.strictEqual((await explicitRemote.api.open(
+    explicitRemote.remoteId,{enterApplication:true})).status,'opened');
+  assert.deepStrictEqual(explicitRemote.activationOptions(),[{
+    alreadyPersisted:true,accessRole:'viewer',enterApplication:true
+  }]);
 
   const rejected=environment({cached:false,repositoryVersion:1,
     repositoryRejection:{ok:false,status:'invalid_repository',issues:[
@@ -309,11 +319,15 @@ function environment(settings={}){
     existingLink:{localConferenceId:'existing-local',remoteConferenceId:'remote-1',
       knownRevision:1,linkStatus:'linked'}
   });
-  assert.strictEqual((await reuse.api.open(reuse.remoteId)).data.localConferenceId,
-    'existing-local');
+  assert.strictEqual((await reuse.api.open(
+    reuse.remoteId,{enterApplication:true})).data.localConferenceId,
+  'existing-local');
   assert.strictEqual(reuse.stored().conferences.length,1);
   assert.strictEqual(reuse.cloudAuthorizations(),1);
   assert.strictEqual(reuse.activated(),1);
+  assert.deepStrictEqual(reuse.activationOptions(),[{
+    alreadyPersisted:true,accessRole:'viewer',enterApplication:true
+  }]);
 
   const linkedDenied=environment({
     membershipDenied:true,
@@ -383,6 +397,9 @@ function environment(settings={}){
   assert.deepStrictEqual(linkedRefresh.forbidden(),{queue:0,publication:0,rpc:0});
   const refreshOne=await linkedRefresh.api.refreshLinkedLocalConference('existing-local');
   assert.strictEqual(refreshOne.status,'opened');
+  assert.strictEqual(linkedRefresh.activationOptions().some(function(options){
+    return options.enterApplication===true;
+  }),false);
   const refreshTwo=await linkedRefresh.api.refreshLinkedLocalConference('existing-local');
   assert.strictEqual(refreshTwo.status,'opened');
   assert.strictEqual(linkedRefresh.stored().conferences.length,1);

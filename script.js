@@ -518,6 +518,12 @@ function activatePersistedConferenceById(id,options){
   }
   traceMemberActivation('conference_resolved','completed',null);
   var conferenceRoute=getCanonicalConferenceRoute();
+  var requestedEntryTabId=null;
+  if(options.enterApplication===true){
+    requestedEntryTabId=getStoredLastTab();
+    if(requestedEntryTabId===null)requestedEntryTabId=0;
+    conferenceRoute={kind:'application',tabId:requestedEntryTabId};
+  }
   if(!conferenceRoute){
     var backgroundSteps=[
       ['set_current_conference',function(){setCurrentConference(current)}],
@@ -573,6 +579,9 @@ function activatePersistedConferenceById(id,options){
       traceMemberActivation('activation_return','return','step_failed');
       return false;
     }
+  }
+  if(requestedEntryTabId!==null){
+    setConferenceApplicationPathname(requestedEntryTabId,{push:true});
   }
   if(options.alreadyPersisted!==true&&window.AutomaticSyncOrchestrator&&
     typeof window.AutomaticSyncOrchestrator.schedule==='function'){
@@ -7169,7 +7178,8 @@ function openDiscoveredConferenceFromStartup(remoteConferenceId){
   if(startupDiscoveredOpenBusy[remoteConferenceId]){
     return startupDiscoveredOpenBusy[remoteConferenceId];
   }
-  var flight=window.DiscoveredConferenceOpenService.open(remoteConferenceId)
+  var flight=window.DiscoveredConferenceOpenService.open(
+    remoteConferenceId,{enterApplication:true})
     .then(function(result){
       if(!result||!result.ok){
         var failedStage=result&&(result.failedStage||result.status||
