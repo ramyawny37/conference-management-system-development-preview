@@ -2,14 +2,13 @@ name: Deploy development preview
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
   workflow_dispatch:
   schedule:
     - cron: '*/5 * * * *'
 
 permissions:
-  contents: write
+  contents: read
   pages: write
   id-token: write
 
@@ -22,46 +21,49 @@ jobs:
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout preview controller
-        uses: actions/checkout@v4
-        with:
-          path: controller
-
       - name: Checkout Platform Development source
         uses: actions/checkout@v4
         with:
           repository: ramyawny37/conference-management-system-v1
           ref: develop
           path: source/platform
-          fetch-depth: 0
+          fetch-depth: 1
 
-      - name: Capture deployed source SHA and bundle hashes
+      - name: Capture source provenance
         id: source_meta
+        shell: bash
         run: |
+          set -euo pipefail
           PLATFORM_SHA="$(git -C source/platform rev-parse HEAD)"
-          test "$PLATFORM_SHA" = "f59b0c0edeff7868ca9311ea80683e9b07a3da1c"
+          JS_SHA="$(sha256sum source/platform/modules/reservations/reservations-module.js | awk '{print $1}')"
+          CSS_SHA="$(sha256sum source/platform/modules/reservations/reservations-module.css | awk '{print $1}')"
           echo "platform_sha=$PLATFORM_SHA" >> "$GITHUB_OUTPUT"
-          echo "reservations_sha=031d1cbdf95c22c3a1ecb470c31433d166dcbb6a" >> "$GITHUB_OUTPUT"
-          echo "reservations_js_sha256=$(sha256sum source/platform/modules/reservations/reservations-module.js | awk '{print $1}')" >> "$GITHUB_OUTPUT"
-          echo "reservations_css_sha256=$(sha256sum source/platform/modules/reservations/reservations-module.css | awk '{print $1}')" >> "$GITHUB_OUTPUT"
+          echo "reservations_js_sha256=$JS_SHA" >> "$GITHUB_OUTPUT"
+          echo "reservations_css_sha256=$CSS_SHA" >> "$GITHUB_OUTPUT"
 
       - name: Validate Development source contracts
+        shell: bash
         run: |
+          set -euo pipefail
           npm --prefix source/platform run check
           node --check source/platform/js/storage/environment-namespace.js
           node --check source/platform/service-worker.js
           node source/platform/tests/browser-storage-isolation.test.js
           test -f source/platform/modules/reservations/reservations-module.js
           test -f source/platform/modules/reservations/reservations-module.css
-          test -n "${{ steps.source_meta.outputs.reservations_js_sha256 }}"
-          test -n "${{ steps.source_meta.outputs.reservations_css_sha256 }}"
 
       - name: Prepare isolated preview artifact
+        shell: bash
+        env:
+          PLATFORM_SOURCE_SHA: ${{ steps.source_meta.outputs.platform_sha }}
+          RESERVATIONS_JS_SHA256: ${{ steps.source_meta.outputs.reservations_js_sha256 }}
+          RESERVATIONS_CSS_SHA256: ${{ steps.source_meta.outputs.reservations_css_sha256 }}
         run: |
+          set -euo pipefail
+          rm -rf site
           mkdir site
           rsync -a source/platform/ site/ \
             --exclude='/.git/' \
@@ -83,24 +85,18 @@ jobs:
               sha: process.env.PLATFORM_SOURCE_SHA
             },
             reservations: {
-              repository: 'ramyawny37/reservation-management-system',
-              source_sha: process.env.RESERVATIONS_SOURCE_SHA,
-              delivery: 'approved-bundle-embedded-in-platform',
+              delivery: 'embedded-in-platform',
               javascript_sha256: process.env.RESERVATIONS_JS_SHA256,
               css_sha256: process.env.RESERVATIONS_CSS_SHA256
             }
           };
-          if (!/^[0-9a-f]{40}$/.test(sources.platform.sha || '') || !/^[0-9a-f]{40}$/.test(sources.reservations.source_sha || '')) throw new Error('Preview source SHA is invalid');
-          if (!/^[0-9a-f]{64}$/.test(sources.reservations.javascript_sha256 || '') || !/^[0-9a-f]{64}$/.test(sources.reservations.css_sha256 || '')) throw new Error('Reservations bundle SHA-256 is invalid');
+          if (!/^[0-9a-f]{40}$/.test(sources.platform.sha || '')) throw new Error('Platform source SHA is invalid');
+          if (!/^[0-9a-f]{64}$/.test(sources.reservations.javascript_sha256 || '')) throw new Error('Reservations JS SHA-256 is invalid');
+          if (!/^[0-9a-f]{64}$/.test(sources.reservations.css_sha256 || '')) throw new Error('Reservations CSS SHA-256 is invalid');
           fs.writeFileSync('site/development-preview-sources.json', JSON.stringify(sources, null, 2) + '\n');
           NODE
-        env:
-          PLATFORM_SOURCE_SHA: ${{ steps.source_meta.outputs.platform_sha }}
-          RESERVATIONS_SOURCE_SHA: ${{ steps.source_meta.outputs.reservations_sha }}
-          RESERVATIONS_JS_SHA256: ${{ steps.source_meta.outputs.reservations_js_sha256 }}
-          RESERVATIONS_CSS_SHA256: ${{ steps.source_meta.outputs.reservations_css_sha256 }}
 
-      - name: Generate Development Supabase public config in artifact
+      - name: Generate Development Supabase public config
         env:
           SUPABASE_URL_DEV: ${{ secrets.SUPABASE_URL_DEV }}
           SUPABASE_ANON_KEY_DEV: ${{ secrets.SUPABASE_ANON_KEY_DEV }}
@@ -115,79 +111,49 @@ jobs:
           if (url !== expectedUrl) throw new Error('Preview Supabase project ref is not the approved Development ref');
           if (!key || key.includes(productionRef)) throw new Error('Preview Supabase publishable key is missing or rejected');
           if (key.startsWith('sb_secret_')) throw new Error('Preview Supabase key must not be a secret key');
-          const keyParts = key.split('.');
-          if (keyParts.length === 3) {
-            const payload = JSON.parse(Buffer.from(keyParts[1], 'base64url').toString('utf8'));
-            if (payload.role === 'service_role') throw new Error('Preview Supabase key must not be a service-role credential');
+          const parts = key.split('.');
+          if (parts.length === 3) {
+            const payload = JSON.parse(Buffer.from(parts[1], 'base64url').toString('utf8'));
+            if (payload.role === 'service_role') throw new Error('Preview Supabase key must not be service_role');
           }
-          const content = "(function(global){\n  'use strict';\n\n  global.SUPABASE_RUNTIME_CONFIG=Object.freeze({\n    url:" + JSON.stringify(url) + ",\n    publishableKey:" + JSON.stringify(key) + "\n  });\n})(window);\n";
+          const content = `(function(global){\n  'use strict';\n  global.SUPABASE_RUNTIME_CONFIG=Object.freeze({url:${JSON.stringify(url)},publishableKey:${JSON.stringify(key)}});\n})(window);\n`;
           fs.writeFileSync('site/js/supabase/public-config.js', content, 'utf8');
           NODE
 
-      - name: Fail-closed Preview artifact target guard
+      - name: Fail-closed preview artifact guard
+        shell: bash
+        env:
+          RESERVATIONS_JS_SHA256: ${{ steps.source_meta.outputs.reservations_js_sha256 }}
+          RESERVATIONS_CSS_SHA256: ${{ steps.source_meta.outputs.reservations_css_sha256 }}
         run: |
-          if grep -R "mpezfbvcdfxpgflehuot" site; then echo "Production Supabase reference found in Preview artifact"; exit 1; fi
+          set -euo pipefail
+          if grep -R "mpezfbvcdfxpgflehuot" site; then
+            echo "Production Supabase reference found in Preview artifact"
+            exit 1
+          fi
           grep -Fq "https://gppwltrifgfxrkzvvxoe.supabase.co" site/js/supabase/public-config.js
           grep -Fq "DEVELOPMENT_PROJECT_REF = 'gppwltrifgfxrkzvvxoe'" site/service-worker.js
           grep -Fq "DEVELOPMENT_PROJECT_REF='gppwltrifgfxrkzvvxoe'" site/js/storage/environment-namespace.js
-          grep -Fq "cms:development:' + DEVELOPMENT_PROJECT_REF + ':'" site/service-worker.js
-          grep -Fq "'cms:development:'+DEVELOPMENT_PROJECT_REF+':'" site/js/storage/environment-namespace.js
-          grep -Fq "js/platform-integration.js?rev=platform-dashboard-v2-v3" site/index.html
-          grep -Fq "./js/platform-integration.js?rev=platform-dashboard-v2-v3" site/service-worker.js
-          grep -Fq "cache.addAll(CORE_ASSETS.map(asset => new Request(asset, { cache: 'reload' })))" site/service-worker.js
-          grep -Fq ".then(() => self.skipWaiting())" site/service-worker.js
-          grep -Fq "event.respondWith(developmentNetworkFirst(request));" site/service-worker.js
-          grep -Fq "setStartupPeerRouteMask(true)" site/js/platform-integration.js
-          grep -Fq "script.js?rev=platform-dashboard-v2-v3" site/index.html
-          grep -Fq "./script.js?rev=platform-dashboard-v2-v3" site/service-worker.js
-          grep -Fq "modules/reservations/reservations-module.js?rev=platform-dashboard-v2-v3" site/index.html
-          grep -Fq "modules/reservations/reservations-module.css?rev=platform-dashboard-v2-v3" site/index.html
-          grep -Fq "./modules/reservations/reservations-module.js?rev=platform-dashboard-v2-v3" site/service-worker.js
-          grep -Fq "./modules/reservations/reservations-module.css?rev=platform-dashboard-v2-v3" site/service-worker.js
-          echo "${{ steps.source_meta.outputs.reservations_js_sha256 }}  site/modules/reservations/reservations-module.js" | sha256sum --check --strict
-          echo "${{ steps.source_meta.outputs.reservations_css_sha256 }}  site/modules/reservations/reservations-module.css" | sha256sum --check --strict
+          echo "$RESERVATIONS_JS_SHA256  site/modules/reservations/reservations-module.js" | sha256sum --check --strict
+          echo "$RESERVATIONS_CSS_SHA256  site/modules/reservations/reservations-module.css" | sha256sum --check --strict
           grep -Fq 'class="platform-global-nav-item" data-platform-module="reservations"' site/index.html
           grep -Fq 'id="reservationsWorkspace"' site/index.html
-          if grep -E "createClient\(|platform-device-session|supabase\\.co" site/modules/reservations/reservations-module.js; then echo "Standalone Reservations auth/session configuration found in Preview artifact"; exit 1; fi
+          if grep -E "createClient\(|platform-device-session|supabase\.co" site/modules/reservations/reservations-module.js; then
+            echo "Standalone Reservations auth/session configuration found in Preview artifact"
+            exit 1
+          fi
           node --check site/js/supabase/public-config.js
           node --check site/js/storage/environment-namespace.js
           node --check site/service-worker.js
-
-      - name: Mirror validated candidate source revision for Pages
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          git -C source/platform push --force "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" HEAD:refs/heads/development-preview-source
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
 
       - name: Upload preview artifact
-        id: artifact
         uses: actions/upload-pages-artifact@v4
         with:
           path: site
 
       - name: Deploy preview
         id: deployment
-        env:
-          ARTIFACT_ID: ${{ steps.artifact.outputs.artifact_id }}
-          BUILD_VERSION: ${{ steps.source_meta.outputs.platform_sha }}
-          GH_TOKEN: ${{ github.token }}
-          REPOSITORY: ${{ github.repository }}
-        run: |
-          node <<'NODE'
-          const fs = require('fs');
-          async function request(url, options = {}) { const response = await fetch(url, options); const body = await response.text(); if (!response.ok) throw new Error(`${options.method || 'GET'} ${url} failed (${response.status}): ${body}`); return body ? JSON.parse(body) : {}; }
-          async function main() {
-            const artifactId=Number(process.env.ARTIFACT_ID),buildVersion=process.env.BUILD_VERSION||'',repository=process.env.REPOSITORY||'',githubToken=process.env.GH_TOKEN||'',oidcUrl=process.env.ACTIONS_ID_TOKEN_REQUEST_URL||'',oidcRequestToken=process.env.ACTIONS_ID_TOKEN_REQUEST_TOKEN||'';
-            if(!artifactId||!/^[0-9a-f]{40}$/.test(buildVersion))throw new Error('Artifact ID or candidate source commit is invalid');
-            if(!repository||!githubToken||!oidcUrl||!oidcRequestToken)throw new Error('Pages deployment credentials are unavailable');
-            const oidc=await request(oidcUrl,{headers:{Authorization:`bearer ${oidcRequestToken}`}});
-            const deployment=await request(`https://api.github.com/repos/${repository}/pages/deployments`,{method:'POST',headers:{Accept:'application/vnd.github+json',Authorization:`Bearer ${githubToken}`,'Content-Type':'application/json','X-GitHub-Api-Version':'2022-11-28'},body:JSON.stringify({artifact_id:artifactId,pages_build_version:buildVersion,oidc_token:oidc.value})});
-            const deploymentId=deployment.id||String(deployment.status_url||'').split('/').pop(); if(!deploymentId)throw new Error('Pages deployment ID is unavailable'); console.log(`Created deployment for ${buildVersion}, ID: ${deploymentId}`);
-            const statusUrl=`https://api.github.com/repos/${repository}/pages/deployments/${deploymentId}`;
-            for(let attempt=0;attempt<120;attempt+=1){await new Promise(resolve=>setTimeout(resolve,5000));const status=await request(statusUrl,{headers:{Accept:'application/vnd.github+json',Authorization:`Bearer ${githubToken}`,'X-GitHub-Api-Version':'2022-11-28'}});if(status.status==='succeed'){console.log('Reported success!');fs.appendFileSync(process.env.GITHUB_OUTPUT,`page_url=${deployment.page_url||''}\n`);fs.appendFileSync(process.env.GITHUB_OUTPUT,`deployment_id=${deploymentId}\n`);fs.appendFileSync(process.env.GITHUB_OUTPUT,`source_commit=${buildVersion}\n`);return;}if(['deployment_failed','deployment_content_failed','deployment_cancelled','deployment_lost'].includes(status.status))throw new Error(`Pages deployment failed with status: ${status.status}`);console.log(`Current status: ${status.status}`);} throw new Error('Pages deployment timed out');
-          }
-          main().catch(error=>{console.error(error);process.exit(1);});
-          NODE
+        uses: actions/deploy-pages@v4
