@@ -12,6 +12,7 @@
 <title>منظومة الإدارة المتكاملة</title>
 <link rel="stylesheet" href="shared-design-tokens.css?rev=platform-shell-phase2b-v1">
 <link rel="stylesheet" href="style.css?rev=item-unit-dialog-v1">
+<link rel="stylesheet" href="platform-shell-v2.css?rev=platform-shell-v2-v1">
 <link rel="stylesheet" href="modules/reservations/reservations-module.css?rev=platform-ui-foundation-v2-dashboard-v2">
 </head>
 <body>
@@ -25,7 +26,36 @@
 
 
 <div id="startupAccessGate" class="startup-access-gate"><div class="startup-access-card">جارٍ التحقق من جلسة الدخول...</div></div>
-<div class="topbar" id="applicationTopbar" style="display:none">
+<div id="platformShell" class="platform-shell-v2">
+<header class="platform-shell-header">
+  <div class="startup-brand">
+    <img src="assets/make-a-difference-logo.png" alt="MAKE A DIFFERENCE MISSION — ارسالية اصنع فرق" class="startup-logo">
+    <div class="startup-brand-copy">
+      <h1>منظومة الإدارة المتكاملة</h1>
+      <p lang="en" dir="ltr">Integrated Management Platform</p>
+    </div>
+  </div>
+  <button type="button" class="platform-module-switcher" onclick="showPlatformModules()" aria-label="العودة إلى الوحدات">
+    <span data-app-icon="building"></span><span>الوحدات</span>
+  </button>
+  <div class="startup-date-card">
+    <div class="startup-date-copy"><strong id="startupDayName">—</strong><small id="startupDateText">—</small></div>
+    <div class="startup-time"><strong id="startupTimeText">—</strong></div>
+  </div>
+  <div class="startup-auth-actions" id="startupAuthActions">
+    <div class="startup-auth-signed-out" data-startup-auth-signed-out>
+      <button type="button" class="startup-auth-create" onclick="StartupAccessGate.showAuthView('signup')">إنشاء حساب</button>
+      <button type="button" class="startup-auth-login" onclick="StartupAccessGate.showAuthView('login')">تسجيل الدخول</button>
+    </div>
+    <div class="startup-auth-signed-in" data-startup-auth-signed-in style="display:none">
+      <span class="startup-auth-account-name" data-startup-auth-account-name></span>
+      <button type="button" class="startup-auth-create" onclick="SyncSettingsUI.signOut()">تسجيل الخروج</button>
+    </div>
+    <button id="install-app-btn" type="button" class="startup-auth-create" style="display:none;">تثبيت البرنامج</button>
+  </div>
+</header>
+
+<div class="topbar conference-module-nav" id="applicationTopbar" style="display:none">
   <div id="globalConferenceHeader"></div>
   <div class="application-brand-logo"><img src="assets/make-a-difference-logo.png" alt="MAKE A DIFFERENCE MISSION — ارسالية اصنع فرق"></div>
   <div class="application-account-entry" id="logo-text"><span class="application-account-icon" data-app-icon="user"></span><span class="application-account-label">صاحب الحساب</span><span class="application-account-chevron" data-app-icon="chevronDown"></span></div>
@@ -56,34 +86,6 @@
 
 <div id="startupScreen" class="startup-dashboard" style="display:none">
   <div class="startup-shell">
-    <header class="startup-home-header">
-      <div class="startup-brand">
-        <img src="assets/make-a-difference-logo.png" alt="MAKE A DIFFERENCE MISSION — ارسالية اصنع فرق" class="startup-logo">
-        <div class="startup-brand-copy">
-          <h1>منظومة الإدارة المتكاملة</h1>
-          <p lang="en" dir="ltr">Integrated Management Platform</p>
-        </div>
-      </div>
-      <button type="button" class="platform-module-switcher" onclick="showPlatformModules()" aria-label="العودة إلى الوحدات">
-        <span data-app-icon="building"></span><span>الوحدات</span>
-      </button>
-      <div class="startup-date-card">
-        <div class="startup-date-copy"><strong id="startupDayName">—</strong><small id="startupDateText">—</small></div>
-        <div class="startup-time"><strong id="startupTimeText">—</strong></div>
-      </div>
-      <div class="startup-auth-actions" id="startupAuthActions">
-        <div class="startup-auth-signed-out" data-startup-auth-signed-out>
-          <button type="button" class="startup-auth-create" onclick="StartupAccessGate.showAuthView('signup')">إنشاء حساب</button>
-          <button type="button" class="startup-auth-login" onclick="StartupAccessGate.showAuthView('login')">تسجيل الدخول</button>
-        </div>
-        <div class="startup-auth-signed-in" data-startup-auth-signed-in style="display:none">
-          <span class="startup-auth-account-name" data-startup-auth-account-name></span>
-          <button type="button" class="startup-auth-create" onclick="SyncSettingsUI.signOut()">تسجيل الخروج</button>
-        </div>
-        <button id="install-app-btn" type="button" class="startup-auth-create" style="display:none;">تثبيت البرنامج</button>
-      </div>
-    </header>
-
     <main class="platform-home" aria-labelledby="platformLauncherTitle">
       <section class="platform-launcher" aria-labelledby="platformLauncherTitle">
         <header class="platform-section-heading">
@@ -177,6 +179,7 @@
     <div id="reservationsWorkspace" class="conference-workspace" tabindex="-1"></div>
   </div>
   <div id="appVersionLabel" class="startup-version"></div>
+</div>
 </div>
 
 <input type="file" id="peopleExcelInput" accept=".xlsx,.xls" style="display:none" onchange="importPeopleExcelFile(event)">

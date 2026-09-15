@@ -69,7 +69,7 @@ test('runtime and service-worker revisions publish one coherent asset set',()=>{
   const index=fs.readFileSync('index.html','utf8'),worker=fs.readFileSync('service-worker.js','utf8');
   assert.match(index,/remaining-operations\.js\?rev=adjustment-conversion-ux-v1/);
   assert.match(index,/workspace\.js\?rev=item-unit-add-ui-v1/);
-assert.match(worker,/development-3-4-0-warehouse-unit-hierarchy-v1/);
+  assert.match(worker,/platform-shell-v2-v1/);
   assert.match(worker,/remaining-operations\.js\?rev=adjustment-conversion-ux-v1/);
   assert.match(worker,/workspace\.js\?rev=item-unit-add-ui-v1/);
 });
