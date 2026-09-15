@@ -8,4 +8,4 @@ its public Supabase configuration from the Development-only repository secrets.
 The approved Development project ref is `gppwltrifgfxrkzvvxoe`; the Production
 canonical configuration is never copied into the deployed artifact.
 
-Last preview refresh trigger: 2026-09-15.
+Last preview refresh trigger: 2026-09-15 — Platform UI Foundation v2 / Reservations bundle.
