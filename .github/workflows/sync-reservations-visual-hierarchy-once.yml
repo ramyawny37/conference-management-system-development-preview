@@ -1,1 +1,67 @@
-name: placeholder
+name: Sync Reservations Visual Hierarchy Once
+
+on:
+  push:
+    branches: [develop]
+    paths:
+      - '.github/workflows/sync-reservations-visual-hierarchy-once.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout develop
+        uses: actions/checkout@v4
+        with:
+          ref: develop
+          fetch-depth: 0
+
+      - name: Download verified Reservations artifact
+        run: |
+          curl -fL 'https://sdmntprdenmarkeast.oaiusercontent.com/files/00000000-f9e0-8210-b434-4056089bed84/raw?se=2026-09-15T05%3A41%3A50Z&sp=r&sv=2026-02-06&sr=b&scid=9e0ae268-43a2-52c9-9f59-da3edd131598&skoid=e5e3659d-4463-4dbf-b2ce-ee32bc0a0a8d&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-09-15T04%3A52%3A54Z&ske=2026-09-16T04%3A52%3A54Z&sks=b&skv=2026-02-06&sig=r0mTdP8gdHdmPDo0YRULyCd%2BU4qIIQCP%2F4hGAAfCIVw%3D' -o /tmp/reservations.zip
+          echo 'd01d3d1876b105e236d5b6a66eccd55b29bef4adfeb8c24dabd019fb955453c2  /tmp/reservations.zip' | sha256sum -c -
+          rm -rf /tmp/reservations-artifact
+          mkdir -p /tmp/reservations-artifact
+          unzip -q /tmp/reservations.zip -d /tmp/reservations-artifact
+          test -f /tmp/reservations-artifact/reservations-module.js
+          test -f /tmp/reservations-artifact/reservations-module.css
+
+      - name: Sync bundle and revision markers
+        run: |
+          cp /tmp/reservations-artifact/reservations-module.js modules/reservations/reservations-module.js
+          cp /tmp/reservations-artifact/reservations-module.css modules/reservations/reservations-module.css
+          python3 - <<'PY'
+          from pathlib import Path
+          files = [
+              Path('index.html'),
+              Path('service-worker.js'),
+              Path('tests/platform-module-contract.test.js'),
+              Path('tests/platform-module-entry-access-gate.test.js'),
+          ]
+          for path in files:
+              text = path.read_text()
+              if 'mountable-bundle-v11' not in text:
+                  raise SystemExit(f'missing v11 marker in {path}')
+              path.write_text(text.replace('mountable-bundle-v11', 'mountable-bundle-v12'))
+          PY
+
+      - name: Verify bundle identity and integration contract
+        run: |
+          git hash-object modules/reservations/reservations-module.js | grep -Fx '94c004e5fd4b6c77567c27c32f4bab017d108ece'
+          git hash-object modules/reservations/reservations-module.css | grep -Fx '7b1eb7cdbf102b1475ce03348aa0c798598fd6cd'
+          grep -F 'mountable-bundle-v12' index.html
+          grep -F 'mountable-bundle-v12' service-worker.js
+          node --test tests/platform-module-contract.test.js tests/platform-module-entry-access-gate.test.js tests/reservations-reconciliation-rejected-architecture-guard.test.js
+
+      - name: Commit synchronized artifact
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html service-worker.js modules/reservations/reservations-module.js modules/reservations/reservations-module.css tests/platform-module-contract.test.js tests/platform-module-entry-access-gate.test.js
+          git diff --cached --quiet && { echo 'No changes to commit'; exit 1; }
+          git commit -m 'chore(reservations): sync visual hierarchy bundle'
+          git push origin HEAD:develop
