@@ -1,40 +1,111 @@
-/* Platform Shell v2 — the canonical global frame. Modules own only local navigation and workflows. */
+/* Platform Shell v2 — canonical visual foundation. Platform owns the global frame; modules own local workflows. */
 html,body{max-width:100%;overflow-x:hidden}
 body{background:var(--platform-page-background);color:var(--platform-text)}
-.platform-shell-v2{min-height:100svh;padding-bottom:var(--platform-safe-area-bottom);background:var(--platform-page-background)}
+.platform-shell-v2{min-height:100svh;padding-right:264px;padding-bottom:var(--platform-safe-area-bottom);background:var(--platform-page-background)}
 .platform-shell-v2 *{box-sizing:border-box}
-.platform-shell-header{position:relative;z-index:50;display:grid;min-height:var(--platform-shell-header-height);grid-template-columns:minmax(250px,1fr) auto auto auto;grid-template-areas:"brand switcher date auth";align-items:center;gap:var(--platform-space-5);padding:var(--platform-space-4) max(var(--platform-space-7),calc((100vw - var(--platform-page-max))/2));border-bottom:1px solid var(--platform-border);background:var(--platform-surface-near-solid);box-shadow:var(--platform-shadow-sm)}
-.platform-shell-header .startup-brand{grid-area:brand;display:flex;min-width:0;align-items:center;gap:var(--platform-space-4)}
-.platform-shell-header .startup-logo{width:48px;height:48px;object-fit:contain;border-radius:var(--platform-radius-md)}
+
+/* Desktop global rail: intentionally different from the legacy Conference header. */
+.platform-shell-header{position:fixed;z-index:50;inset:0 0 0 auto;width:264px;display:flex;flex-direction:column;align-items:stretch;gap:var(--platform-space-6);padding:24px 18px max(18px,var(--platform-safe-area-bottom));border-left:1px solid rgba(255,255,255,.09);background:linear-gradient(180deg,#102f55 0%,#0b2543 58%,#081d35 100%);box-shadow:-12px 0 32px rgba(14,40,69,.12);color:#fff}
+.platform-shell-header .startup-brand{display:flex;min-width:0;align-items:center;gap:12px;padding:0 4px 20px;border-bottom:1px solid rgba(255,255,255,.11)}
+.platform-shell-header .startup-logo{width:52px;height:52px;flex:0 0 auto;object-fit:contain;border-radius:14px;background:#fff;padding:4px;box-shadow:0 8px 20px rgba(0,0,0,.16)}
 .platform-shell-header .startup-brand-copy{min-width:0}
-.platform-shell-header .startup-brand-copy h1{margin:0;color:var(--platform-text);font-size:18px;line-height:1.35;font-weight:800}
-.platform-shell-header .startup-brand-copy p{margin:2px 0 0;color:var(--platform-text-muted);font-size:10px}
-.platform-shell-header .platform-module-switcher{grid-area:switcher;display:flex;min-height:var(--platform-touch-target);align-items:center;justify-content:center;gap:var(--platform-space-2);padding-inline:var(--platform-space-6);border:1px solid var(--platform-border);border-radius:var(--platform-radius-control);background:var(--platform-surface);color:var(--platform-primary);font-family:inherit;font-weight:700;cursor:pointer}
-.platform-shell-header .startup-date-card{grid-area:date}
-.platform-shell-header .startup-auth-actions{grid-area:auth;min-width:0}
-.platform-shell-header button:focus-visible,.platform-shell-header [tabindex]:focus-visible{outline:0;box-shadow:var(--platform-focus-ring)}
-.startup-dashboard{min-height:0;padding:var(--platform-space-7);padding-bottom:max(var(--platform-space-7),var(--platform-safe-area-bottom));background:transparent;color:var(--platform-text)}
-.startup-shell{width:min(100%,var(--platform-page-max));min-height:calc(100svh - var(--platform-shell-header-height) - var(--platform-space-8));margin-inline:auto;display:flex;flex-direction:column;gap:var(--platform-space-6)}
-.platform-home{width:100%;max-width:var(--platform-launcher-max);align-self:center;padding-block:var(--platform-landing-offset)}
-.platform-launcher{padding:var(--platform-space-7);border:1px solid var(--platform-border);border-radius:var(--platform-radius-lg);background:var(--platform-surface-near-solid);box-shadow:var(--platform-shadow-sm)}
-.platform-module-grid{gap:var(--platform-space-5)}
-.platform-module-card{min-height:104px;padding:var(--platform-space-5);border-radius:var(--platform-radius-card)}
+.platform-shell-header .startup-brand-copy h1{margin:0;color:#fff;font-size:16px;line-height:1.45;font-weight:800}
+.platform-shell-header .startup-brand-copy p{margin:3px 0 0;color:rgba(225,237,249,.68);font-size:9px;line-height:1.35}
+.platform-shell-header .platform-module-switcher{order:2;display:flex;width:100%;min-height:46px;align-items:center;justify-content:flex-start;gap:10px;padding:0 14px;border:1px solid rgba(255,255,255,.12);border-radius:12px;background:rgba(255,255,255,.08);color:#fff;font-family:inherit;font-weight:800;cursor:pointer;transition:background .16s ease,border-color .16s ease,transform .16s ease}
+.platform-shell-header .platform-module-switcher:hover{background:rgba(255,255,255,.14);border-color:rgba(255,255,255,.22)}
+.platform-shell-header .platform-module-switcher:active{transform:translateY(1px)}
+.platform-shell-header .startup-date-card{order:3;margin-top:auto;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.055);color:#fff;box-shadow:none}
+.platform-shell-header .startup-date-card *{color:inherit}
+.platform-shell-header .startup-date-card small{color:rgba(225,237,249,.68)}
+.platform-shell-header .startup-auth-actions{order:4;min-width:0;padding-top:14px;border-top:1px solid rgba(255,255,255,.1)}
+.platform-shell-header .startup-auth-signed-out,.platform-shell-header .startup-auth-signed-in{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.platform-shell-header .startup-auth-account-name{width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#dceafb;font-size:12px;font-weight:700;padding:0 2px 4px}
+.platform-shell-header .startup-auth-create,.platform-shell-header .startup-auth-login,.platform-shell-header #install-app-btn{min-height:40px;border-color:rgba(255,255,255,.16);background:rgba(255,255,255,.08);color:#fff}
+.platform-shell-header button:focus-visible,.platform-shell-header [tabindex]:focus-visible{outline:0;box-shadow:0 0 0 3px rgba(126,183,255,.32)}
+
+/* Shared page geometry. */
+.startup-dashboard{min-height:0;padding:24px clamp(18px,2.4vw,34px);padding-bottom:max(28px,var(--platform-safe-area-bottom));background:transparent;color:var(--platform-text)}
+.startup-shell{width:min(100%,var(--platform-page-max));min-height:calc(100svh - 48px);margin-inline:auto;display:flex;flex-direction:column;gap:20px}
+.platform-home{width:100%;max-width:var(--platform-launcher-max);align-self:center;padding-block:clamp(20px,5vh,64px)}
+.platform-launcher{padding:24px;border:1px solid rgba(202,217,232,.86);border-radius:18px;background:rgba(255,255,255,.88);box-shadow:0 16px 40px rgba(30,65,100,.08);backdrop-filter:blur(14px)}
+.platform-module-grid{gap:14px}
+.platform-module-card{min-height:104px;padding:18px;border-radius:16px}
 .conference-workspace,#warehouseWorkspace,#reservationsWorkspace{width:100%;min-width:0;max-width:100%}
 .platform-reservations-active .startup-shell,.platform-conference-active .startup-shell,.platform-warehouse-active .startup-shell{max-width:var(--platform-page-max)}
-.conference-module-nav{position:relative;top:auto;z-index:20;width:min(calc(100% - (2 * var(--platform-space-7))),var(--platform-page-max));min-height:0;margin:var(--platform-space-6) auto 0;padding:var(--platform-space-3);border:1px solid var(--platform-border);border-radius:var(--platform-radius-lg);background:var(--platform-surface-near-solid);box-shadow:var(--platform-shadow-sm)}
+
+/* Conference navigation is module-local, not a second global header. */
+.conference-module-nav{position:relative;top:auto;z-index:20;width:min(calc(100% - 48px),var(--platform-page-max));min-height:0;margin:20px auto 0;padding:8px 10px;border:1px solid rgba(205,220,234,.9);border-radius:14px;background:rgba(255,255,255,.9);box-shadow:0 8px 24px rgba(30,65,100,.07);backdrop-filter:blur(12px)}
 .conference-module-nav .application-brand-logo,.conference-module-nav .application-account-entry{display:none!important}
 .conference-module-nav .main-tabs{min-width:0;overflow-x:auto;overscroll-behavior-inline:contain}
 .conference-module-nav .main-tab{min-height:var(--platform-touch-target)}
-.platform-shell-v2>.body{width:min(calc(100% - (2 * var(--platform-space-7))),var(--platform-page-max));min-width:0;margin-inline:auto}
-#warehouseWorkspace .warehouse-app,#warehouseWorkspace .warehouse-app.sidebar-collapsed{min-height:0;grid-template-columns:minmax(0,1fr) 248px;border:1px solid var(--platform-border);border-radius:var(--platform-radius-lg);overflow:hidden;background:var(--platform-surface);box-shadow:var(--platform-shadow-sm)}
+.platform-shell-v2>.body{width:min(calc(100% - 48px),var(--platform-page-max));min-width:0;margin-inline:auto}
+
+/* Warehouse consumes the same global shell while retaining its domain rail. */
+#warehouseWorkspace .warehouse-app,#warehouseWorkspace .warehouse-app.sidebar-collapsed{min-height:0;grid-template-columns:minmax(0,1fr) 248px;border:1px solid var(--platform-border);border-radius:18px;overflow:hidden;background:var(--platform-surface);box-shadow:0 14px 36px rgba(30,65,100,.08)}
 #warehouseWorkspace .warehouse-app.sidebar-collapsed{grid-template-columns:minmax(0,1fr) 76px}
-#warehouseWorkspace .warehouse-sidebar{position:relative;top:auto;height:auto;min-height:calc(100svh - var(--platform-shell-header-height) - 2 * var(--platform-space-7));box-shadow:none}
+#warehouseWorkspace .warehouse-sidebar{position:relative;top:auto;height:auto;min-height:calc(100svh - 48px);box-shadow:none}
 #warehouseWorkspace .warehouse-sidebar nav{padding-top:var(--platform-space-6)}
 #warehouseWorkspace .warehouse-main{min-width:0;min-height:0}
 #warehouseWorkspace .warehouse-route-context{min-height:var(--platform-touch-target);padding-top:var(--platform-space-6)}
 #warehouseWorkspace .warehouse-menu-trigger{display:none;min-width:var(--platform-touch-target);min-height:var(--platform-touch-target)}
 #warehouseWorkspace .warehouse-table-card,#warehouseWorkspace .warehouse-table-wrap{max-width:100%;overflow-x:auto;overscroll-behavior-inline:contain}
-@media(max-width:1100px){.platform-shell-header{grid-template-columns:minmax(220px,1fr) auto auto;grid-template-areas:"brand date auth" "brand switcher switcher"}.platform-module-grid{grid-template-columns:repeat(2,minmax(0,1fr))}#warehouseWorkspace .warehouse-app,#warehouseWorkspace .warehouse-app.sidebar-collapsed{grid-template-columns:minmax(0,1fr) 88px}#warehouseWorkspace .warehouse-nav-item>span,#warehouseWorkspace .warehouse-nav-group-label>span,#warehouseWorkspace .warehouse-collapse>span{display:none}}
-@media(max-width:820px){.platform-shell-header{grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"brand auth" "switcher switcher";padding:var(--platform-space-4)}.platform-shell-header .startup-date-card{display:none}.platform-shell-header .startup-brand-copy h1{font-size:16px}.startup-dashboard{padding:var(--platform-space-4);padding-bottom:max(var(--platform-mobile-bottom-breathing),var(--platform-safe-area-bottom))}.startup-shell{min-height:calc(100svh - var(--platform-shell-header-height) - (2 * var(--platform-space-4)))}.conference-module-nav,.platform-shell-v2>.body{width:calc(100% - (2 * var(--platform-space-4)))}#warehouseWorkspace .warehouse-app,#warehouseWorkspace .warehouse-app.sidebar-collapsed{display:block}#warehouseWorkspace .warehouse-sidebar{position:fixed;inset:0 0 0 auto;z-index:60;width:268px;height:100dvh;min-height:0;transform:translateX(105%);transition:transform .2s ease}#warehouseWorkspace .warehouse-app.menu-open .warehouse-sidebar{transform:none}#warehouseWorkspace .warehouse-nav-item>span,#warehouseWorkspace .warehouse-nav-group-label>span{display:inline}#warehouseWorkspace .warehouse-menu-trigger{display:grid;place-items:center}}
+
+@media(max-width:1100px){
+  .platform-shell-v2{padding-right:92px}
+  .platform-shell-header{width:92px;padding:18px 10px;align-items:center}
+  .platform-shell-header .startup-brand{padding:0 0 16px;border-bottom:1px solid rgba(255,255,255,.11)}
+  .platform-shell-header .startup-brand-copy,.platform-shell-header .platform-module-switcher span:last-child,.platform-shell-header .startup-date-card,.platform-shell-header .startup-auth-account-name{display:none}
+  .platform-shell-header .platform-module-switcher{width:52px;justify-content:center;padding:0}
+  .platform-shell-header .startup-auth-actions{width:100%;margin-top:auto;padding-top:14px}
+  .platform-shell-header .startup-auth-signed-out,.platform-shell-header .startup-auth-signed-in{justify-content:center}
+  .platform-shell-header .startup-auth-create,.platform-shell-header .startup-auth-login,.platform-shell-header #install-app-btn{width:100%;padding-inline:4px;font-size:10px}
+  .platform-module-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  #warehouseWorkspace .warehouse-app,#warehouseWorkspace .warehouse-app.sidebar-collapsed{grid-template-columns:minmax(0,1fr) 88px}
+  #warehouseWorkspace .warehouse-nav-item>span,#warehouseWorkspace .warehouse-nav-group-label>span,#warehouseWorkspace .warehouse-collapse>span{display:none}
+}
+
+@media(max-width:820px){
+  .platform-shell-v2{padding-right:0;padding-top:76px}
+  .platform-shell-header{position:fixed;inset:0 0 auto 0;width:100%;height:76px;display:grid;grid-template-columns:minmax(0,1fr) auto auto;grid-template-areas:"brand switcher auth";align-items:center;gap:8px;padding:max(8px,env(safe-area-inset-top,0px)) 12px 8px;border-left:0;border-bottom:1px solid rgba(255,255,255,.1);background:linear-gradient(105deg,#102f55,#0a2442);box-shadow:0 8px 24px rgba(14,40,69,.14)}
+  .platform-shell-header .startup-brand{grid-area:brand;padding:0;border:0;min-width:0}
+  .platform-shell-header .startup-logo{width:42px;height:42px;border-radius:11px}
+  .platform-shell-header .startup-brand-copy{display:block}
+  .platform-shell-header .startup-brand-copy h1{font-size:14px}
+  .platform-shell-header .startup-brand-copy p{display:none}
+  .platform-shell-header .platform-module-switcher{grid-area:switcher;width:44px;min-height:44px;padding:0;justify-content:center}
+  .platform-shell-header .startup-auth-actions{grid-area:auth;width:auto;margin:0;padding:0;border:0}
+  .platform-shell-header .startup-auth-account-name,.platform-shell-header .startup-date-card{display:none}
+  .platform-shell-header .startup-auth-signed-out,.platform-shell-header .startup-auth-signed-in{flex-wrap:nowrap}
+  .platform-shell-header .startup-auth-create,.platform-shell-header .startup-auth-login,.platform-shell-header #install-app-btn{width:auto;min-width:44px;min-height:44px;padding-inline:9px;font-size:10px}
+  .startup-dashboard{padding:16px;padding-bottom:max(var(--platform-mobile-bottom-breathing),var(--platform-safe-area-bottom))}
+  .startup-shell{min-height:calc(100svh - 108px)}
+  .conference-module-nav,.platform-shell-v2>.body{width:calc(100% - 32px)}
+  #warehouseWorkspace .warehouse-app,#warehouseWorkspace .warehouse-app.sidebar-collapsed{display:block}
+  #warehouseWorkspace .warehouse-sidebar{position:fixed;inset:76px 0 0 auto;z-index:60;width:268px;height:calc(100dvh - 76px);min-height:0;transform:translateX(105%);transition:transform .2s ease}
+  #warehouseWorkspace .warehouse-app.menu-open .warehouse-sidebar{transform:none}
+  #warehouseWorkspace .warehouse-nav-item>span,#warehouseWorkspace .warehouse-nav-group-label>span{display:inline}
+  #warehouseWorkspace .warehouse-menu-trigger{display:grid;place-items:center}
+}
+
 @media(max-width:700px){.conference-module-nav{align-items:stretch}.conference-module-nav .main-tabs{width:100%}.platform-shell-v2 .table-wrap,.platform-shell-v2 .table-container{max-width:100%;overflow-x:auto;overscroll-behavior-inline:contain}}
-@media(max-width:600px){.platform-shell-header{grid-template-columns:1fr;grid-template-areas:"brand" "auth" "switcher";align-items:stretch}.platform-shell-header .startup-logo{width:42px;height:42px}.platform-shell-header .startup-auth-actions,.platform-shell-header .startup-auth-signed-out,.platform-shell-header .startup-auth-signed-in{width:100%}.platform-shell-header .startup-auth-signed-out,.platform-shell-header .startup-auth-signed-in{flex-wrap:wrap}.platform-shell-header .startup-auth-signed-out button,.platform-shell-header .startup-auth-signed-in button,.platform-shell-header #install-app-btn,.platform-shell-header .platform-module-switcher{min-height:var(--platform-touch-target)}.platform-shell-header .platform-module-switcher{width:100%}.startup-dashboard{padding:var(--platform-space-3);padding-bottom:calc(var(--platform-safe-area-bottom) + var(--platform-mobile-bottom-breathing))}.startup-shell{gap:var(--platform-space-4);min-height:calc(100svh - var(--platform-shell-header-height) - (2 * var(--platform-space-3)))}.platform-home{padding-block:var(--platform-space-6)}.platform-launcher{padding:var(--platform-space-4)}.platform-module-grid{grid-template-columns:1fr}.platform-module-card{min-height:88px}.conference-module-nav,.platform-shell-v2>.body{width:calc(100% - (2 * var(--platform-space-3)))}.platform-shell-v2 input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]),.platform-shell-v2 select,.platform-shell-v2 textarea{font-size:16px}}
+
+@media(max-width:600px){
+  .platform-shell-v2{padding-top:68px}
+  .platform-shell-header{height:68px;grid-template-columns:minmax(0,1fr) 44px 44px;padding-inline:10px}
+  .platform-shell-header .startup-logo{width:38px;height:38px}
+  .platform-shell-header .startup-brand-copy h1{font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .platform-shell-header .startup-auth-signed-out .startup-auth-create,.platform-shell-header .startup-auth-signed-out .startup-auth-login{font-size:0;width:44px;padding:0}
+  .platform-shell-header .startup-auth-signed-out .startup-auth-login:after{content:'دخول';font-size:10px}
+  .platform-shell-header .startup-auth-signed-out .startup-auth-create{display:none}
+  .platform-shell-header .startup-auth-signed-in .startup-auth-create{font-size:0;width:44px;padding:0}
+  .platform-shell-header .startup-auth-signed-in .startup-auth-create:after{content:'خروج';font-size:10px}
+  .platform-shell-header #install-app-btn{display:none!important}
+  .startup-dashboard{padding:12px;padding-bottom:calc(var(--platform-safe-area-bottom) + var(--platform-mobile-bottom-breathing))}
+  .startup-shell{gap:14px;min-height:calc(100svh - 92px)}
+  .platform-home{padding-block:18px}
+  .platform-launcher{padding:14px}
+  .platform-module-grid{grid-template-columns:1fr}
+  .platform-module-card{min-height:88px}
+  .conference-module-nav,.platform-shell-v2>.body{width:calc(100% - 24px)}
+  .platform-shell-v2 input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]),.platform-shell-v2 select,.platform-shell-v2 textarea{font-size:16px}
+}
