@@ -155,11 +155,12 @@ for(const section of ['stores','documents','items','stock','approvals']){
   });
 }
 
-test('#/warehouse defaults to the Warehouse dashboard and launcher is structurally separate',()=>{
+test('#/warehouse defaults to the Warehouse dashboard without a launcher dependency',()=>{
   const state=warehouseRuntime('/warehouse');
   state.window.openWarehouseWorkspace({route:'/warehouse'});
   assert.match(state.node.innerHTML,/warehouse-nav-item active[^>]*data-wh-route=""|data-wh-route=""[^>]*warehouse-nav-item active/);
-  assert.match(html,/<main class="platform-home"[\s\S]*?<\/main>[\s\S]*?id="conferenceWorkspace"[\s\S]*?id="warehouseWorkspace"/);
+  assert.doesNotMatch(html,/class="platform-home"/);
+  assert.match(html,/id="conferenceWorkspace"[\s\S]*?id="warehouseWorkspace"/);
   assert.doesNotMatch(html,/id="warehouseWorkspace"[^>]+style="display:none"/);
 });
 

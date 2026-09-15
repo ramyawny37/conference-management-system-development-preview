@@ -7,7 +7,7 @@ const CACHE_NAMESPACE = IS_DEVELOPMENT
   : '';
 const CACHE_PREFIX = CACHE_NAMESPACE + 'conference-manager-core-';
 const CACHE_REVISION = IS_DEVELOPMENT
-  ? 'platform-shell-v2-v1'
+  ? 'platform-dashboard-v2-v1'
   : 'production-3-5-0-config-isolation-v1';
 const CACHE_NAME = CACHE_PREFIX + 'v' + APP_VERSION + '-' + CACHE_REVISION;
 const CORE_ASSETS = [
@@ -15,8 +15,8 @@ const CORE_ASSETS = [
   './index.html',
   './shared-design-tokens.css?rev=platform-shell-phase2b-v1',
   './style.css?rev=item-unit-dialog-v1',
-  './platform-shell-v2.css?rev=platform-shell-v2-v1',
-  './modules/reservations/reservations-module.css?rev=platform-ui-foundation-v2-dashboard-v2',
+  './platform-shell-v2.css?rev=platform-dashboard-v2-v1',
+  './modules/reservations/reservations-module.css?rev=platform-dashboard-v2-v1',
   './js/application-routing.js?rev=canonical-conference-routing-v1',
   './js/storage/environment-namespace.js',
   './js/storage/snapshot-payload-diagnostics.js?rev=snapshot-payload-diagnostics-v1',
@@ -41,8 +41,8 @@ const CORE_ASSETS = [
   './js/supabase/warehouse-transport.js?rev=phase-w1-v1',
   './js/supabase/client.js?rev=phase1c-v1',
   './js/supabase/auth.js?rev=account-session-identity-v1',
-  './js/platform-integration.js?rev=module-entry-access-gate-v1',
-  './modules/reservations/reservations-module.js?rev=platform-ui-foundation-v2-dashboard-v2',
+  './js/platform-integration.js?rev=platform-dashboard-v2-v1',
+  './modules/reservations/reservations-module.js?rev=platform-dashboard-v2-v1',
   './js/supabase/system-access-service.js?rev=conference-create-authorization-v1',
   './js/sync/diagnostics-privacy-policy.js?rev=diagnostics-privacy-hardening-v1',
   './js/sync/organization-administration-utils.js',
@@ -143,7 +143,7 @@ const CORE_ASSETS = [
   './js/warehouse/party-management.js?rev=warehouse-party-management-v1',
   './js/warehouse/remaining-operations.js?rev=adjustment-conversion-ux-v1',
   './js/warehouse/workspace.js?rev=item-unit-add-ui-v1',
-  './script.js?rev=platform-module-entry-gate-v1',
+  './script.js?rev=platform-dashboard-v2-v1',
   './version.js',
   './pwa.js?rev=organization-membership-operation-key-v1',
   './libs/html2canvas.min.js',

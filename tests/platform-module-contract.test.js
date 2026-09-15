@@ -95,13 +95,14 @@ test('unknown modules fail closed and cannot be opened',()=>{
   assert.strictEqual(state.window.PlatformIntegration.getActiveModuleId(),'');
 });
 
-test('Reservations launcher and static bundle stay inside the unified Platform artifact',()=>{
-  assert.match(index,/data-platform-module="reservations" class="platform-module-card platform-module-card-available"/);
+test('Reservations global navigation and static bundle stay inside the unified Platform artifact',()=>{
+  assert.match(index,/platform-global-nav[\s\S]*data-platform-module="reservations"/);
+  assert.match(index,/class="platform-global-nav-item" data-platform-module="reservations"/);
   assert.match(index,/id="reservationsWorkspace"/);
-  assert.match(index,/modules\/reservations\/reservations-module\.js\?rev=platform-ui-foundation-v2-dashboard-v2/);
-  assert.match(index,/modules\/reservations\/reservations-module\.css\?rev=platform-ui-foundation-v2-dashboard-v2/);
-  assert.match(worker,/\.\/modules\/reservations\/reservations-module\.js\?rev=platform-ui-foundation-v2-dashboard-v2/);
-  assert.match(worker,/\.\/modules\/reservations\/reservations-module\.css\?rev=platform-ui-foundation-v2-dashboard-v2/);
+  assert.match(index,/modules\/reservations\/reservations-module\.js\?rev=platform-dashboard-v2-v1/);
+  assert.match(index,/modules\/reservations\/reservations-module\.css\?rev=platform-dashboard-v2-v1/);
+  assert.match(worker,/\.\/modules\/reservations\/reservations-module\.js\?rev=platform-dashboard-v2-v1/);
+  assert.match(worker,/\.\/modules\/reservations\/reservations-module\.css\?rev=platform-dashboard-v2-v1/);
   assert.ok(fs.existsSync('modules/reservations/reservations-module.js'));
   assert.ok(fs.existsSync('modules/reservations/reservations-module.css'));
   assert.doesNotMatch(fs.readFileSync('modules/reservations/reservations-module.js','utf8'),/supabase\.co|createClient\(|platform-device-session/);

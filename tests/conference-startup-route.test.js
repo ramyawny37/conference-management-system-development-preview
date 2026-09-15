@@ -43,34 +43,34 @@ test('authorized startup keeps direct Conference pathname authoritative',()=>{
   assert.strictEqual(state.classes.has('platform-conference-active'),true);
 });
 
-test('Conference query strings resolve by pathname and explicit modules returns root',()=>{
+test('Conference query strings resolve by pathname and explicit home returns the operational dashboard',()=>{
   const state=runtime('/conference');
   state.sandbox.openStartupScreen({persistView:false});
   state.sandbox.showPlatformModules();
   assert.strictEqual(state.location.pathname,'/');
-  assert.strictEqual(state.classes.has('platform-conference-active'),false);
+  assert.strictEqual(state.classes.has('platform-conference-active'),true);
 });
 
-test('root startup remains on the Platform launcher',()=>{
+test('root startup enters the operational dashboard without a launcher step',()=>{
   const state=runtime('/');
   state.sandbox.openStartupScreen({persistView:false});
   assert.strictEqual(state.location.pathname,'/');
-  assert.strictEqual(state.classes.has('platform-conference-active'),false);
+  assert.strictEqual(state.classes.has('platform-conference-active'),true);
 });
 
-test('repository-scoped Conference restores workspace and return home restores application base',()=>{
+test('repository-scoped Conference and Platform home share the operational dashboard',()=>{
   const state=runtime('/preview/conference','/preview/');
   state.sandbox.openStartupScreen({persistView:false});
   assert.strictEqual(state.classes.has('platform-conference-active'),true);
   state.sandbox.showPlatformModules();
   assert.strictEqual(state.location.pathname,'/preview/');
-  assert.strictEqual(state.classes.has('platform-conference-active'),false);
+  assert.strictEqual(state.classes.has('platform-conference-active'),true);
 });
 
 test('Conference route correction invalidates the Development runtime cache',()=>{
-  assert.match(html,/script\.js\?rev=platform-module-entry-gate-v1/);
-assert.match(worker,/platform-shell-v2-v1/);
-  assert.match(worker,/script\.js\?rev=platform-module-entry-gate-v1/);
+  assert.match(html,/script\.js\?rev=platform-dashboard-v2-v1/);
+assert.match(worker,/platform-dashboard-v2-v1/);
+  assert.match(worker,/script\.js\?rev=platform-dashboard-v2-v1/);
 });
 
 test('authorized async restoration cannot override an explicit Conference home route',()=>{

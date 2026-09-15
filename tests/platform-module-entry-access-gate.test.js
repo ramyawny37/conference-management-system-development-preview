@@ -30,12 +30,12 @@ for(const moduleId of ['warehouse','reservations']){
     assert.equal(await state.window.PlatformIntegration.openModule(moduleId),true);
     assert.deepEqual(state.calls.slice(0,3).map(call=>call[0]),['check','push',moduleId+'-mount']);
   });
-  test('denied '+moduleId+' card stays on launcher and never mounts',async()=>{
-    const state=runtime('/',moduleId);
+  test('denied '+moduleId+' navigation preserves the current route and never mounts',async()=>{
+    const state=runtime('/conference',moduleId);
     assert.equal(await state.window.PlatformIntegration.openModule(moduleId),false);
     assert.equal(state.calls.some(call=>call[0]===moduleId+'-mount'),false);
-    assert.equal(state.getRoute(),'/');
-    assert.equal(state.calls.some(call=>call[0]==='launcher'),true);
+    assert.equal(state.getRoute(),'/conference');
+    assert.equal(state.calls.some(call=>call[0]==='launcher'),false);
   });
   test('direct '+moduleId+' route checks access before mount',async()=>{
     const state=runtime('/'+moduleId);
@@ -83,10 +83,10 @@ test('dispatcher delegates other operations and authorizes with the verified ses
 
 test('route restores use PlatformIntegration and deterministic assets remain aligned',()=>{
   assert.doesNotMatch(script,/platformRoute\.indexOf\('\/warehouse'\)[\s\S]{0,180}openWarehouseWorkspace/);
-  assert.match(index,/js\/platform-integration\.js\?rev=module-entry-access-gate-v1/);
-  assert.match(worker,/\.\/js\/platform-integration\.js\?rev=module-entry-access-gate-v1/);
-  assert.match(index,/script\.js\?rev=platform-module-entry-gate-v1/);
-  assert.match(worker,/\.\/script\.js\?rev=platform-module-entry-gate-v1/);
-  assert.match(index,/reservations-module\.js\?rev=platform-ui-foundation-v2-dashboard-v2/);
+  assert.match(index,/js\/platform-integration\.js\?rev=platform-dashboard-v2-v1/);
+  assert.match(worker,/\.\/js\/platform-integration\.js\?rev=platform-dashboard-v2-v1/);
+  assert.match(index,/script\.js\?rev=platform-dashboard-v2-v1/);
+  assert.match(worker,/\.\/script\.js\?rev=platform-dashboard-v2-v1/);
+  assert.match(index,/reservations-module\.js\?rev=platform-dashboard-v2-v1/);
   assert.doesNotMatch(reservationsBundle,/check_module_access/);
 });
