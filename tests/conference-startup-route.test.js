@@ -89,7 +89,7 @@ test('explicit Conference opening publishes a durable route and Home removes no 
   );
   const navigation=source.slice(source.indexOf('function showHomePage'),source.indexOf('function getAccommodationPricingModeLabel'));
   assert.match(selection,/prepareCanonicalConferenceApplicationEntry\(options\)[\s\S]*setApplicationMode\('application'\)/);
-  assert.match(entry,/options\.enterApplication===true[\s\S]*getStoredLastTab\(\)[\s\S]*setConferenceApplicationPathname\(requestedTabId,\{push:true\}\)/);
+  assert.match(entry,/options\.enterApplication===true[\s\S]*getStoredLastTab\(\)[\s\S]*setConferenceApplicationPathname\([\s\S]*requestedTabId,\{push:true\}/);
   assert.match(navigation,/function showHomePage\(\)[\s\S]*replacePlatformShellPathname\('\/conference'\)[\s\S]*clearCurrentConference:false/);
   assert.doesNotMatch(source,/conferenceApplicationEntryActive|conferenceModuleHomeRouteActive/);
 });

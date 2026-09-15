@@ -52,6 +52,7 @@ var sandbox={
   refreshPeopleDatalist:function(){},renderAccommodation:function(){},
   renderTransports:function(){},renderSettings:function(){},currentTab:0,
   switchTab:function(){return true;},restoreLastApplicationTab:function(){},
+  getPlatformShellPathname:function(){return '/warehouse/approvals';},
   getCanonicalConferenceRoute:function(){return null;},
   getStoredLastTab:function(){return 0;},
   setConferenceApplicationPathname:function(){return true;},

@@ -33,15 +33,30 @@ function environment(options={}){
       calls.push('render_accommodation');
       if(options.throwStage==='render_accommodation')throw new Error('render');
     },
-    renderTransports(){calls.push('render_transports');},
-    renderSettings(){calls.push('render_settings');},
-    restoreLastApplicationTab(){calls.push('render_current_tab');},
+    renderTransports(){
+      calls.push('render_transports');
+      if(options.throwStage==='render_transports')throw new Error('render');
+    },
+    renderSettings(){
+      calls.push('render_settings');
+      if(options.throwStage==='render_settings')throw new Error('render');
+    },
+    restoreLastApplicationTab(){
+      calls.push('render_current_tab');
+      if(options.throwStage==='render_current_tab')throw new Error('render');
+    },
     getStoredLastTab(){return 0;},
     setConferenceApplicationPathname(tabId,navigationOptions){
       calls.push('navigate_application');
       assert.strictEqual(tabId,0);
       assert.strictEqual(navigationOptions.push,true);
       route='/conference/app/accommodation';
+      return true;
+    },
+    replacePlatformShellPathname(pathname){
+      calls.push('rollback_route');
+      route=pathname;
+      return true;
     },
     switchTab(_tabId,switchOptions){
       calls.push('render_current_tab');
@@ -57,13 +72,16 @@ function environment(options={}){
         return options.activationAllowed!==false;
       }
     },
-    AutomaticSyncOrchestrator:{schedule(){calls.push('schedule');}}
+    AutomaticSyncOrchestrator:{schedule(){
+      calls.push('schedule');
+      if(options.throwStage==='schedule')throw new Error('schedule');
+    }}
   };
   sandbox.getPlatformShellPathname=()=>route;
   sandbox.getCanonicalConferenceRoute=()=>{
     if(route==='/conference')return {kind:'home',tabId:null};
-    const match=/^\/conference\/app\/(accommodation)$/.exec(route);
-    return match?{kind:'application',tabId:0}:null;
+    const match=/^\/conference\/app\/(accommodation|transports)$/.exec(route);
+    return match?{kind:'application',tabId:match[1]==='accommodation'?0:1}:null;
   };
   sandbox.getCurrentConference=()=>sandbox.appData.conferences.find(item=>
     item.id===sandbox.appData.currentConferenceId)||null;
@@ -159,8 +177,35 @@ const explicitRenderFailure=environment({
 });
 assert.strictEqual(explicitRenderFailure.sandbox.activatePersistedConferenceById(
   'local',{alreadyPersisted:true,enterApplication:true}),false);
-assert.strictEqual(explicitRenderFailure.route(),'/conference/app/accommodation');
+assert.strictEqual(explicitRenderFailure.route(),'/conference');
 assert.ok(explicitRenderFailure.calls.indexOf('navigate_application')<
   explicitRenderFailure.calls.indexOf('render_accommodation'));
+assert.strictEqual(explicitRenderFailure.calls.filter(call=>
+  call==='rollback_route').length,1);
+
+const previousApplicationFailure=environment({
+  throwStage:'render_transports',
+  route:'/conference/app/transports',startup:true
+});
+assert.strictEqual(previousApplicationFailure.sandbox
+  .activatePersistedConferenceById(
+    'local',{alreadyPersisted:true,enterApplication:true}
+  ),false);
+assert.strictEqual(
+  previousApplicationFailure.route(),'/conference/app/transports'
+);
+assert.strictEqual(previousApplicationFailure.calls.filter(call=>
+  call==='navigate_application').length,1);
+assert.strictEqual(previousApplicationFailure.calls.filter(call=>
+  call==='rollback_route').length,1);
+
+const postRenderFailure=environment({
+  throwStage:'schedule',route:'/conference',startup:true
+});
+assert.strictEqual(postRenderFailure.sandbox.activatePersistedConferenceById(
+  'local',{enterApplication:true}),false);
+assert.strictEqual(postRenderFailure.route(),'/conference');
+assert.strictEqual(postRenderFailure.calls.filter(call=>
+  call==='rollback_route').length,1);
 
 console.log('member activation completion tests passed');

@@ -457,17 +457,30 @@ var currentConferenceRuntimeAccessRole=null;
 var currentConferenceRuntimeAccessRoles=Object.create(null);
 function prepareCanonicalConferenceApplicationEntry(options){
   options=options||{};
+  var previousPathname=getPlatformShellPathname();
   var conferenceRoute=getCanonicalConferenceRoute();
   var requestedTabId=null;
+  var routePublished=false;
   if(options.enterApplication===true){
     requestedTabId=getStoredLastTab();
     if(requestedTabId===null)requestedTabId=0;
-    setConferenceApplicationPathname(requestedTabId,{push:true});
+    routePublished=setConferenceApplicationPathname(
+      requestedTabId,{push:true}
+    )===true;
     conferenceRoute={kind:'application',tabId:requestedTabId};
   }else if(conferenceRoute&&conferenceRoute.kind==='application'){
     requestedTabId=conferenceRoute.tabId;
   }
-  return {route:conferenceRoute,tabId:requestedTabId};
+  return {
+    route:conferenceRoute,
+    tabId:requestedTabId,
+    previousPathname:previousPathname,
+    routePublished:routePublished
+  };
+}
+function rollbackCanonicalConferenceApplicationEntry(entry){
+  if(!entry||entry.routePublished!==true||!entry.previousPathname)return false;
+  return replacePlatformShellPathname(entry.previousPathname);
 }
 function traceMemberActivation(stage,status,reason){
   memberActivationDiagnosticState.currentStage=String(stage||'unknown');
@@ -579,13 +592,20 @@ function activatePersistedConferenceById(id,options){
   ];
   for(var stepIndex=0;stepIndex<steps.length;stepIndex++){
     if(!runMemberActivationStep(steps[stepIndex][0],steps[stepIndex][1]).ok){
+      rollbackCanonicalConferenceApplicationEntry(entry);
       traceMemberActivation('activation_return','return','step_failed');
       return false;
     }
   }
   if(options.alreadyPersisted!==true&&window.AutomaticSyncOrchestrator&&
     typeof window.AutomaticSyncOrchestrator.schedule==='function'){
-    window.AutomaticSyncOrchestrator.schedule('conference_changed');
+    if(!runMemberActivationStep('schedule_conference_changed',function(){
+      window.AutomaticSyncOrchestrator.schedule('conference_changed');
+    }).ok){
+      rollbackCanonicalConferenceApplicationEntry(entry);
+      traceMemberActivation('activation_return','return','step_failed');
+      return false;
+    }
   }
   traceMemberActivation('activation_return','completed',null);
   return true;

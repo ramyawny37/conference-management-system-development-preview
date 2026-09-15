@@ -79,6 +79,7 @@ function commonOpenPath(env,appData,links){
     saveCurrentConferenceSelection(){return true;},
     syncCurrentConferenceRefs(){},
     getCurrentConference(){return current;},
+    getPlatformShellPathname(){return '/conference';},
     getCanonicalConferenceRoute(){return {kind:'home'};},
     openStartupScreen(){},
     console
