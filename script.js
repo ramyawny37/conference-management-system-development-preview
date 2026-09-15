@@ -7198,14 +7198,21 @@ function getStartupConferenceViewModel(){
     }):[];
   var merged=localConferences.slice();
   var remoteIds=Object.create(null);
-  localConferences.forEach(function(conference){
+  localConferences.forEach(function(conference,index){
     if(!conference)return;
     var localId=String(conference.id||'');
     var link=window.ConferenceLinkStore&&
       typeof window.ConferenceLinkStore.get==='function'
       ?window.ConferenceLinkStore.get(localId):null;
     var linkedRemoteId=String(link&&link.remoteConferenceId||'');
-    if(linkedRemoteId)remoteIds[linkedRemoteId]=true;
+    if(linkedRemoteId){
+      remoteIds[linkedRemoteId]=true;
+      var linkedViewConference=typeof structuredClone==='function'
+        ?structuredClone(conference)
+        :JSON.parse(JSON.stringify(conference));
+      linkedViewConference.__startupDiscoveredRemoteId=linkedRemoteId;
+      merged[index]=linkedViewConference;
+    }
   });
   var discovered=window.StartupConferenceDiscovery&&
     typeof window.StartupConferenceDiscovery.getRecords==='function'

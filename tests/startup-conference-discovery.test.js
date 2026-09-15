@@ -63,6 +63,40 @@ function environment(options={}){
   };
 }
 
+function startupCards(options={}){
+  const start=scriptSource.indexOf('function conferenceStatusText');
+  const end=scriptSource.indexOf('function showStartupConferenceList');
+  const localOpens=[];
+  const remoteOpens=[];
+  const sandbox={
+    window:null,
+    appData:{conferences:options.localConferences||[]},
+    structuredClone:value=>JSON.parse(JSON.stringify(value)),
+    JSON,Object,Array,String,
+    ConferenceLinkStore:{get:id=>options.links&&options.links[id]||null},
+    StartupConferenceDiscovery:{getRecords:()=>options.discovered||[]},
+    DiscoveredConferenceOpenService:{open:id=>{
+      remoteOpens.push(id);
+      return Promise.resolve({ok:true,status:'opened'});
+    }},
+    openConferenceFromStartup:id=>{localOpens.push(id);return true;},
+    accommodationIcon:()=>'',esc:value=>String(value),
+    showStartupConferenceList(){},showToast(){},console
+  };
+  sandbox.window=sandbox;
+  vm.runInNewContext(scriptSource.slice(start,end),sandbox);
+  return {
+    viewModel:()=>sandbox.getStartupConferenceViewModel(),
+    render:items=>sandbox.renderStartupConferenceCards(items,'active'),
+    async click(html){
+      const match=/onclick="(open(?:Discovered)?ConferenceFromStartup)\('([^']+)'\)"/.exec(html);
+      assert.ok(match,'startup card must expose an existing open route');
+      return sandbox[match[1]](match[2]);
+    },
+    localOpens,remoteOpens
+  };
+}
+
 (async function(){
   const env=environment();
   const result=await env.api.refresh();
@@ -141,6 +175,47 @@ function environment(options={}){
     sameName.api.getRecords().map(item=>item.remoteConferenceId),
     ['remote-a','remote-b']
   );
+
+  const unlinkedCards=startupCards({
+    localConferences:[{id:'local-new',name:'Local',status:'active'}]
+  });
+  const unlinkedView=unlinkedCards.viewModel();
+  assert.strictEqual(unlinkedView.length,1);
+  await unlinkedCards.click(unlinkedCards.render(unlinkedView));
+  assert.deepStrictEqual(unlinkedCards.localOpens,['local-new']);
+  assert.deepStrictEqual(unlinkedCards.remoteOpens,[]);
+
+  const linkedCards=startupCards({
+    localConferences:[{id:'local-old',name:'Linked',status:'active'}],
+    links:{'local-old':{
+      localConferenceId:'local-old',remoteConferenceId:'remote-linked',
+      linkStatus:'cloud_linked',knownRevision:1
+    }},
+    discovered:[{
+      remoteConferenceId:'remote-linked',
+      conference:{id:'remote-copy',name:'Linked',status:'active'}
+    }]
+  });
+  const linkedView=linkedCards.viewModel();
+  assert.strictEqual(linkedView.length,1);
+  assert.strictEqual(linkedView[0].id,'local-old');
+  assert.strictEqual(
+    linkedView[0].__startupDiscoveredRemoteId,'remote-linked'
+  );
+  await linkedCards.click(linkedCards.render(linkedView));
+  assert.deepStrictEqual(linkedCards.localOpens,[]);
+  assert.deepStrictEqual(linkedCards.remoteOpens,['remote-linked']);
+
+  const discoveredCards=startupCards({
+    discovered:[{
+      remoteConferenceId:'remote-only',
+      conference:{id:'downloaded-copy',name:'Remote',status:'active'}
+    }]
+  });
+  const discoveredView=discoveredCards.viewModel();
+  assert.strictEqual(discoveredView.length,1);
+  await discoveredCards.click(discoveredCards.render(discoveredView));
+  assert.deepStrictEqual(discoveredCards.remoteOpens,['remote-only']);
 
   assert.match(scriptSource,
     /openDiscoveredConferenceFromStartup\(\\''\+conf\.__startupDiscoveredRemoteId/);

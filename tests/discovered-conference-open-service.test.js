@@ -12,6 +12,7 @@ function environment(settings={}){
   let stored=clone(settings.appData||{conferences:[],currentConferenceId:null});
   let memory=clone(stored);
   let activated=0,downloads=0,inspects=0,configured=0,deactivations=0;
+  let cloudAuthorizations=0;
   let manualRelinkChecks=[];
   const forbidden={queue:0,publication:0,rpc:0};
   const events=[];
@@ -55,7 +56,7 @@ function environment(settings={}){
   };
   const sandbox={window:null,structuredClone:clone,
     ConferenceActivationAuthorization:{
-      authorizeCloud:()=>({ok:true}),
+      authorizeCloud:()=>{cloudAuthorizations++;return {ok:true};},
       deactivate:()=>{deactivations++;return {ok:false,status:'membership_unavailable'};}
     },
     AutomaticSyncOrchestrator:{schedule:()=>{}},
@@ -194,6 +195,7 @@ function environment(settings={}){
   return {api:sandbox.DiscoveredConferenceOpenService,events,links,
     stored:()=>clone(stored),memory:()=>clone(sandbox.appData),
     activated:()=>activated,configured:()=>configured,
+    cloudAuthorizations:()=>cloudAuthorizations,
     downloads:()=>downloads,inspects:()=>inspects,
     deactivations:()=>deactivations,
     realtimePipeline:()=>clone(realtimePipeline),
@@ -310,6 +312,21 @@ function environment(settings={}){
   assert.strictEqual((await reuse.api.open(reuse.remoteId)).data.localConferenceId,
     'existing-local');
   assert.strictEqual(reuse.stored().conferences.length,1);
+  assert.strictEqual(reuse.cloudAuthorizations(),1);
+  assert.strictEqual(reuse.activated(),1);
+
+  const linkedDenied=environment({
+    membershipDenied:true,
+    appData:{conferences:[{id:'existing-local',name:'Same',status:'active'}],
+      currentConferenceId:null},
+    existingLink:{localConferenceId:'existing-local',remoteConferenceId:'remote-1',
+      knownRevision:1,linkStatus:'linked'}
+  });
+  assert.strictEqual((await linkedDenied.api.open(linkedDenied.remoteId)).status,
+    'membership_unavailable');
+  assert.strictEqual(linkedDenied.cloudAuthorizations(),0);
+  assert.strictEqual(linkedDenied.activated(),0);
+  assert.strictEqual(linkedDenied.stored().currentConferenceId,null);
 
   const refreshSnapshot2={
     id:'source-local',name:'Rev-2',status:'active',
