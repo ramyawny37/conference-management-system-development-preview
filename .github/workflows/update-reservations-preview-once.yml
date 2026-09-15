@@ -1,4 +1,4 @@
-name: Update Reservations Preview Pin Once
+name: Update Platform Preview Pin Once
 
 on:
   push:
@@ -18,31 +18,25 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: main
-      - name: Update approved source pins
+      - name: Update approved Platform source pin
         run: |
           python3 - <<'PY'
           from pathlib import Path
           p = Path('.github/workflows/deploy-preview.yml')
           s = p.read_text()
-          replacements = {
-            'ce6c80236e2a92acadc4c46ca49a4e43037304f1': '1c3eb08c7ae31f04cf707cb9650f7b01efa64a84',
-            '61eda9a0e25290d3ce9ecfbec6455338debbf737': 'e9e063b28142c9ab2f5557ec873bb75abdb3be86',
-            'mountable-bundle-v11': 'mountable-bundle-v12',
-          }
-          for old, new in replacements.items():
-              if old not in s:
-                  raise SystemExit(f'missing expected marker: {old}')
-              s = s.replace(old, new)
+          old = '7a4734548638b89dacf2767ec28f06bdbc68c460'
+          new = 'f59b0c0edeff7868ca9311ea80683e9b07a3da1c'
+          if old not in s:
+              raise SystemExit(f'missing expected Platform pin: {old}')
+          s = s.replace(old, new)
           p.write_text(s)
-          assert '1c3eb08c7ae31f04cf707cb9650f7b01efa64a84' in s
-          assert 'e9e063b28142c9ab2f5557ec873bb75abdb3be86' in s
-          assert 'mountable-bundle-v12' in s
-          assert 'mountable-bundle-v11' not in s
+          assert new in s
+          assert old not in s
           PY
       - name: Commit preview pin update
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add .github/workflows/deploy-preview.yml
-          git commit -m 'fix(preview): pin reservations visual hierarchy v12'
+          git commit -m 'chore(preview): validate platform shell refinement'
           git push origin HEAD:main
