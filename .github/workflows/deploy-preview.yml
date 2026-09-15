@@ -43,9 +43,9 @@ jobs:
         id: source_meta
         run: |
           PLATFORM_SHA="$(git -C source/platform rev-parse HEAD)"
-          test "$PLATFORM_SHA" = "559e2f3674054537209b7ef9ea4560ab7e5467d7"
+          test "$PLATFORM_SHA" = "abe96427f3e36c4519c002fb1bcdfe9cdd91f583"
           echo "platform_sha=$PLATFORM_SHA" >> "$GITHUB_OUTPUT"
-          echo "reservations_sha=85ca9e6dde3ac7ca1f12bdbd370266c92b9c771d" >> "$GITHUB_OUTPUT"
+          echo "reservations_sha=3002985f06821698577bd9f8dbe7ace2090502d3" >> "$GITHUB_OUTPUT"
           echo "reservations_js_sha256=$(sha256sum source/platform/modules/reservations/reservations-module.js | awk '{print $1}')" >> "$GITHUB_OUTPUT"
           echo "reservations_css_sha256=$(sha256sum source/platform/modules/reservations/reservations-module.css | awk '{print $1}')" >> "$GITHUB_OUTPUT"
 
@@ -132,18 +132,18 @@ jobs:
           grep -Fq "DEVELOPMENT_PROJECT_REF='gppwltrifgfxrkzvvxoe'" site/js/storage/environment-namespace.js
           grep -Fq "cms:development:' + DEVELOPMENT_PROJECT_REF + ':'" site/service-worker.js
           grep -Fq "'cms:development:'+DEVELOPMENT_PROJECT_REF+':'" site/js/storage/environment-namespace.js
-          grep -Fq "js/platform-integration.js?rev=platform-dashboard-v2-v1" site/index.html
-          grep -Fq "./js/platform-integration.js?rev=platform-dashboard-v2-v1" site/service-worker.js
+          grep -Fq "js/platform-integration.js?rev=platform-dashboard-v2-v2" site/index.html
+          grep -Fq "./js/platform-integration.js?rev=platform-dashboard-v2-v2" site/service-worker.js
           grep -Fq "cache.addAll(CORE_ASSETS.map(asset => new Request(asset, { cache: 'reload' })))" site/service-worker.js
           grep -Fq ".then(() => self.skipWaiting())" site/service-worker.js
           grep -Fq "event.respondWith(developmentNetworkFirst(request));" site/service-worker.js
           grep -Fq "setStartupPeerRouteMask(true)" site/js/platform-integration.js
-          grep -Fq "script.js?rev=platform-dashboard-v2-v1" site/index.html
-          grep -Fq "./script.js?rev=platform-dashboard-v2-v1" site/service-worker.js
-          grep -Fq "modules/reservations/reservations-module.js?rev=platform-dashboard-v2-v1" site/index.html
-          grep -Fq "modules/reservations/reservations-module.css?rev=platform-dashboard-v2-v1" site/index.html
-          grep -Fq "./modules/reservations/reservations-module.js?rev=platform-dashboard-v2-v1" site/service-worker.js
-          grep -Fq "./modules/reservations/reservations-module.css?rev=platform-dashboard-v2-v1" site/service-worker.js
+          grep -Fq "script.js?rev=platform-dashboard-v2-v2" site/index.html
+          grep -Fq "./script.js?rev=platform-dashboard-v2-v2" site/service-worker.js
+          grep -Fq "modules/reservations/reservations-module.js?rev=platform-dashboard-v2-v2" site/index.html
+          grep -Fq "modules/reservations/reservations-module.css?rev=platform-dashboard-v2-v2" site/index.html
+          grep -Fq "./modules/reservations/reservations-module.js?rev=platform-dashboard-v2-v2" site/service-worker.js
+          grep -Fq "./modules/reservations/reservations-module.css?rev=platform-dashboard-v2-v2" site/service-worker.js
           echo "${{ steps.source_meta.outputs.reservations_js_sha256 }}  site/modules/reservations/reservations-module.js" | sha256sum --check --strict
           echo "${{ steps.source_meta.outputs.reservations_css_sha256 }}  site/modules/reservations/reservations-module.css" | sha256sum --check --strict
           grep -Fq 'class="platform-global-nav-item" data-platform-module="reservations"' site/index.html
