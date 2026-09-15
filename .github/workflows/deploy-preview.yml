@@ -44,14 +44,22 @@ jobs:
           echo "reservations_js_sha256=$JS_SHA" >> "$GITHUB_OUTPUT"
           echo "reservations_css_sha256=$CSS_SHA" >> "$GITHUB_OUTPUT"
 
-      - name: Validate Development source contracts
+      - name: Validate Development preview contracts
         shell: bash
         run: |
           set -euo pipefail
-          npm --prefix source/platform run check
+          # Preview validation is intentionally source/runtime scoped.
+          # Production promotion-readiness tests require origin/main and release
+          # evidence and therefore belong exclusively to the promotion pipeline.
           node --check source/platform/js/storage/environment-namespace.js
           node --check source/platform/service-worker.js
           node source/platform/tests/browser-storage-isolation.test.js
+          node --test \
+            source/platform/tests/platform-runtime-module-access.test.js \
+            source/platform/tests/platform-global-navigation.test.js \
+            source/platform/tests/platform-permissions-runtime.test.js \
+            source/platform/tests/platform-permission-registry.test.js \
+            source/platform/tests/platform-auth-shell.test.js
           test -f source/platform/modules/reservations/reservations-module.js
           test -f source/platform/modules/reservations/reservations-module.css
 
