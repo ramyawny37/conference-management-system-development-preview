@@ -52,7 +52,11 @@ function emptyApp(){
 }
 
 function commonOpenPath(env,appData,links){
-  const openSource=scriptSource.slice(
+  const entrySource=scriptSource.slice(
+    scriptSource.indexOf('function prepareCanonicalConferenceApplicationEntry'),
+    scriptSource.indexOf('function traceMemberActivation')
+  );
+  const openSource=entrySource+'\n'+scriptSource.slice(
     scriptSource.indexOf('function setCurrentConferenceById'),
     scriptSource.indexOf('function completeCurrentConference')
   );

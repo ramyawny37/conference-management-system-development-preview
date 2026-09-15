@@ -61,6 +61,8 @@ var sandbox={
 sandbox.window=sandbox;
 vm.runInNewContext(
   extract(stateSource,'saveCurrentConferenceSelection','getStorageUsageReport')+'\n'+
+  extract(scriptSource,'prepareCanonicalConferenceApplicationEntry',
+    'traceMemberActivation')+'\n'+
   extract(scriptSource,'setCurrentConferenceById','completeCurrentConference'),
   sandbox
 );

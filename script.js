@@ -275,15 +275,9 @@ function setCurrentConferenceById(id, options){
     return;
   }
 
-  var conferenceRoute=getCanonicalConferenceRoute();
-  var requestedTabId=null;
-  if(options.enterApplication===true){
-    requestedTabId=getStoredLastTab();
-    if(requestedTabId===null)requestedTabId=0;
-    setConferenceApplicationPathname(requestedTabId,{push:true});
-  }else if(conferenceRoute&&conferenceRoute.kind==='application'){
-    requestedTabId=conferenceRoute.tabId;
-  }
+  var entry=prepareCanonicalConferenceApplicationEntry(options);
+  var conferenceRoute=entry.route;
+  var requestedTabId=entry.tabId;
 
   if(options.enterApplication!==true&&conferenceRoute&&
     conferenceRoute.kind==='home'){
@@ -461,6 +455,20 @@ var memberActivationDiagnosticState={
 };
 var currentConferenceRuntimeAccessRole=null;
 var currentConferenceRuntimeAccessRoles=Object.create(null);
+function prepareCanonicalConferenceApplicationEntry(options){
+  options=options||{};
+  var conferenceRoute=getCanonicalConferenceRoute();
+  var requestedTabId=null;
+  if(options.enterApplication===true){
+    requestedTabId=getStoredLastTab();
+    if(requestedTabId===null)requestedTabId=0;
+    setConferenceApplicationPathname(requestedTabId,{push:true});
+    conferenceRoute={kind:'application',tabId:requestedTabId};
+  }else if(conferenceRoute&&conferenceRoute.kind==='application'){
+    requestedTabId=conferenceRoute.tabId;
+  }
+  return {route:conferenceRoute,tabId:requestedTabId};
+}
 function traceMemberActivation(stage,status,reason){
   memberActivationDiagnosticState.currentStage=String(stage||'unknown');
   memberActivationDiagnosticState.trace.push({
@@ -517,13 +525,8 @@ function activatePersistedConferenceById(id,options){
     return false;
   }
   traceMemberActivation('conference_resolved','completed',null);
-  var conferenceRoute=getCanonicalConferenceRoute();
-  var requestedEntryTabId=null;
-  if(options.enterApplication===true){
-    requestedEntryTabId=getStoredLastTab();
-    if(requestedEntryTabId===null)requestedEntryTabId=0;
-    conferenceRoute={kind:'application',tabId:requestedEntryTabId};
-  }
+  var entry=prepareCanonicalConferenceApplicationEntry(options);
+  var conferenceRoute=entry.route;
   if(!conferenceRoute){
     var backgroundSteps=[
       ['set_current_conference',function(){setCurrentConference(current)}],
@@ -579,9 +582,6 @@ function activatePersistedConferenceById(id,options){
       traceMemberActivation('activation_return','return','step_failed');
       return false;
     }
-  }
-  if(requestedEntryTabId!==null){
-    setConferenceApplicationPathname(requestedEntryTabId,{push:true});
   }
   if(options.alreadyPersisted!==true&&window.AutomaticSyncOrchestrator&&
     typeof window.AutomaticSyncOrchestrator.schedule==='function'){
@@ -7178,6 +7178,7 @@ function openDiscoveredConferenceFromStartup(remoteConferenceId){
   if(startupDiscoveredOpenBusy[remoteConferenceId]){
     return startupDiscoveredOpenBusy[remoteConferenceId];
   }
+  var completedSuccessfully=false;
   var flight=window.DiscoveredConferenceOpenService.open(
     remoteConferenceId,{enterApplication:true})
     .then(function(result){
@@ -7185,13 +7186,15 @@ function openDiscoveredConferenceFromStartup(remoteConferenceId){
         var failedStage=result&&(result.failedStage||result.status||
           result.data&&result.data.failedStage)||'unknown';
         showToast('تعذر إكمال العملية بأمان. المرحلة: '+failedStage,'#E74C3C');
+      }else{
+        completedSuccessfully=true;
       }
       return result;
     })
     .finally(function(){
       if(startupDiscoveredOpenBusy[remoteConferenceId]===flight){
         delete startupDiscoveredOpenBusy[remoteConferenceId];
-        showStartupConferenceList();
+        if(!completedSuccessfully)showStartupConferenceList();
       }
     });
   startupDiscoveredOpenBusy[remoteConferenceId]=flight;

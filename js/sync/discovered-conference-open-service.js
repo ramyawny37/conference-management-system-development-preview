@@ -607,6 +607,20 @@
     var previousMemory=copy(d.getData());
     var activeData=copy(data);
     activeData.currentConferenceId=localConferenceId;
+    if(details&&details.configureSync===true){
+      var configured=d.integration&&
+        typeof d.integration.configureConferenceSync==='function'
+        ?d.integration.configureConferenceSync(localConferenceId,{
+          conferenceId:details.remoteConferenceId,
+          baseRevision:details.revision,
+          schemaVersion:String(details.schemaVersion),
+          appVersion:String(details.appVersion)
+        }):null;
+      if(!configured||configured.ok===false){
+        diagnosticState.lastActivationStatus='sync_configuration_failed';
+        return result(false,'sync_configuration_failed');
+      }
+    }
     traceLinkedRefresh('apply_runtime','entered',null);
     d.applyData(activeData);
     traceLinkedRefresh('apply_runtime','completed',null);
@@ -619,7 +633,8 @@
         details&&details.remoteConferenceId,details&&details.role);
       activated=typeof d.activate==='function'&&
         d.activate(localConferenceId,{
-          alreadyPersisted:true,accessRole:details&&details.role||null
+          alreadyPersisted:true,accessRole:details&&details.role||null,
+          enterApplication:details&&details.enterApplication===true
         })===true;
       traceLinkedRefresh('render','completed',activated?null:'activation_returned_false');
     }catch(error){
@@ -649,6 +664,62 @@
     diagnosticState.lastActivationStatus='activated';
     traceLinkedRefresh('completed','return','up_to_date');
     return result(true,'up_to_date',details);
+  }
+  function openTrustedLinkedLocal(d,remoteId,access,ctx){
+    var link=d.links&&typeof d.links.findByRemoteId==='function'
+      ?d.links.findByRemoteId(remoteId):null;
+    if(!link||!link.localConferenceId||
+      ['linked','cloud_linked'].indexOf(link.linkStatus)<0){
+      return Promise.resolve(null);
+    }
+    var localConferenceId=String(link.localConferenceId);
+    return read(d).then(function(stored){
+      if(!alive(ctx.token,d,ctx.account,ctx.client))return result(false,'stale');
+      return evaluateLinkedRefreshGuards(
+        d,localConferenceId,link,stored,ctx.options
+      ).then(function(guarded){
+        if(!guarded.ok)return guarded;
+        return inspectSnapshotMetadata(d,remoteId).then(function(metadata){
+          if(!metadata.ok||!alive(ctx.token,d,ctx.account,ctx.client)){
+            return metadata.ok?result(false,'stale'):metadata;
+          }
+          var knownRevision=Number(link.knownRevision);
+          if(!Number.isInteger(knownRevision)||knownRevision<1||
+            metadata.data.revision>knownRevision){
+            return {reconcile:true,metadata:metadata};
+          }
+          if(metadata.data.revision<knownRevision){
+            return result(false,'revision_regressed');
+          }
+          var materialization=localMaterialization(
+            link,conference(stored,localConferenceId),knownRevision
+          );
+          if(!materialization.complete){
+            return {reconcile:true,metadata:metadata};
+          }
+          diagnosticState.localMaterializedRevision=knownRevision;
+          diagnosticState.materializationTrusted=true;
+          diagnosticState.materializationComplete=true;
+          diagnosticState.currentConferenceContentComplete=true;
+          diagnostic('linked_open','trusted_local_fast_path',{
+            localConferenceId:localConferenceId,
+            remoteConferenceId:remoteId,
+            revision:knownRevision
+          });
+          return activateUpToDateMaterialization(d,stored,localConferenceId,{
+            localConferenceId:localConferenceId,
+            remoteConferenceId:remoteId,
+            role:access.data.role,
+            revision:knownRevision,
+            schemaVersion:metadata.data.schemaVersion,
+            appVersion:metadata.data.appVersion,
+            configureSync:true,
+            enterApplication:ctx.options.enterApplication===true,
+            fastPath:true
+          });
+        });
+      });
+    });
   }
   function replaceConferenceSnapshot(data,localConferenceId,snapshot){
     var next=copy(data);
@@ -863,8 +934,11 @@
       return result(true,'authorized',{listing:listing,role:role});
     });
   }
-  function snapshotFor(d,remoteId,account){
-    return d.remote.inspectInitialSnapshot(remoteId).then(function(inspected){
+  function snapshotFor(d,remoteId,account,knownMetadata){
+    var inspection=knownMetadata
+      ?Promise.resolve({ok:true,status:'found',data:knownMetadata.data})
+      :d.remote.inspectInitialSnapshot(remoteId);
+    return inspection.then(function(inspected){
       if(!inspected||!inspected.ok||inspected.status!=='found'){
         return result(false,'snapshot_unavailable');
       }
@@ -1414,7 +1488,14 @@
       if(restoreIsolationPending(d,options)){
         return result(false,'restore_isolated');
       }
-      return snapshotFor(d,remoteConferenceId,account).then(function(snapshot){
+      return openTrustedLinkedLocal(d,remoteConferenceId,access,{
+        token:token,account:account,client:activeClient,options:options
+      }).then(function(fastResult){
+        if(fastResult&&fastResult.reconcile!==true)return fastResult;
+        return snapshotFor(
+          d,remoteConferenceId,account,
+          fastResult&&fastResult.reconcile===true?fastResult.metadata:null
+        ).then(function(snapshot){
         if(!snapshot.ok||!alive(token,d,account,activeClient))return snapshot.ok?result(false,'stale'):snapshot;
         var task=function(){return runTransaction({d:d,remoteId:remoteConferenceId,
           account:account,client:activeClient,token:token,role:access.data.role,
@@ -1422,6 +1503,7 @@
         var serialized=transactionTail.catch(function(){return null;}).then(task);
         transactionTail=serialized.catch(function(){return null;});
         return serialized;
+        });
       });
     }).finally(function(){if(flights[remoteConferenceId]===flight)delete flights[remoteConferenceId];});
     flights[remoteConferenceId]=flight;

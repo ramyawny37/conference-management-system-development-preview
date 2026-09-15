@@ -530,6 +530,20 @@ function environment(settings={}){
     'activate_persisted_conference','render',
     'activate_persisted_conference','resolve_settings','completed'
   ]);
+  const trustedExplicit=await trustedEmpty.api.open(
+    trustedEmpty.remoteId,{enterApplication:true}
+  );
+  assert.strictEqual(trustedExplicit.status,'up_to_date');
+  assert.strictEqual(trustedExplicit.data.fastPath,true);
+  assert.strictEqual(trustedEmpty.downloads(),0);
+  assert.deepStrictEqual(trustedEmpty.events,[]);
+  assert.strictEqual(trustedEmpty.inspects(),2);
+  assert.strictEqual(trustedEmpty.configured(),1);
+  assert.strictEqual(trustedEmpty.activated(),2);
+  assert.strictEqual(trustedEmpty.cloudAuthorizations(),2);
+  assert.deepStrictEqual(trustedEmpty.activationOptions().slice(-1)[0],{
+    alreadyPersisted:true,accessRole:'viewer',enterApplication:true
+  });
 
   const failedActivationMemory={conferences:[{
     id:'existing-local',name:'Memory before failed activation',status:'active',

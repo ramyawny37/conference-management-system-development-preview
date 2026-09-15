@@ -111,6 +111,8 @@ assert.strictEqual(explicitHome.calls.filter(call=>
   call==='navigate_application').length,1);
 assert.strictEqual(explicitHome.calls.filter(call=>
   call==='set_application_mode').length,1);
+assert.ok(explicitHome.calls.indexOf('navigate_application')<
+  explicitHome.calls.indexOf('set_application_mode'));
 
 const background=environment({route:'/warehouse/approvals'});
 assert.strictEqual(background.sandbox.activatePersistedConferenceById(
@@ -157,9 +159,8 @@ const explicitRenderFailure=environment({
 });
 assert.strictEqual(explicitRenderFailure.sandbox.activatePersistedConferenceById(
   'local',{alreadyPersisted:true,enterApplication:true}),false);
-assert.strictEqual(explicitRenderFailure.route(),'/conference');
-assert.strictEqual(
-  explicitRenderFailure.calls.includes('navigate_application'),false
-);
+assert.strictEqual(explicitRenderFailure.route(),'/conference/app/accommodation');
+assert.ok(explicitRenderFailure.calls.indexOf('navigate_application')<
+  explicitRenderFailure.calls.indexOf('render_accommodation'));
 
 console.log('member activation completion tests passed');

@@ -83,8 +83,13 @@ test('authorized async restoration cannot override an explicit Conference home r
 
 test('explicit Conference opening publishes a durable route and Home removes no selection',()=>{
   const selection=source.slice(source.indexOf('function setCurrentConferenceById'),source.indexOf('function completeCurrentConference'));
+  const entry=source.slice(
+    source.indexOf('function prepareCanonicalConferenceApplicationEntry'),
+    source.indexOf('function traceMemberActivation')
+  );
   const navigation=source.slice(source.indexOf('function showHomePage'),source.indexOf('function getAccommodationPricingModeLabel'));
-  assert.match(selection,/options\.enterApplication===true[\s\S]*getStoredLastTab\(\)[\s\S]*setConferenceApplicationPathname\(requestedTabId,\{push:true\}\)[\s\S]*setApplicationMode\('application'\)/);
+  assert.match(selection,/prepareCanonicalConferenceApplicationEntry\(options\)[\s\S]*setApplicationMode\('application'\)/);
+  assert.match(entry,/options\.enterApplication===true[\s\S]*getStoredLastTab\(\)[\s\S]*setConferenceApplicationPathname\(requestedTabId,\{push:true\}\)/);
   assert.match(navigation,/function showHomePage\(\)[\s\S]*replacePlatformShellPathname\('\/conference'\)[\s\S]*clearCurrentConference:false/);
   assert.doesNotMatch(source,/conferenceApplicationEntryActive|conferenceModuleHomeRouteActive/);
 });

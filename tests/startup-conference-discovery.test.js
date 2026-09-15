@@ -68,6 +68,7 @@ function startupCards(options={}){
   const end=scriptSource.indexOf('function showStartupConferenceList');
   const localOpens=[];
   const remoteOpens=[];
+  let renders=0;
   const sandbox={
     window:null,
     appData:{conferences:options.localConferences||[]},
@@ -77,11 +78,11 @@ function startupCards(options={}){
     StartupConferenceDiscovery:{getRecords:()=>options.discovered||[]},
     DiscoveredConferenceOpenService:{open:(id,openOptions)=>{
       remoteOpens.push({id,options:JSON.parse(JSON.stringify(openOptions))});
-      return Promise.resolve({ok:true,status:'opened'});
+      return Promise.resolve(options.remoteResult||{ok:true,status:'opened'});
     }},
     openConferenceFromStartup:id=>{localOpens.push(id);return true;},
     accommodationIcon:()=>'',esc:value=>String(value),
-    showStartupConferenceList(){},showToast(){},console
+    showStartupConferenceList(){renders++;},showToast(){},console
   };
   sandbox.window=sandbox;
   vm.runInNewContext(scriptSource.slice(start,end),sandbox);
@@ -93,7 +94,7 @@ function startupCards(options={}){
       assert.ok(match,'startup card must expose an existing open route');
       return sandbox[match[1]](match[2]);
     },
-    localOpens,remoteOpens
+    localOpens,remoteOpens,renders:()=>renders
   };
 }
 
@@ -207,6 +208,17 @@ function startupCards(options={}){
   assert.deepStrictEqual(linkedCards.remoteOpens,[{
     id:'remote-linked',options:{enterApplication:true}
   }]);
+  assert.strictEqual(linkedCards.renders(),1,
+    'successful linked entry must not redraw startup after completion');
+
+  const failedLinkedCards=startupCards({remoteResult:{
+    ok:false,status:'membership_unavailable'
+  }});
+  await failedLinkedCards.click(
+    '<article onclick="openDiscoveredConferenceFromStartup(\'remote-failed\')"></article>'
+  );
+  assert.strictEqual(failedLinkedCards.renders(),2,
+    'failed linked entry restores the startup card state');
 
   const discoveredCards=startupCards({
     discovered:[{
