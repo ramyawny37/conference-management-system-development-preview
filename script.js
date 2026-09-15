@@ -228,7 +228,11 @@ function restoreArchive(id){
 function setCurrentConferenceById(id, options){
   if(window.StartupAccessGate&&!window.StartupAccessGate.isAllowed())return false;
   var activationAuthorization=window.ConferenceActivationAuthorization;
+  var conferenceLink=window.ConferenceLinkStore&&
+    typeof window.ConferenceLinkStore.get==='function'
+      ?window.ConferenceLinkStore.get(String(id||'')):null;
   if(activationAuthorization&&
+    !conferenceLink&&
     !activationAuthorization.canDisplay(String(id||''))){
     activationAuthorization.authorizeLocalOnly(appData,String(id||''));
   }
