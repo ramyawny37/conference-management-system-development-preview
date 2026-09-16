@@ -55,18 +55,20 @@ jobs:
           sudo systemctl start postgresql
           for attempt in {1..20}; do
             if sudo -u postgres pg_isready -d postgres; then
-              exit 0
+              break
             fi
             sleep 1
           done
-          echo "Local PostgreSQL did not become ready"
-          exit 1
+          sudo -u postgres pg_isready -d postgres
+          sudo -u postgres psql -v ON_ERROR_STOP=1 -d postgres -c "ALTER ROLE postgres PASSWORD 'preview_validation_only';"
 
       - name: Validate Development preview contracts
         working-directory: source/platform
         env:
-          PGHOST: /var/run/postgresql
+          PGHOST: 127.0.0.1
+          PGPORT: '5432'
           PGUSER: postgres
+          PGPASSWORD: preview_validation_only
         run: npm run check:development-preview
 
       - name: Prepare isolated preview artifact
