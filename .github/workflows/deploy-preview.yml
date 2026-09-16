@@ -48,8 +48,25 @@ jobs:
         working-directory: source/platform
         run: npm ci --ignore-scripts
 
+      - name: Start local PostgreSQL for validation
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo systemctl start postgresql
+          for attempt in {1..20}; do
+            if sudo -u postgres pg_isready -d postgres; then
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "Local PostgreSQL did not become ready"
+          exit 1
+
       - name: Validate Development preview contracts
         working-directory: source/platform
+        env:
+          PGHOST: /var/run/postgresql
+          PGUSER: postgres
         run: npm run check:development-preview
 
       - name: Prepare isolated preview artifact
