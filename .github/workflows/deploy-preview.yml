@@ -44,6 +44,10 @@ jobs:
           echo "reservations_js_sha256=$JS_SHA" >> "$GITHUB_OUTPUT"
           echo "reservations_css_sha256=$CSS_SHA" >> "$GITHUB_OUTPUT"
 
+      - name: Install validation dependencies
+        working-directory: source/platform
+        run: npm ci --ignore-scripts
+
       - name: Validate Development preview contracts
         working-directory: source/platform
         run: npm run check:development-preview
