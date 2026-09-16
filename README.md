@@ -8,4 +8,4 @@ its public Supabase configuration from the Development-only repository secrets.
 The approved Development project ref is `gppwltrifgfxrkzvvxoe`; the Production
 canonical configuration is never copied into the deployed artifact.
 
-Last preview refresh trigger: 2026-09-16 — Corrected Platform shell responsive contract.
+Last preview refresh trigger: 2026-09-16 — Canonical shell redesign (compact sidebar + floating header composition).
