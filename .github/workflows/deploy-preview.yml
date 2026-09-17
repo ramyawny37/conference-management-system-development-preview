@@ -152,7 +152,7 @@ jobs:
           grep -Fq "DEVELOPMENT_PROJECT_REF='gppwltrifgfxrkzvvxoe'" site/js/storage/environment-namespace.js
           echo "$RESERVATIONS_JS_SHA256  site/modules/reservations/reservations-module.js" | sha256sum --check --strict
           echo "$RESERVATIONS_CSS_SHA256  site/modules/reservations/reservations-module.css" | sha256sum --check --strict
-          grep -Fq 'class="platform-global-nav-item" data-platform-module="reservations"' site/index.html
+          grep -Fq 'class="canonical-platform-nav__item" data-platform-module="reservations"' site/index.html
           grep -Fq 'id="reservationsWorkspace"' site/index.html
           if grep -E "createClient\(|platform-device-session|supabase\.co" site/modules/reservations/reservations-module.js; then
             echo "Standalone Reservations auth/session configuration found in Preview artifact"
