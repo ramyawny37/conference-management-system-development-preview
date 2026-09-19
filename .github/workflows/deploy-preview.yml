@@ -4,6 +4,11 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      platform_sha:
+        description: 'Exact Platform develop SHA to publish (optional; defaults to current develop)'
+        required: false
+        type: string
   schedule:
     - cron: '*/5 * * * *'
 
@@ -28,19 +33,38 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: ramyawny37/conference-management-system-v1
-          ref: develop
+          ref: ${{ inputs.platform_sha || 'develop' }}
           path: source/platform
           fetch-depth: 1
 
-      - name: Capture source provenance
+      - name: Capture and verify source provenance
         id: source_meta
         shell: bash
+        env:
+          REQUESTED_PLATFORM_SHA: ${{ inputs.platform_sha }}
         run: |
           set -euo pipefail
           PLATFORM_SHA="$(git -C source/platform rev-parse HEAD)"
+          REQUESTED_SHA="${REQUESTED_PLATFORM_SHA:-}"
+          if [ -n "$REQUESTED_SHA" ]; then
+            if ! printf '%s' "$REQUESTED_SHA" | grep -Eq '^[0-9a-f]{40}$'; then
+              echo "Requested Platform SHA is invalid"
+              exit 1
+            fi
+            if [ "$PLATFORM_SHA" != "$REQUESTED_SHA" ]; then
+              echo "Checked-out Platform SHA does not match requested SHA"
+              echo "requested=$REQUESTED_SHA"
+              echo "actual=$PLATFORM_SHA"
+              exit 1
+            fi
+            PLATFORM_REF="$REQUESTED_SHA"
+          else
+            PLATFORM_REF="develop"
+          fi
           JS_SHA="$(sha256sum source/platform/modules/reservations/reservations-module.js | awk '{print $1}')"
           CSS_SHA="$(sha256sum source/platform/modules/reservations/reservations-module.css | awk '{print $1}')"
           echo "platform_sha=$PLATFORM_SHA" >> "$GITHUB_OUTPUT"
+          echo "platform_ref=$PLATFORM_REF" >> "$GITHUB_OUTPUT"
           echo "reservations_js_sha256=$JS_SHA" >> "$GITHUB_OUTPUT"
           echo "reservations_css_sha256=$CSS_SHA" >> "$GITHUB_OUTPUT"
 
@@ -75,6 +99,7 @@ jobs:
         shell: bash
         env:
           PLATFORM_SOURCE_SHA: ${{ steps.source_meta.outputs.platform_sha }}
+          PLATFORM_SOURCE_REF: ${{ steps.source_meta.outputs.platform_ref }}
           RESERVATIONS_JS_SHA256: ${{ steps.source_meta.outputs.reservations_js_sha256 }}
           RESERVATIONS_CSS_SHA256: ${{ steps.source_meta.outputs.reservations_css_sha256 }}
         run: |
@@ -97,7 +122,7 @@ jobs:
           const sources = {
             platform: {
               repository: 'ramyawny37/conference-management-system-v1',
-              ref: 'develop',
+              ref: process.env.PLATFORM_SOURCE_REF,
               sha: process.env.PLATFORM_SOURCE_SHA
             },
             reservations: {
@@ -106,6 +131,7 @@ jobs:
               css_sha256: process.env.RESERVATIONS_CSS_SHA256
             }
           };
+          if (!sources.platform.ref) throw new Error('Platform source ref is missing');
           if (!/^[0-9a-f]{40}$/.test(sources.platform.sha || '')) throw new Error('Platform source SHA is invalid');
           if (!/^[0-9a-f]{64}$/.test(sources.reservations.javascript_sha256 || '')) throw new Error('Reservations JS SHA-256 is invalid');
           if (!/^[0-9a-f]{64}$/.test(sources.reservations.css_sha256 || '')) throw new Error('Reservations CSS SHA-256 is invalid');
