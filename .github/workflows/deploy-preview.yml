@@ -202,7 +202,7 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
-      - name: Report deployed Platform source
+      - name: Report validated Platform source
         run: echo "Deploying Platform develop SHA ${{ needs.build.outputs.platform_sha }}"
       - name: Deploy preview
         id: deployment
