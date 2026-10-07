@@ -36,7 +36,7 @@ jobs:
           path: source/platform
           fetch-depth: 1
 
-      # Final-authority-only develop source validation
+      # Runtime syntax and device administration repair validation
       - name: Capture and verify source provenance
         id: source_meta
         shell: bash
