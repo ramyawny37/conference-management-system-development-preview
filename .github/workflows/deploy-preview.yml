@@ -24,6 +24,8 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    outputs:
+      platform_sha: ${{ steps.source_meta.outputs.platform_sha }}
 
     steps:
       - name: Checkout Platform Development source
@@ -200,6 +202,8 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
+      - name: Report Platform source
+        run: echo "Deploying Platform develop SHA ${{ needs.build.outputs.platform_sha }}"
       - name: Deploy preview
         id: deployment
         uses: actions/deploy-pages@v4
