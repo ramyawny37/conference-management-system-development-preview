@@ -36,7 +36,7 @@ jobs:
           path: source/platform
           fetch-depth: 1
 
-      # Runtime repair cache rotation revalidation
+      # Full precached runtime syntax validation
       - name: Capture and verify source provenance
         id: source_meta
         shell: bash
