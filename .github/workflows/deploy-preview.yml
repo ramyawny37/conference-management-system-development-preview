@@ -36,6 +36,7 @@ jobs:
           path: source/platform
           fetch-depth: 1
 
+      # Canonical Platform-only device path validation
       - name: Capture and verify source provenance
         id: source_meta
         shell: bash
