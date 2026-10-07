@@ -36,7 +36,7 @@ jobs:
           path: source/platform
           fetch-depth: 1
 
-      # Full single-authority develop source audit validation
+      # Full single-authority develop source audit revalidation
       - name: Capture and verify source provenance
         id: source_meta
         shell: bash
