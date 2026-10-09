@@ -95,6 +95,15 @@ jobs:
           PGPASSWORD: preview_validation_only
         run: npm run check:development-preview
 
+      - name: Validate canonical conference opening before publish
+        working-directory: source/platform
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check script.js
+          node --check js/sync/discovered-conference-open-service.js
+          node --test tests/discovered-conference-open-service.test.js tests/platform-resource-lease-client.test.js
+
       - name: Prepare isolated preview artifact
         shell: bash
         env:
