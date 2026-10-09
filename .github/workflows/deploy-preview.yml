@@ -102,7 +102,7 @@ jobs:
           set -euo pipefail
           node --check script.js
           node --check js/sync/discovered-conference-open-service.js
-          node --test tests/discovered-conference-open-service.test.js tests/platform-resource-lease-client.test.js
+          node --test tests/discovered-conference-open-service.test.js tests/platform-resource-lease-client.test.js tests/startup-canonical-discovery-view.test.js
 
       - name: Prepare isolated preview artifact
         shell: bash
