@@ -95,6 +95,7 @@ jobs:
           PGPASSWORD: preview_validation_only
         run: npm run check:development-preview
 
+      # Trigger a fresh verified Development build after the canonical startup fix.
       - name: Validate canonical conference opening before publish
         working-directory: source/platform
         shell: bash
