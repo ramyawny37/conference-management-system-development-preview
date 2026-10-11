@@ -7,7 +7,7 @@ const CACHE_NAMESPACE = IS_DEVELOPMENT
   : '';
 const CACHE_PREFIX = CACHE_NAMESPACE + 'conference-manager-core-';
 const CACHE_REVISION = IS_DEVELOPMENT
-  ? 'canonical-conference-id-v1'
+  ? 'canonical-owner-preflight-v1'
   : 'production-3-6-0-release-v6';
 const CACHE_NAME = CACHE_PREFIX + 'v' + APP_VERSION + '-' + CACHE_REVISION;
 const CORE_ASSETS = [
@@ -62,7 +62,7 @@ const CORE_ASSETS = [
   './js/sync/module-permission-administration-service.js?rev=unified-three-module-permissions-v1',
   './js/sync/module-permission-administration-ui.js?rev=unified-three-module-permissions-v1',
   './js/sync/conference-linking-attempt-store.js',
-  './js/sync/discovered-conference-open-service.js?rev=conference-activation-canonical-v1',
+  './js/sync/discovered-conference-open-service.js?rev=canonical-owner-preflight-v1',
   './utils.js',
   './core.js?rev=canonical-conference-id-v1',
   './people.js?rev=canonical-conference-schema-v1',
