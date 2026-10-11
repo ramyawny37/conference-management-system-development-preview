@@ -650,7 +650,6 @@ function activatePersistedConferenceById(id,options){
   var activationDecision=options.activationDecision||null;
   if(!activationDecision||activationDecision.ok!==true||
     activationDecision.active!==true)return false;
-  currentConferenceRuntimeActivationDecision=activationDecision;
   memberActivationDiagnosticState={
     trace:[],currentStage:null,exceptionStage:null,settingsResolved:false
   };
@@ -663,10 +662,15 @@ function activatePersistedConferenceById(id,options){
     traceMemberActivation('conference_resolved','return','conference_not_found');
     return false;
   }
+  var previousConferenceId=appData.currentConferenceId;
+  var previousActivationDecision=currentConferenceRuntimeActivationDecision;
   appData.currentConferenceId=matching.id;
+  currentConferenceRuntimeActivationDecision=activationDecision;
   traceMemberActivation('current_id_set','completed',null);
   var current=getCurrentConference();
   if(!current||String(current.id)!==String(id)){
+    appData.currentConferenceId=previousConferenceId;
+    currentConferenceRuntimeActivationDecision=previousActivationDecision;
     traceMemberActivation('conference_resolved','return','conference_not_resolved');
     return false;
   }
