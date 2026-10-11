@@ -5,7 +5,7 @@ do $$
 declare
   v_definition text;
   v_old text := E'  select * into v_new_event from reservations.events where id=v_event_id;';
-  v_new text := E'  -- Link all existing bookings in the same transaction, after scope re-keying.\n  -- A failed participation creation rolls back the event and every scope update.\n  for v_booking_id in\n    select b.id from reservations.bookings b\n    where b.event_id=v_event_id order by b.id\n  loop\n    perform reservations_private.link_booking_to_canonical_participation(\n      v_booking_id,extensions.gen_random_uuid(),v_context\n    );\n  end loop;\n  select * into v_new_event from reservations.events where id=v_event_id;';
+  v_new text := E'  -- Link all existing bookings in the same transaction, after scope re-keying.\n  -- A failed participation creation rolls back the event and every scope update.\n  for v_booking_id in\n    select b.id from reservations.bookings b\n    where b.event_id=v_event_id order by b.id\n  loop\n    perform reservations_private.link_booking_to_canonical_participation(\n      v_booking_id,extensions.uuid_generate_v5(v_operation_id,v_booking_id::text),v_context\n    );\n  end loop;\n  select * into v_new_event from reservations.events where id=v_event_id;';
 begin
   select pg_get_functiondef('reservations_private.link_standalone_event_to_conference(uuid,jsonb)'::regprocedure)
   into v_definition;
