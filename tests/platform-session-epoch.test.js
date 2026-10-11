@@ -41,3 +41,15 @@ test('protected response is preserved within unchanged session',async()=>{
   const result=await pending;
   assert.equal(result.conferenceId,'example');
 });
+
+test('external session reset clears selected conference and rejects stale pending work',async()=>{
+  const env=environment();
+  env.services.setSelectedConferenceId('old-conference');
+  assert.equal(env.services.getSelectedConferenceId(),'old-conference');
+  const pending=env.services.invokeProtected('conference','get_conference_core',{});
+  await Promise.resolve();
+  env.reset();
+  assert.equal(env.services.getSelectedConferenceId(),'');
+  env.respond({conferenceId:'old-conference'});
+  await assert.rejects(pending,error=>error&&error.code==='PLATFORM_SESSION_STALE');
+});
