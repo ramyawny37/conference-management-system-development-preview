@@ -9,7 +9,10 @@
     return Promise.resolve(session.invokeModuleProtected(
       'conference','list_accessible_conferences',{}
     )).then(function(response){
-      var rows=response&&Array.isArray(response.conferences)?response.conferences:[];
+      if(!response||!Array.isArray(response.conferences)){
+        return output(false,'invalid_response',null,{code:'CANONICAL_CONFERENCE_DISCOVERY_INVALID_RESPONSE'});
+      }
+      var rows=response.conferences;
       var conferences=rows.filter(function(item){return item&&item.conferenceId;}).map(function(item){return {
         id:item.conferenceId,name:item.name,
         startDate:item.startDate||null,endDate:item.endDate||null,status:item.status,
