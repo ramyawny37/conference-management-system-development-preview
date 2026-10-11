@@ -14,25 +14,14 @@
       return item?result(true,'authorized',{conference:item,capabilities:item.capabilities||{}}):result(false,'access_denied');
     });
   }
-  function linkFor(remoteId,conference,options){
-    var links=options.links||global.ConferenceLinkStore;
-    var existing=links&&typeof links.findByRemoteId==='function'?links.findByRemoteId(remoteId):null;
-    var localId=String(existing&&existing.localConferenceId||remoteId);
-    if(!existing){
-      if(!links||typeof links.save!=='function')throw {code:'CONFERENCE_LINK_STORE_UNAVAILABLE'};
-      var saved=links.save({localConferenceId:localId,remoteConferenceId:remoteId,remoteName:String(conference.name||''),linkStatus:'linked'});
-      if(!saved||saved.ok!==true)throw {code:'CONFERENCE_LINK_SAVE_FAILED',status:saved&&saved.status};
-    }
-    return localId;
-  }
-  function ensureRuntimeConference(localId,conference,options){
+  function ensureRuntimeConference(conferenceId,conference,options){
     var getData=options.getAppData||function(){return global.appData;};
     var applyData=options.applyAppData||function(value){global.appData=value;};
     var data=copy(getData()||{});
     data.conferences=Array.isArray(data.conferences)?data.conferences:[];
-    var found=data.conferences.find(function(item){return item&&String(item.id||'')===localId;});
+    var found=data.conferences.find(function(item){return item&&String(item.id||'')===conferenceId;});
     if(!found){
-      found={id:localId,name:String(conference.name||''),status:String(conference.status||'active'),startDate:conference.startDate||'',endDate:conference.endDate||'',peopleDb:{people:[]},houses:[],transports:[],activityLog:[]};
+      found={id:conferenceId,name:String(conference.name||''),status:String(conference.status||'active'),startDate:conference.startDate||'',endDate:conference.endDate||'',peopleDb:{people:[]},houses:[],transports:[],activityLog:[]};
       data.conferences.push(found);
     }else{
       found.name=String(conference.name||found.name||'');
@@ -44,19 +33,19 @@
     applyData(data);
     return data;
   }
-  function hydrate(localId,remoteId){
+  function hydrate(conferenceId){
     var platform=global.PlatformIntegration;
     var tasks=[];
     function add(target,name,args){if(target&&typeof target[name]==='function')tasks.push(Promise.resolve(target[name].apply(target,args)));}
-    add(platform,'hydrateConferenceCore',[localId,remoteId]);
-    add(platform,'hydrateConferenceParticipations',[localId,remoteId]);
-    add(platform,'hydrateConferenceAccommodation',[localId,remoteId]);
-    add(platform,'hydrateConferenceAirConditioning',[localId,remoteId]);
-    add(global.CanonicalConferenceBranding,'hydrate',[localId,remoteId]);
-    add(global.CanonicalConferenceAirConditioning,'hydrate',[localId,remoteId]);
-    add(global.CanonicalConferenceFinance,'hydrate',[localId,remoteId]);
-    add(global.CanonicalConferenceTransport,'hydrate',[localId,remoteId]);
-    add(global.CanonicalConferenceRestaurant,'hydrate',[localId,remoteId]);
+    add(platform,'hydrateConferenceCore',[conferenceId,conferenceId]);
+    add(platform,'hydrateConferenceParticipations',[conferenceId,conferenceId]);
+    add(platform,'hydrateConferenceAccommodation',[conferenceId,conferenceId]);
+    add(platform,'hydrateConferenceAirConditioning',[conferenceId,conferenceId]);
+    add(global.CanonicalConferenceBranding,'hydrate',[conferenceId,conferenceId]);
+    add(global.CanonicalConferenceAirConditioning,'hydrate',[conferenceId,conferenceId]);
+    add(global.CanonicalConferenceFinance,'hydrate',[conferenceId,conferenceId]);
+    add(global.CanonicalConferenceTransport,'hydrate',[conferenceId,conferenceId]);
+    add(global.CanonicalConferenceRestaurant,'hydrate',[conferenceId,conferenceId]);
     return Promise.all(tasks).then(function(values){diagnostics.canonicalHydrationCount=values.length;return values;});
   }
   function open(remoteConferenceId,options){
@@ -68,33 +57,29 @@
     diagnostics.lastRemoteConferenceId=remoteId;
     var flight=available(remoteId,options).then(function(access){
       if(!access.ok||token!==generation)return token===generation?access:result(false,'stale');
-      var links=options.links||global.ConferenceLinkStore;
-      var existing=links&&typeof links.findByRemoteId==='function'?links.findByRemoteId(remoteId):null;
-      var localId=String(existing&&existing.localConferenceId||remoteId);
-      return hydrate(localId,remoteId).then(function(){
+      return hydrate(remoteId).then(function(){
         if(token!==generation)return result(false,'stale');
-        linkFor(remoteId,access.data.conference,options);
-        ensureRuntimeConference(localId,access.data.conference,options);
+        ensureRuntimeConference(remoteId,access.data.conference,options);
         if(token!==generation)return result(false,'stale');
         var authorization=global.ConferenceActivationAuthorization;
         if(!authorization||typeof authorization.authorizeCloud!=='function'){
           return result(false,'activation_authorization_unavailable');
         }
         var activationDecision=authorization.authorizeCloud({
-          conferenceId:localId,
+          conferenceId:remoteId,
           canonicalAccess:true,
           capabilities:access.data.capabilities
         });
         var activate=options.activate||global.activatePersistedConferenceById;
-        var activated=typeof activate==='function'&&activate(localId,{
+        var activated=typeof activate==='function'&&activate(remoteId,{
           alreadyPersisted:true,
           activationDecision:activationDecision,
           enterApplication:options.enterApplication===true
         })===true;
         if(!activated)return result(false,'runtime_activation_failed');
-        return result(true,'opened',{localConferenceId:localId,remoteConferenceId:remoteId,canonicalAccess:true,capabilities:access.data.capabilities});
+        return result(true,'opened',{conferenceId:remoteId,canonicalAccess:true,capabilities:access.data.capabilities});
       });
-    }).catch(function(error){return result(false,error&&error.code==='CONFERENCE_LINK_SAVE_FAILED'?'conference_link_save_failed':error&&error.code==='CONFERENCE_LINK_STORE_UNAVAILABLE'?'conference_link_store_unavailable':'canonical_hydration_failed',null,{code:String(error&&error.code||error&&error.message||'CANONICAL_HYDRATION_FAILED')});}).finally(function(){if(flights[remoteId]===flight)delete flights[remoteId];});
+    }).catch(function(error){return result(false,'canonical_hydration_failed',null,{code:String(error&&error.code||error&&error.message||'CANONICAL_HYDRATION_FAILED')});}).finally(function(){if(flights[remoteId]===flight)delete flights[remoteId];});
     flights[remoteId]=flight;
     return flight;
   }
