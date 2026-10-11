@@ -9850,38 +9850,25 @@ function completeAuthorizedApplicationStartup(){
         currentConferenceRuntimeActivationDecision=null;
         return result;
       }
-      var localConference=(appData.conferences||[]).find(function(item){
+      var discovered=result&&result.data&&Array.isArray(result.data.conferences)
+        ?result.data.conferences:[];
+      var canonicalRecord=discovered.find(function(item){
         return item&&String(item.id||'')===candidate;
       });
-      if(!localConference){
+      // A persisted selection is not authority. Reopen only a discovered canonical ID.
+      if(!canonicalRecord){
         appData.currentConferenceId=null;
         currentConferenceRuntimeActivationDecision=null;
         return result;
       }
-      var link=window.ConferenceLinkStore&&
-        typeof window.ConferenceLinkStore.get==='function'
-          ?window.ConferenceLinkStore.get(candidate):null;
-      var discovered=result&&result.data&&Array.isArray(result.data.conferences)
-        ?result.data.conferences:[];
-      var canonicalRecord=link&&link.remoteConferenceId
-        ?discovered.find(function(item){
-          return item&&String(item.id||'')===String(link.remoteConferenceId);
-        }):null;
-      return authorization.reconcileStartup({
-        conferenceId:candidate,
-        isLinked:!!(link&&link.remoteConferenceId),
-        canonicalAccess:!!canonicalRecord,
-        capabilities:canonicalRecord?canonicalRecord.capabilities:null
-      }).then(function(decision){
-        if(!decision||decision.ok!==true||decision.active!==true){
-          appData.currentConferenceId=null;
-          currentConferenceRuntimeActivationDecision=null;
-          return result;
-        }
-        if(!activatePersistedConferenceById(candidate,{
-          activationDecision:decision,
-          enterApplication:false
-        })){
+      var opener=window.DiscoveredConferenceOpenService;
+      if(!opener||typeof opener.open!=='function'){
+        appData.currentConferenceId=null;
+        currentConferenceRuntimeActivationDecision=null;
+        return result;
+      }
+      return opener.open(candidate,{enterApplication:false}).then(function(openResult){
+        if(!openResult||openResult.ok!==true){
           appData.currentConferenceId=null;
           currentConferenceRuntimeActivationDecision=null;
         }
