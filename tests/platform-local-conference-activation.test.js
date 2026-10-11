@@ -126,14 +126,9 @@ test('common open path fails closed for linked conference without canonical deci
   assert.equal(opener.selectedConferenceId(),'');
 });
 
-test('common open path accepts linked conference only with canonical activation decision',()=>{
-  const linked={
-    localConferenceId:'cloud',
-    remoteConferenceId:'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
-    linkStatus:'cloud_linked'
-  };
+test('common open path accepts canonical activation decision without local link',()=>{
   const app={currentConferenceId:null,conferences:[{id:'cloud',name:'Cloud'}]};
-  const opener=commonOpenPath(app,{get(id){return id==='cloud'?linked:null;}});
+  const opener=commonOpenPath(app,{get(){throw new Error('link store must not be read');}});
   const decision=opener.authorization.authorizeCloud({
     conferenceId:'cloud',
     canonicalAccess:true,
