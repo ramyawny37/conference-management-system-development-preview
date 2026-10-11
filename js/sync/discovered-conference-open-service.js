@@ -36,7 +36,7 @@
   function hydrate(conferenceId){
     var platform=global.PlatformIntegration;
     var tasks=[];
-    function add(target,name,args){if(target&&typeof target[name]==='function')tasks.push(Promise.resolve(target[name].apply(target,args)));}
+    function add(target,name,args){if(!target||typeof target[name]!=='function')throw {code:'CANONICAL_HYDRATOR_UNAVAILABLE',owner:name};tasks.push(Promise.resolve(target[name].apply(target,args)));}
     add(platform,'hydrateConferenceCore',[conferenceId,conferenceId]);
     add(platform,'hydrateConferenceParticipations',[conferenceId,conferenceId]);
     add(platform,'hydrateConferenceAccommodation',[conferenceId,conferenceId]);
