@@ -99,3 +99,22 @@ test('restaurant hydration receives authorized remote identity without local lin
   assert.equal(result.ok,true);
   assert.equal(hydratedRemoteId,remote);
 });
+
+test('session reset invalidates pending discovery before activation',async()=>{
+  const env=environment();
+  const listeners={};
+  env.sandbox.addEventListener=(name,fn)=>{(listeners[name]??=[]).push(fn);};
+  // Re-evaluate with the event dispatcher installed, as the listener is bound at module load.
+  vm.runInNewContext(source,env.sandbox);
+  let resolveDiscovery;
+  env.sandbox.CanonicalConferenceDiscovery.listAccessibleConferences=()=>new Promise(resolve=>{resolveDiscovery=resolve;});
+  const pending=env.sandbox.DiscoveredConferenceOpenService.open(remote);
+  assert.equal(typeof resolveDiscovery,'function');
+  for(const fn of listeners['platform-session-reset']||[])fn({type:'platform-session-reset'});
+  resolveDiscovery({ok:true,data:{conferences:[{id:remote,name:'Canonical',capabilities:{edit:true}}]}});
+  const outcome=await pending;
+  assert.equal(outcome.ok,false);
+  assert.equal(outcome.status,'stale');
+  assert.equal(env.calls.includes('activate'),false);
+  assert.equal(env.getData().conferences.length,0);
+});
