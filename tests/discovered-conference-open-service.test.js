@@ -153,3 +153,22 @@ test('every canonical owner failure blocks activation without manufacturing runt
     });
   }
 });
+
+test('rejected canonical hydration after session reset reports stale without activation',async()=>{
+  const env=environment();
+  const listeners={};
+  env.sandbox.addEventListener=(name,fn)=>{(listeners[name]??=[]).push(fn);};
+  vm.runInNewContext(source,env.sandbox);
+  let rejectHydration;
+  env.sandbox.PlatformIntegration.hydrateConferenceCore=()=>new Promise((resolve,reject)=>{rejectHydration=reject;});
+  const pending=env.sandbox.DiscoveredConferenceOpenService.open(remote);
+  for(let i=0;i<8&&!rejectHydration;i++)await Promise.resolve();
+  assert.equal(typeof rejectHydration,'function');
+  for(const fn of listeners['platform-session-reset']||[])fn({type:'platform-session-reset'});
+  rejectHydration({code:'DEVICE_SESSION_EXPIRED'});
+  const outcome=await pending;
+  assert.equal(outcome.ok,false);
+  assert.equal(outcome.status,'stale');
+  assert.equal(env.calls.includes('activate'),false);
+  assert.equal(env.getData().conferences.length,0);
+});
