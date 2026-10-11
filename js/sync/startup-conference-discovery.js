@@ -14,7 +14,8 @@
     flight=Promise.resolve(authority.listAccessibleConferences()).then(function(listed){
       if(token!==generation)return result(false,'stale');
       if(!listed||listed.ok!==true)return listed||result(false,'failed');
-      records=copy(listed.data&&listed.data.conferences||[]);
+      if(!listed.data||!Array.isArray(listed.data.conferences))return result(false,'invalid_response',null,{code:'CANONICAL_CONFERENCE_DISCOVERY_INVALID_RESPONSE'});
+      records=copy(listed.data.conferences);
       return result(true,'loaded',{conferences:copy(records)});
     }).finally(function(){if(token===generation)flight=null;});
     return flight;
