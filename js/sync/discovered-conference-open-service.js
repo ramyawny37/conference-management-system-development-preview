@@ -42,7 +42,6 @@
     add(platform,'hydrateConferenceAccommodation',[conferenceId,conferenceId]);
     add(platform,'hydrateConferenceAirConditioning',[conferenceId,conferenceId]);
     add(global.CanonicalConferenceBranding,'hydrate',[conferenceId,conferenceId]);
-    add(global.CanonicalConferenceAirConditioning,'hydrate',[conferenceId,conferenceId]);
     add(global.CanonicalConferenceFinance,'hydrate',[conferenceId,conferenceId]);
     add(global.CanonicalConferenceTransport,'hydrate',[conferenceId,conferenceId]);
     add(global.CanonicalConferenceRestaurant,'hydrate',[conferenceId,conferenceId]);
