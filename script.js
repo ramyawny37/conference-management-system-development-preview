@@ -2453,17 +2453,7 @@ function initializePlatformAdministrationContext(){
 
 function canEditCurrentConferenceData(){
   var current=getCurrentConference();
-  var authorization=window.ConferenceActivationAuthorization;
-  if(!current||!authorization)return false;
-  var link=window.ConferenceLinkStore&&
-    typeof window.ConferenceLinkStore.get==='function'
-      ?window.ConferenceLinkStore.get(String(current.id||'')):null;
-  if(!link){
-    var localDecision=authorization.authorizeLocal({
-      conferenceId:String(current.id||'')
-    });
-    return !!(localDecision&&localDecision.ok===true&&localDecision.active===true);
-  }
+  if(!current)return false;
   var decision=currentConferenceRuntimeActivationDecision;
   return !!(decision&&decision.ok===true&&decision.active===true&&
     String(decision.conferenceId||'')===String(current.id||'')&&
