@@ -718,7 +718,6 @@ function activatePersistedConferenceById(id,options){
     ['set_current_conference',function(){setCurrentConference(current)}],
     ['sync_current_references',function(){syncCurrentConferenceRefs()}],
     ['set_application_mode',function(){setApplicationMode('application')}],
-    ['refresh_people_datalist',function(){refreshPeopleDatalist()}],
     ['render_accommodation',function(){if(ge('tab0'))renderAccommodation()}],
     ['render_transports',function(){if(ge('tab1'))renderTransports()}],
     ['render_settings',function(){
