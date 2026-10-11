@@ -19,8 +19,6 @@
     var applyData=options.applyAppData||function(value){global.appData=value;};
     var data=copy(getData()||{});
     data.conferences=Array.isArray(data.conferences)?data.conferences:[];
-    // Discovery is authoritative: never retain legacy local conference entries.
-    data.conferences=data.conferences.filter(function(item){return item&&String(item.id||'')===conferenceId;});
     var found=data.conferences.find(function(item){return item&&String(item.id||'')===conferenceId;});
     if(!found){
       found={id:conferenceId,name:String(conference.name||''),status:String(conference.status||'active'),startDate:conference.startDate||'',endDate:conference.endDate||'',peopleDb:{people:[]},houses:[],transports:[],activityLog:[]};
