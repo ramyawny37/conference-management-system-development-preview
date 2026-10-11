@@ -76,8 +76,8 @@ test('dispatcher delegates other operations and authorizes with the verified ses
 
 test('route restores use PlatformIntegration and deterministic assets remain aligned',()=>{
   assert.doesNotMatch(script,/platformRoute\.indexOf\('\/warehouse'\)[\s\S]{0,180}openWarehouseWorkspace/);
-  assert.match(index,/js\/platform-integration\.js\?rev=unified-module-entry-gate-v1/);
-  assert.match(worker,/\.\/js\/platform-integration\.js\?rev=unified-module-entry-gate-v1/);
+  assert.match(index,/js\/platform-integration\.js\?rev=platform-session-epoch-v1/);
+  assert.match(worker,/\.\/js\/platform-integration\.js\?rev=platform-session-epoch-v1/);
   assert.match(index,/script\.js\?rev=canonical-conference-id-v1/);
   assert.match(worker,/\.\/script\.js\?rev=canonical-conference-id-v1/);
   assert.match(index,/reservations-module\.js\?rev=reservations-root-boundary-v1/);
