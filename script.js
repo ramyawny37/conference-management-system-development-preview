@@ -643,6 +643,17 @@ function runMemberActivationStep(stage,callback){
     return {ok:false,value:null};
   }
 }
+function runMemberActivationRenderStep(stage,callback){
+  var outcome=runMemberActivationStep(stage,callback);
+  if(!outcome.ok){
+    // Rendering is not an authorization or conference-identity boundary.
+    // Preserve the diagnostic failure; never roll back an authorized conference.
+    if(window.console&&typeof window.console.error==='function'){
+      window.console.error('CONFERENCE_RENDER_FAILED:',stage);
+    }
+  }
+  return true;
+}
 function activatePersistedConferenceById(id,options){
   options=options||{};
   var activationAuthorization=window.ConferenceActivationAuthorization;
@@ -714,30 +725,13 @@ function activatePersistedConferenceById(id,options){
   }
   var applicationBody=ge('applicationBody');
   var wasStartup=applicationBody&&applicationBody.style.display==='none';
-  var steps=[
+  var essentialSteps=[
     ['set_current_conference',function(){setCurrentConference(current)}],
     ['sync_current_references',function(){syncCurrentConferenceRefs()}],
-    ['set_application_mode',function(){setApplicationMode('application')}],
-    ['render_accommodation',function(){if(ge('tab0'))renderAccommodation()}],
-    ['render_transports',function(){if(ge('tab1'))renderTransports()}],
-    ['render_settings',function(){
-      if(ge('tab6')){
-        renderSettings();
-        memberActivationDiagnosticState.settingsResolved=true;
-      }
-    }],
-    ['render_current_tab',function(){
-      if(wasStartup)restoreLastApplicationTab({
-        tabId:conferenceRoute&&conferenceRoute.kind==='application'
-          ?conferenceRoute.tabId:null
-      });
-      else if(conferenceRoute&&conferenceRoute.kind==='application'){
-        if(!switchTab(conferenceRoute.tabId,{preserveRoute:true}))switchTab(0);
-      }else if(!switchTab(currentTab))switchTab(0);
-    }]
+    ['set_application_mode',function(){setApplicationMode('application')}]
   ];
-  for(var stepIndex=0;stepIndex<steps.length;stepIndex++){
-    if(!runMemberActivationStep(steps[stepIndex][0],steps[stepIndex][1]).ok){
+  for(var stepIndex=0;stepIndex<essentialSteps.length;stepIndex++){
+    if(!runMemberActivationStep(essentialSteps[stepIndex][0],essentialSteps[stepIndex][1]).ok){
       rollbackCanonicalConferenceApplicationEntry(entry);
       appData.currentConferenceId=previousConferenceId;
       currentConferenceRuntimeActivationDecision=previousActivationDecision;
@@ -748,6 +742,27 @@ function activatePersistedConferenceById(id,options){
       return false;
     }
   }
+  runMemberActivationRenderStep('render_accommodation',function(){
+    if(ge('tab0'))renderAccommodation();
+  });
+  runMemberActivationRenderStep('render_transports',function(){
+    if(ge('tab1'))renderTransports();
+  });
+  runMemberActivationRenderStep('render_settings',function(){
+    if(ge('tab6')){
+      renderSettings();
+      memberActivationDiagnosticState.settingsResolved=true;
+    }
+  });
+  runMemberActivationRenderStep('render_current_tab',function(){
+    if(wasStartup)restoreLastApplicationTab({
+      tabId:conferenceRoute&&conferenceRoute.kind==='application'
+        ?conferenceRoute.tabId:null
+    });
+    else if(conferenceRoute&&conferenceRoute.kind==='application'){
+      if(!switchTab(conferenceRoute.tabId,{preserveRoute:true}))switchTab(0);
+    }else if(!switchTab(currentTab))switchTab(0);
+  });
   traceMemberActivation('activation_return','completed',null);
   return true;
 }
