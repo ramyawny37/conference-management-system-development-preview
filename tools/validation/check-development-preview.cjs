@@ -125,6 +125,8 @@ if (platformTests.length === 0) {
   throw new Error('DEVELOPMENT_PREVIEW_PLATFORM_TESTS_NOT_FOUND');
 }
 
+// Canonical session isolation must be exercised by the publish gate, not just syntax-checked.
+runNode(['--test', 'tests/canonical-conference-session-stale-hydration.test.js']);
 runNode(['--test', ...platformTests]);
 
 for (const artifact of [
