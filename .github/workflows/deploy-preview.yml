@@ -3,6 +3,8 @@ name: Deploy development preview
 on:
   push:
     branches: [main]
+  repository_dispatch:
+    types: [platform-develop-updated]
   workflow_dispatch:
     inputs:
       platform_sha:
@@ -32,7 +34,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: ramyawny37/conference-management-system-v1
-          ref: ${{ inputs.platform_sha || 'develop' }}
+          ref: ${{ github.event.client_payload.platform_sha || inputs.platform_sha || 'develop' }}
           path: source/platform
           fetch-depth: 1
 
@@ -41,7 +43,7 @@ jobs:
         id: source_meta
         shell: bash
         env:
-          REQUESTED_PLATFORM_SHA: ${{ inputs.platform_sha }}
+          REQUESTED_PLATFORM_SHA: ${{ github.event.client_payload.platform_sha || inputs.platform_sha }}
         run: |
           set -euo pipefail
           PLATFORM_SHA="$(git -C source/platform rev-parse HEAD)"
