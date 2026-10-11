@@ -52,7 +52,6 @@
 
   async function reconcileStartup({
     conferenceId,
-    isLinked = false,
     validateCloud: validateCloudCallback = null,
     canonicalAccess = false,
     capabilities = null,
@@ -60,7 +59,7 @@
   } = {}) {
     const normalizedConferenceId = normalizeId(conferenceId);
     if (!normalizedConferenceId) return buildDenied('conference_missing', conferenceId);
-    // Link-store presence is not an authorization signal. Always validate canonical access.
+    // A persisted selection must pass canonical authorization on every startup.
 
     let decision;
     if (typeof validateCloudCallback === 'function') {
