@@ -17,17 +17,21 @@ test('startup renders canonical discovery rows directly and opens by canonical i
   assert.equal(rows[0].__startupDiscoveredRemoteId,'cloud-1');
 });
 
-test('local-only startup open cannot bypass canonical discovery authorization',()=>{
+test('startup open delegates to canonical discovery and never activates local-only records',()=>{
   const begin=script.indexOf('function openConferenceFromStartup(id){');
   const end=script.indexOf('\nvar conferenceBrandingDraft=',begin);
   assert.ok(begin>=0&&end>begin);
   const source=script.slice(begin,end);
-  let localActivations=0,toast='';
-  const sandbox={window:{ConferenceLinkStore:{get:()=>null}},showToast:value=>{toast=value;},setCurrentConferenceById:()=>{localActivations++;return true;}};
+  let requestedId=null,localActivations=0;
+  const sandbox={
+    window:{},
+    openDiscoveredConferenceFromStartup:id=>{requestedId=id;return false;},
+    setCurrentConferenceById:()=>{localActivations++;return true;}
+  };
   vm.runInNewContext(source+'\nthis.openLocal=openConferenceFromStartup;',sandbox);
   assert.equal(sandbox.openLocal('local-only'),false);
+  assert.equal(requestedId,'local-only');
   assert.equal(localActivations,0);
-  assert.match(toast,/السحابية/);
 });
 
 test('startup excludes browser-local conferences not returned by authorized discovery',()=>{
