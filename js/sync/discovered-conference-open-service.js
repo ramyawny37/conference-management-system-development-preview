@@ -59,8 +59,6 @@
       if(!access.ok||token!==generation)return token===generation?access:result(false,'stale');
       return hydrate(remoteId).then(function(){
         if(token!==generation)return result(false,'stale');
-        ensureRuntimeConference(remoteId,access.data.conference,options);
-        if(token!==generation)return result(false,'stale');
         var authorization=global.ConferenceActivationAuthorization;
         if(!authorization||typeof authorization.authorizeCloud!=='function'){
           return result(false,'activation_authorization_unavailable');
@@ -73,6 +71,8 @@
         if(!activationDecision||activationDecision.ok!==true||activationDecision.active!==true){
           return result(false,'activation_authorization_denied');
         }
+        if(token!==generation)return result(false,'stale');
+        ensureRuntimeConference(remoteId,access.data.conference,options);
         var activate=options.activate||global.activatePersistedConferenceById;
         var activated=typeof activate==='function'&&activate(remoteId,{
           alreadyPersisted:true,
