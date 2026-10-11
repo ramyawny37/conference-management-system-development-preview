@@ -12,7 +12,7 @@ test('conference activation distinguishes essential state steps from nonfatal re
   assert.match(activation,/runMemberActivationRenderStep\('render_transports'/);
   assert.match(activation,/runMemberActivationRenderStep\('render_settings'/);
   assert.match(activation,/runMemberActivationRenderStep\('render_current_tab'/);
-  assert.match(activation,/runMemberActivationStep\(steps\[stepIndex\]\[0\]/);
+  assert.match(activation,/runMemberActivationStep\(essentialSteps\[stepIndex\]\[0\]/);
 });
 test('render failures are recorded and never classified as activation failure',()=>{
   const helper=source.slice(source.indexOf('function runMemberActivationRenderStep('),start);
