@@ -82,7 +82,7 @@
         if(!activated)return result(false,'runtime_activation_failed');
         return result(true,'opened',{conferenceId:remoteId,canonicalAccess:true,capabilities:access.data.capabilities});
       });
-    }).catch(function(error){return result(false,'canonical_hydration_failed',null,{code:String(error&&error.code||error&&error.message||'CANONICAL_HYDRATION_FAILED')});}).finally(function(){if(flights[remoteId]===flight)delete flights[remoteId];});
+    }).catch(function(error){if(token!==generation)return result(false,'stale');return result(false,'canonical_hydration_failed',null,{code:String(error&&error.code||error&&error.message||'CANONICAL_HYDRATION_FAILED')});}).finally(function(){if(flights[remoteId]===flight)delete flights[remoteId];});
     flights[remoteId]=flight;
     return flight;
   }
