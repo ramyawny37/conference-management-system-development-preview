@@ -22,7 +22,8 @@ test('linked open hydrates every canonical owner without snapshot infrastructure
   const env=environment();const result=await env.sandbox.DiscoveredConferenceOpenService.open(remote);
   assert.equal(result.ok,true);assert.equal(result.status,'opened');
   assert.deepEqual(env.calls,['core','participation','accommodation','air_conditioning','branding','finance','transport','restaurant','authorizeCloud','activate','decision:edit']);
-  assert.equal(env.links[remote].remoteConferenceId,remote);
+  assert.equal(env.links[remote],undefined);
+  assert.equal(result.data.conferenceId,remote);
   assert.equal(env.getData().conferences[0].name,'Canonical');
 });
 test('canonical hydration failure has no fallback and does not activate',async()=>{
@@ -33,16 +34,13 @@ test('runtime contains no linked whole-document read, revision, queue, or recove
   assert.doesNotMatch(source,/conference_snapshots|SupabaseSnapshotSync|OfflineSyncQueue|snapshotRevision|baseRevision|needs_resolution|recovery|fallback/i);
 });
 
-test('automatic link persistence failure stops before runtime mutation or hydration',async()=>{
+test('canonical open never writes to legacy link store',async()=>{
   const env=environment();
-  env.sandbox.ConferenceLinkStore.save=()=>({ok:false,status:'storage_error'});
+  env.sandbox.ConferenceLinkStore.save=()=>{throw new Error('legacy link store must not be used');};
   const result=await env.sandbox.DiscoveredConferenceOpenService.open(remote);
-  assert.equal(result.ok,false);
-  assert.equal(result.status,'conference_link_save_failed');
-  assert.equal(result.error.code,'CONFERENCE_LINK_SAVE_FAILED');
-  assert.equal(env.getData().currentConferenceId,null);
-  assert.equal(env.getData().conferences.length,0);
-  assert.equal(env.calls.includes('activate'),false);
+  assert.equal(result.ok,true);
+  assert.equal(result.data.conferenceId,remote);
+  assert.equal(env.links[remote],undefined);
 });
 
 test('failed hydration preserves previously selected conference',async()=>{
@@ -55,7 +53,7 @@ test('failed hydration preserves previously selected conference',async()=>{
   assert.equal(env.calls.includes('activate'),false);
 });
 
-test('canonical hydration failure does not persist a new link or runtime conference',async()=>{
+test('canonical hydration failure does not create a runtime conference',async()=>{
   const env=environment('finance');
   const result=await env.sandbox.DiscoveredConferenceOpenService.open(remote);
   assert.equal(result.ok,false);
@@ -65,7 +63,7 @@ test('canonical hydration failure does not persist a new link or runtime confere
   assert.equal(env.getData().currentConferenceId,null);
 });
 
-test('transport hydration receives authorized remote identity before link persistence',async()=>{
+test('transport hydration receives authorized remote identity without local link persistence',async()=>{
   const env=environment();
   let hydratedRemoteId=null;
   env.sandbox.CanonicalConferenceTransport={hydrate:(localId,remoteId)=>{
@@ -78,7 +76,7 @@ test('transport hydration receives authorized remote identity before link persis
   assert.equal(hydratedRemoteId,remote);
 });
 
-test('restaurant hydration receives authorized remote identity before link persistence',async()=>{
+test('restaurant hydration receives authorized remote identity without local link persistence',async()=>{
   const env=environment();
   let hydratedRemoteId=null;
   env.sandbox.CanonicalConferenceRestaurant={hydrate:(localId,remoteId)=>{
