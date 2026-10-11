@@ -77,3 +77,16 @@ test('transport hydration receives authorized remote identity before link persis
   assert.equal(result.ok,true);
   assert.equal(hydratedRemoteId,remote);
 });
+
+test('restaurant hydration receives authorized remote identity before link persistence',async()=>{
+  const env=environment();
+  let hydratedRemoteId=null;
+  env.sandbox.CanonicalConferenceRestaurant={hydrate:(localId,remoteId)=>{
+    assert.equal(env.links[remote],undefined);
+    hydratedRemoteId=remoteId;
+    return Promise.resolve({});
+  }};
+  const result=await env.sandbox.DiscoveredConferenceOpenService.open(remote);
+  assert.equal(result.ok,true);
+  assert.equal(hydratedRemoteId,remote);
+});
