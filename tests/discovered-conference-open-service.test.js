@@ -172,3 +172,28 @@ test('rejected canonical hydration after session reset reports stale without act
   assert.equal(env.calls.includes('activate'),false);
   assert.equal(env.getData().conferences.length,0);
 });
+
+test('missing canonical owner fails closed before activation rather than silently skipping hydration',async(t)=>{
+  const cases=[
+    ['PlatformIntegration','hydrateConferenceCore'],
+    ['PlatformIntegration','hydrateConferenceParticipations'],
+    ['PlatformIntegration','hydrateConferenceAccommodation'],
+    ['PlatformIntegration','hydrateConferenceAirConditioning'],
+    ['CanonicalConferenceBranding','hydrate'],
+    ['CanonicalConferenceFinance','hydrate'],
+    ['CanonicalConferenceTransport','hydrate'],
+    ['CanonicalConferenceRestaurant','hydrate']
+  ];
+  for(const [target,method] of cases){
+    await t.test(target+'.'+method,async()=>{
+      const env=environment();
+      delete env.sandbox[target][method];
+      const outcome=await env.sandbox.DiscoveredConferenceOpenService.open(remote);
+      assert.equal(outcome.ok,false);
+      assert.equal(outcome.status,'canonical_hydration_failed');
+      assert.equal(outcome.error.code,'CANONICAL_HYDRATOR_UNAVAILABLE');
+      assert.equal(env.calls.includes('activate'),false);
+      assert.equal(env.getData().conferences.length,0);
+    });
+  }
+});
