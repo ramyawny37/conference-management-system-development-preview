@@ -137,3 +137,19 @@ test('session reset during canonical hydration prevents runtime creation and act
   assert.equal(env.calls.includes('activate'),false);
   assert.equal(env.getData().conferences.length,0);
 });
+
+test('every canonical owner failure blocks activation without manufacturing runtime data',async(t)=>{
+  for(const owner of ['core','participation','accommodation','air_conditioning','branding','finance','transport','restaurant']){
+    await t.test(owner,async()=>{
+      const env=environment(owner);
+      env.sandbox.appData.currentConferenceId='previous-conference';
+      const outcome=await env.sandbox.DiscoveredConferenceOpenService.open(remote);
+      assert.equal(outcome.ok,false);
+      assert.equal(outcome.status,'canonical_hydration_failed');
+      assert.equal(env.calls.includes('activate'),false);
+      assert.equal(env.getData().currentConferenceId,'previous-conference');
+      assert.equal(env.getData().conferences.length,0);
+      assert.equal(env.links[remote],undefined);
+    });
+  }
+});
