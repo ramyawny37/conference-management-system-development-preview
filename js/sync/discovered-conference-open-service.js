@@ -88,5 +88,6 @@
   }
   function validateAuthorization(remoteConferenceId,options){return available(String(remoteConferenceId||''),options||{});}
   function invalidate(){generation++;flights=Object.create(null);return result(true,'invalidated');}
+  if(typeof global.addEventListener==='function')global.addEventListener('platform-session-reset',invalidate);
   global.DiscoveredConferenceOpenService=Object.freeze({open:open,validateAuthorization:validateAuthorization,invalidate:invalidate,getDiagnostics:function(){return copy(diagnostics);},getState:function(){return {activeConferenceIds:Object.keys(flights)};}});
 })(window);
