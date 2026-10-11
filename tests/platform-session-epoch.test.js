@@ -53,3 +53,11 @@ test('external session reset clears selected conference and rejects stale pendin
   env.respond({conferenceId:'old-conference'});
   await assert.rejects(pending,error=>error&&error.code==='PLATFORM_SESSION_STALE');
 });
+
+test('reset before dispatch prevents invoking protected RPC at all',async()=>{
+  const env=environment();
+  const pending=env.services.invokeProtected('conference','get_conference_core',{});
+  env.reset();
+  await assert.rejects(pending,error=>error&&error.code==='PLATFORM_SESSION_STALE');
+  assert.equal(env.hasPending(),false);
+});
