@@ -33,6 +33,8 @@ test('denied canonical activation cannot enter application',async()=>{
   assert.equal(result.ok,false);
   assert.equal(result.status,'activation_authorization_denied');
   assert.equal(env.calls.includes('activate'),false);
+  assert.equal(env.getData().conferences.length,0);
+  assert.equal(env.getData().currentConferenceId,null);
 });
 
 test('canonical hydration failure has no fallback and does not activate',async()=>{
