@@ -26,6 +26,15 @@ test('linked open hydrates every canonical owner without snapshot infrastructure
   assert.equal(result.data.conferenceId,remote);
   assert.equal(env.getData().conferences[0].name,'Canonical');
 });
+test('denied canonical activation cannot enter application',async()=>{
+  const env=environment();
+  env.sandbox.ConferenceActivationAuthorization.authorizeCloud=()=>({ok:false,active:false,reason:'access_denied'});
+  const result=await env.sandbox.DiscoveredConferenceOpenService.open(remote);
+  assert.equal(result.ok,false);
+  assert.equal(result.status,'activation_authorization_denied');
+  assert.equal(env.calls.includes('activate'),false);
+});
+
 test('canonical hydration failure has no fallback and does not activate',async()=>{
   const env=environment('finance');const result=await env.sandbox.DiscoveredConferenceOpenService.open(remote);
   assert.equal(result.ok,false);assert.equal(result.status,'canonical_hydration_failed');assert.equal(env.calls.includes('activate'),false);
