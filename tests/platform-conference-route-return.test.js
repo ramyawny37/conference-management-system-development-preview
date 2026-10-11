@@ -15,7 +15,7 @@ test('returning from Reservations restores the authorized Conference workspace r
     history: {pushState(_state,_title,value){pushed.push(value);route=value.slice(1);},replaceState(){}},
     ApplicationRouting: {getLogicalPathname(){return route;},resolveLogicalRoute(value){return '#'+value;}},
     StartupAccessGate: {getState(){return {pipelineState:'completed',applicationVisible:true,gateState:'allowed'};},isAllowed(){return true;}},
-    PlatformDeviceSession: {invokeModuleProtected(){return Promise.resolve({status:'allowed'});}},
+    PlatformDeviceSession: {invokeModuleProtected(module){return Promise.resolve({status:'allowed',moduleKey:module});}},
     openConferenceWorkspace(){return true;},
     reconcileConferenceRoute(){return true;},
     showPlatformModules(){return true;}
