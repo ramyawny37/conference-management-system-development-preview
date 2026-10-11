@@ -36,7 +36,7 @@
   function hydrate(conferenceId){
     var platform=global.PlatformIntegration;
     var tasks=[];
-    function add(target,name,args){if(!target||typeof target[name]!=='function')throw {code:'CANONICAL_HYDRATOR_UNAVAILABLE',owner:name};tasks.push(Promise.resolve(target[name].apply(target,args)));}
+    function add(target,name,args){tasks.push({target:target,name:name,args:args});}
     add(platform,'hydrateConferenceCore',[conferenceId,conferenceId]);
     add(platform,'hydrateConferenceParticipations',[conferenceId,conferenceId]);
     add(platform,'hydrateConferenceAccommodation',[conferenceId,conferenceId]);
@@ -46,7 +46,9 @@
     add(global.CanonicalConferenceFinance,'hydrate',[conferenceId,conferenceId]);
     add(global.CanonicalConferenceTransport,'hydrate',[conferenceId,conferenceId]);
     add(global.CanonicalConferenceRestaurant,'hydrate',[conferenceId,conferenceId]);
-    return Promise.all(tasks).then(function(values){diagnostics.canonicalHydrationCount=values.length;return values;});
+    var missing=tasks.find(function(task){return !task.target||typeof task.target[task.name]!=='function';});
+    if(missing)return Promise.reject({code:'CANONICAL_HYDRATOR_UNAVAILABLE',owner:missing.name});
+    return Promise.all(tasks.map(function(task){return Promise.resolve().then(function(){return task.target[task.name].apply(task.target,task.args);});})).then(function(values){diagnostics.canonicalHydrationCount=values.length;return values;});
   }
   function open(remoteConferenceId,options){
     options=options&&typeof options==='object'?options:{};
