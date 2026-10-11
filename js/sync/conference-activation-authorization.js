@@ -20,18 +20,9 @@
     };
   }
 
+  // Local conference activation is retired. Canonical server discovery is required.
   function authorizeLocal({ conferenceId } = {}) {
-    const normalizedConferenceId = normalizeId(conferenceId);
-    if (!normalizedConferenceId) return buildDenied('conference_missing', conferenceId);
-    return {
-      ok: true,
-      active: true,
-      reason: 'local_conference',
-      conferenceId: normalizedConferenceId,
-      role: null,
-      capabilities: null,
-      source: SOURCE,
-    };
+    return buildDenied('canonical_access_required', conferenceId);
   }
 
   function authorizeCanonicalCloud({ conferenceId, canonicalAccess = false, capabilities = null } = {}) {
@@ -69,7 +60,7 @@
   } = {}) {
     const normalizedConferenceId = normalizeId(conferenceId);
     if (!normalizedConferenceId) return buildDenied('conference_missing', conferenceId);
-    if (!isLinked) return authorizeLocal({ conferenceId: normalizedConferenceId });
+    // Link-store presence is not an authorization signal. Always validate canonical access.
 
     let decision;
     if (typeof validateCloudCallback === 'function') {
