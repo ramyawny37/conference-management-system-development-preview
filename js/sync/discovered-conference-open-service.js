@@ -55,7 +55,7 @@
     add(global.CanonicalConferenceBranding,'hydrate',[localId,remoteId]);
     add(global.CanonicalConferenceAirConditioning,'hydrate',[localId,remoteId]);
     add(global.CanonicalConferenceFinance,'hydrate',[localId,remoteId]);
-    add(global.CanonicalConferenceTransport,'hydrate',[localId]);
+    add(global.CanonicalConferenceTransport,'hydrate',[localId,remoteId]);
     add(global.CanonicalConferenceRestaurant,'hydrate',[localId]);
     return Promise.all(tasks).then(function(values){diagnostics.canonicalHydrationCount=values.length;return values;});
   }
