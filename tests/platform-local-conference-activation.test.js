@@ -63,12 +63,12 @@ function commonOpenPath(appData,links){
   };
 }
 
-test('unlinked conference uses the canonical local activation contract',()=>{
+test('local conference activation is denied without canonical discovery',()=>{
   const authorization=runtime();
   const decision=authorization.authorizeLocal({conferenceId:'local-new'});
-  assert.equal(decision.ok,true);
-  assert.equal(decision.active,true);
-  assert.equal(decision.reason,'local_conference');
+  assert.equal(decision.ok,false);
+  assert.equal(decision.active,false);
+  assert.equal(decision.reason,'canonical_access_required');
   assert.equal(decision.conferenceId,'local-new');
   assert.equal(decision.role,null);
   assert.equal(decision.capabilities,null);
@@ -105,12 +105,12 @@ test('activation module exposes no retired stateful compatibility API',()=>{
   ));
 });
 
-test('common open path authorizes an unlinked conference locally',()=>{
+test('common open path denies an unlinked conference without canonical decision',()=>{
   const app={currentConferenceId:null,conferences:[{id:'local-new',name:'Local'}]};
   const opener=commonOpenPath(app,{get(){return null;}});
-  assert.equal(opener.open('local-new'),true);
-  assert.equal(opener.current().id,'local-new');
-  assert.equal(opener.selectedConferenceId(),'local-new');
+  assert.equal(opener.open('local-new'),false);
+  assert.equal(opener.current(),null);
+  assert.equal(opener.selectedConferenceId(),'');
 });
 
 test('common open path fails closed for linked conference without canonical decision',()=>{
@@ -144,19 +144,14 @@ test('common open path accepts linked conference only with canonical activation 
   assert.equal(opener.selectedConferenceId(),'cloud');
 });
 
-test('startup card delegates linked conferences to authorized cloud open and rejects local-only records',()=>{
+test('startup card delegates canonical ID directly without link lookup',()=>{
   const start=scriptSource.indexOf('function openConferenceFromStartup(id){');
   const end=scriptSource.indexOf('\nvar conferenceBrandingDraft=',start);
   assert.ok(start>=0&&end>start);
   const source=scriptSource.slice(start,end);
-  let remoteOpened=null;
-  let localActivated=false;
-  const sandbox={window:{ConferenceLinkStore:{get:()=>({remoteConferenceId:'cloud-id'})}},openDiscoveredConferenceFromStartup:id=>{remoteOpened=id;return true;},setCurrentConferenceById:()=>{localActivated=true;return true;}};
+  let opened=null;
+  const sandbox={window:{},openDiscoveredConferenceFromStartup:id=>{opened=id;return true;}};
   vm.runInNewContext(source+'\nthis.openStartup=openConferenceFromStartup;',sandbox);
-  assert.equal(sandbox.openStartup('local-id'),true);
-  assert.equal(remoteOpened,'cloud-id');
-  assert.equal(localActivated,false);
-  sandbox.window.ConferenceLinkStore.get=()=>null;
-  assert.equal(sandbox.openStartup('local-only'),false);
-  assert.equal(localActivated,false);
+  assert.equal(sandbox.openStartup('canonical-id'),true);
+  assert.equal(opened,'canonical-id');
 });
