@@ -78,8 +78,8 @@ test('route restores use PlatformIntegration and deterministic assets remain ali
   assert.doesNotMatch(script,/platformRoute\.indexOf\('\/warehouse'\)[\s\S]{0,180}openWarehouseWorkspace/);
   assert.match(index,/js\/platform-integration\.js\?rev=unified-module-entry-gate-v1/);
   assert.match(worker,/\.\/js\/platform-integration\.js\?rev=unified-module-entry-gate-v1/);
-  assert.match(index,/script\.js\?rev=house-template-local-authority-v1/);
-  assert.match(worker,/\.\/script\.js\?rev=house-template-local-authority-v1/);
+  assert.match(index,/script\.js\?rev=canonical-conference-id-v1/);
+  assert.match(worker,/\.\/script\.js\?rev=canonical-conference-id-v1/);
   assert.match(index,/reservations-module\.js\?rev=reservations-root-boundary-v1/);
   assert.doesNotMatch(reservationsBundle,/check_module_access/);
 });

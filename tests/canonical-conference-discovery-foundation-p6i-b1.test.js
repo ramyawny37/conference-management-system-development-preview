@@ -33,7 +33,10 @@ test('10 approved device and protected session are required',()=>{assert.match(s
 test('11 frontend discovery does not query conference_members',()=>{assert.doesNotMatch(discovery,/conference_members|\.from\(/);assert.doesNotMatch(startup,/listAvailableConferences/);});
 test('12 frontend discovery invokes the canonical operation',()=>{assert.match(discovery,/invokeModuleProtected\([\s\S]*list_accessible_conferences/);assert.match(edge,/conference\.add\('list_accessible_conferences'\)/);});
 test('13 discovery contains no snapshot hydration',()=>assert.doesNotMatch(startup+opening,/downloadSnapshot|conference_snapshots|SupabaseSnapshotSync/));
-test('15 local-only conference authorization remains isolated',()=>assert.match(activation,/function authorizeLocalOnly/));
+test('15 activation has no retired local authorization path',()=>{
+  assert.doesNotMatch(activation,/authorizeLocal|local_conference|isLinked/);
+  assert.match(activation,/canonicalAccess !== true/);
+});
 test('16 Reservations operation allowlist remains present',()=>assert.match(edge,/const reservations=new Set/));
 test('17 Warehouse operation allowlist remains present',()=>assert.match(edge,/const warehouse=new Set/));
 test('18 direct function execution remains denied',()=>assert.match(sql,/revoke all on function public\.list_accessible_conferences\(uuid\) from public,anon,authenticated,service_role/));

@@ -7,7 +7,7 @@ const CACHE_NAMESPACE = IS_DEVELOPMENT
   : '';
 const CACHE_PREFIX = CACHE_NAMESPACE + 'conference-manager-core-';
 const CACHE_REVISION = IS_DEVELOPMENT
-  ? 'runtime-syntax-repair-v3'
+  ? 'canonical-conference-id-v1'
   : 'production-3-6-0-release-v6';
 const CACHE_NAME = CACHE_PREFIX + 'v' + APP_VERSION + '-' + CACHE_REVISION;
 const CORE_ASSETS = [
@@ -23,7 +23,7 @@ const CORE_ASSETS = [
   './js/storage/indexeddb.js?rev=single-local-persistence-v1',
   './js/storage/storage-repository.js?rev=house-template-local-authority-v1',
   './js/storage/conference-repository.js',
-  './js/storage/full-backup.js?rev=canonical-conference-core-cutover-v2',
+  './js/storage/full-backup.js?rev=canonical-conference-id-v1',
   './js/supabase/public-config.js',
   './js/supabase/runtime-config.js',
   './js/supabase/device-storage-namespace.js?rev=project-device-storage-isolation-v1',
@@ -51,13 +51,12 @@ const CORE_ASSETS = [
   './js/sync/device-authorization-administration-ui.js?rev=platform-only-device-administration-v1',
   './js/sync/startup-conference-discovery.js?rev=shared-template-library-v1',
   './js/sync/conference-locks.js?rev=conference-lock-release-diagnostics-v1',
-  './js/sync/conference-edit-lock-manager.js?rev=section-accommodation-edit-lock-v1',
+  './js/sync/conference-edit-lock-manager.js?rev=canonical-conference-id-v1',
   './js/sync/template-diagnostic-export.js?rev=house-template-local-authority-v1',
   './js/sync/sync-settings-ui.js?rev=platform-first-login-coordinator-v1',
   './js/supabase/first-system-bootstrap-service.js?rev=first-owner-bootstrap-hardening-v1',
   './js/sync/startup-access-gate.js?rev=revoked-rerequest-error-code-v1',
-  './js/sync/conference-link-store.js',
-  './js/sync/conference-activation-authorization.js?rev=conference-activation-canonical-v1',
+  './js/sync/conference-activation-authorization.js?rev=canonical-conference-id-v1',
   './js/sync/user-management-read-service.js?rev=platform-read-only-v1',
   './js/sync/user-management-ui.js?rev=platform-read-only-v1',
   './js/sync/module-permission-administration-service.js?rev=unified-three-module-permissions-v1',
@@ -65,12 +64,12 @@ const CORE_ASSETS = [
   './js/sync/conference-linking-attempt-store.js',
   './js/sync/discovered-conference-open-service.js?rev=conference-activation-canonical-v1',
   './utils.js',
-  './core.js?rev=development-3-4-0-platform-foundation-v1',
+  './core.js?rev=canonical-conference-id-v1',
   './people.js?rev=canonical-conference-schema-v1',
   './houses.js?rev=template-floor-conference-sync-v1',
   './transport.js',
   './houseTemplates.js?rev=house-template-local-authority-v1',
-  './state.js?rev=house-template-local-authority-v1',
+  './state.js?rev=canonical-conference-id-v1',
   './js/conference/accounts.js?rev=development-3-4-0-platform-foundation-v1',
   './js/conference-template-houses-editor.js',
   './cards.js',
@@ -81,7 +80,7 @@ const CORE_ASSETS = [
   './js/warehouse/party-management.js?rev=warehouse-party-management-v1',
   './js/warehouse/remaining-operations.js?rev=adjustment-conversion-ux-v1',
   './js/warehouse/workspace.js?rev=item-unit-add-ui-v1',
-  './script.js?rev=house-template-local-authority-v1',
+  './script.js?rev=canonical-conference-id-v1',
   './version.js',
   './pwa.js?rev=pwa-update-state-consistency-v1',
   './libs/html2canvas.min.js',

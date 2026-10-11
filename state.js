@@ -200,10 +200,7 @@ function save(options){
     notifyPersistenceFailure('تعذر حفظ البيانات على الجهاز. قد تكون مساحة التخزين ممتلئة. لم يتم تأكيد حفظ آخر تعديل.');
     return false;
   }
-  var linkedConference=currentConference&&window.ConferenceLinkStore&&
-    typeof window.ConferenceLinkStore.get==='function'
-      ?window.ConferenceLinkStore.get(String(currentConference.id||'')):null;
-  if(linkedConference&&linkedConference.remoteConferenceId){
+  if(currentConference&&String(currentConference.id||'').trim()){
     return true;
   }
   if(window.StorageRepository&&

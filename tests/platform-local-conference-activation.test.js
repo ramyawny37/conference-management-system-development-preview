@@ -63,9 +63,9 @@ function commonOpenPath(appData,links){
   };
 }
 
-test('local conference activation is denied without canonical discovery',()=>{
+test('activation rejects access without a canonical decision',()=>{
   const authorization=runtime();
-  const decision=authorization.authorizeLocal({conferenceId:'local-new'});
+  const decision=authorization.authorizeCloud({conferenceId:'local-new'});
   assert.equal(decision.ok,false);
   assert.equal(decision.active,false);
   assert.equal(decision.reason,'canonical_access_required');
@@ -97,7 +97,7 @@ test('linked conference requires explicit canonical access and carries capabilit
 test('activation module exposes no retired stateful compatibility API',()=>{
   const authorization=runtime();
   [
-    'authorizeLocalOnly','canDisplay','canEdit','canSync','activate','deactivate',
+    'authorizeLocal','authorizeLocalOnly','canDisplay','canEdit','canSync','activate','deactivate',
     'getCurrentState','capturePersistedCandidate','getPersistedCandidate',
     'preparePersistedAppData'
   ].forEach(name=>assert.equal(

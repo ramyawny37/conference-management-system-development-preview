@@ -32,8 +32,8 @@ assert.strictEqual(value.currentConferenceId,null,
   'startup selection must remain inactive until authorization reconciliation');
 assert.match(source,/window\.applicationPersistedConferenceCandidate=[\s\S]*String\(selection\.data\.currentConferenceId\|\|''\)\.trim\(\)\|\|null;[\s\S]*appData\.currentConferenceId=null;[\s\S]*restoreSafeSingleCurrentConferenceSelection\(appData\)/,
   'startup must preserve the persisted candidate as non-authoritative selection while clearing active state');
-assert.match(startupSource,/authorization\.reconcileStartup\(\{[\s\S]*canonicalAccess:[\s\S]*capabilities:[\s\S]*activatePersistedConferenceById\(candidate,\{[\s\S]*activationDecision:decision/,
-  'only centralized authorization reconciliation may restore the active conference');
+assert.match(startupSource,/canonicalRecord=discovered\.find\([\s\S]*String\(item\.id\|\|''\)===candidate[\s\S]*opener\.open\(candidate,\{enterApplication:false\}\)/,
+  'only the canonical discovered-open service may restore the active conference');
 
 (async function verifyPersistedCandidateBoundary(){
   const startupEnv=sandbox();

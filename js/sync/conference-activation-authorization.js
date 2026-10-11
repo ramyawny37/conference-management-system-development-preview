@@ -20,11 +20,6 @@
     };
   }
 
-  // Local conference activation is retired. Canonical server discovery is required.
-  function authorizeLocal({ conferenceId } = {}) {
-    return buildDenied('canonical_access_required', conferenceId);
-  }
-
   function authorizeCanonicalCloud({ conferenceId, canonicalAccess = false, capabilities = null } = {}) {
     const normalizedConferenceId = normalizeId(conferenceId);
     if (!normalizedConferenceId) return buildDenied('conference_missing', conferenceId);
@@ -94,7 +89,6 @@
   }
 
   global.ConferenceActivationAuthorization = Object.freeze({
-    authorizeLocal,
     authorizeCloud,
     validateCloud,
     reconcileStartup,

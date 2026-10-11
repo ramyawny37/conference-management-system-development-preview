@@ -65,19 +65,7 @@ function environment(options={}){
       }
       return true;
     },
-    ConferenceActivationAuthorization:{
-      authorizeLocal(input){
-        authorizationCalls.push(input.conferenceId);
-        assert.strictEqual(input.conferenceId,'local');
-        return {
-          ok:options.activationAllowed!==false,
-          active:options.activationAllowed!==false,
-          conferenceId:input.conferenceId,
-          capabilities:null,
-          role:null
-        };
-      }
-    },
+    ConferenceActivationAuthorization:{},
     AutomaticSyncOrchestrator:{schedule(){
       calls.push('schedule');
       if(options.throwStage==='schedule')throw new Error('schedule');
@@ -96,10 +84,16 @@ function environment(options={}){
   return {sandbox,calls,authorizationCalls,conference,route:()=>route};
 }
 
+function canonicalActivation(options={}){
+  return Object.assign({},options,{
+    activationDecision:{ok:true,active:true,conferenceId:'local',capabilities:{edit:true}}
+  });
+}
+
 const denied=environment({activationAllowed:false});
 assert.strictEqual(denied.sandbox.activatePersistedConferenceById(
-  'local',{alreadyPersisted:true,enterApplication:true}),false);
-assert.deepStrictEqual(denied.authorizationCalls,['local']);
+  'local',{alreadyPersisted:true,enterApplication:true,activationDecision:{ok:false,active:false,conferenceId:'local'}}),false);
+assert.deepStrictEqual(denied.authorizationCalls,[]);
 assert.strictEqual(denied.sandbox.appData.currentConferenceId,null);
 assert.deepStrictEqual(denied.calls,[]);
 assert.strictEqual(denied.calls.includes('navigate_application'),false);
@@ -108,9 +102,9 @@ const success=environment({
   currentTab:0,route:'/conference/app/accommodation'
 });
 const successResult=success.sandbox.activatePersistedConferenceById(
-  'local',{alreadyPersisted:true});
+  'local',{alreadyPersisted:true,activationDecision:{ok:true,active:true,conferenceId:'local',capabilities:{edit:true}}});
 assert.strictEqual(successResult,true);
-assert.deepStrictEqual(success.authorizationCalls,['local']);
+assert.deepStrictEqual(success.authorizationCalls,[]);
 assert.strictEqual(successResult&&typeof successResult.then,'undefined');
 assert.strictEqual(success.sandbox.appData.currentConferenceId,'local');
 assert.strictEqual(success.sandbox.getCurrentConference().houses[0]
@@ -129,7 +123,7 @@ assert.strictEqual(success.sandbox.getMemberActivationDiagnostics()
 
 const explicitHome=environment({route:'/conference',startup:true});
 assert.strictEqual(explicitHome.sandbox.activatePersistedConferenceById(
-  'local',{alreadyPersisted:true,enterApplication:true}),true);
+  'local',canonicalActivation({alreadyPersisted:true,enterApplication:true})),true);
 assert.strictEqual(explicitHome.route(),'/conference/app/accommodation');
 assert.strictEqual(explicitHome.calls.filter(call=>
   call==='navigate_application').length,1);
@@ -140,7 +134,7 @@ assert.ok(explicitHome.calls.indexOf('navigate_application')<
 
 const background=environment({route:'/warehouse/approvals'});
 assert.strictEqual(background.sandbox.activatePersistedConferenceById(
-  'local',{alreadyPersisted:true}),true);
+  'local',canonicalActivation({alreadyPersisted:true})),true);
 assert.deepStrictEqual(background.calls,[
   'set_current_conference','sync_current_references'
 ]);
@@ -153,7 +147,7 @@ const missingDom=environment({
   missingDom:true,currentTab:6,route:'/conference/app/accommodation'
 });
 assert.strictEqual(missingDom.sandbox.activatePersistedConferenceById(
-  'local',{alreadyPersisted:true}),true);
+  'local',canonicalActivation({alreadyPersisted:true})),true);
 assert.strictEqual(missingDom.calls.includes('render_accommodation'),false);
 assert.strictEqual(missingDom.calls.includes('render_settings'),false);
 assert.strictEqual(missingDom.sandbox.getMemberActivationDiagnostics()
@@ -164,14 +158,14 @@ const conflictVisible=environment({
   currentTab:6,route:'/conference/app/accommodation'
 });
 assert.strictEqual(conflictVisible.sandbox.activatePersistedConferenceById(
-  'local',{alreadyPersisted:true}),true);
+  'local',canonicalActivation({alreadyPersisted:true})),true);
 assert.strictEqual(conflictVisible.calls.includes('render_settings'),true);
 
 const renderFailure=environment({
   throwStage:'render_accommodation',route:'/conference/app/accommodation'
 });
 assert.strictEqual(renderFailure.sandbox.activatePersistedConferenceById(
-  'local',{alreadyPersisted:true}),false);
+  'local',canonicalActivation({alreadyPersisted:true})),false);
 const failureState=renderFailure.sandbox.getMemberActivationDiagnostics();
 assert.strictEqual(failureState.exceptionStage,'render_accommodation');
 assert.ok(failureState.trace.some(entry=>
@@ -182,7 +176,7 @@ const explicitRenderFailure=environment({
   throwStage:'render_accommodation',route:'/conference',startup:true
 });
 assert.strictEqual(explicitRenderFailure.sandbox.activatePersistedConferenceById(
-  'local',{alreadyPersisted:true,enterApplication:true}),false);
+  'local',canonicalActivation({alreadyPersisted:true,enterApplication:true})),false);
 assert.strictEqual(explicitRenderFailure.route(),'/conference');
 assert.ok(explicitRenderFailure.calls.indexOf('navigate_application')<
   explicitRenderFailure.calls.indexOf('render_accommodation'));
@@ -195,7 +189,7 @@ const previousApplicationFailure=environment({
 });
 assert.strictEqual(previousApplicationFailure.sandbox
   .activatePersistedConferenceById(
-    'local',{alreadyPersisted:true,enterApplication:true}
+    'local',canonicalActivation({alreadyPersisted:true,enterApplication:true})
   ),false);
 assert.strictEqual(
   previousApplicationFailure.route(),'/conference/app/transports'

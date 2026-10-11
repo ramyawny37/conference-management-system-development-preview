@@ -53,7 +53,6 @@
   }
 
   function isUuid(value){
-    // Keep this contract identical to ConferenceLinkStore.isUuid().
     return typeof value==='string'&&
       /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
         .test(value);
@@ -142,13 +141,6 @@
     options=isPlainObject(options)?options:{};
     requireBuildInput(appData);
     var clonedAppData=cloneFullBackupValue(appData);
-    var links=global.ConferenceLinkStore;
-    var currentConferenceWasLinked=!!(clonedAppData.currentConferenceId&&links&&
-      typeof links.get==='function'&&links.get(clonedAppData.currentConferenceId));
-    clonedAppData.conferences=clonedAppData.conferences.filter(function(conference){
-      return !(conference&&links&&typeof links.get==='function'&&links.get(conference.id));
-    });
-    if(currentConferenceWasLinked)clonedAppData.currentConferenceId=null;
     if(!hasOwn(clonedAppData,'currentConferenceId')){
       clonedAppData.currentConferenceId=null;
     }
@@ -1031,13 +1023,6 @@
       if(!restoreInput||restoreInput.confirmed!==true){
         throw codedError('FULL_RESTORE_CONFIRMATION_REQUIRED',
           'Explicit restore confirmation is required.');
-      }
-      var activeLinks=global.ConferenceLinkStore&&
-        typeof global.ConferenceLinkStore.list==='function'
-        ?global.ConferenceLinkStore.list():[];
-      if(activeLinks.length){
-        throw codedError('FULL_RESTORE_LOCAL_ONLY_REQUIRED',
-          'Whole-document restore is available only when no linked Conference is present.');
       }
       var document=restoreInput.backupDocument;
       var validation=validateFullBackupDocument(document);

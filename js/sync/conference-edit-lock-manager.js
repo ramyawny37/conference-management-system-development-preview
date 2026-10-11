@@ -5,7 +5,7 @@
   var state={localConferenceId:null,remoteConferenceId:null,section:SECTION,status:'viewing',lock:null,error:null,lastAcquireResult:null,lastRenewResult:null,lastReleaseResult:null};
   function copy(value){return value==null?value:JSON.parse(JSON.stringify(value));}
   function currentId(){var current=global.getCurrentConference&&global.getCurrentConference();return current&&String(current.id||'')||'';}
-  function linked(localId){var link=global.ConferenceLinkStore&&global.ConferenceLinkStore.get(localId);return link&&['linked','cloud_linked'].indexOf(link.linkStatus)>=0?link:null;}
+  function linked(conferenceId){conferenceId=String(conferenceId||'').trim();return conferenceId?{remoteConferenceId:conferenceId}:null;}
   function valid(){return state.status==='editing'&&state.lock&&state.lock.owned===true&&Date.parse(state.lock.expiresAt||'')>Date.now();}
   function clearTimer(){if(timer!==null)global.clearInterval(timer);timer=null;}
   function rerender(){if(typeof global.renderAccommodation==='function')global.renderAccommodation();}

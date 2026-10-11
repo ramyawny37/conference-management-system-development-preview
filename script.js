@@ -214,11 +214,8 @@ function restoreArchive(id){
   return true;
 }
 function getCanonicalConferenceCoreLink(localConferenceId){
-  var link=window.ConferenceLinkStore&&
-    typeof window.ConferenceLinkStore.get==='function'
-      ?window.ConferenceLinkStore.get(String(localConferenceId||'')):null;
-  return link&&['linked','cloud_linked'].indexOf(link.linkStatus)>=0&&
-    link.remoteConferenceId?link:null;
+  var conferenceId=String(localConferenceId||'').trim();
+  return conferenceId?{remoteConferenceId:conferenceId}:null;
 }
 function refreshCanonicalConferenceCorePresentation(localConferenceId){
   var current=getCurrentConference();
