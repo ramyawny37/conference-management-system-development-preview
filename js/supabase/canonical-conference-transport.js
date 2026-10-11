@@ -1,6 +1,6 @@
 (function(global){
   'use strict';
-  var states=Object.create(null),flights=Object.create(null);
+  var states=Object.create(null),flights=Object.create(null),sessionEpoch=0;
   function copy(value){return value==null?value:JSON.parse(JSON.stringify(value));}
   function operationId(){return global.crypto&&global.crypto.randomUUID?global.crypto.randomUUID():String(Date.now())+'-0000-4000-8000-'+Math.random().toString(16).slice(2,14).padEnd(12,'0');}
   // Canonical conference ID is the sole identity; no local/cloud link lookup.
@@ -27,7 +27,30 @@
     });
     return {localConferenceId:String(localId),remoteConferenceId:String(response&&response.conferenceId||''),canManage:response&&response.canManage===true,vehicles:vehicles,assignments:assignments};
   }
-  function hydrate(localId,authorizedRemoteId){localId=String(localId||'');var conferenceId=String(authorizedRemoteId||localId);if(!conferenceId)return Promise.reject(new Error('CANONICAL_CONFERENCE_ID_REQUIRED'));if(flights[localId])return flights[localId];flights[localId]=invoke('get_conference_transport',{p_conference_id:conferenceId}).then(function(response){states[localId]=projection(localId,response);delete flights[localId];return copy(states[localId]);},function(error){delete flights[localId];throw error;});return flights[localId];}
+  function hydrate(localId,authorizedRemoteId){
+    localId=String(localId||'');
+    var conferenceId=String(authorizedRemoteId||localId);
+    if(!conferenceId)return Promise.reject(new Error('CANONICAL_CONFERENCE_ID_REQUIRED'));
+    if(flights[localId])return flights[localId];
+    var epoch=sessionEpoch;
+    var flight=invoke('get_conference_transport',{p_conference_id:conferenceId}).then(function(response){
+      if(epoch!==sessionEpoch)throw new Error('CANONICAL_CONFERENCE_SESSION_STALE');
+      if(!response||String(response.conferenceId||'')!==conferenceId)throw new Error('CANONICAL_CONFERENCE_RESPONSE_ID_MISMATCH');
+      var next=projection(localId,response);
+      if(epoch!==sessionEpoch)throw new Error('CANONICAL_CONFERENCE_SESSION_STALE');
+      states[localId]=next;
+      return copy(next);
+    });
+    flights[localId]=flight.then(function(value){
+      if(flights[localId]===tracked)delete flights[localId];
+      return value;
+    },function(error){
+      if(flights[localId]===tracked)delete flights[localId];
+      throw error;
+    });
+    var tracked=flights[localId];
+    return tracked;
+  }
   function state(localId){return copy(states[String(localId||'')]||null);}
   function refreshAfter(localId,promise){return promise.then(function(result){return hydrate(localId).then(function(){return result;});});}
   function mutateVehicle(localId,draft){draft=draft||{};return refreshAfter(localId,invoke('mutate_conference_transport_vehicle',{p_operation_id:operationId(),p_operation:String(draft.operation||''),p_conference_id:remoteId(localId),p_vehicle_id:draft.vehicleId?String(draft.vehicleId):null,p_expected_revision:draft.expectedRevision==null?null:Number(draft.expectedRevision),p_name:draft.name==null?null:String(draft.name),p_icon:draft.icon==null?null:String(draft.icon),p_capacity:draft.capacity==null?null:Number(draft.capacity),p_position:draft.position==null?null:Number(draft.position),p_remove_overflow:draft.removeOverflow===true}));}
@@ -35,6 +58,6 @@
   function removeAssignment(localId,assignmentId,revision){return refreshAfter(localId,invoke('remove_conference_transport_assignment',{p_operation_id:operationId(),p_assignment_id:String(assignmentId||''),p_expected_revision:Number(revision)}));}
   function participants(localId){var integration=global.PlatformIntegration,state=integration&&integration.getConferenceParticipationState&&integration.getConferenceParticipationState(localId);return state&&Array.isArray(state.items)?state.items.filter(function(item){return item.status==='active';}):[];}
   function createParticipant(localId,fullName){var integration=global.PlatformIntegration;if(!integration||typeof integration.createConferenceParticipationWithPerson!=='function')return Promise.reject(new Error('CANONICAL_PARTICIPATION_RUNTIME_REQUIRED'));return integration.createConferenceParticipationWithPerson(localId,{fullName:String(fullName||'').trim(),phone:null,email:null,notes:null});}
-  function clear(){states=Object.create(null);flights=Object.create(null);}
+  function clear(){sessionEpoch++;states=Object.create(null);flights=Object.create(null);}
   global.CanonicalConferenceTransport=Object.freeze({isLinked:isLinked,hydrate:hydrate,getState:state,getVehicles:function(localId){var value=states[String(localId||'')];return copy(value&&value.vehicles||[]);},getActiveParticipations:participants,mutateVehicle:mutateVehicle,setAssignment:setAssignment,removeAssignment:removeAssignment,createParticipant:createParticipant,clear:clear});
 })(window);
