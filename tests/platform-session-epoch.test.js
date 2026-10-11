@@ -63,8 +63,6 @@ test('reset before dispatch prevents invoking protected RPC at all',async()=>{
 });
 
 test('logout clears selected conference even when browser event dispatch is unavailable',async()=>{
-  const env=environment();
-  env.services.setSelectedConferenceId('previous');
   // The test sandbox has no dispatchEvent or CustomEvent, exercising the fallback.
   const sourceSandbox={
     window:null,
