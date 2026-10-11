@@ -61,3 +61,20 @@ test('reset before dispatch prevents invoking protected RPC at all',async()=>{
   await assert.rejects(pending,error=>error&&error.code==='PLATFORM_SESSION_STALE');
   assert.equal(env.hasPending(),false);
 });
+
+test('logout clears selected conference even when browser event dispatch is unavailable',async()=>{
+  const env=environment();
+  env.services.setSelectedConferenceId('previous');
+  // The test sandbox has no dispatchEvent or CustomEvent, exercising the fallback.
+  const sourceSandbox={
+    window:null,
+    addEventListener:()=>{},
+    PlatformDeviceSession:{invokeModuleProtected:()=>Promise.resolve({})}
+  };
+  sourceSandbox.window=sourceSandbox;
+  vm.runInNewContext(source,sourceSandbox);
+  const platform=sourceSandbox.PlatformIntegration;
+  platform.getModuleServices().setSelectedConferenceId('previous');
+  await platform.logout();
+  assert.equal(platform.getModuleServices().getSelectedConferenceId(),'');
+});
