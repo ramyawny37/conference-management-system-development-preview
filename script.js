@@ -691,6 +691,8 @@ function activatePersistedConferenceById(id,options){
         backgroundSteps[backgroundStepIndex][0],
         backgroundSteps[backgroundStepIndex][1]
       ).ok){
+        appData.currentConferenceId=previousConferenceId;
+        currentConferenceRuntimeActivationDecision=previousActivationDecision;
         traceMemberActivation('activation_return','return','step_failed');
         return false;
       }
@@ -701,7 +703,12 @@ function activatePersistedConferenceById(id,options){
     return true;
   }
   if(conferenceRoute&&conferenceRoute.kind==='home'){
-    openStartupScreen({clearCurrentConference:false,persistView:false});
+    if(!openStartupScreen({clearCurrentConference:false,persistView:false})){
+      appData.currentConferenceId=previousConferenceId;
+      currentConferenceRuntimeActivationDecision=previousActivationDecision;
+      traceMemberActivation('activation_return','return','home_view_failed');
+      return false;
+    }
     traceMemberActivation('activation_return','completed','CONFERENCE_HOME_ROUTE');
     return true;
   }
@@ -733,6 +740,11 @@ function activatePersistedConferenceById(id,options){
   for(var stepIndex=0;stepIndex<steps.length;stepIndex++){
     if(!runMemberActivationStep(steps[stepIndex][0],steps[stepIndex][1]).ok){
       rollbackCanonicalConferenceApplicationEntry(entry);
+      appData.currentConferenceId=previousConferenceId;
+      currentConferenceRuntimeActivationDecision=previousActivationDecision;
+      if(previousConferenceId===null||previousConferenceId===undefined){
+        openStartupScreen({clearCurrentConference:false,persistView:false});
+      }
       traceMemberActivation('activation_return','return','step_failed');
       return false;
     }
