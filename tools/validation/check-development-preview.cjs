@@ -127,6 +127,7 @@ if (platformTests.length === 0) {
 
 // Canonical session isolation must be exercised by the publish gate, not just syntax-checked.
 runNode(['--test', 'tests/canonical-conference-session-stale-hydration.test.js']);
+runNode(['--test', 'tests/canonical-conference-activation-render-isolation.test.js']);
 runNode(['--test', ...platformTests]);
 
 for (const artifact of [
