@@ -9832,6 +9832,8 @@ function completeAuthorizedApplicationStartup(){
     return Promise.resolve(discovery).then(function(result){
       requireStartupResult('discovery',result);
       recordStartupStage('discovery','completed');
+      // Discovery updates its store asynchronously; render the authorized list now.
+      showStartupConferenceList();
       var authorization=window.ConferenceActivationAuthorization;
       var candidate=String(window.applicationPersistedConferenceCandidate||'').trim();
       if(!candidate||!authorization){
