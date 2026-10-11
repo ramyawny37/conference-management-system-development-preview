@@ -192,6 +192,7 @@ test('missing canonical owner fails closed before activation rather than silentl
       assert.equal(outcome.ok,false);
       assert.equal(outcome.status,'canonical_hydration_failed');
       assert.equal(outcome.error.code,'CANONICAL_HYDRATOR_UNAVAILABLE');
+      assert.deepEqual(env.calls,[],'all owners must be present before any hydration starts');
       assert.equal(env.calls.includes('activate'),false);
       assert.equal(env.getData().conferences.length,0);
     });
