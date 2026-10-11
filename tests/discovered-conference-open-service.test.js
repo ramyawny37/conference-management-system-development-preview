@@ -118,3 +118,22 @@ test('session reset invalidates pending discovery before activation',async()=>{
   assert.equal(env.calls.includes('activate'),false);
   assert.equal(env.getData().conferences.length,0);
 });
+
+test('session reset during canonical hydration prevents runtime creation and activation',async()=>{
+  const env=environment();
+  const listeners={};
+  env.sandbox.addEventListener=(name,fn)=>{(listeners[name]??=[]).push(fn);};
+  vm.runInNewContext(source,env.sandbox);
+  let releaseHydration;
+  env.sandbox.PlatformIntegration.hydrateConferenceCore=()=>new Promise(resolve=>{releaseHydration=resolve;});
+  const pending=env.sandbox.DiscoveredConferenceOpenService.open(remote);
+  for(let i=0;i<5&&!releaseHydration;i++)await Promise.resolve();
+  assert.equal(typeof releaseHydration,'function');
+  for(const fn of listeners['platform-session-reset']||[])fn({type:'platform-session-reset'});
+  releaseHydration({});
+  const outcome=await pending;
+  assert.equal(outcome.ok,false);
+  assert.equal(outcome.status,'stale');
+  assert.equal(env.calls.includes('activate'),false);
+  assert.equal(env.getData().conferences.length,0);
+});
