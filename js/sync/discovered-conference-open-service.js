@@ -70,6 +70,9 @@
           canonicalAccess:true,
           capabilities:access.data.capabilities
         });
+        if(!activationDecision||activationDecision.ok!==true||activationDecision.active!==true){
+          return result(false,'activation_authorization_denied');
+        }
         var activate=options.activate||global.activatePersistedConferenceById;
         var activated=typeof activate==='function'&&activate(remoteId,{
           alreadyPersisted:true,
