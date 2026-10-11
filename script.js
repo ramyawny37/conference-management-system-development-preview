@@ -336,17 +336,9 @@ function hydrateCanonicalConferenceRestaurant(localConferenceId,options){
 function setCurrentConferenceById(id, options){
   if(window.StartupAccessGate&&!window.StartupAccessGate.isAllowed())return false;
   var activationAuthorization=window.ConferenceActivationAuthorization;
-  var conferenceLink=window.ConferenceLinkStore&&
-    typeof window.ConferenceLinkStore.get==='function'
-      ?window.ConferenceLinkStore.get(String(id||'')):null;
   options = options || {};
   if(!activationAuthorization)return false;
   var activationDecision=options.activationDecision||null;
-  if(!conferenceLink){
-    activationDecision=activationAuthorization.authorizeLocal({
-      conferenceId:String(id||'')
-    });
-  }
   if(!activationDecision||activationDecision.ok!==true||
     activationDecision.active!==true)return false;
   if(window.ConferenceEditLockManager&&
@@ -658,15 +650,7 @@ function activatePersistedConferenceById(id,options){
   options=options||{};
   var activationAuthorization=window.ConferenceActivationAuthorization;
   if(!activationAuthorization)return false;
-  var conferenceLink=window.ConferenceLinkStore&&
-    typeof window.ConferenceLinkStore.get==='function'
-      ?window.ConferenceLinkStore.get(String(id||'')):null;
   var activationDecision=options.activationDecision||null;
-  if(!conferenceLink){
-    activationDecision=activationAuthorization.authorizeLocal({
-      conferenceId:String(id||'')
-    });
-  }
   if(!activationDecision||activationDecision.ok!==true||
     activationDecision.active!==true)return false;
   currentConferenceRuntimeActivationDecision=activationDecision;
