@@ -1,0 +1,33 @@
+name: Verify private Reservations artifact
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.RESERVATIONS_SOURCE_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: develop
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check access
+        run: |
+          if [ -z "$GH_TOKEN" ]; then
+            echo "::error::Private source token is not configured"
+            exit 1
+          fi
+      - name: Download and verify approved source artifact
+        run: |
+          set -euo pipefail
+          repo=ramyawny37/reservation-management-system
+          sha=$(gh api "repos/$repo/actions/runs/38275177451" --jq .head_sha)
+          test "$sha" = 7f4298bc1111f721b73ed73a4fd4476a2044e9b4
+          gh api "repos/$repo/actions/artifacts/11759285007/zip" > "$RUNNER_TEMP/reservations.zip"
+          unzip -t "$RUNNER_TEMP/reservations.zip"
+          node tools/integrate-reservations-artifact.cjs "$RUNNER_TEMP/reservations.zip"
+          git diff --check
