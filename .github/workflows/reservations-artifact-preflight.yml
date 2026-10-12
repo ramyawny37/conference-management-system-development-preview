@@ -1,0 +1,30 @@
+name: Reservations artifact integration preflight
+on:
+  push:
+    branches: [develop]
+    paths:
+      - '.github/workflows/reservations-artifact-preflight.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  preflight:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: develop
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify integration utility
+        run: node --check tools/integrate-reservations-artifact.cjs
+      - name: Verify artifact access configuration
+        env:
+          HAS_SOURCE_TOKEN: ${{ secrets.RESERVATIONS_SOURCE_TOKEN != '' }}
+        run: |
+          if [ "$HAS_SOURCE_TOKEN" = true ]; then
+            echo 'Private Reservations artifact access is configured.'
+          else
+            echo 'Private Reservations artifact access is not configured.'
+          fi
