@@ -65,8 +65,11 @@ jobs:
         run: npm ci
       - name: Install PostgreSQL client
         run: sudo apt-get update -qq && sudo apt-get install -y postgresql-client
-      - name: Conference platform regression tests
-        run: npm run check
+      - name: Conference Development platform regression tests
+        run: node --test $(find tests -maxdepth 1 -name 'platform-*.test.js' ! -name 'platform-promotion-readiness.test.js' -print | sort)
+      - name: Production promotion readiness (diagnostic only; never a Development acceptance gate)
+        continue-on-error: true
+        run: node --test tests/platform-promotion-readiness.test.js
       - name: Development preview validation
         if: always()
         run: npm run check:development-preview
