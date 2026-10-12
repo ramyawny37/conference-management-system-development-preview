@@ -1,0 +1,51 @@
+name: Validate Reservations integration on develop
+on:
+  push:
+    branches: [develop]
+    paths:
+      - 'tools/integrate-reservations-artifact.cjs'
+      - '.github/workflows/validate-reservations-integration.yml'
+      - 'modules/reservations/reservations-module.js'
+      - 'modules/reservations/reservations-module.css'
+      - 'index.html'
+      - 'service-worker.js'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: develop
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check integration script syntax
+        run: node --check tools/integrate-reservations-artifact.cjs
+      - name: Validate source boundary and cache references
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const fs = require('fs');
+          const tool = fs.readFileSync('tools/integrate-reservations-artifact.cjs', 'utf8');
+          const index = fs.readFileSync('index.html', 'utf8');
+          const sw = fs.readFileSync('service-worker.js', 'utf8');
+          for (const name of ['reservations-module.js', 'reservations-module.css']) {
+            if (!tool.includes(name)) throw Error('Integrator missing ' + name);
+            if (!index.includes('modules/reservations/' + name)) throw Error('HTML missing ' + name);
+            if (!sw.includes('modules/reservations/' + name)) throw Error('SW missing ' + name);
+          }
+          if (!tool.includes("branch !== 'develop'")) throw Error('Missing develop guard');
+          if (!tool.includes("crypto.createHash('sha256')")) throw Error('Missing checksum guard');
+          console.log('Source boundary and references: PASS');
+          NODE
+      - name: Install dependencies
+        run: npm ci
+      - name: Conference platform regression tests
+        run: npm run check
+      - name: Development preview validation
+        run: npm run check:development-preview
