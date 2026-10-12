@@ -28,7 +28,10 @@ try {
   execFileSync('unzip', ['-q', path.resolve(archive), '-d', temp]);
   const payloads = {};
   for (const [name, hash] of Object.entries(expected)) {
-    const source = path.join(temp, 'modules', 'reservations', name);
+    const nested = path.join(temp, 'modules', 'reservations', name);
+    const flat = path.join(temp, name);
+    const source = fs.existsSync(nested) ? nested : flat;
+    if (!fs.existsSync(source)) throw new Error('Artifact missing: ' + name);
     const bytes = fs.readFileSync(source);
     const actual = crypto.createHash('sha256').update(bytes).digest('hex');
     if (actual !== hash) throw new Error(name + ' SHA256 mismatch: ' + actual);
@@ -49,6 +52,7 @@ try {
     sw = replaceOnce(sw, oldRef, newRef, 'service-worker.js ' + name);
   }
   sw = replaceOnce(sw, "'conference-owner-preflight-correction-v1'", "'" + rev + "'", 'Development cache revision');
+  // Validate all references and checksums before modifying any tracked file.
   for (const [name, bytes] of Object.entries(payloads)) {
     fs.writeFileSync(path.join(root, 'modules', 'reservations', name), bytes);
   }
