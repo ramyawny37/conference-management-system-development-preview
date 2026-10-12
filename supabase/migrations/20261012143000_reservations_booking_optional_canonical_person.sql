@@ -21,8 +21,8 @@ begin
   v_new_insert := replace(v_old_insert,'(scope_partition_id,full_name','(scope_partition_id,person_id,full_name');
   v_new_insert := replace(v_new_insert,'values(v_event.scope_partition_id,btrim','values(v_event.scope_partition_id,nullif(p_args->>''p_person_id'','''')::uuid,btrim');
   -- Replace only the create_booking keys (the update contract stays unchanged).
-  v_definition := replace(v_definition, v_old_keys||'; v_context:=reservations_private.resolve_event_scope',
-    v_new_keys||'; v_context:=reservations_private.resolve_event_scope');
+  v_definition := replace(v_definition, v_old_keys||'); v_context:=reservations_private.resolve_event_scope',
+    v_new_keys||'); v_context:=reservations_private.resolve_event_scope');
   if position(v_new_keys in v_definition)=0 then
     raise exception 'RESERVATIONS_BOOKING_IDENTITY_KEY_REWRITE_FAILED' using errcode='55000';
   end if;
