@@ -25,9 +25,9 @@ jobs:
         run: |
           set -euo pipefail
           repo=ramyawny37/reservation-management-system
-          sha=$(gh api "repos/$repo/actions/runs/38275177451" --jq .head_sha)
-          test "$sha" = 7f4298bc1111f721b73ed73a4fd4476a2044e9b4
-          gh api "repos/$repo/actions/artifacts/11759285007/zip" > "$RUNNER_TEMP/reservations.zip"
+          sha=$(gh api "repos/$repo/actions/runs/38433644462" --jq .head_sha)
+          test "$sha" = 485c0eb938d46cc2aa1e89045918c8344c9a8d75
+          gh api "repos/$repo/actions/artifacts/11832257434/zip" > "$RUNNER_TEMP/reservations.zip"
           unzip -t "$RUNNER_TEMP/reservations.zip"
           node tools/integrate-reservations-artifact.cjs "$RUNNER_TEMP/reservations.zip"
           git diff --check
