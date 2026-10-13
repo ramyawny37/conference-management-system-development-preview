@@ -12,6 +12,8 @@ const edge=read('supabase/functions/platform-device-operation/index.ts');
 const conferenceRouter=read('supabase/migrations/20261010201000_reservations_organization_free_scope_runtime.sql');
 const conferenceCore=read('supabase/migrations/20261010201600_platform_dispatcher_organization_retirement.sql');
 const dispatcher=migration.match(/create or replace function platform\.execute_device_operation\([\s\S]*?end \$\$;/i)?.[0]||'';
+const dispatcherPatches=read('supabase/migrations/20261013141000_reservations_canonical_people_device_dispatch.sql');
+const effectiveDispatcher=dispatcher+dispatcherPatches;
 
 function edgeOperations(module){
   const initial=edge.match(new RegExp(`const ${module}=new Set\\(\\[([^;]+)\\]\\)`));
@@ -36,9 +38,9 @@ test('one top-level dispatcher owns the verified session and has no predecessor 
 });
 
 test('every current Edge operation remains represented by its canonical module route',()=>{
-  for(const operation of edgeOperations('platform'))assert.match(dispatcher,new RegExp(`'${operation}'`),`platform:${operation}`);
-  for(const operation of edgeOperations('reservations'))assert.match(dispatcher,new RegExp(`'${operation}'`),`reservations:${operation}`);
-  for(const operation of edgeOperations('warehouse'))assert.match(dispatcher,new RegExp(`'${operation}'`),`warehouse:${operation}`);
+  for(const operation of edgeOperations('platform'))assert.match(effectiveDispatcher,new RegExp(`'${operation}'`),`platform:${operation}`);
+  for(const operation of edgeOperations('reservations'))assert.match(effectiveDispatcher,new RegExp(`'${operation}'`),`reservations:${operation}`);
+  for(const operation of edgeOperations('warehouse'))assert.match(effectiveDispatcher,new RegExp(`'${operation}'`),`warehouse:${operation}`);
   assert.match(dispatcher,/'apply_library_template_content_operation'/);
   assert.match(dispatcher,/p_module='conference'[\s\S]*platform\.execute_conference_device_operation\(/);
   for(const operation of edgeOperations('conference')){
