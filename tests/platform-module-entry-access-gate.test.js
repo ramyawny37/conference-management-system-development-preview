@@ -11,6 +11,7 @@ const script=fs.readFileSync('script.js','utf8');
 const index=fs.readFileSync('index.html','utf8');
 const worker=fs.readFileSync('service-worker.js','utf8');
 const reservationsBundle=fs.readFileSync('modules/reservations/reservations-module.js','utf8');
+const reservationsRevision='reservations-canonical-people-7f4298bc-v1';
 
 function runtime(initialRoute,denyModule){
   let route=initialRoute;
@@ -80,6 +81,10 @@ test('route restores use PlatformIntegration and deterministic assets remain ali
   assert.match(worker,/\.\/js\/platform-integration\.js\?rev=platform-session-epoch-v1/);
   assert.match(index,/script\.js\?rev=canonical-conference-id-v1/);
   assert.match(worker,/\.\/script\.js\?rev=canonical-conference-id-v1/);
-  assert.match(index,/reservations-module\.js\?rev=reservations-root-boundary-v1/);
+  for(const asset of ['reservations-module.js','reservations-module.css']){
+    const reference=`modules/reservations/${asset}?rev=${reservationsRevision}`;
+    assert.ok(index.includes(reference),`index missing ${reference}`);
+    assert.ok(worker.includes(`./${reference}`),`service worker missing ${reference}`);
+  }
   assert.doesNotMatch(reservationsBundle,/check_module_access/);
 });
