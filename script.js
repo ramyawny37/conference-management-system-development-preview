@@ -8383,6 +8383,8 @@ function importLocalOnlyPeopleExcelFile(e){
   e.target.value = '';
 }
 
+var personDialogContext = { guestRowId: null, childRowId: null, targetField: '' };
+
 function openPersonDialog(personId){
   var current=getCurrentConference();
   var linked=!!(current&&getCanonicalConferenceCoreLink(current.id));
