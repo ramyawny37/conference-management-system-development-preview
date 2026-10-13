@@ -6,7 +6,7 @@ const vm=require('node:vm');
 const source=fs.readFileSync('js/platform-integration.js','utf8');
 const index=fs.readFileSync('index.html','utf8');
 const worker=fs.readFileSync('service-worker.js','utf8');
-const reservationsRevision='reservations-canonical-people-7f4298bc-v1';
+const reservationsRevision='reservations-person-consent-485c0eb-v1';
 
 function runtime(initialRoute='/'){
   let route=initialRoute;

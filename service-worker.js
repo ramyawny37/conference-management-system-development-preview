@@ -7,7 +7,7 @@ const CACHE_NAMESPACE = IS_DEVELOPMENT
   : '';
 const CACHE_PREFIX = CACHE_NAMESPACE + 'conference-manager-core-';
 const CACHE_REVISION = IS_DEVELOPMENT
-  ? 'reservations-canonical-people-7f4298bc-v1'
+  ? 'reservations-person-consent-485c0eb-v1'
   : 'production-3-6-0-release-v6';
 const CACHE_NAME = CACHE_PREFIX + 'v' + APP_VERSION + '-' + CACHE_REVISION;
 const CORE_ASSETS = [
@@ -16,7 +16,7 @@ const CORE_ASSETS = [
   './shared-design-tokens.css?rev=platform-shell-phase2b-v1',
   './style.css?rev=item-unit-dialog-v1',
   './canonical-platform-shell.css?rev=reservations-workspace-v6',
-  './modules/reservations/reservations-module.css?rev=reservations-canonical-people-7f4298bc-v1',
+  './modules/reservations/reservations-module.css?rev=reservations-person-consent-485c0eb-v1',
   './modules/reservations/reservations-visual-prototype.css?rev=reservations-prototype-fidelity-v2',
   './js/application-routing.js?rev=canonical-conference-routing-v1',
   './js/storage/environment-namespace.js',
@@ -38,7 +38,7 @@ const CORE_ASSETS = [
   './js/supabase/canonical-conference-discovery.js?rev=p6i-b1-v1',
   './js/supabase/canonical-conference-transport.js?rev=p6i-b2-v1',
   './js/supabase/canonical-conference-restaurant.js?rev=p6i-b3-v1',
-  './modules/reservations/reservations-module.js?rev=reservations-canonical-people-7f4298bc-v1',
+  './modules/reservations/reservations-module.js?rev=reservations-person-consent-485c0eb-v1',
   './modules/reservations/reservations-visual-prototype.js?rev=reservations-prototype-fidelity-v2',
   './js/supabase/system-access-service.js?rev=conference-create-authorization-v1',
   './js/sync/diagnostics-privacy-policy.js?rev=platform-capability-authority-v1',
