@@ -448,7 +448,7 @@
   <div class="mhead"><span id="personModalTitle">➕ إضافة شخص جديد</span><span style="cursor:pointer" onclick="closePersonDialog()">✕</span></div>
   <div class="mbody">
     <input type="hidden" id="personDialogId">
-    <div style="margin-bottom:9px"><label class="lbl">الاسم الكامل *</label><input id="person_full_name" placeholder="الاسم الكامل"></div>
+    <div style="margin-bottom:9px"><label class="lbl">الاسم الكامل *</label><input id="person_full_name" placeholder="الاسم الكامل" autocomplete="off" oninput="searchCanonicalPersonSuggestions()" aria-controls="personCanonicalSuggestions" aria-autocomplete="list"><div id="personCanonicalSuggestions" role="listbox" style="display:none;max-height:180px;overflow-y:auto"></div></div>
     <div class="row" style="margin-bottom:9px;gap:8px">
       <div style="flex:1"><label class="lbl">الكنيسة</label><input id="person_church" placeholder="الكنيسة"></div>
       <div style="flex:1"><label class="lbl">الهاتف</label><input id="person_phone" placeholder="الهاتف"></div>
