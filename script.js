@@ -8403,7 +8403,7 @@ function searchCanonicalPersonSuggestions(){
   }).catch(function(){if(generation===canonicalPersonSearchGeneration){box.style.display='none';showToast('تعذر البحث في دليل الأشخاص.','#E74C3C');}});
 }
 function openPersonDialog(personId){
-  canonicalPersonSearchGeneration++;canonicalPersonSelectedId=null;canonicalPersonSelectedName='';
+  canonicalPersonSearchGeneration++;canonicalPersonSelectedId=null;canonicalPersonSelectedName='';canonicalPersonSelectedSnapshot=null;
   ge('personCanonicalSuggestions').style.display='none';ge('personCanonicalSuggestions').textContent='';
   var current=getCurrentConference();
   var linked=!!(current&&getCanonicalConferenceCoreLink(current.id));
