@@ -102,3 +102,9 @@ test('canonical edit fetches exact person id rather than an ambiguous name searc
  assert.match(integration,/invokeProtected\('conference','get_conference_canonical_person'/);
  assert.match(ui,/getConferenceCanonicalPerson\(current\.id,selected\.personId\)/);
 });
+
+test('canonical person modal cannot be replaced or closed while update is pending',()=>{
+ assert.match(ui,/function closePersonDialog\(\)\{\s*if\(canonicalPersonSavePending\)return false/);
+ assert.match(ui,/function openPersonDialog\(personId\)\{\s*if\(canonicalPersonSavePending\)return false/);
+ assert.match(ui,/canonicalPersonSavePending=false;closePersonDialog\(\);renderSettings\(\)/);
+});

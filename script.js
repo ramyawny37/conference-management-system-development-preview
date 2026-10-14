@@ -8419,6 +8419,7 @@ function searchCanonicalPersonSuggestions(){
   }).catch(function(){if(generation===canonicalPersonSearchGeneration){box.style.display='none';showToast('تعذر البحث في دليل الأشخاص.','#E74C3C');}});
 }
 function openPersonDialog(personId){
+  if(canonicalPersonSavePending)return false;
   canonicalPersonSearchGeneration++;canonicalPersonSelectedId=null;canonicalPersonSelectedName='';canonicalPersonSelectedSnapshot=null;
   ge('personCanonicalSuggestions').style.display='none';ge('personCanonicalSuggestions').textContent='';
   var current=getCurrentConference();
@@ -8467,6 +8468,7 @@ function openPersonDialog(personId){
 }
 
 function closePersonDialog(){
+  if(canonicalPersonSavePending)return false;
   canonicalPersonSearchGeneration++;canonicalPersonSelectedId=null;canonicalPersonSelectedName='';canonicalPersonSelectedSnapshot=null;
   ge('personCanonicalSuggestions').style.display='none';ge('personCanonicalSuggestions').textContent='';
   ge('personModal').style.display = 'none';
@@ -8567,7 +8569,7 @@ function saveCanonicalConferenceParticipant(linkedCurrent,personId){
     return window.PlatformIntegration.updateConferenceCanonicalPerson(linkedCurrent.id,canonicalPersonSelectedId,snapshot.revision,{
       fullName:ge('person_full_name').value.trim(),phone:ge('person_phone').value.trim(),church:ge('person_church').value.trim(),
       gender:gender||null,dateOfBirth:ge('person_date_of_birth').value||null
-    }).then(function(){closePersonDialog();renderSettings();showToast('تم تحديث بيانات الشخص في الدليل المركزي');return true;})
+    }).then(function(){canonicalPersonSavePending=false;closePersonDialog();renderSettings();showToast('تم تحديث بيانات الشخص في الدليل المركزي');return true;})
       .catch(function(error){showToast(error&&error.code==='PERSON_REVISION_CONFLICT'?'تم تعديل الشخص من جهاز آخر. أعد فتح بياناته.':'تعذر تحديث بيانات الشخص.','#E74C3C');return false;})
       .finally(function(){canonicalPersonSavePending=false;});
   }
