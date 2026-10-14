@@ -8304,6 +8304,7 @@ function renderPeopleDatabaseSection(){
       h += '<div class="settings-list-item">';
       h += '<div><div style="font-weight:700">' + esc(person.fullName) + '</div><div style="font-size:10px;color:#5a7a9a">' + esc(linked?canonicalParticipantMetaText(p):personMetaText(person) || '-') + '</div></div>';
       h += '<div class="row" style="gap:4px">';
+      if(linked)h += '<button class="btn btn-gray btn-sm" onclick="openPersonDialog(\\''+p.participationId+'\\')">✏️ تعديل</button>';
       if(linked)h += '<button class="btn btn-gray btn-sm" onclick="setCanonicalParticipantStatus(\''+p.participationId+'\',\''+(p.status==='active'?'apologized':'active')+'\')">'+(p.status==='active'?'اعتذار':'تفعيل')+'</button>';
       else h += '<button class="btn btn-gray btn-sm" onclick="openPersonDialog(\'' + p.id + '\')">✏️ تعديل</button>';
       h += '<button class="btn btn-red btn-sm" onclick="deletePersonFromDatabase(\'' + (linked?p.participationId:p.id) + '\')">🗑️ حذف</button>';
@@ -8421,7 +8422,29 @@ function openPersonDialog(personId){
   ge('personCanonicalSuggestions').style.display='none';ge('personCanonicalSuggestions').textContent='';
   var current=getCurrentConference();
   var linked=!!(current&&getCanonicalConferenceCoreLink(current.id));
-  if(linked&&personId)return false;
+  if(linked&&personId){
+    var state=window.PlatformIntegration&&window.PlatformIntegration.getConferenceParticipationState(current.id);
+    var selected=state&&state.items.find(function(item){return item.participationId===String(personId);});
+    if(!selected)return false;
+    return window.PlatformIntegration.searchConferencePeople(current.id,selected.person.fullName,20).then(function(items){
+      var person=items.find(function(item){return item.personId===selected.personId;});
+      if(!person){showToast('تعذر تحميل بيانات الشخص الحالية.','#E74C3C');return false;}
+      canonicalPersonSelectedId=person.personId;canonicalPersonSelectedName=person.fullName;
+      canonicalPersonSelectedSnapshot={revision:Number(person.revision),church:String(person.church||''),phone:String(person.phone||''),gender:String(person.gender||''),dateOfBirth:String(person.dateOfBirth||'').slice(0,10)};
+      ge('personDialogId').value=selected.participationId;
+      ge('person_full_name').value=person.fullName;
+      ge('person_church').value=person.church||'';
+      ge('person_phone').value=person.phone||'';
+      ge('person_gender').value=person.gender||'';
+      ge('person_date_of_birth').value=String(person.dateOfBirth||'').slice(0,10);
+      ge('person_age').value=canonicalPersonAgeFromBirthDate(person.dateOfBirth);
+      ge('person_age').disabled=true;ge('person_notes').disabled=true;
+      ge('person_age_field').style.display='';ge('person_date_of_birth_field').style.display='';
+      ge('person_notes_field').style.display='none';
+      ge('personModalTitle').textContent='تعديل بيانات الشخص في الدليل المركزي';
+      ge('personModal').style.display='flex';return true;
+    }).catch(function(){showToast('تعذر تحميل بيانات الشخص الحالية.','#E74C3C');return false;});
+  }
   var person = personId ? getPersonById(personId) : null;
   ge('personDialogId').value = person ? person.id : '';
   ge('person_full_name').value = person ? person.fullName : '';
@@ -8526,7 +8549,20 @@ function savePersonDialog(){
 }
 
 function saveCanonicalConferenceParticipant(linkedCurrent,personId){
-  if(personId||personDialogContext.guestRowId||personDialogContext.childRowId)return false;
+  if(personDialogContext.guestRowId||personDialogContext.childRowId)return false;
+  if(personId){
+    var snapshot=canonicalPersonSelectedSnapshot;
+    if(!snapshot||!canonicalPersonSelectedId||!Number.isInteger(snapshot.revision))return false;
+    if(!confirm('تحديث بيانات الشخص في الدليل المركزي؟ سيظهر التعديل في جميع الموديولات التي تستخدم نفس الشخص.'))return false;
+    var gender=ge('person_gender').value.trim();
+    if(gender==='ذكر')gender='male';else if(gender==='أنثى')gender='female';
+    if(gender!==''&&gender!=='male'&&gender!=='female'){showToast('قيمة النوع غير صحيحة.','#E74C3C');return false;}
+    return window.PlatformIntegration.updateConferenceCanonicalPerson(linkedCurrent.id,canonicalPersonSelectedId,snapshot.revision,{
+      fullName:ge('person_full_name').value.trim(),phone:ge('person_phone').value.trim(),church:ge('person_church').value.trim(),
+      gender:gender||null,dateOfBirth:ge('person_date_of_birth').value||null
+    }).then(function(){closePersonDialog();renderSettings();showToast('تم تحديث بيانات الشخص في الدليل المركزي');return true;})
+      .catch(function(error){showToast(error&&error.code==='PERSON_REVISION_CONFLICT'?'تم تعديل الشخص من جهاز آخر. أعد فتح بياناته.':'تعذر تحديث بيانات الشخص.','#E74C3C');return false;});
+  }
   var linkedFullName=ge('person_full_name').value.trim();
   if(!linkedFullName){alert('الاسم الكامل مطلوب.');return false;}
   if(canonicalPersonSelectedId){

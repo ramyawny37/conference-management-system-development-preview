@@ -78,3 +78,10 @@ test('canonical birth date is editable on create, saved once, and age recalculat
  assert.match(ui,/ge\('person_age'\)\.value=canonicalPersonAgeFromBirthDate\(ge\('person_date_of_birth'\)\.value\)/);
  assert.match(ui,/dateOfBirth:ge\('person_date_of_birth'\)\.value\|\|null/);
 });
+
+test('conference central person editing uses guarded device dispatch and revision',()=>{
+ assert.match(integration,/invokeProtected\('conference','update_conference_canonical_person'/);
+ assert.match(integration,/p_expected_revision:expectedRevision/);
+ assert.match(ui,/تحديث بيانات الشخص في الدليل المركزي؟/);
+ assert.match(ui,/PERSON_REVISION_CONFLICT/);
+});
