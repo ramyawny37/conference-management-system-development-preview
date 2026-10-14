@@ -8427,7 +8427,7 @@ function openPersonDialog(personId){
 }
 
 function closePersonDialog(){
-  canonicalPersonSearchGeneration++;canonicalPersonSelectedId=null;canonicalPersonSelectedName='';
+  canonicalPersonSearchGeneration++;canonicalPersonSelectedId=null;canonicalPersonSelectedName='';canonicalPersonSelectedSnapshot=null;
   ge('personCanonicalSuggestions').style.display='none';ge('personCanonicalSuggestions').textContent='';
   ge('personModal').style.display = 'none';
   personDialogContext = { guestRowId: null, childRowId: null, targetField: '' };
