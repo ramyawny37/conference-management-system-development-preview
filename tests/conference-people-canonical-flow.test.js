@@ -62,3 +62,11 @@ test('Reservations update is a revision-guarded central person write with module
 test('central person date of birth selection normalizes ISO timestamp for HTML date field',()=>{
  assert.match(ui,/ge\('person_date_of_birth'\)\.value=String\(person\.dateOfBirth\|\|''\)\.slice\(0,10\)/);
 });
+
+test('conference UI displays derived age rather than a birth-date entry without inventing a birthday',()=>{
+ assert.match(ui,/function canonicalPersonAgeFromBirthDate/);
+ assert.match(ui,/ge\('person_age'\)\.value=canonicalPersonAgeFromBirthDate\(person\.dateOfBirth\)/);
+ assert.match(ui,/ge\('person_date_of_birth_field'\)\.style\.display='none'/);
+ assert.match(ui,/ge\('person_age'\)\.disabled=linked/);
+ assert.match(html,/السن للعرض فقط في البنك المركزي/);
+});

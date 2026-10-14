@@ -8389,6 +8389,15 @@ var canonicalPersonSearchGeneration=0;
 var canonicalPersonSelectedId=null;
 var canonicalPersonSelectedName='';
 var canonicalPersonSelectedSnapshot=null;
+function canonicalPersonAgeFromBirthDate(value){
+  var date=String(value||'').slice(0,10);
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(date))return '';
+  var birth=new Date(date+'T12:00:00'),today=new Date();
+  if(Number.isNaN(birth.getTime())||birth.getFullYear()!==Number(date.slice(0,4))||birth.getMonth()+1!==Number(date.slice(5,7))||birth.getDate()!==Number(date.slice(8,10))||birth>today)return '';
+  var years=today.getFullYear()-birth.getFullYear();
+  if(today.getMonth()<birth.getMonth()||(today.getMonth()===birth.getMonth()&&today.getDate()<birth.getDate()))years--;
+  return years>=0&&years<=130?String(years):'';
+}
 function searchCanonicalPersonSuggestions(){
   var current=getCurrentConference(),field=ge('person_full_name'),box=ge('personCanonicalSuggestions');
   var generation=++canonicalPersonSearchGeneration;
@@ -8398,7 +8407,7 @@ function searchCanonicalPersonSuggestions(){
   window.PlatformIntegration.searchConferencePeople(current.id,query,12).then(function(items){
     if(generation!==canonicalPersonSearchGeneration||ge('personModal').style.display==='none')return;
     box.textContent='';
-    items.forEach(function(person){var option=document.createElement('button');option.type='button';option.className='btn btn-gray';option.style.cssText='display:block;width:100%;text-align:right;margin:3px 0';option.setAttribute('role','option');option.textContent=String(person.fullName||'')+(person.phone?' — '+person.phone:'');option.onclick=function(){canonicalPersonSearchGeneration++;canonicalPersonSelectedId=person.personId;canonicalPersonSelectedName=String(person.fullName||'');canonicalPersonSelectedSnapshot={church:String(person.church||''),phone:String(person.phone||''),gender:String(person.gender||''),dateOfBirth:String(person.dateOfBirth||'').slice(0,10)};field.value=canonicalPersonSelectedName;ge('person_church').value=person.church||'';ge('person_phone').value=person.phone||'';ge('person_gender').value=person.gender||'';ge('person_date_of_birth').value=String(person.dateOfBirth||'').slice(0,10);box.style.display='none';};box.appendChild(option);});
+    items.forEach(function(person){var option=document.createElement('button');option.type='button';option.className='btn btn-gray';option.style.cssText='display:block;width:100%;text-align:right;margin:3px 0';option.setAttribute('role','option');option.textContent=String(person.fullName||'')+(person.phone?' — '+person.phone:'');option.onclick=function(){canonicalPersonSearchGeneration++;canonicalPersonSelectedId=person.personId;canonicalPersonSelectedName=String(person.fullName||'');canonicalPersonSelectedSnapshot={church:String(person.church||''),phone:String(person.phone||''),gender:String(person.gender||''),dateOfBirth:String(person.dateOfBirth||'').slice(0,10)};field.value=canonicalPersonSelectedName;ge('person_church').value=person.church||'';ge('person_phone').value=person.phone||'';ge('person_gender').value=person.gender||'';ge('person_date_of_birth').value=String(person.dateOfBirth||'').slice(0,10);ge('person_age').value=canonicalPersonAgeFromBirthDate(person.dateOfBirth);box.style.display='none';};box.appendChild(option);});
     box.style.display=items.length?'block':'none';
   }).catch(function(){if(generation===canonicalPersonSearchGeneration){box.style.display='none';showToast('تعذر البحث في دليل الأشخاص.','#E74C3C');}});
 }
@@ -8414,13 +8423,13 @@ function openPersonDialog(personId){
   ge('person_church').value = person ? person.church : '';
   ge('person_phone').value = person ? person.phone : '';
   ge('person_gender').value = person ? person.gender : '';
-  ge('person_age').value = person ? person.age : '';
+  ge('person_age').value = linked ? '' : (person ? person.age : '');
   ge('person_date_of_birth').value = linked ? '' : (person&&person.dateOfBirth||'');
   ge('person_notes').value = person ? person.notes : '';
   ge('person_age').disabled=linked;
   ge('person_notes').disabled=linked;
-  ge('person_age_field').style.display=linked?'none':'';
-  ge('person_date_of_birth_field').style.display=linked?'':'none';
+  ge('person_age_field').style.display='';
+  ge('person_date_of_birth_field').style.display='none';
   ge('person_notes_field').style.display=linked?'none':'';
   ge('personModalTitle').textContent = person ? '✏️ تعديل شخص' : '➕ إضافة شخص جديد';
   ge('personModal').style.display = 'flex';
