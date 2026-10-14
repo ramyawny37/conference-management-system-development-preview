@@ -8388,16 +8388,17 @@ var personDialogContext = { guestRowId: null, childRowId: null, targetField: '' 
 var canonicalPersonSearchGeneration=0;
 var canonicalPersonSelectedId=null;
 var canonicalPersonSelectedName='';
+var canonicalPersonSelectedSnapshot=null;
 function searchCanonicalPersonSuggestions(){
   var current=getCurrentConference(),field=ge('person_full_name'),box=ge('personCanonicalSuggestions');
   var generation=++canonicalPersonSearchGeneration;
-  canonicalPersonSelectedId=null;canonicalPersonSelectedName='';box.style.display='none';box.textContent='';
+  canonicalPersonSelectedId=null;canonicalPersonSelectedName='';canonicalPersonSelectedSnapshot=null;box.style.display='none';box.textContent='';
   if(!current||!getCanonicalConferenceCoreLink(current.id)||!window.PlatformIntegration||typeof window.PlatformIntegration.searchConferencePeople!=='function')return;
   var query=field.value.trim();if(query.length<2)return;
   window.PlatformIntegration.searchConferencePeople(current.id,query,12).then(function(items){
     if(generation!==canonicalPersonSearchGeneration||ge('personModal').style.display==='none')return;
     box.textContent='';
-    items.forEach(function(person){var option=document.createElement('button');option.type='button';option.className='btn btn-gray';option.style.cssText='display:block;width:100%;text-align:right;margin:3px 0';option.setAttribute('role','option');option.textContent=String(person.fullName||'')+(person.phone?' — '+person.phone:'');option.onclick=function(){canonicalPersonSelectedId=person.personId;canonicalPersonSelectedName=String(person.fullName||'');field.value=canonicalPersonSelectedName;ge('person_church').value=person.church||'';ge('person_phone').value=person.phone||'';ge('person_gender').value=person.gender||'';ge('person_date_of_birth').value=person.dateOfBirth||'';box.style.display='none';};box.appendChild(option);});
+    items.forEach(function(person){var option=document.createElement('button');option.type='button';option.className='btn btn-gray';option.style.cssText='display:block;width:100%;text-align:right;margin:3px 0';option.setAttribute('role','option');option.textContent=String(person.fullName||'')+(person.phone?' — '+person.phone:'');option.onclick=function(){canonicalPersonSelectedId=person.personId;canonicalPersonSelectedName=String(person.fullName||'');canonicalPersonSelectedSnapshot={church:String(person.church||''),phone:String(person.phone||''),gender:String(person.gender||''),dateOfBirth:String(person.dateOfBirth||'').slice(0,10)};field.value=canonicalPersonSelectedName;ge('person_church').value=person.church||'';ge('person_phone').value=person.phone||'';ge('person_gender').value=person.gender||'';ge('person_date_of_birth').value=person.dateOfBirth||'';box.style.display='none';};box.appendChild(option);});
     box.style.display=items.length?'block':'none';
   }).catch(function(){if(generation===canonicalPersonSearchGeneration){box.style.display='none';showToast('تعذر البحث في دليل الأشخاص.','#E74C3C');}});
 }
@@ -8516,6 +8517,8 @@ function saveCanonicalConferenceParticipant(linkedCurrent,personId){
   if(!linkedFullName){alert('الاسم الكامل مطلوب.');return false;}
   if(canonicalPersonSelectedId){
     if(linkedFullName!==canonicalPersonSelectedName){alert('أعد اختيار الشخص من نتائج البحث أو أنشئ شخصًا جديدًا.');return false;}
+    var snapshot=canonicalPersonSelectedSnapshot;
+    if(!snapshot||ge('person_church').value.trim()!==snapshot.church||ge('person_phone').value.trim()!==snapshot.phone||ge('person_gender').value.trim()!==snapshot.gender||ge('person_date_of_birth').value!==snapshot.dateOfBirth){alert('لا يتم تحديث الدليل المركزي تلقائيًا. أعد اختيار الشخص دون تعديل بياناته.');return false;}
     return window.PlatformIntegration.createConferenceParticipationForExistingPerson(linkedCurrent.id,canonicalPersonSelectedId).then(function(){renderSettings();closePersonDialog();showToast('✅ تمت إضافة الشخص للمؤتمر');return true;}).catch(function(error){showToast(error&&error.code==='CANONICAL_CONFERENCE_PERSON_ALREADY_PARTICIPATING'?'الشخص موجود بالفعل في المؤتمر.':'تعذر إضافة الشخص للمؤتمر.','#E74C3C');return false;});
   }
   var genderValue=ge('person_gender').value.trim();
