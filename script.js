@@ -8304,7 +8304,7 @@ function renderPeopleDatabaseSection(){
       h += '<div class="settings-list-item">';
       h += '<div><div style="font-weight:700">' + esc(person.fullName) + '</div><div style="font-size:10px;color:#5a7a9a">' + esc(linked?canonicalParticipantMetaText(p):personMetaText(person) || '-') + '</div></div>';
       h += '<div class="row" style="gap:4px">';
-      if(linked)h += '<button class="btn btn-gray btn-sm" onclick="openPersonDialog(\\''+p.participationId+'\\')">✏️ تعديل</button>';
+      if(linked)h += '<button class="btn btn-gray btn-sm" onclick="openPersonDialog(\''+p.participationId+'\')">✏️ تعديل</button>';
       if(linked)h += '<button class="btn btn-gray btn-sm" onclick="setCanonicalParticipantStatus(\''+p.participationId+'\',\''+(p.status==='active'?'apologized':'active')+'\')">'+(p.status==='active'?'اعتذار':'تفعيل')+'</button>';
       else h += '<button class="btn btn-gray btn-sm" onclick="openPersonDialog(\'' + p.id + '\')">✏️ تعديل</button>';
       h += '<button class="btn btn-red btn-sm" onclick="deletePersonFromDatabase(\'' + (linked?p.participationId:p.id) + '\')">🗑️ حذف</button>';
