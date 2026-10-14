@@ -42,3 +42,19 @@ test('conference removal explicitly preserves central identity and explains acco
  assert.match(ui,/تم حذف المشاركة من المؤتمر مع الاحتفاظ بالشخص/);
  assert.match(ui,/تم تسجيل الاعتذار وإزالة التسكين إن وُجد/);
 });
+
+test('apology and removal cascade through the canonical accommodation cleanup function',()=>{
+ const sql=fs.readFileSync(path.join(root,'supabase/migrations/20260929160000_canonical_conference_participation_accommodation_propagation.sql'),'utf8');
+ assert.match(sql,/create function platform_private\.cleanup_conference_accommodation_for_participation/);
+ assert.match(sql,/delete from public\.conference_accommodation_occupancies where id=v_occupancy\.id/);
+ assert.match(sql,/if v_current\.status='active' and p_status='apologized' then\s*perform platform_private\.cleanup_conference_accommodation_for_participation/);
+ assert.match(sql,/'participation_deleted',p_operation_id/);
+ assert.match(sql,/conference\.accommodation\.participation_cleanup/);
+});
+test('Reservations update is a revision-guarded central person write with module permission',()=>{
+ const sql=fs.readFileSync(path.join(root,'supabase/migrations/20261012200000_reservations_shared_people_permission_scope_fix.sql'),'utf8');
+ assert.match(sql,/require_effective_module_permission\(p_device_id,'reservations','reservations\.people\.manage',null,null\)/);
+ assert.match(sql,/update platform\.people set full_name=/);
+ assert.match(sql,/where id=v_person_id and revision=\(p_args->>'p_person_update_revision'\)::bigint/);
+ assert.match(sql,/PERSON_REVISION_CONFLICT/);
+});
