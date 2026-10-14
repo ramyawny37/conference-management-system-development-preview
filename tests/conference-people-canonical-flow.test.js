@@ -97,3 +97,8 @@ test('canonical person edit prevents duplicate writes and requires a valid revis
  assert.match(ui,/\.finally\(function\(\)\{canonicalPersonSavePending=false;\}\)/);
  assert.match(ui,/snapshot\.revision<1/);
 });
+
+test('canonical edit fetches exact person id rather than an ambiguous name search',()=>{
+ assert.match(integration,/invokeProtected\('conference','get_conference_canonical_person'/);
+ assert.match(ui,/getConferenceCanonicalPerson\(current\.id,selected\.personId\)/);
+});

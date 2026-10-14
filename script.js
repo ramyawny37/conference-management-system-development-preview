@@ -8428,9 +8428,9 @@ function openPersonDialog(personId){
     var selected=state&&state.items.find(function(item){return item.participationId===String(personId);});
     if(!selected)return false;
     var editGeneration=canonicalPersonSearchGeneration;
-    return window.PlatformIntegration.searchConferencePeople(current.id,selected.person.fullName,20).then(function(items){
-      if(editGeneration!==canonicalPersonSearchGeneration||getCurrentConference().id!==current.id)return false;
-      var person=items.find(function(item){return item.personId===selected.personId;});
+    return window.PlatformIntegration.getConferenceCanonicalPerson(current.id,selected.personId).then(function(person){
+      var activeConference=getCurrentConference();
+      if(editGeneration!==canonicalPersonSearchGeneration||!activeConference||activeConference.id!==current.id)return false;
       if(!person){showToast('تعذر تحميل بيانات الشخص الحالية.','#E74C3C');return false;}
       canonicalPersonSelectedId=person.personId;canonicalPersonSelectedName=person.fullName;
       canonicalPersonSelectedSnapshot={revision:Number(person.revision),church:String(person.church||''),phone:String(person.phone||''),gender:String(person.gender||''),dateOfBirth:String(person.dateOfBirth||'').slice(0,10)};
