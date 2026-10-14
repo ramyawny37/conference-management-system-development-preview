@@ -8446,8 +8446,8 @@ function deleteCanonicalConferenceParticipation(linkedCurrent,participationId){
   var state=integration&&integration.getConferenceParticipationState(linkedCurrent.id);
   var participation=state&&state.items.find(function(item){return item.participationId===String(participationId||'');});
   if(!participation)return false;
-  if(!confirm('هل أنت متأكد من حذف "'+esc(participation.person.fullName||'الشخص')+'"؟'))return false;
-  return integration.deleteConferenceParticipation(linkedCurrent.id,participation.participationId).then(function(){renderSettings();showToast('🗑️ تم حذف الشخص');return true;}).catch(function(){showToast('تعذر حذف المشارك.','#E74C3C');return false;});
+  if(!confirm('هل تريد إزالة مشاركة "'+esc(participation.person.fullName||'الشخص')+'" من المؤتمر؟ سيُزال تسكينه إن وُجد، لكن بياناته ستبقى في بنك الأشخاص المركزي.'))return false;
+  return integration.deleteConferenceParticipation(linkedCurrent.id,participation.participationId).then(function(){renderSettings();showToast('تم حذف المشاركة من المؤتمر مع الاحتفاظ بالشخص في البنك المركزي');return true;}).catch(function(){showToast('تعذر حذف المشارك.','#E74C3C');return false;});
 }
 
 function deleteLocalOnlyPersonFromDatabase(personId){
@@ -8583,7 +8583,7 @@ function saveLocalOnlyPersonDialog(personId){
 function setCanonicalParticipantStatus(participationId,status){
   var current=getCurrentConference();
   if(!current||!getCanonicalConferenceCoreLink(current.id))return false;
-  return window.PlatformIntegration.setConferenceParticipationStatus(current.id,participationId,status).then(function(){renderSettings();return true;}).catch(function(){showToast('تعذر تحديث حالة المشارك.','#E74C3C');return false;});
+  return window.PlatformIntegration.setConferenceParticipationStatus(current.id,participationId,status).then(function(){renderSettings();showToast(status==='apologized'?'تم تسجيل الاعتذار وإزالة التسكين إن وُجد':'تم تفعيل المشاركة');return true;}).catch(function(){showToast('تعذر تحديث حالة المشارك.','#E74C3C');return false;});
 }
 
 function openQuickAddPersonForGuest(rowId){

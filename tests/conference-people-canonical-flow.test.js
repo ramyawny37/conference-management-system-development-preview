@@ -35,3 +35,10 @@ test('conference participation status and removal do not delete platform people'
  assert.match(integration,/mutateParticipation\(localId,'delete_conference_participation'/);
  assert.match(integration,/current\.items=current\.items\.filter/);
 });
+
+test('conference removal explicitly preserves central identity and explains accommodation effect',()=>{
+ assert.match(ui,/هل تريد إزالة مشاركة/);
+ assert.match(ui,/بياناته ستبقى في بنك الأشخاص المركزي/);
+ assert.match(ui,/تم حذف المشاركة من المؤتمر مع الاحتفاظ بالشخص/);
+ assert.match(ui,/تم تسجيل الاعتذار وإزالة التسكين إن وُجد/);
+});
