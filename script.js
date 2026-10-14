@@ -8551,20 +8551,25 @@ function savePersonDialog(){
   return saveLocalOnlyPersonDialog(personId);
 }
 
+var canonicalPersonSavePending=false;
 function saveCanonicalConferenceParticipant(linkedCurrent,personId){
+  if(canonicalPersonSavePending)return false;
   if(personDialogContext.guestRowId||personDialogContext.childRowId)return false;
   if(personId){
     var snapshot=canonicalPersonSelectedSnapshot;
-    if(!snapshot||!canonicalPersonSelectedId||!Number.isInteger(snapshot.revision))return false;
+    if(!snapshot||!canonicalPersonSelectedId||!Number.isInteger(snapshot.revision)||snapshot.revision<1)return false;
+    if(!ge('person_full_name').value.trim()){showToast('الاسم الكامل مطلوب.','#E74C3C');return false;}
     if(!confirm('تحديث بيانات الشخص في الدليل المركزي؟ سيظهر التعديل في جميع الموديولات التي تستخدم نفس الشخص.'))return false;
     var gender=ge('person_gender').value.trim();
     if(gender==='ذكر')gender='male';else if(gender==='أنثى')gender='female';
     if(gender!==''&&gender!=='male'&&gender!=='female'){showToast('قيمة النوع غير صحيحة.','#E74C3C');return false;}
+    canonicalPersonSavePending=true;
     return window.PlatformIntegration.updateConferenceCanonicalPerson(linkedCurrent.id,canonicalPersonSelectedId,snapshot.revision,{
       fullName:ge('person_full_name').value.trim(),phone:ge('person_phone').value.trim(),church:ge('person_church').value.trim(),
       gender:gender||null,dateOfBirth:ge('person_date_of_birth').value||null
     }).then(function(){closePersonDialog();renderSettings();showToast('تم تحديث بيانات الشخص في الدليل المركزي');return true;})
-      .catch(function(error){showToast(error&&error.code==='PERSON_REVISION_CONFLICT'?'تم تعديل الشخص من جهاز آخر. أعد فتح بياناته.':'تعذر تحديث بيانات الشخص.','#E74C3C');return false;});
+      .catch(function(error){showToast(error&&error.code==='PERSON_REVISION_CONFLICT'?'تم تعديل الشخص من جهاز آخر. أعد فتح بياناته.':'تعذر تحديث بيانات الشخص.','#E74C3C');return false;})
+      .finally(function(){canonicalPersonSavePending=false;});
   }
   var linkedFullName=ge('person_full_name').value.trim();
   if(!linkedFullName){alert('الاسم الكامل مطلوب.');return false;}

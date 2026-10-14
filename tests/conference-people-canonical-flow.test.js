@@ -90,3 +90,10 @@ test('editing a selected canonical person does not reset identity or reopen a st
  assert.match(ui,/if\(ge\('personDialogId'\)\.value\)return;/);
  assert.match(ui,/editGeneration!==canonicalPersonSearchGeneration/);
 });
+
+test('canonical person edit prevents duplicate writes and requires a valid revision and full name',()=>{
+ assert.match(ui,/if\(canonicalPersonSavePending\)return false/);
+ assert.match(ui,/canonicalPersonSavePending=true/);
+ assert.match(ui,/\.finally\(function\(\)\{canonicalPersonSavePending=false;\}\)/);
+ assert.match(ui,/snapshot\.revision<1/);
+});
