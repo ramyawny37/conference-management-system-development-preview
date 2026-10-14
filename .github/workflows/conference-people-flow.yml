@@ -1,0 +1,30 @@
+name: Conference canonical people flow
+on:
+  push:
+    branches: [develop]
+    paths:
+      - 'script.js'
+      - 'index.html'
+      - 'js/platform-integration.js'
+      - 'supabase/migrations/*conference_people*'
+      - 'tests/conference-people-canonical-flow.test.js'
+      - '.github/workflows/conference-people-flow.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check frontend JavaScript syntax
+        run: |
+          node --check script.js
+          node --check js/platform-integration.js
+      - name: Check canonical people contract
+        run: node --test tests/conference-people-canonical-flow.test.js
