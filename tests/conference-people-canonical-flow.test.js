@@ -108,3 +108,20 @@ test('canonical person modal cannot be replaced or closed while update is pendin
  assert.match(ui,/function openPersonDialog\(personId\)\{\s*if\(canonicalPersonSavePending\)return false/);
  assert.match(ui,/canonicalPersonSavePending=false;closePersonDialog\(\);renderSettings\(\)/);
 });
+
+test('conference and reservations share one revision-guarded platform person writer',()=>{
+ const sql=fs.readFileSync(path.join(root,'supabase/migrations/20261014230000_shared_canonical_person_update.sql'),'utf8');
+ const scope=fs.readFileSync(path.join(root,'supabase/migrations/20261014231000_shared_person_conference_scope_guard.sql'),'utf8');
+ assert.match(sql,/create function platform_private\.update_canonical_person/);
+ assert.match(sql,/where id=p_person_id and revision=p_expected_revision/);
+ assert.match(sql,/PERSON_REVISION_CONFLICT/);
+ assert.match(sql,/platform\.audit_events/);
+ assert.match(sql,/create or replace function public\.update_conference_canonical_person/);
+ assert.match(sql,/return platform_private\.update_canonical_person\(p_actor_device_id/);
+ assert.match(sql,/pg_get_functiondef\('reservations_private\.mutate_scoped/);
+ assert.match(sql,/perform platform_private\.update_canonical_person\(p_device_id,v_actor,v_person_id/);
+ assert.match(sql,/PERSON_UPDATE_ARGUMENT_UNKNOWN/);
+ assert.match(scope,/require_conference_participation_context/);
+ assert.match(scope,/CONFERENCE_PERSON_NOT_PARTICIPATING/);
+ assert.match(scope,/SHARED_PERSON_SCOPE_ANCHOR_NOT_UNIQUE/);
+});
