@@ -58,3 +58,7 @@ test('Reservations update is a revision-guarded central person write with module
  assert.match(sql,/where id=v_person_id and revision=\(p_args->>'p_person_update_revision'\)::bigint/);
  assert.match(sql,/PERSON_REVISION_CONFLICT/);
 });
+
+test('central person date of birth selection normalizes ISO timestamp for HTML date field',()=>{
+ assert.match(ui,/ge\('person_date_of_birth'\)\.value=String\(person\.dateOfBirth\|\|''\)\.slice\(0,10\)/);
+});
