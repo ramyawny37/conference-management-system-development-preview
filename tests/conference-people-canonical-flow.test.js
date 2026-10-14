@@ -85,3 +85,8 @@ test('conference central person editing uses guarded device dispatch and revisio
  assert.match(ui,/تحديث بيانات الشخص في الدليل المركزي؟/);
  assert.match(ui,/PERSON_REVISION_CONFLICT/);
 });
+
+test('editing a selected canonical person does not reset identity or reopen a stale dialog',()=>{
+ assert.match(ui,/if\(ge\('personDialogId'\)\.value\)return;/);
+ assert.match(ui,/editGeneration!==canonicalPersonSearchGeneration/);
+});

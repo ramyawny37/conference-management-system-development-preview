@@ -8405,6 +8405,7 @@ function refreshCanonicalPersonAge(){
   ge('person_age').value=canonicalPersonAgeFromBirthDate(ge('person_date_of_birth').value);
 }
 function searchCanonicalPersonSuggestions(){
+  if(ge('personDialogId').value)return;
   var current=getCurrentConference(),field=ge('person_full_name'),box=ge('personCanonicalSuggestions');
   var generation=++canonicalPersonSearchGeneration;
   canonicalPersonSelectedId=null;canonicalPersonSelectedName='';canonicalPersonSelectedSnapshot=null;box.style.display='none';box.textContent='';
@@ -8426,7 +8427,9 @@ function openPersonDialog(personId){
     var state=window.PlatformIntegration&&window.PlatformIntegration.getConferenceParticipationState(current.id);
     var selected=state&&state.items.find(function(item){return item.participationId===String(personId);});
     if(!selected)return false;
+    var editGeneration=canonicalPersonSearchGeneration;
     return window.PlatformIntegration.searchConferencePeople(current.id,selected.person.fullName,20).then(function(items){
+      if(editGeneration!==canonicalPersonSearchGeneration||getCurrentConference().id!==current.id)return false;
       var person=items.find(function(item){return item.personId===selected.personId;});
       if(!person){showToast('تعذر تحميل بيانات الشخص الحالية.','#E74C3C');return false;}
       canonicalPersonSelectedId=person.personId;canonicalPersonSelectedName=person.fullName;
