@@ -456,7 +456,7 @@
     <div class="row" style="margin-bottom:9px;gap:8px">
       <div style="flex:1"><label class="lbl">النوع</label><input id="person_gender" placeholder="ذكر/أنثى"></div>
       <div id="person_age_field" style="flex:1"><label class="lbl">السن <small id="person_age_hint">(يُحسب من تاريخ الميلاد المسجل إن وجد)</small></label><input id="person_age" type="number" min="0" placeholder="غير متاح" title="السن للعرض فقط في البنك المركزي؛ لا يتم تخمين تاريخ ميلاد من السن"></div>
-      <div id="person_date_of_birth_field" style="flex:1;display:none"><label class="lbl">تاريخ الميلاد</label><input id="person_date_of_birth" type="date"></div>
+      <div id="person_date_of_birth_field" style="flex:1;display:none"><label class="lbl">تاريخ الميلاد (يُحفظ لحساب السن تلقائيًا)</label><input id="person_date_of_birth" type="date" oninput="refreshCanonicalPersonAge()" onchange="refreshCanonicalPersonAge()"></div>
     </div>
     <div id="person_notes_field" style="margin-bottom:9px"><label class="lbl">ملاحظات</label><input id="person_notes" placeholder="ملاحظات"></div>
     <div class="row">

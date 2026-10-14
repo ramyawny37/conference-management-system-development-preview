@@ -70,3 +70,11 @@ test('conference UI displays derived age rather than a birth-date entry without 
  assert.match(ui,/ge\('person_age'\)\.disabled=linked/);
  assert.match(html,/السن للعرض فقط في البنك المركزي/);
 });
+
+test('canonical birth date is editable on create, saved once, and age recalculated from it',()=>{
+ assert.match(html,/تاريخ الميلاد \(يُحفظ لحساب السن تلقائيًا\)/);
+ assert.match(html,/oninput="refreshCanonicalPersonAge\(\)"/);
+ assert.match(ui,/function refreshCanonicalPersonAge\(\)/);
+ assert.match(ui,/ge\('person_age'\)\.value=canonicalPersonAgeFromBirthDate\(ge\('person_date_of_birth'\)\.value\)/);
+ assert.match(ui,/dateOfBirth:ge\('person_date_of_birth'\)\.value\|\|null/);
+});

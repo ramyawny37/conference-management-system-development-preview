@@ -8398,6 +8398,11 @@ function canonicalPersonAgeFromBirthDate(value){
   if(today.getMonth()<birth.getMonth()||(today.getMonth()===birth.getMonth()&&today.getDate()<birth.getDate()))years--;
   return years>=0&&years<=130?String(years):'';
 }
+function refreshCanonicalPersonAge(){
+  var current=getCurrentConference();
+  if(!current||!getCanonicalConferenceCoreLink(current.id))return;
+  ge('person_age').value=canonicalPersonAgeFromBirthDate(ge('person_date_of_birth').value);
+}
 function searchCanonicalPersonSuggestions(){
   var current=getCurrentConference(),field=ge('person_full_name'),box=ge('personCanonicalSuggestions');
   var generation=++canonicalPersonSearchGeneration;
@@ -8429,7 +8434,7 @@ function openPersonDialog(personId){
   ge('person_age').disabled=linked;
   ge('person_notes').disabled=linked;
   ge('person_age_field').style.display='';
-  ge('person_date_of_birth_field').style.display='none';
+  ge('person_date_of_birth_field').style.display=linked?'':'none';
   ge('person_notes_field').style.display=linked?'none':'';
   ge('personModalTitle').textContent = person ? '✏️ تعديل شخص' : '➕ إضافة شخص جديد';
   ge('personModal').style.display = 'flex';
