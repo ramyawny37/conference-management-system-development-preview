@@ -109,7 +109,7 @@ test('account, device and audit reads use granular Platform permissions',()=>{
 });
 
 test('cache references are atomically consistent for every changed runtime asset',()=>{
-  const revision='platform-administration-canonical-sidebar-navigation-v2';
+  const revision='device-key-store-recovery-v1';
   for(const asset of ['style.css','canonical-platform-shell.css','js/platform-integration.js','js/sync/user-management-ui.js','js/sync/module-permission-administration-ui.js','js/sync/platform-administration-ui.js','script.js']){
     assert.ok(index.includes(asset+'?rev='+revision),asset+' missing from index');
     assert.ok(worker.includes('./'+asset+'?rev='+revision),asset+' missing from worker');
