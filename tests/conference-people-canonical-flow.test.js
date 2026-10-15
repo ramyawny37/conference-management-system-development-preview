@@ -125,3 +125,11 @@ test('conference and reservations share one revision-guarded platform person wri
  assert.match(scope,/CONFERENCE_PERSON_NOT_PARTICIPATING/);
  assert.match(scope,/SHARED_PERSON_SCOPE_ANCHOR_NOT_UNIQUE/);
 });
+
+test('conference change cursor advances only after canonical projections refresh',()=>{
+ const source=integration.slice(integration.indexOf('function pollConferenceChanges('),integration.indexOf('function startConferenceChangeWatch('));
+ assert.match(source,/if\(!changed\.length\)\{watch\.eventId=newest\|\|previous;return null;\}/);
+ assert.match(source,/return Promise\.all\(refresh\)\.then\(function\(\)\{if\(conferenceChangeWatch===watch&&epoch===sessionEpoch\)\{watch\.eventId=newest\|\|previous;notifyConferenceSourceChange\(watch,changed\);\}\}\)/);
+ assert.doesNotMatch(source,/watch\.eventId=newest\|\|previous;conferenceActivities/);
+ assert.match(source,/\.catch\(function\(\)\{\}\)\.then\(function\(\)\{if\(conferenceChangeWatch!==watch\)return;watch\.inFlight=false;scheduleConferenceChangeWatch\(watch\);\}\)/);
+});
