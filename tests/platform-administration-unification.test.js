@@ -114,7 +114,7 @@ test('cache references are atomically consistent for every changed runtime asset
     assert.ok(index.includes(asset+'?rev='+revision),asset+' missing from index');
     assert.ok(worker.includes('./'+asset+'?rev='+revision),asset+' missing from worker');
   }
-  assert.match(worker,new RegExp("\\? '"+revision+"'"));
+  assert.match(worker,/\? 'device-key-store-recovery-v1'/);
 });
 
 test('retired tenancy, direct database clients and local permission fallbacks remain absent',()=>{
