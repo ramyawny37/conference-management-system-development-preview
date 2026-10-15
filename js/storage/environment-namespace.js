@@ -4,7 +4,7 @@
   var DEVELOPMENT_PROJECT_REF='gppwltrifgfxrkzvvxoe';
   var DEVELOPMENT_PATH='/conference-management-system-development-preview/';
   var pathname=String(global.location&&global.location.pathname||'/');
-  var isDevelopment=pathname.indexOf(DEVELOPMENT_PATH)===0;
+  var isDevelopment=pathname.indexOf(DEVELOPMENT_PATH)===0 || pathname.indexOf('/conference-management-system-v1'+DEVELOPMENT_PATH)===0;
   var prefix=isDevelopment
     ?'cms:development:'+DEVELOPMENT_PROJECT_REF+':'
     :'';
