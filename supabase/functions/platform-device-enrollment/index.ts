@@ -29,10 +29,9 @@ Deno.serve(async(request)=>{
     }
     if(action==='device-status'){
       const deviceId=String(body.deviceId||'');if(!/^[0-9a-f-]{36}$/i.test(deviceId))throw new Error('DEVICE_ID_INVALID');
-      const result=await service.schema('platform').from('user_device_authorizations').select('id,status,revoked_at').eq('user_id',userResult.data.user.id).eq('device_id',deviceId).limit(1);
+      const result=await service.schema('platform').rpc('get_device_enrollment_device_status',{p_user_id:userResult.data.user.id,p_device_id:deviceId});
       if(result.error)throw result.error;
-      const row=result.data&&result.data[0];
-      return json(200,{ok:true,data:{known:!!row,status:row?String(row.status||'missing'):'missing',revoked:!!(row&&row.revoked_at)}});
+      return json(200,{ok:true,data:result.data});
     }
     if(action==='rerequest'){
       const bindingId=String(body.bindingId||''),deviceId=String(body.deviceId||'');
