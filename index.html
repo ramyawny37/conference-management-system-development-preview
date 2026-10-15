@@ -11,10 +11,10 @@
 
 <title>منظومة الإدارة المتكاملة</title>
 <link rel="stylesheet" href="shared-design-tokens.css?rev=platform-shell-phase2b-v1">
-<link rel="stylesheet" href="style.css?rev=platform-administration-unification-v1">
+<link rel="stylesheet" href="style.css?rev=platform-administration-canonical-sidebar-v1">
 <link rel="stylesheet" href="modules/reservations/reservations-module.css?rev=reservations-person-live-0d9db39-v1">
 <link rel="stylesheet" href="modules/reservations/reservations-visual-prototype.css?rev=reservations-prototype-fidelity-v2">
-<link rel="stylesheet" href="canonical-platform-shell.css?rev=reservations-workspace-v6">
+<link rel="stylesheet" href="canonical-platform-shell.css?rev=platform-administration-canonical-sidebar-v1">
 </head>
 <body>
 
@@ -58,7 +58,19 @@
     <button type="button" class="canonical-platform-nav__item" data-platform-module="warehouse"><span data-app-icon="boxes"></span><span>المخازن</span></button>
     <button type="button" class="canonical-platform-nav__item" disabled aria-disabled="true"><span data-app-icon="bed"></span><span>الإقامة</span><small>قريبًا</small></button>
     <button type="button" class="canonical-platform-nav__item" disabled aria-disabled="true"><span data-app-icon="note"></span><span>المطاعم</span><small>قريبًا</small></button>
-    <button type="button" class="canonical-platform-nav__item" disabled aria-disabled="true"><span data-app-icon="users"></span><span>المستخدمين</span><small>قريبًا</small></button>
+    <div class="canonical-platform-nav__group" data-platform-nav-group="platform-administration" hidden>
+      <div class="canonical-platform-nav__group-row">
+        <button type="button" class="canonical-platform-nav__item" data-platform-route="/platform-administration/users"><span data-app-icon="users"></span><span>إدارة المنصة</span></button>
+        <button type="button" class="canonical-platform-nav__toggle" data-platform-nav-toggle="platform-administration" aria-expanded="false" aria-controls="platformAdministrationSubnav" aria-label="إظهار روابط إدارة المنصة">⌄</button>
+      </div>
+      <div class="canonical-platform-subnav" id="platformAdministrationSubnav" hidden>
+        <button type="button" hidden data-platform-administration-section="users" data-platform-route="/platform-administration/users">المستخدمون والحسابات</button>
+        <button type="button" hidden data-platform-administration-section="roles" data-platform-route="/platform-administration/roles">الأدوار والصلاحيات</button>
+        <button type="button" hidden data-platform-administration-section="devices" data-platform-route="/platform-administration/devices">اعتماد الأجهزة</button>
+        <button type="button" hidden data-platform-administration-section="audit" data-platform-route="/platform-administration/audit">سجل التدقيق</button>
+        <button type="button" hidden data-platform-administration-section="security" data-platform-route="/platform-administration/security">إعدادات الأمان</button>
+      </div>
+    </div>
     <button type="button" class="canonical-platform-nav__item" disabled aria-disabled="true"><span data-app-icon="money"></span><span>العهد والسلف</span><small>قريبًا</small></button>
   </nav>
 </aside>
@@ -169,6 +181,7 @@
     <div id="warehouseWorkspace" class="conference-workspace" tabindex="-1"></div>
     <div id="reservationsWorkspace" class="conference-workspace" tabindex="-1"></div>
     <div id="reservations-prototypeWorkspace" class="conference-workspace" tabindex="-1"></div>
+    <div id="platform-administrationWorkspace" class="conference-workspace platform-administration-workspace" tabindex="-1"></div>
   </div>
   <div id="appVersionLabel" class="startup-version"></div>
 </div>
@@ -506,7 +519,7 @@
 <script src="js/supabase/warehouse-transport.js?rev=phase-w1-v1"></script>
 <script src="js/supabase/client.js?rev=target-device-argument-preservation-v1"></script>
 <script src="js/supabase/auth.js?rev=account-session-identity-v1"></script>
-<script src="js/platform-integration.js?rev=conference-people-accommodation-permissions-v1"></script>
+<script src="js/platform-integration.js?rev=platform-administration-canonical-sidebar-v1"></script>
 <script src="js/supabase/canonical-conference-discovery.js?rev=conference-section-capabilities-v2"></script>
 <script src="js/supabase/canonical-conference-transport.js?rev=p6i-b2-v1"></script>
 <script src="js/supabase/canonical-conference-restaurant.js?rev=p6i-b3-v1"></script>
@@ -528,9 +541,10 @@
 <script src="js/sync/startup-access-gate.js?rev=revoked-rerequest-error-code-v1"></script>
 <script src="js/sync/conference-activation-authorization.js?rev=canonical-conference-id-v1"></script>
 <script src="js/sync/user-management-read-service.js?rev=platform-administration-unification-v1"></script>
-<script src="js/sync/user-management-ui.js?rev=platform-administration-unification-v1"></script>
+<script src="js/sync/user-management-ui.js?rev=platform-administration-canonical-sidebar-v1"></script>
 <script src="js/sync/module-permission-administration-service.js?rev=platform-administration-unification-v1"></script>
-<script src="js/sync/module-permission-administration-ui.js?rev=platform-administration-unification-v1"></script>
+<script src="js/sync/module-permission-administration-ui.js?rev=platform-administration-canonical-sidebar-v1"></script>
+<script src="js/sync/platform-administration-ui.js?rev=platform-administration-canonical-sidebar-v1"></script>
 <script src="js/sync/conference-linking-attempt-store.js"></script>
 <script src="js/sync/discovered-conference-open-service.js?rev=conference-section-capabilities-v2"></script>
 <script src="utils.js"></script>
@@ -551,7 +565,7 @@
 <script src="js/warehouse/party-management.js?rev=warehouse-party-management-v1"></script>
 <script src="js/warehouse/remaining-operations.js?rev=adjustment-conversion-ux-v1"></script>
 <script src="js/warehouse/workspace.js?rev=item-unit-add-ui-v1"></script>
-<script src="script.js?rev=platform-administration-unification-v1"></script>
+<script src="script.js?rev=platform-administration-canonical-sidebar-v1"></script>
 <script src="version.js"></script>
 <script>
   document.addEventListener('DOMContentLoaded', function() {

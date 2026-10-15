@@ -54,7 +54,7 @@ test('actor device overrides remain rejected at both client and Edge boundaries'
 });
 test('frontend entrypoint loads service before UI',()=>{
   const serviceAsset='js/sync/module-permission-administration-service.js?rev=platform-administration-unification-v1';
-  const uiAsset='js/sync/module-permission-administration-ui.js?rev=platform-administration-unification-v1';
+  const uiAsset='js/sync/module-permission-administration-ui.js?rev=platform-administration-canonical-sidebar-v1';
   assert.ok(index.includes(serviceAsset));assert.ok(index.includes(uiAsset));assert.ok(index.indexOf(serviceAsset)<index.indexOf(uiAsset));
 });
 test('business authority remains server-catalog driven',()=>{
@@ -72,7 +72,7 @@ test('foundation and catalog paths remain separated from Organization and Invent
 });
 test('Module Administration frontend assets remain in the authoritative PWA shell',()=>{
   const serviceAsset='module-permission-administration-service.js?rev=platform-administration-unification-v1';
-  const uiAsset='module-permission-administration-ui.js?rev=platform-administration-unification-v1';
+  const uiAsset='module-permission-administration-ui.js?rev=platform-administration-canonical-sidebar-v1';
   for(const asset of [serviceAsset,uiAsset]){assert.ok(index.includes(asset),'index missing '+asset);assert.ok(worker.includes(asset),'cache shell missing '+asset);}
   assert.equal(index.match(/js\/sync\/module-permission-administration-service\.js\?rev=[^"']+/)[0],worker.match(/js\/sync\/module-permission-administration-service\.js\?rev=[^"']+/)[0]);
   assert.equal(index.match(/js\/sync\/module-permission-administration-ui\.js\?rev=[^"']+/)[0],worker.match(/js\/sync\/module-permission-administration-ui\.js\?rev=[^"']+/)[0]);

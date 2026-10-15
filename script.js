@@ -8122,29 +8122,7 @@ function renderAirConditioningV3Settings(conference){
 function renderSettings(){
   var current = getCurrentConference();
   var activeSettingsTab = settingsTab || 'general';
-  ensureUserManagementAccess();
-  ensureModulePermissionAdministrationAccess();
-  var canOpenUserManagement=userManagementAccessState.status==='loaded'&&
-    userManagementAccessState.capabilities&&
-    userManagementAccessState.capabilities.canOpenUserManagement===true;
-  var canOpenModulePermissionAdministration=
-    modulePermissionAdministrationAccessState.status==='loaded'&&
-    modulePermissionAdministrationAccessState.available===true;
-  var administrationCapabilities=userManagementAccessState.capabilities||{};
-  var canOpenDeviceAdministration=administrationCapabilities.canViewDevices===true||administrationCapabilities.canManageDevices===true;
-  var canOpenAudit=administrationCapabilities.canViewAudit===true;
-  var canOpenSecurity=administrationCapabilities.canManageSecurity===true;
-  if(activeSettingsTab==='users'&&!canOpenUserManagement){
-    activeSettingsTab='general';
-    settingsTab='general';
-  }
-  if(activeSettingsTab==='module-permissions'&&!canOpenModulePermissionAdministration){
-    activeSettingsTab='general';
-    settingsTab='general';
-  }
-  if((activeSettingsTab==='platform-devices'&&!canOpenDeviceAdministration)||
-    (activeSettingsTab==='platform-audit'&&!canOpenAudit)||
-    (activeSettingsTab==='platform-security'&&!canOpenSecurity)){
+  if(activeSettingsTab!=='general'&&activeSettingsTab!=='houses'){
     activeSettingsTab='general';
     settingsTab='general';
   }
@@ -8152,62 +8130,10 @@ function renderSettings(){
   h+='<div class="settings-nav">';
   h+='<button class="btn '+(activeSettingsTab==='general'?'btn-purple':'btn-gray')+' btn-sm" onclick="switchSettingsTab(\'general\')">⚙️ إعدادات الحدث</button>';
   h+='<button class="btn '+(activeSettingsTab==='houses'?'btn-purple':'btn-gray')+' btn-sm" onclick="switchSettingsTab(\'houses\')">🏠 بيوت المؤتمرات</button>';
-  if(canOpenUserManagement||canOpenModulePermissionAdministration||canOpenDeviceAdministration||canOpenAudit||canOpenSecurity)h+='<span class="settings-nav-group-label">إدارة المنصة</span>';
-  if(canOpenUserManagement)h+='<button class="btn '+(activeSettingsTab==='users'?'btn-purple':'btn-gray')+' btn-sm" onclick="switchSettingsTab(\'users\')">المستخدمون والحسابات</button>';
-  if(canOpenModulePermissionAdministration)h+='<button class="btn '+(activeSettingsTab==='module-permissions'?'btn-purple':'btn-gray')+' btn-sm" onclick="switchSettingsTab(\'module-permissions\')">الأدوار والصلاحيات</button>';
-  if(canOpenDeviceAdministration)h+='<button class="btn '+(activeSettingsTab==='platform-devices'?'btn-purple':'btn-gray')+' btn-sm" onclick="switchSettingsTab(\'platform-devices\')">اعتماد الأجهزة</button>';
-  if(canOpenAudit)h+='<button class="btn '+(activeSettingsTab==='platform-audit'?'btn-purple':'btn-gray')+' btn-sm" onclick="switchSettingsTab(\'platform-audit\')">سجل التدقيق</button>';
-  if(canOpenSecurity)h+='<button class="btn '+(activeSettingsTab==='platform-security'?'btn-purple':'btn-gray')+' btn-sm" onclick="switchSettingsTab(\'platform-security\')">إعدادات الأمان</button>';
   h+='</div>';
   if (activeSettingsTab === 'houses') {
     h += '<section class="settings-section settings-library-section">' + renderHouseTemplatesSettings() + '</section></div>';
     ge('tab6').innerHTML = h;
-    return;
-  }
-  if (activeSettingsTab === 'users') {
-    if(window.UserManagementUI&&
-      typeof window.UserManagementUI.renderSection==='function'){
-      h+=window.UserManagementUI.renderSection();
-    }else{
-      h+='<div class="settings-empty-state">تعذر تحميل نموذج إدارة المستخدمين.</div>';
-    }
-    h+='</div>';
-    ge('tab6').innerHTML=h;
-    if(window.UserManagementUI&&
-      typeof window.UserManagementUI.initialize==='function'){
-      window.UserManagementUI.initialize();
-    }
-    return;
-  }
-  if(activeSettingsTab==='module-permissions'){
-    if(window.ModulePermissionAdministrationUI&&
-      typeof window.ModulePermissionAdministrationUI.renderSection==='function'){
-      h+=window.ModulePermissionAdministrationUI.renderSection();
-    }else{
-      h+='<div class="settings-empty-state">تعذر تحميل إدارة صلاحيات الموديولات.</div>';
-    }
-    h+='</div>';
-    ge('tab6').innerHTML=h;
-    if(window.ModulePermissionAdministrationUI&&
-      typeof window.ModulePermissionAdministrationUI.initialize==='function'){
-      window.ModulePermissionAdministrationUI.initialize();
-    }
-    return;
-  }
-  if(activeSettingsTab==='platform-devices'){
-    h+='<div id="device_authorization_administration_root"></div>';
-    if(window.UserManagementUI&&typeof window.UserManagementUI.renderSection==='function')h+=window.UserManagementUI.renderSection();
-    h+='</div>';
-    ge('tab6').innerHTML=h;
-    refreshDeviceAuthorizationAdministration();
-    if(window.UserManagementUI&&typeof window.UserManagementUI.initialize==='function')window.UserManagementUI.initialize();
-    return;
-  }
-  if(activeSettingsTab==='platform-audit'||activeSettingsTab==='platform-security'){
-    var method=activeSettingsTab==='platform-audit'?'renderAuditSection':'renderSecuritySection';
-    h+=window.UserManagementUI&&typeof window.UserManagementUI[method]==='function'?window.UserManagementUI[method]():'<div class="settings-empty-state">تعذر تحميل قسم إدارة المنصة.</div>';
-    h+='</div>';ge('tab6').innerHTML=h;
-    if(window.UserManagementUI&&typeof window.UserManagementUI.initialize==='function')window.UserManagementUI.initialize();
     return;
   }
   if (!current) {
@@ -9978,12 +9904,12 @@ function restoreAuthorizedApplicationView(){
     recordStartupStage('view_restore','completed','PLATFORM_HOME_ROUTE');
     return true;
   }
-  if(platformRoute&&platformRoute.indexOf('/warehouse')===0){
-    setApplicationMode('startup');
-    if(window.PlatformIntegration&&typeof window.PlatformIntegration.reconcileRoute==='function')window.PlatformIntegration.reconcileRoute();
-    recordStartupStage('view_restore','completed','WAREHOUSE_ROUTE');
-    return true;
-  }
+      if(platformRoute&&/^\/(?:warehouse|reservations|platform-administration)(?:\/|$)/.test(platformRoute)){
+        setApplicationMode('startup');
+        if(window.PlatformIntegration&&typeof window.PlatformIntegration.reconcileRoute==='function')window.PlatformIntegration.reconcileRoute();
+        recordStartupStage('view_restore','completed','PLATFORM_MODULE_ROUTE');
+        return true;
+      }
   var authorization=window.ConferenceActivationAuthorization;
   var current=getCurrentConference();
   if(conferenceRoute&&conferenceRoute.kind==='home'){

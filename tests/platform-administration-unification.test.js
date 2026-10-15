@@ -14,6 +14,7 @@ const userUi=read('js/sync/user-management-ui.js');
 const script=read('script.js');
 const index=read('index.html');
 const worker=read('service-worker.js');
+const platformAdministration=read('js/sync/platform-administration-ui.js');
 
 test('existing canonical role and permission stores are extended without a parallel authority',()=>{
   for(const table of ['platform.roles','platform.role_permissions','platform.user_roles','platform.permissions'])assert.match(migration,new RegExp(table.replace('.','\\.')));
@@ -61,13 +62,43 @@ test('accounts load automatically, search is optional, and paging remains select
   assert.match(userUi,/تعذر تحميل الحسابات/);
 });
 
-test('Platform administration uses the existing settings sidebar with one entry per concern',()=>{
-  for(const label of ['المستخدمون والحسابات','الأدوار والصلاحيات','اعتماد الأجهزة','سجل التدقيق','إعدادات الأمان'])assert.equal((script.match(new RegExp(label,'g'))||[]).length>=1,true,label);
-  assert.match(script,/settings-nav-group-label[^\n]*إدارة المنصة/);
+test('Platform administration uses the canonical Platform sidebar with one route per concern',()=>{
+  for(const route of ['users','roles','devices','audit','security'])assert.match(index,new RegExp('data-platform-route="/platform-administration/'+route+'"'));
+  for(const label of ['المستخدمون والحسابات','الأدوار والصلاحيات','اعتماد الأجهزة','سجل التدقيق','إعدادات الأمان'])assert.equal((index.match(new RegExp(label,'g'))||[]).length,1,label);
+  assert.match(index,/canonical-platform-sidebar[\s\S]*data-platform-nav-group="platform-administration"/);
+  assert.doesNotMatch(script,/settings-nav-group-label[^\n]*إدارة المنصة/);
+  assert.doesNotMatch(script,/switchSettingsTab\('(users|module-permissions|platform-devices|platform-audit|platform-security)'\)/);
   assert.doesNotMatch(index,/platform-administration-shell|admin-shell/);
-  assert.match(script,/device_authorization_administration_root/);
+  assert.match(platformAdministration,/device_authorization_administration_root/);
   assert.match(userUi,/platform_audit_screen/);
   assert.match(userUi,/platform_security_screen/);
+});
+
+test('independent administration routes mount without a selected Conference and reuse current services',()=>{
+  assert.match(index,/id="platform-administrationWorkspace"/);
+  assert.match(platformAdministration,/PlatformIntegration\.registerModule\(\{id:'platform-administration'/);
+  assert.match(platformAdministration,/UserManagementUI\.renderSection/);
+  assert.match(platformAdministration,/ModulePermissionAdministrationUI\.renderSection/);
+  assert.match(platformAdministration,/DeviceAuthorizationAdministrationUI\.initialize/);
+  assert.doesNotMatch(platformAdministration,/getCurrentConference|selectedConference|localStorage|indexedDB|\.rpc\s*\(|\.from\s*\(/);
+});
+
+test('sidebar visibility follows protected capability state and routes remain fail closed',()=>{
+  assert.match(platformAdministration,/capabilities\.canOpenUserManagement===true/);
+  assert.match(platformAdministration,/capabilities\.canViewDevices===true\|\|capabilities\.canManageDevices===true/);
+  assert.match(platformAdministration,/capabilities\.canViewAudit===true/);
+  assert.match(platformAdministration,/capabilities\.canManageSecurity===true/);
+  assert.match(platformAdministration,/permissions\.available===true/);
+  assert.match(platformAdministration,/item\.hidden=!access\.pending&&access\[section\]!==true/);
+  assert.match(platformAdministration,/group\.hidden=access\.pending\|\|!/);
+});
+
+test('permission module switches preserve the selected account and unify effective authority',()=>{
+  assert.match(ui,/var selected=state\.selected;[\s\S]*state=\{moduleKey:selectedModuleKey,selected:selected/);
+  assert.match(ui,/الأدوار والصلاحيات الفعلية/);
+  assert.match(ui,/من خلال دور/);
+  assert.match(ui,/تفويض مباشر/);
+  assert.match(ui,/<details class="module-permission-advanced"><summary>التفويضات المباشرة — إعدادات متقدمة/);
 });
 
 test('account, device and audit reads use granular Platform permissions',()=>{
@@ -78,8 +109,8 @@ test('account, device and audit reads use granular Platform permissions',()=>{
 });
 
 test('cache references are atomically consistent for every changed runtime asset',()=>{
-  const revision='platform-administration-unification-v1';
-  for(const asset of ['style.css','js/sync/user-management-read-service.js','js/sync/user-management-ui.js','js/sync/module-permission-administration-service.js','js/sync/module-permission-administration-ui.js','script.js']){
+  const revision='platform-administration-canonical-sidebar-v1';
+  for(const asset of ['style.css','canonical-platform-shell.css','js/platform-integration.js','js/sync/user-management-ui.js','js/sync/module-permission-administration-ui.js','js/sync/platform-administration-ui.js','script.js']){
     assert.ok(index.includes(asset+'?rev='+revision),asset+' missing from index');
     assert.ok(worker.includes('./'+asset+'?rev='+revision),asset+' missing from worker');
   }
