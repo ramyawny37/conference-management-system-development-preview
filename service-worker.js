@@ -7,7 +7,7 @@ const CACHE_NAMESPACE = IS_DEVELOPMENT
   : '';
 const CACHE_PREFIX = CACHE_NAMESPACE + 'conference-manager-core-';
 const CACHE_REVISION = IS_DEVELOPMENT
-  ? 'conference-section-capabilities-v1'
+  ? 'conference-section-capabilities-v2'
   : 'production-3-6-0-release-v6';
 const CACHE_NAME = CACHE_PREFIX + 'v' + APP_VERSION + '-' + CACHE_REVISION;
 const CORE_ASSETS = [
@@ -34,8 +34,8 @@ const CORE_ASSETS = [
   './js/supabase/warehouse-transport.js?rev=phase-w1-v1',
   './js/supabase/client.js?rev=target-device-argument-preservation-v1',
   './js/supabase/auth.js?rev=account-session-identity-v1',
-  './js/platform-integration.js?rev=conference-section-capabilities-v1',
-  './js/supabase/canonical-conference-discovery.js?rev=conference-section-capabilities-v1',
+  './js/platform-integration.js?rev=conference-section-capabilities-v2',
+  './js/supabase/canonical-conference-discovery.js?rev=conference-section-capabilities-v2',
   './js/supabase/canonical-conference-transport.js?rev=p6i-b2-v1',
   './js/supabase/canonical-conference-restaurant.js?rev=p6i-b3-v1',
   './modules/reservations/reservations-module.js?rev=reservations-person-live-0d9db39-v1',
@@ -62,7 +62,7 @@ const CORE_ASSETS = [
   './js/sync/module-permission-administration-service.js?rev=unified-three-module-permissions-v1',
   './js/sync/module-permission-administration-ui.js?rev=unified-three-module-permissions-v1',
   './js/sync/conference-linking-attempt-store.js',
-  './js/sync/discovered-conference-open-service.js?rev=conference-section-capabilities-v1',
+  './js/sync/discovered-conference-open-service.js?rev=conference-section-capabilities-v2',
   './utils.js',
   './core.js?rev=canonical-conference-id-v1',
   './people.js?rev=canonical-conference-schema-v1',
