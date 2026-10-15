@@ -172,6 +172,7 @@ test('module-only Reservations permission grants and revokes without resource',a
 test('Warehouse store-scoped controls remain metadata-driven',async()=>{
   const runtime=uiRuntime('resource',null);
   await runtime.ui.initialize();
+  await runtime.ui.selectModule('warehouse');
   await runtime.ui.search('User');
   await runtime.ui.select(runtime.target);
   const html=runtime.ui.renderSection();

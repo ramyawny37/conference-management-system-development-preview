@@ -7,14 +7,14 @@ const CACHE_NAMESPACE = IS_DEVELOPMENT
   : '';
 const CACHE_PREFIX = CACHE_NAMESPACE + 'conference-manager-core-';
 const CACHE_REVISION = IS_DEVELOPMENT
-  ? 'conference-people-accommodation-permissions-v1'
+  ? 'platform-administration-unification-v1'
   : 'production-3-6-0-release-v6';
 const CACHE_NAME = CACHE_PREFIX + 'v' + APP_VERSION + '-' + CACHE_REVISION;
 const CORE_ASSETS = [
   './',
   './index.html',
   './shared-design-tokens.css?rev=platform-shell-phase2b-v1',
-  './style.css?rev=conference-people-accommodation-permissions-v1',
+  './style.css?rev=platform-administration-unification-v1',
   './canonical-platform-shell.css?rev=reservations-workspace-v6',
   './modules/reservations/reservations-module.css?rev=reservations-person-live-0d9db39-v1',
   './modules/reservations/reservations-visual-prototype.css?rev=reservations-prototype-fidelity-v2',
@@ -57,10 +57,10 @@ const CORE_ASSETS = [
   './js/supabase/first-system-bootstrap-service.js?rev=first-owner-bootstrap-hardening-v1',
   './js/sync/startup-access-gate.js?rev=revoked-rerequest-error-code-v1',
   './js/sync/conference-activation-authorization.js?rev=canonical-conference-id-v1',
-  './js/sync/user-management-read-service.js?rev=platform-read-only-v1',
-  './js/sync/user-management-ui.js?rev=platform-read-only-v1',
-  './js/sync/module-permission-administration-service.js?rev=unified-three-module-permissions-v1',
-  './js/sync/module-permission-administration-ui.js?rev=unified-three-module-permissions-v1',
+  './js/sync/user-management-read-service.js?rev=platform-administration-unification-v1',
+  './js/sync/user-management-ui.js?rev=platform-administration-unification-v1',
+  './js/sync/module-permission-administration-service.js?rev=platform-administration-unification-v1',
+  './js/sync/module-permission-administration-ui.js?rev=platform-administration-unification-v1',
   './js/sync/conference-linking-attempt-store.js',
   './js/sync/discovered-conference-open-service.js?rev=conference-section-capabilities-v2',
   './utils.js',
@@ -80,7 +80,7 @@ const CORE_ASSETS = [
   './js/warehouse/party-management.js?rev=warehouse-party-management-v1',
   './js/warehouse/remaining-operations.js?rev=adjustment-conversion-ux-v1',
   './js/warehouse/workspace.js?rev=item-unit-add-ui-v1',
-  './script.js?rev=conference-people-accommodation-permissions-v1',
+  './script.js?rev=platform-administration-unification-v1',
   './version.js',
   './pwa.js?rev=pwa-update-state-consistency-v1',
   './libs/html2canvas.min.js',

@@ -333,6 +333,8 @@ tr:nth-child(even) td{background:#F7FBFF}
 /* Startup dashboard */
 .settings-dashboard{direction:rtl;display:flex;flex-direction:column;gap:12px;margin-top:-2px;color:#243b53}
 .settings-nav{display:flex;gap:7px;flex-wrap:wrap;padding:4px 0}
+.settings-nav-group-label{display:inline-flex;align-items:center;padding:0 8px;font-weight:800;color:#4b5563;border-inline-start:2px solid #d8b4fe}
+.user-management-pagination{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px;border-top:1px solid #e5e7eb}
 .settings-dashboard .btn{min-height:36px}
 .settings-hero,.settings-section{background:#fff;border:1px solid #e4edf5;border-radius:14px;box-shadow:0 3px 14px rgba(31,78,121,.07);padding:14px}
 .settings-hero{border-right:5px solid #27ae60;background:linear-gradient(135deg,#fff 0%,#f4fbf7 100%)}

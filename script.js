@@ -1278,7 +1278,7 @@ function mountSyncSettingsSection(){
 }
 
 function refreshDeviceAuthorizationAdministration(){
-  if(window.DeviceAuthorizationAdministrationUI&&
+  if(ge('device_authorization_administration_root')&&window.DeviceAuthorizationAdministrationUI&&
     typeof window.DeviceAuthorizationAdministrationUI.initialize==='function'){
     window.DeviceAuthorizationAdministrationUI.initialize();
   }
@@ -2454,6 +2454,7 @@ function ensureModulePermissionAdministrationAccess(){
     typeof window.ModulePermissionAdministrationService.probeAvailability!=='function')return Promise.resolve(modulePermissionAdministrationAccessState);
   modulePermissionAdministrationAccessState.status='loading';
   modulePermissionAdministrationAccessState.flight=Promise.all([
+    window.ModulePermissionAdministrationService.probeAvailability('conference'),
     window.ModulePermissionAdministrationService.probeAvailability('warehouse'),
     window.ModulePermissionAdministrationService.probeAvailability('reservations')
   ]).then(function(responses){
@@ -8129,6 +8130,10 @@ function renderSettings(){
   var canOpenModulePermissionAdministration=
     modulePermissionAdministrationAccessState.status==='loaded'&&
     modulePermissionAdministrationAccessState.available===true;
+  var administrationCapabilities=userManagementAccessState.capabilities||{};
+  var canOpenDeviceAdministration=administrationCapabilities.canViewDevices===true||administrationCapabilities.canManageDevices===true;
+  var canOpenAudit=administrationCapabilities.canViewAudit===true;
+  var canOpenSecurity=administrationCapabilities.canManageSecurity===true;
   if(activeSettingsTab==='users'&&!canOpenUserManagement){
     activeSettingsTab='general';
     settingsTab='general';
@@ -8137,14 +8142,23 @@ function renderSettings(){
     activeSettingsTab='general';
     settingsTab='general';
   }
+  if((activeSettingsTab==='platform-devices'&&!canOpenDeviceAdministration)||
+    (activeSettingsTab==='platform-audit'&&!canOpenAudit)||
+    (activeSettingsTab==='platform-security'&&!canOpenSecurity)){
+    activeSettingsTab='general';
+    settingsTab='general';
+  }
   var h='<div class="settings-dashboard" dir="rtl">';
   h+='<div class="settings-nav">';
   h+='<button class="btn '+(activeSettingsTab==='general'?'btn-purple':'btn-gray')+' btn-sm" onclick="switchSettingsTab(\'general\')">⚙️ إعدادات الحدث</button>';
   h+='<button class="btn '+(activeSettingsTab==='houses'?'btn-purple':'btn-gray')+' btn-sm" onclick="switchSettingsTab(\'houses\')">🏠 بيوت المؤتمرات</button>';
-  if(canOpenUserManagement)h+='<button class="btn '+(activeSettingsTab==='users'?'btn-purple':'btn-gray')+' btn-sm" onclick="switchSettingsTab(\'users\')">👥 إدارة المستخدمين</button>';
-  if(canOpenModulePermissionAdministration)h+='<button class="btn '+(activeSettingsTab==='module-permissions'?'btn-purple':'btn-gray')+' btn-sm" onclick="switchSettingsTab(\'module-permissions\')">صلاحيات الموديولات</button>';
+  if(canOpenUserManagement||canOpenModulePermissionAdministration||canOpenDeviceAdministration||canOpenAudit||canOpenSecurity)h+='<span class="settings-nav-group-label">إدارة المنصة</span>';
+  if(canOpenUserManagement)h+='<button class="btn '+(activeSettingsTab==='users'?'btn-purple':'btn-gray')+' btn-sm" onclick="switchSettingsTab(\'users\')">المستخدمون والحسابات</button>';
+  if(canOpenModulePermissionAdministration)h+='<button class="btn '+(activeSettingsTab==='module-permissions'?'btn-purple':'btn-gray')+' btn-sm" onclick="switchSettingsTab(\'module-permissions\')">الأدوار والصلاحيات</button>';
+  if(canOpenDeviceAdministration)h+='<button class="btn '+(activeSettingsTab==='platform-devices'?'btn-purple':'btn-gray')+' btn-sm" onclick="switchSettingsTab(\'platform-devices\')">اعتماد الأجهزة</button>';
+  if(canOpenAudit)h+='<button class="btn '+(activeSettingsTab==='platform-audit'?'btn-purple':'btn-gray')+' btn-sm" onclick="switchSettingsTab(\'platform-audit\')">سجل التدقيق</button>';
+  if(canOpenSecurity)h+='<button class="btn '+(activeSettingsTab==='platform-security'?'btn-purple':'btn-gray')+' btn-sm" onclick="switchSettingsTab(\'platform-security\')">إعدادات الأمان</button>';
   h+='</div>';
-  if(activeSettingsTab==='general')h+='<div id="device_authorization_administration_root" style="display:none"></div>';
   if (activeSettingsTab === 'houses') {
     h += '<section class="settings-section settings-library-section">' + renderHouseTemplatesSettings() + '</section></div>';
     ge('tab6').innerHTML = h;
@@ -8178,6 +8192,22 @@ function renderSettings(){
       typeof window.ModulePermissionAdministrationUI.initialize==='function'){
       window.ModulePermissionAdministrationUI.initialize();
     }
+    return;
+  }
+  if(activeSettingsTab==='platform-devices'){
+    h+='<div id="device_authorization_administration_root"></div>';
+    if(window.UserManagementUI&&typeof window.UserManagementUI.renderSection==='function')h+=window.UserManagementUI.renderSection();
+    h+='</div>';
+    ge('tab6').innerHTML=h;
+    refreshDeviceAuthorizationAdministration();
+    if(window.UserManagementUI&&typeof window.UserManagementUI.initialize==='function')window.UserManagementUI.initialize();
+    return;
+  }
+  if(activeSettingsTab==='platform-audit'||activeSettingsTab==='platform-security'){
+    var method=activeSettingsTab==='platform-audit'?'renderAuditSection':'renderSecuritySection';
+    h+=window.UserManagementUI&&typeof window.UserManagementUI[method]==='function'?window.UserManagementUI[method]():'<div class="settings-empty-state">تعذر تحميل قسم إدارة المنصة.</div>';
+    h+='</div>';ge('tab6').innerHTML=h;
+    if(window.UserManagementUI&&typeof window.UserManagementUI.initialize==='function')window.UserManagementUI.initialize();
     return;
   }
   if (!current) {
