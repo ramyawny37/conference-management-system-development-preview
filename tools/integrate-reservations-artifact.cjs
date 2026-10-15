@@ -11,10 +11,10 @@ const root = path.resolve(__dirname, '..');
 const archive = process.argv[2];
 if (!archive) throw new Error('Pass the verified Reservations integration ZIP path');
 const expected = {
-  'reservations-module.js': '86ab2840435a7ba51fd177a030715d752e79ea2f57a45e0f8b29ff9127fbb5ab',
+  'reservations-module.js': '3c4976e9633f1ff5b86100854531ba5e2faf949b4e034245c9bb1e5d83e28ef4',
   'reservations-module.css': 'be6a3a042c8b6ab0d0dd9c2c8a5fd31f0d936aa6de30a670f89cdc567ae608d5',
 };
-const rev = 'reservations-batch-church-0f205a3-v1';
+const rev = 'reservations-person-live-0d9db39-v1';
 const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'cms-reservations-'));
 function replaceOnce(source, before, after, label) {
   if (source.split(before).length !== 2) throw new Error(label + ': expected exactly one original reference');
@@ -42,8 +42,8 @@ try {
   let index = fs.readFileSync(indexPath, 'utf8');
   let sw = fs.readFileSync(swPath, 'utf8');
   const refs = {
-    'reservations-module.css': 'reservations-person-consent-485c0eb-v1',
-    'reservations-module.js': 'reservations-person-consent-485c0eb-v1',
+    'reservations-module.css': 'reservations-batch-church-0f205a3-v1',
+    'reservations-module.js': 'reservations-batch-church-0f205a3-v1',
   };
   for (const [name, oldRev] of Object.entries(refs)) {
     const oldRef = 'modules/reservations/' + name + '?rev=' + oldRev;
@@ -51,7 +51,7 @@ try {
     index = replaceOnce(index, oldRef, newRef, 'index.html ' + name);
     sw = replaceOnce(sw, oldRef, newRef, 'service-worker.js ' + name);
   }
-  sw = replaceOnce(sw, "'reservations-person-consent-485c0eb-v1'", "'" + rev + "'", 'Development cache revision');
+  sw = replaceOnce(sw, "'reservations-batch-church-0f205a3-v1'", "'" + rev + "'", 'Development cache revision');
   // Validate all references and checksums before modifying any tracked file.
   for (const [name, bytes] of Object.entries(payloads)) {
     fs.writeFileSync(path.join(root, 'modules', 'reservations', name), bytes);
@@ -60,7 +60,7 @@ try {
   fs.writeFileSync(swPath, sw);
   execFileSync('git', ['diff', '--check'], {cwd: root, stdio:'inherit'});
   console.log('Integrated verified Reservations artifact into Conference develop working tree.');
-  console.log('Source Reservations commit: 0f205a3508a8ac4eb66ed21684ff669a5e305a32');
+  console.log('Source Reservations commit: 0d9db39429bf2b3f00ca292b85c1d874cdd68be9');
   console.log('Review git diff, run checks, then commit/push develop only.');
 } finally {
   fs.rmSync(temp, {recursive:true, force:true});
