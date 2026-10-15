@@ -75,6 +75,21 @@ test('disposable PostgreSQL proves ledger replay, complete cleanup audits and at
       end \$\$;`);
     command('psql',['-X','-v','ON_ERROR_STOP=1','-d',database,'-f',path.join(root,'supabase/migrations/20261003140000_canonical_conference_transport_foundation.sql')]);
     command('psql',['-X','-v','ON_ERROR_STOP=1','-d',database,'-f',path.join(root,'supabase/migrations/20261003160000_canonical_conference_restaurant_foundation.sql')]);
+    query(`create function public.search_conference_people(uuid,uuid,text,integer) returns jsonb language sql as \$\$select '{}'::jsonb\$\$;
+      create function public.get_conference_canonical_person(uuid,uuid,uuid) returns jsonb language sql as \$\$select '{}'::jsonb\$\$;
+      create function public.update_conference_canonical_person(uuid,uuid,uuid,bigint,text,text,text,text,date) returns jsonb language sql as \$\$select '{}'::jsonb\$\$;
+      create function public.create_conference_participation(uuid,uuid,uuid,uuid) returns jsonb language sql as \$\$select '{}'::jsonb\$\$;
+      create function public.create_conference_participation_with_person(uuid,uuid,uuid,text,text,text,date,text) returns jsonb language sql as \$\$select '{}'::jsonb\$\$;
+      create function platform_private.cleanup_conference_accommodation_for_participation(uuid,uuid,uuid,jsonb,text,uuid) returns uuid language plpgsql as \$\$declare removed uuid;begin delete from public.conference_accommodation_occupancies where participation_id=\$1 returning room_id into removed;return removed;end\$\$;
+      create or replace function platform_private.route_canonical_conference_operation(p_user_id uuid,p_session_id uuid,p_token_hash bytea,p_actor_device_id uuid,p_operation text,p_args jsonb) returns jsonb language plpgsql security definer set search_path='' as \$\$ begin
+        if p_operation='search_conference_people' then return public.search_conference_people(p_actor_device_id,null,null,null);
+        elsif p_operation='get_conference_canonical_person' then return public.get_conference_canonical_person(p_actor_device_id,null,null);
+        elsif p_operation='update_conference_canonical_person' then return public.update_conference_canonical_person(p_actor_device_id,null,null,null,null,null,null,null,null);
+        elsif p_operation='create_conference_participation' then return public.create_conference_participation(p_actor_device_id,null,null,null);
+        elsif p_operation='create_conference_participation_with_person' then return public.create_conference_participation_with_person(p_actor_device_id,null,null,null,null,null,null,null);
+        elsif p_operation='delete_conference_participation' then return public.delete_conference_participation(p_actor_device_id,null,null,null); end if;
+        return '{}'::jsonb; end \$\$;`);
+    command('psql',['-X','-v','ON_ERROR_STOP=1','-d',database,'-f',path.join(root,'supabase/migrations/20261015110000_conference_people_operation_contract_reconciliation.sql')]);
     query(`create function platform_private.run_delete(uuid,uuid,bigint) returns jsonb language plpgsql security definer set search_path='' as \$\$ begin perform set_config('platform.phase1c_context',jsonb_build_object('purpose','PLATFORM_DEVICE_SESSION_DISPATCH','user_id','${actor}','device_id','${device}')::text,true); return public.delete_conference_participation('${device}',\$1,\$2,\$3); end \$\$;
       create function platform_private.run_remove(uuid,uuid,bigint) returns jsonb language plpgsql security definer set search_path='' as \$\$ begin perform set_config('platform.phase1c_context',jsonb_build_object('purpose','PLATFORM_DEVICE_SESSION_DISPATCH','user_id','${actor}','device_id','${device}')::text,true); return public.remove_conference_transport_assignment('${device}',\$1,\$2,\$3); end \$\$;`);
     let sequence=1;
@@ -126,7 +141,7 @@ test('disposable PostgreSQL proves ledger replay, complete cleanup audits and at
       assert.equal(query(`select count(*) from platform.audit_events where operation_id='${op}' and action='conference.transport.assignment_removed'`),'2');
       assert.equal(query(`select count(*) from platform.audit_events where operation_id='${op}' and action='conference.restaurant.participation_override_removed'`),'1');
       assert.deepEqual(JSON.parse(query(`select platform_private.run_delete('${op}','${guardian}',1)`)),result);
-      assert.equal(query(`select count(*) from platform.audit_events where operation_id='${op}'`),'3');
+      assert.equal(query(`select count(*) from platform.audit_events where operation_id='${op}'`),'5');
     });
     await t.test('injected failure rolls back Transport cleanup, audit and Participation deletion',()=>{
       const part=participant(),bus=vehicle(),assignment=assign(part,bus.vehicleId),op=uuid('56');

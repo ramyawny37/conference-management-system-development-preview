@@ -11,6 +11,11 @@ const migration=read('supabase/migrations/20261010201800_flatten_platform_device
 const edge=read('supabase/functions/platform-device-operation/index.ts');
 const conferenceRouter=read('supabase/migrations/20261010201000_reservations_organization_free_scope_runtime.sql');
 const conferenceCore=read('supabase/migrations/20261010201600_platform_dispatcher_organization_retirement.sql');
+const conferencePeoplePatches=[
+  'supabase/migrations/20261014182000_conference_people_search_canonical_device_route.sql',
+  'supabase/migrations/20261014210000_conference_canonical_person_revision_update.sql',
+  'supabase/migrations/20261014220000_conference_canonical_person_exact_read.sql',
+].map(read).join('\n');
 const dispatcher=migration.match(/create or replace function platform\.execute_device_operation\([\s\S]*?end \$\$;/i)?.[0]||'';
 const dispatcherPatches=read('supabase/migrations/20261013141000_reservations_canonical_people_device_dispatch.sql');
 const effectiveDispatcher=dispatcher+dispatcherPatches;
@@ -44,7 +49,7 @@ test('every current Edge operation remains represented by its canonical module r
   assert.match(dispatcher,/'apply_library_template_content_operation'/);
   assert.match(dispatcher,/p_module='conference'[\s\S]*platform\.execute_conference_device_operation\(/);
   for(const operation of edgeOperations('conference')){
-    const route=operation==='check_module_access'?dispatcher:conferenceRouter+conferenceCore;
+    const route=operation==='check_module_access'?dispatcher:conferenceRouter+conferenceCore+conferencePeoplePatches;
     assert.match(route,new RegExp(`'${operation}'`),`conference:${operation}`);
   }
 });
