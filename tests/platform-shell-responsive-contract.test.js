@@ -31,11 +31,11 @@ test('the document exposes exactly one canonical shell, sidebar, header, and wor
 });
 
 test('the canonical shell is the only active global shell stylesheet',()=>{
-  const canonicalAsset='canonical-platform-shell.css?rev=device-key-store-recovery-v1';
+  const canonicalAsset='canonical-platform-shell.css?rev=platform-administration-canonical-sidebar-navigation-v2';
   assert.match(html,new RegExp(canonicalAsset.replace(/[.?]/g,'\\$&')));
   assert.match(worker,new RegExp(canonicalAsset.replace(/[.?]/g,'\\$&')));
-  assert.match(html,/js\/platform-integration\.js\?rev=device-key-store-recovery-v1/);
-  assert.match(worker,/js\/platform-integration\.js\?rev=device-key-store-recovery-v1/);
+  assert.match(html,/js\/platform-integration\.js\?rev=platform-administration-canonical-sidebar-navigation-v2/);
+  assert.match(worker,/js\/platform-integration\.js\?rev=platform-administration-canonical-sidebar-navigation-v2/);
   assert.doesNotMatch(html,/platform-shell-v2\.css|class="platform-shell-v2"/);
   assert.doesNotMatch(worker,/platform-shell-v2\.css/);
   assert.strictEqual(fs.existsSync(path.join(root,'platform-shell-v2.css')),false);
