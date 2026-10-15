@@ -33,18 +33,17 @@
     applyData(data);
     return data;
   }
-  function hydrate(conferenceId){
+  function hydrate(conferenceId,capabilities){
     var platform=global.PlatformIntegration;
     var tasks=[];
-    function add(target,name,args){tasks.push({target:target,name:name,args:args});}
-    add(platform,'hydrateConferenceCore',[conferenceId,conferenceId]);
-    add(platform,'hydrateConferenceParticipations',[conferenceId,conferenceId]);
-    add(platform,'hydrateConferenceAccommodation',[conferenceId,conferenceId]);
-    add(platform,'hydrateConferenceAirConditioning',[conferenceId,conferenceId]);
-    add(global.CanonicalConferenceBranding,'hydrate',[conferenceId,conferenceId]);
-    add(global.CanonicalConferenceFinance,'hydrate',[conferenceId,conferenceId]);
-    add(global.CanonicalConferenceTransport,'hydrate',[conferenceId,conferenceId]);
-    add(global.CanonicalConferenceRestaurant,'hydrate',[conferenceId,conferenceId]);
+    capabilities=capabilities&&typeof capabilities==='object'?capabilities:{};
+    if(typeof global.clearConferenceCanonicalState!=='function')return Promise.reject({code:'CANONICAL_STATE_CLEAR_UNAVAILABLE'});
+    global.clearConferenceCanonicalState(conferenceId,capabilities);
+    function add(capability,target,name,args){if(capabilities[capability]===true)tasks.push({target:target,name:name,args:args});}
+    add('core',platform,'hydrateConferenceCore',[conferenceId,conferenceId]);add('people',platform,'hydrateConferenceParticipations',[conferenceId,conferenceId]);
+    add('accommodation',platform,'hydrateConferenceAccommodation',[conferenceId,conferenceId]);add('airConditioning',platform,'hydrateConferenceAirConditioning',[conferenceId,conferenceId]);
+    add('branding',global.CanonicalConferenceBranding,'hydrate',[conferenceId,conferenceId]);add('finance',global.CanonicalConferenceFinance,'hydrate',[conferenceId,conferenceId]);
+    add('transport',global.CanonicalConferenceTransport,'hydrate',[conferenceId,conferenceId]);add('restaurant',global.CanonicalConferenceRestaurant,'hydrate',[conferenceId,conferenceId]);
     var missing=tasks.find(function(task){return !task.target||typeof task.target[task.name]!=='function';});
     if(missing)return Promise.reject({code:'CANONICAL_HYDRATOR_UNAVAILABLE',owner:missing.name});
     return Promise.all(tasks.map(function(task){return Promise.resolve().then(function(){return task.target[task.name].apply(task.target,task.args);});})).then(function(values){diagnostics.canonicalHydrationCount=values.length;return values;});
@@ -58,7 +57,7 @@
     diagnostics.lastRemoteConferenceId=remoteId;
     var flight=available(remoteId,options).then(function(access){
       if(!access.ok||token!==generation)return token===generation?access:result(false,'stale');
-      return hydrate(remoteId).then(function(){
+      return hydrate(remoteId,access.data.capabilities).then(function(){
         if(token!==generation)return result(false,'stale');
         var authorization=global.ConferenceActivationAuthorization;
         if(!authorization||typeof authorization.authorizeCloud!=='function'){

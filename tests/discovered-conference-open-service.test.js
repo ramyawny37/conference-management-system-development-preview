@@ -9,11 +9,12 @@ function environment(failure){
   const calls=[];let data={conferences:[],currentConferenceId:null};const links={};
   const hydrate=name=>function(){calls.push(name);return name===failure?Promise.reject({code:'FAILED_'+name}):Promise.resolve({});};
   const sandbox={window:null,structuredClone:value=>JSON.parse(JSON.stringify(value)),appData:data,
-    CanonicalConferenceDiscovery:{listAccessibleConferences:()=>Promise.resolve({ok:true,data:{conferences:[{id:remote,name:'Canonical',status:'active',capabilities:{edit:true}}]}})},
+    CanonicalConferenceDiscovery:{listAccessibleConferences:()=>Promise.resolve({ok:true,data:{conferences:[{id:remote,name:'Canonical',status:'active',capabilities:{core:true,people:true,accommodation:true,airConditioning:true,branding:true,finance:true,transport:true,restaurant:true,edit:true}}]}})},
     ConferenceLinkStore:{findByRemoteId:id=>Object.values(links).find(x=>x.remoteConferenceId===id)||null,save:value=>{links[value.localConferenceId]=value;return {ok:true};}},
     PlatformIntegration:{hydrateConferenceCore:hydrate('core'),hydrateConferenceParticipations:hydrate('participation'),hydrateConferenceAccommodation:hydrate('accommodation'),hydrateConferenceAirConditioning:hydrate('air_conditioning')},
     CanonicalConferenceBranding:{hydrate:hydrate('branding')},CanonicalConferenceFinance:{hydrate:hydrate('finance')},CanonicalConferenceTransport:{hydrate:hydrate('transport')},CanonicalConferenceRestaurant:{hydrate:hydrate('restaurant')},
     ConferenceActivationAuthorization:{authorizeCloud(input){calls.push('authorizeCloud');return {ok:input.canonicalAccess===true,active:input.canonicalAccess===true,conferenceId:input.conferenceId,capabilities:input.capabilities,role:null};}},
+    clearConferenceCanonicalState:(id,capabilities)=>{calls.push('clear');return !!id&&!!capabilities;},
     activatePersistedConferenceById:(id,options)=>{calls.push('activate');calls.push(options&&options.activationDecision&&options.activationDecision.capabilities&&options.activationDecision.capabilities.edit===true?'decision:edit':'decision:missing');return true;}};
   sandbox.window=sandbox;vm.runInNewContext(source,sandbox);
   return {sandbox,calls,links,getData:()=>sandbox.appData};
@@ -21,7 +22,7 @@ function environment(failure){
 test('linked open hydrates every canonical owner without snapshot infrastructure',async()=>{
   const env=environment();const result=await env.sandbox.DiscoveredConferenceOpenService.open(remote);
   assert.equal(result.ok,true);assert.equal(result.status,'opened');
-  assert.deepEqual(env.calls,['core','participation','accommodation','air_conditioning','branding','finance','transport','restaurant','authorizeCloud','activate','decision:edit']);
+  assert.deepEqual(env.calls,['clear','core','participation','accommodation','air_conditioning','branding','finance','transport','restaurant','authorizeCloud','activate','decision:edit']);
   assert.equal(env.links[remote],undefined);
   assert.equal(result.data.conferenceId,remote);
   assert.equal(env.getData().conferences[0].name,'Canonical');
@@ -192,9 +193,16 @@ test('missing canonical owner fails closed before activation rather than silentl
       assert.equal(outcome.ok,false);
       assert.equal(outcome.status,'canonical_hydration_failed');
       assert.equal(outcome.error.code,'CANONICAL_HYDRATOR_UNAVAILABLE');
-      assert.deepEqual(env.calls,[],'all owners must be present before any hydration starts');
+      assert.deepEqual(env.calls,['clear'],'state is cleared before owner availability is validated');
       assert.equal(env.calls.includes('activate'),false);
       assert.equal(env.getData().conferences.length,0);
     });
   }
+});
+test('access-only user hydrates core and skips unauthorized sections',async()=>{
+  const env=environment();
+  env.sandbox.CanonicalConferenceDiscovery.listAccessibleConferences=()=>Promise.resolve({ok:true,data:{conferences:[{id:remote,name:'Canonical',capabilities:{core:true}}]}});
+  const outcome=await env.sandbox.DiscoveredConferenceOpenService.open(remote);
+  assert.equal(outcome.ok,true);
+  assert.deepEqual(env.calls,['clear','core','authorizeCloud','activate','decision:missing']);
 });

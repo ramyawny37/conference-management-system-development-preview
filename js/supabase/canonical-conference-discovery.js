@@ -19,8 +19,11 @@
         completedAt:item.completedAt||null,revision:item.revision,
         createdAt:item.createdAt,updatedAt:item.updatedAt,
         capabilities:{
-          edit:!!(item.capabilities&&item.capabilities.edit===true),
-          sync:!!(item.capabilities&&item.capabilities.sync===true),
+          core:!!(item.capabilities&&item.capabilities.core===true),people:!!(item.capabilities&&item.capabilities.people===true),
+          accommodation:!!(item.capabilities&&item.capabilities.accommodation===true),airConditioning:!!(item.capabilities&&item.capabilities.airConditioning===true),
+          branding:!!(item.capabilities&&item.capabilities.branding===true),finance:!!(item.capabilities&&item.capabilities.finance===true),
+          transport:!!(item.capabilities&&item.capabilities.transport===true),restaurant:!!(item.capabilities&&item.capabilities.restaurant===true),
+          edit:!!(item.capabilities&&item.capabilities.edit===true),sync:!!(item.capabilities&&item.capabilities.sync===true),
           transportManage:!!(item.capabilities&&item.capabilities.transportManage===true)
         }
       };});

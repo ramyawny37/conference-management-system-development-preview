@@ -62,7 +62,7 @@ test('21 runtime adapter returns canonical metadata and server-derived capabilit
   assert.equal(result.data.conferences[0].id,'30000000-0000-4000-8000-000000000001');
   assert.equal(Object.hasOwn(result.data.conferences[0],'role'),false);
   assert.equal(Object.hasOwn(result.data.conferences[0],'snapshot'),false);
-  assert.equal(JSON.stringify(result.data.conferences[0].capabilities),JSON.stringify({edit:true,sync:true,transportManage:false}));
+  assert.equal(JSON.stringify(result.data.conferences[0].capabilities),JSON.stringify({core:false,people:false,accommodation:false,airConditioning:false,branding:false,finance:false,transport:false,restaurant:false,edit:true,sync:true,transportManage:false}));
 });
 
 const postgresAppBin='/Applications/Postgres.app/Contents/Versions/latest/bin';
