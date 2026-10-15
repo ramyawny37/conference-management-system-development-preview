@@ -1,0 +1,16 @@
+'use strict';
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const path=require('node:path');
+const root=path.resolve(__dirname,'..');
+const sql=fs.readFileSync(path.join(root,'supabase/migrations/20261015120000_platform_user_management_search_aggregation_fix.sql'),'utf8');
+const service=fs.readFileSync(path.join(root,'js/sync/module-permission-administration-service.js'),'utf8');
+const dispatcher=fs.readFileSync(path.join(root,'supabase/migrations/20261010201800_flatten_platform_device_operation_dispatcher.sql'),'utf8');
+assert.match(sql,/require_current_approved_device\(p_actor_device_id\)/);
+assert.match(sql,/is_system_owner\(actor_id\)/);
+assert.match(sql,/from\s*\(\s*select\s+u\.id[\s\S]*?order by coalesce\(p\.display_name,u\.email\),u\.id limit effective_limit\s*\) ordered/i);
+assert.match(sql,/jsonb_agg\([\s\S]*?order by ordered\.sort_name,ordered\.id\)/i);
+assert.match(dispatcher,/when 'manage_catalog_module_grant' then[\s\S]*?require_exact_jsonb_keys\(p_args,array\[[^\]]*'p_resource_type','p_resource_id'/i);
+assert.match(service,/args\.p_resource_type=foundation\?null/);
+assert.match(service,/args\.p_resource_id=foundation\?null/);
+console.log('canonical user management and grant argument contracts: passed');
