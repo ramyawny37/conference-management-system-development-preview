@@ -112,7 +112,7 @@ test('Reservations global navigation and static bundle stay inside the unified P
     assert.ok(index.includes(reference),`index missing ${reference}`);
     assert.ok(worker.includes(`./${reference}`),`service worker missing ${reference}`);
   }
-  assert.match(worker,/\? 'platform-administration-canonical-sidebar-navigation-v2'/);
+  assert.match(worker,/\? 'device-key-store-recovery-v1'/);
   assert.doesNotMatch(worker,/reservations-root-boundary-v1|participant-quick-actions-v1|conference-owner-preflight-correction-v1/);
   assert.ok(fs.existsSync('modules/reservations/reservations-module.js'));
   assert.ok(fs.existsSync('modules/reservations/reservations-module.css'));
