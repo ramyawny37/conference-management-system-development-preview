@@ -7,14 +7,14 @@ const CACHE_NAMESPACE = IS_DEVELOPMENT
   : '';
 const CACHE_PREFIX = CACHE_NAMESPACE + 'conference-manager-core-';
 const CACHE_REVISION = IS_DEVELOPMENT
-  ? 'conference-section-capabilities-v2'
+  ? 'conference-people-accommodation-permissions-v1'
   : 'production-3-6-0-release-v6';
 const CACHE_NAME = CACHE_PREFIX + 'v' + APP_VERSION + '-' + CACHE_REVISION;
 const CORE_ASSETS = [
   './',
   './index.html',
   './shared-design-tokens.css?rev=platform-shell-phase2b-v1',
-  './style.css?rev=item-unit-dialog-v1',
+  './style.css?rev=conference-people-accommodation-permissions-v1',
   './canonical-platform-shell.css?rev=reservations-workspace-v6',
   './modules/reservations/reservations-module.css?rev=reservations-person-live-0d9db39-v1',
   './modules/reservations/reservations-visual-prototype.css?rev=reservations-prototype-fidelity-v2',
@@ -34,7 +34,7 @@ const CORE_ASSETS = [
   './js/supabase/warehouse-transport.js?rev=phase-w1-v1',
   './js/supabase/client.js?rev=target-device-argument-preservation-v1',
   './js/supabase/auth.js?rev=account-session-identity-v1',
-  './js/platform-integration.js?rev=conference-section-capabilities-v2',
+  './js/platform-integration.js?rev=conference-people-accommodation-permissions-v1',
   './js/supabase/canonical-conference-discovery.js?rev=conference-section-capabilities-v2',
   './js/supabase/canonical-conference-transport.js?rev=p6i-b2-v1',
   './js/supabase/canonical-conference-restaurant.js?rev=p6i-b3-v1',
@@ -80,7 +80,7 @@ const CORE_ASSETS = [
   './js/warehouse/party-management.js?rev=warehouse-party-management-v1',
   './js/warehouse/remaining-operations.js?rev=adjustment-conversion-ux-v1',
   './js/warehouse/workspace.js?rev=item-unit-add-ui-v1',
-  './script.js?rev=canonical-conference-id-v1',
+  './script.js?rev=conference-people-accommodation-permissions-v1',
   './version.js',
   './pwa.js?rev=pwa-update-state-consistency-v1',
   './libs/html2canvas.min.js',

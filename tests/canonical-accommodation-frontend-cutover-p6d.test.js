@@ -15,7 +15,8 @@ function environment(){
   const ids={house:'20000000-0000-4000-8000-000000000001',floor:'30000000-0000-4000-8000-000000000001',room:'40000000-0000-4000-8000-000000000001',participation:'50000000-0000-4000-8000-000000000001',occupancy:'60000000-0000-4000-8000-000000000001',person:'70000000-0000-4000-8000-000000000001'};
   const hierarchy=()=>({conferenceId:remote,houses:[{houseId:ids.house,name:'Canonical House',description:null,position:0,revision:2,floors:[{floorId:ids.floor,name:'Canonical Floor',position:0,revision:3,rooms:[{roomId:ids.room,roomNumber:'101',baseCapacity:2,extraBedCapacity:1,notes:null,isClosed:false,closedDay:null,position:0,revision:4,occupancies:[{occupancyId:ids.occupancy,revision:5,arrivalDay:1,leaveDay:3,bedType:'base',extraBedPersonType:null,participationId:ids.participation,participationStatus:'active',person:{personId:ids.person,fullName:'Canonical Occupant',phone:'0100',gender:'female',dateOfBirth:'1990-01-01',church:'Canonical Church'}}]}]}]}]});
   const snapshot={houses:[{id:'legacy-house',floors:[{rooms:[{guests:[{name:'Legacy'}],children:[]}]}]}],peopleDb:{people:[{id:'legacy-person'}]}};
-  const sandbox={window:null,console,Promise,JSON,Object,String,Array,Date,RegExp,Error,Uint8Array,Math,setTimeout,clearTimeout,navigator:{onLine:true},document:{addEventListener(){},getElementById(){return null;},querySelector(){return null;}},addEventListener(){},dispatchEvent(){},CustomEvent:function(){},appData:{currentConferenceId:'local',conferences:[{id:'local',...snapshot}]},ConferenceLinkStore:{get(){return {linkStatus:'linked',remoteConferenceId:remote};}},PlatformDeviceSession:{invokeModuleProtected(module,operation,args){calls.push({module,operation,args:JSON.parse(JSON.stringify(args))});if(failure)return Promise.reject({code:failure});if(operation==='get_conference_accommodation')return Promise.resolve(hierarchy());return Promise.resolve({ok:true});}}};
+  const lease={owned:true,leaseToken:'80000000-0000-4000-8000-000000000001',expiresAt:'2999-01-01T00:00:00.000Z'};
+  const sandbox={window:null,console,Promise,JSON,Object,String,Array,Date,RegExp,Error,Uint8Array,Math,setTimeout,clearTimeout,navigator:{onLine:true},document:{addEventListener(){},getElementById(){return null;},querySelector(){return null;}},addEventListener(){},dispatchEvent(){},CustomEvent:function(){},appData:{currentConferenceId:'local',conferences:[{id:'local',...snapshot}]},ConferenceLinkStore:{get(){return {linkStatus:'linked',remoteConferenceId:remote};}},PlatformDeviceSession:{invokeModuleProtected(module,operation,args){calls.push({module,operation,args:JSON.parse(JSON.stringify(args))});if(failure)return Promise.reject({code:failure});if(operation==='get_conference_accommodation')return Promise.resolve(hierarchy());if(operation==='get_resource_lease'||operation==='acquire_resource_lease'||operation==='renew_resource_lease')return Promise.resolve(lease);if(operation==='release_resource_lease')return Promise.resolve({owned:false});return Promise.resolve({ok:true});}}};
   sandbox.window=sandbox;
   vm.runInNewContext(integrationSource,sandbox);
   return {sandbox,calls,remote,ids,snapshotBefore:JSON.stringify(sandbox.appData.conferences[0]),fail(code){failure=code;}};
@@ -53,7 +54,9 @@ test('linked structure mutations use exact canonical operations and expected rev
     await api.mutateConferenceAccommodationStructure('local',operation,args);
     const call=env.calls.at(-2);
     assert.equal(call.operation,operation);
-    assert.deepEqual(call.args,{...args,p_conference_id:env.remote});
+    const expected={...args,p_conference_id:env.remote};
+    if(operation==='update_accommodation_room'||operation==='delete_accommodation_room')expected.p_room_lease_tokens=[{roomId:env.ids.room,token:'80000000-0000-4000-8000-000000000001'}];
+    assert.deepEqual(call.args,expected);
     assert.equal(env.calls.at(-1).operation,'get_conference_accommodation');
   }
   assert.equal(JSON.stringify(env.sandbox.appData.conferences[0]),env.snapshotBefore);
@@ -63,13 +66,13 @@ test('assign, move and remove use canonical Participation and occupancy identiti
   const env=environment(),api=env.sandbox.PlatformIntegration;
   await api.hydrateConferenceAccommodation('local',env.remote);
   await api.assignConferenceAccommodation('local',{roomId:env.ids.room,participationId:env.ids.participation,arrivalDay:1,leaveDay:3,bedType:'base',extraBedPersonType:null});
-  assert.deepEqual(env.calls.at(-2),{module:'conference',operation:'assign_conference_accommodation',args:{p_room_id:env.ids.room,p_participation_id:env.ids.participation,p_arrival_day:1,p_leave_day:3,p_bed_type:'base',p_extra_bed_person_type:null,p_conference_id:env.remote}});
+  assert.deepEqual(env.calls.at(-2),{module:'conference',operation:'assign_conference_accommodation',args:{p_room_id:env.ids.room,p_participation_id:env.ids.participation,p_arrival_day:1,p_leave_day:3,p_bed_type:'base',p_extra_bed_person_type:null,p_conference_id:env.remote,p_room_lease_tokens:[{roomId:env.ids.room,token:'80000000-0000-4000-8000-000000000001'}]}});
   await api.moveConferenceAccommodation('local',{occupancyId:env.ids.occupancy,expectedRevision:5,roomId:env.ids.room,arrivalDay:1,leaveDay:3,bedType:'base',extraBedPersonType:null});
   assert.equal(env.calls.at(-2).operation,'move_conference_accommodation');
   assert.equal(env.calls.at(-2).args.p_occupancy_id,env.ids.occupancy);
   assert.equal(env.calls.at(-2).args.p_expected_revision,5);
   await api.removeConferenceAccommodation('local',env.ids.occupancy,5);
-  assert.deepEqual(env.calls.at(-2),{module:'conference',operation:'remove_conference_accommodation',args:{p_occupancy_id:env.ids.occupancy,p_expected_revision:5,p_conference_id:env.remote}});
+  assert.deepEqual(env.calls.at(-2),{module:'conference',operation:'remove_conference_accommodation',args:{p_occupancy_id:env.ids.occupancy,p_expected_revision:5,p_conference_id:env.remote,p_room_lease_tokens:[{roomId:env.ids.room,token:'80000000-0000-4000-8000-000000000001'}]}});
   assert.equal(JSON.stringify(env.sandbox.appData.conferences[0]),env.snapshotBefore);
 });
 

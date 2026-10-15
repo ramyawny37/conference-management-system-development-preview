@@ -2488,6 +2488,26 @@ function canEditCurrentConferenceData(){
     decision.capabilities&&decision.capabilities.edit===true);
 }
 
+function currentConferenceSectionCapability(name){
+  var current=getCurrentConference(),decision=currentConferenceRuntimeActivationDecision;
+  return !!(current&&decision&&decision.ok===true&&decision.active===true&&
+    String(decision.conferenceId||'')===String(current.id||'')&&
+    decision.capabilities&&decision.capabilities[name]===true);
+}
+
+function retryCanonicalConferencePeople(){
+  var current=getCurrentConference();
+  if(!current||!currentConferenceSectionCapability('people'))return false;
+  return hydrateCanonicalConferenceParticipations(current.id).catch(function(){return false;});
+}
+
+function retryCanonicalConferenceAccommodation(){
+  var current=getCurrentConference(),link=current&&getCanonicalConferenceCoreLink(current.id);
+  if(!current||!link||!currentConferenceSectionCapability('accommodation'))return false;
+  renderAccommodation();
+  return window.PlatformIntegration.hydrateConferenceAccommodation(String(current.id),String(link.remoteConferenceId)).then(function(){renderAccommodation();return true;}).catch(function(){renderAccommodation();return false;});
+}
+
 function canEditCurrentConferenceAccommodation(){
   return canEditCurrentConferenceData()&&!!(window.ConferenceEditLockManager&&
     window.ConferenceEditLockManager.canMutateAccommodation());
@@ -2686,6 +2706,7 @@ function findCanonicalAccommodationEntity(kind,id){
 
 function canonicalAccommodationStructure(operation,args,message){
   var current=getCurrentConference(),integration=window.PlatformIntegration;
+  if(!currentConferenceSectionCapability('accommodationManage')){showToast('ليس لديك صلاحية إدارة التسكين.','#E74C3C');return false;}
   if(!current||!getCanonicalConferenceCoreLink(current.id)||!integration)return false;
   return canonicalAccommodationMutation(integration.mutateConferenceAccommodationStructure(current.id,operation,args),message);
 }
@@ -2762,6 +2783,7 @@ function deleteCanonicalAccommodationRoom(roomId){
 }
 
 function assignCanonicalAccommodation(roomId){
+  if(!currentConferenceSectionCapability('accommodationManage')){showToast('ليس لديك صلاحية إدارة التسكين.','#E74C3C');return false;}
   var room=findCanonicalAccommodationEntity('room',roomId);
   if(!room||room.isClosed){alert('لا يمكن إضافة نزيل إلى غرفة مغلقة أو غير موجودة.');return false;}
   if((room.occupancies||[]).length>=Number(room.baseCapacity||0)+Number(room.extraBedCapacity||0)){alert('الغرفة ممتلئة ولا توجد أسرة متاحة.');return false;}
@@ -2777,6 +2799,7 @@ function assignCanonicalAccommodation(roomId){
 }
 
 function moveCanonicalAccommodation(occupancyId){
+  if(!currentConferenceSectionCapability('accommodationManage')){showToast('ليس لديك صلاحية إدارة التسكين.','#E74C3C');return false;}
   var current=getCurrentConference(),integration=window.PlatformIntegration,occupancy=findCanonicalAccommodationEntity('occupancy',occupancyId),rooms=[];
   if(!occupancy)return false;
   (canonicalAccommodationState().houses||[]).forEach(function(h){(h.floors||[]).forEach(function(f){(f.rooms||[]).forEach(function(r){if(!r.isClosed&&r.roomId!==occupancy.roomId&&(r.occupancies||[]).length<Number(r.baseCapacity||0)+Number(r.extraBedCapacity||0))rooms.push({house:h,floor:f,room:r});});});});
@@ -2788,6 +2811,7 @@ function moveCanonicalAccommodation(occupancyId){
 }
 
 function removeCanonicalAccommodation(occupancyId){
+  if(!currentConferenceSectionCapability('accommodationManage')){showToast('ليس لديك صلاحية إدارة التسكين.','#E74C3C');return false;}
   var current=getCurrentConference(),integration=window.PlatformIntegration,occupancy=findCanonicalAccommodationEntity('occupancy',occupancyId);
   if(!occupancy||!confirm('إزالة '+occupancy.person.fullName+' من الغرفة؟'))return false;
   return canonicalAccommodationMutation(integration.removeConferenceAccommodation(current.id,occupancy.occupancyId,occupancy.revision),'🗑️ تم حذف النزيل من الغرفة');
@@ -2795,7 +2819,13 @@ function removeCanonicalAccommodation(occupancyId){
 
 function renderCanonicalAccommodation(state){
   var h='<main class="accommodation-dashboard">';
-  if(!state){h+='<div class="card" role="status">جارٍ تحميل بيانات التسكين المركزية...</div></main>';ge('tab0').innerHTML=h;return;}
+  if(!state){
+    var loadState=typeof window.getConferenceAccommodationLoadState==='function'?window.getConferenceAccommodationLoadState(getCurrentConference().id):{status:'idle'};
+    if(loadState.status==='loading')h+='<div class="card" role="status">جارٍ تحميل بيانات التسكين المركزية...</div>';
+    else h+='<div class="card" role="alert">تعذر تحميل بيانات التسكين. <button type="button" class="btn btn-blue btn-sm" onclick="retryCanonicalConferenceAccommodation()">إعادة المحاولة</button></div>';
+    h+='</main>';ge('tab0').innerHTML=h;return;
+  }
+  var canManage=currentConferenceSectionCapability('accommodationManage');
   var houses=state.houses||[],rooms=[];houses.forEach(function(house){(house.floors||[]).forEach(function(floor){(floor.rooms||[]).forEach(function(room){rooms.push(room);});});});
   var occupied=rooms.reduce(function(n,room){return n+(room.occupancies||[]).length;},0);
   var occupiedRooms=rooms.filter(function(room){return (room.occupancies||[]).length>0;}).length;
@@ -2824,17 +2854,17 @@ function renderCanonicalAccommodation(state){
   });
   h+='</div>';
   h+='<div class="accommodation-search-count" aria-live="polite">الغرف المعروضة: '+matchingRooms.length+' من '+rooms.length+'</div>';
-  h+='<div class="accommodation-edit-toolbar"><button class="btn btn-blue" onclick="createCanonicalAccommodationHouse()">➕ إضافة بيت تسكين</button></div>';
+  if(canManage)h+='<div class="accommodation-edit-toolbar"><button class="btn btn-blue" onclick="createCanonicalAccommodationHouse()">➕ إضافة بيت تسكين</button></div>';
   h+='<div class="accommodation-canonical-summary" role="group" aria-label="ملخص التسكين"><div class="card">إجمالي الغرف <strong>'+rooms.length+'</strong></div><div class="card">الغرف المشغولة <strong>'+occupiedRooms+'</strong></div><div class="card">الغرف الفارغة <strong>'+emptyOpenRooms+'</strong></div><div class="card">الغرف المغلقة <strong>'+closedRooms+'</strong></div><div class="card">النزلاء <strong>'+occupied+'</strong></div><div class="card">الأسرة الإضافية المستخدمة <strong>'+extraBedsUsed+'</strong></div><div class="card">الأسرة المتاحة <strong>'+Math.max(0,usableCapacity-openOccupancies)+'</strong></div></div>';
   if((query||filter!=='all')&&!matchingRooms.length&&rooms.length)h+='<div class="card" role="status">لا توجد غرف مطابقة للبحث أو الفلتر.</div>';
   if(!houses.length)h+='<div class="card" role="status" style="text-align:center;padding:20px;color:#95a5a6;">لا توجد بيوت تسكين في بيانات المؤتمر المركزية. يمكنك إضافة بيت من الزر أعلاه.</div>';
   state.houses.forEach(function(house){
-    h+='<section class="card accommodation-house section-card"><div class="accommodation-house-title"><span>'+accommodationIcon('building')+'</span><strong>'+esc(house.name)+'</strong><div class="row"><button class="btn btn-blue btn-sm" onclick="editCanonicalAccommodationHouse(\''+house.houseId+'\')">✏️ تعديل</button><button class="btn btn-green btn-sm" onclick="createCanonicalAccommodationFloor(\''+house.houseId+'\')">➕ دور</button><button class="btn btn-red btn-sm" onclick="deleteCanonicalAccommodationHouse(\''+house.houseId+'\')">🗑️ حذف</button></div></div>';
+    h+='<section class="card accommodation-house section-card"><div class="accommodation-house-title"><span>'+accommodationIcon('building')+'</span><strong>'+esc(house.name)+'</strong>'+(canManage?'<div class="row"><button class="btn btn-blue btn-sm" onclick="editCanonicalAccommodationHouse(\''+house.houseId+'\')">✏️ تعديل</button><button class="btn btn-green btn-sm" onclick="createCanonicalAccommodationFloor(\''+house.houseId+'\')">➕ دور</button><button class="btn btn-red btn-sm" onclick="deleteCanonicalAccommodationHouse(\''+house.houseId+'\')">🗑️ حذف</button></div>':'')+'</div>';
     (house.floors||[]).forEach(function(floor){
-      h+='<div class="floor-section"><div class="floor-title"><strong>'+esc(floor.name)+'</strong><div class="row"><button class="btn btn-blue btn-sm" onclick="editCanonicalAccommodationFloor(\''+floor.floorId+'\')">✏️ تعديل</button><button class="btn btn-green btn-sm" onclick="createCanonicalAccommodationRoom(\''+floor.floorId+'\')">➕ غرفة</button><button class="btn btn-red btn-sm" onclick="deleteCanonicalAccommodationFloor(\''+floor.floorId+'\')">🗑️ حذف</button></div></div><div class="rooms-grid">';
+      h+='<div class="floor-section"><div class="floor-title"><strong>'+esc(floor.name)+'</strong>'+(canManage?'<div class="row"><button class="btn btn-blue btn-sm" onclick="editCanonicalAccommodationFloor(\''+floor.floorId+'\')">✏️ تعديل</button><button class="btn btn-green btn-sm" onclick="createCanonicalAccommodationRoom(\''+floor.floorId+'\')">➕ غرفة</button><button class="btn btn-red btn-sm" onclick="deleteCanonicalAccommodationFloor(\''+floor.floorId+'\')">🗑️ حذف</button></div>':'')+'</div><div class="rooms-grid">';
       (floor.rooms||[]).filter(function(room){return matchingRooms.indexOf(room)>=0;}).forEach(function(room){
-        h+='<article class="room-card'+(room.isClosed?' room-closed':'')+'"><div class="room-card-header"><strong>غرفة '+esc(room.roomNumber)+'</strong><span>'+(room.isClosed?'مغلقة · ':'')+(room.occupancies||[]).length+'/'+(Number(room.baseCapacity||0)+Number(room.extraBedCapacity||0))+'</span></div><div class="row" style="gap:4px;flex-wrap:wrap"><button class="btn btn-green btn-sm" '+(room.isClosed||(room.occupancies||[]).length>=Number(room.baseCapacity||0)+Number(room.extraBedCapacity||0)?'disabled title="الغرفة مغلقة أو ممتلئة"':'onclick="assignCanonicalAccommodation(\''+room.roomId+'\')"')+'>➕ إضافة نزيل</button><button class="btn btn-blue btn-sm" onclick="editCanonicalAccommodationRoom(\''+room.roomId+'\')">✏️ تعديل</button><button class="btn btn-gray btn-sm" onclick="toggleCanonicalAccommodationRoom(\''+room.roomId+'\')">'+(room.isClosed?'🔓':'🔒')+'</button><button class="btn btn-red btn-sm" onclick="deleteCanonicalAccommodationRoom(\''+room.roomId+'\')">🗑️</button></div>';
-        (room.occupancies||[]).forEach(function(occupancy){h+='<div class="guest-row"><div><strong>'+esc(occupancy.person.fullName)+'</strong><div style="font-size:10px;color:#5a7a9a">'+esc(occupancy.person.church||occupancy.person.phone||'')+' • '+(occupancy.bedType==='extra'?'سرير إضافي':'سرير أساسي')+'</div></div><div class="row"><button class="btn btn-blue btn-sm" onclick="moveCanonicalAccommodation(\''+occupancy.occupancyId+'\')">↔️ نقل</button><button class="btn btn-red btn-sm" onclick="removeCanonicalAccommodation(\''+occupancy.occupancyId+'\')">🗑️ حذف</button></div></div>';});
+        h+='<article class="room-card'+(room.isClosed?' room-closed':'')+'"><div class="room-card-header"><strong>غرفة '+esc(room.roomNumber)+'</strong><span>'+(room.isClosed?'مغلقة · ':'')+(room.occupancies||[]).length+'/'+(Number(room.baseCapacity||0)+Number(room.extraBedCapacity||0))+'</span></div>'+(canManage?'<div class="row" style="gap:4px;flex-wrap:wrap"><button class="btn btn-green btn-sm" '+(room.isClosed||(room.occupancies||[]).length>=Number(room.baseCapacity||0)+Number(room.extraBedCapacity||0)?'disabled title="الغرفة مغلقة أو ممتلئة"':'onclick="assignCanonicalAccommodation(\''+room.roomId+'\')"')+'>➕ إضافة نزيل</button><button class="btn btn-blue btn-sm" onclick="editCanonicalAccommodationRoom(\''+room.roomId+'\')">✏️ تعديل</button><button class="btn btn-gray btn-sm" onclick="toggleCanonicalAccommodationRoom(\''+room.roomId+'\')">'+(room.isClosed?'🔓':'🔒')+'</button><button class="btn btn-red btn-sm" onclick="deleteCanonicalAccommodationRoom(\''+room.roomId+'\')">🗑️</button></div>':'');
+        (room.occupancies||[]).forEach(function(occupancy){h+='<div class="guest-row"><div><strong>'+esc(occupancy.person.fullName)+'</strong><div style="font-size:10px;color:#5a7a9a">'+esc(occupancy.person.church||occupancy.person.phone||'')+' • '+(occupancy.bedType==='extra'?'سرير إضافي':'سرير أساسي')+'</div></div>'+(canManage?'<div class="row"><button class="btn btn-blue btn-sm" onclick="moveCanonicalAccommodation(\''+occupancy.occupancyId+'\')">↔️ نقل</button><button class="btn btn-red btn-sm" onclick="removeCanonicalAccommodation(\''+occupancy.occupancyId+'\')">🗑️ حذف</button></div>':'')+'</div>';});
         h+='</article>';
       });
       h+='</div></div>';
@@ -2848,6 +2878,10 @@ function renderAccommodation() {
   var current = getCurrentConference();
   if (!current || !getCanonicalConferenceCoreLink(current.id)) {
     ge('tab0').innerHTML = '<main class="accommodation-dashboard"><div class="card" role="status">لا تتوفر بيانات تسكين سحابية للمؤتمر الحالي. افتح المؤتمر من قائمة المؤتمرات بالمنصة لإعادة تحميل سياقه تلقائيًا؛ لا يلزم إنشاء ربط يدوي.</div></main>';
+    return;
+  }
+  if(!currentConferenceSectionCapability('accommodation')){
+    ge('tab0').innerHTML='<main class="accommodation-dashboard"><div class="card" role="alert">ليس لديك صلاحية مشاهدة التسكين.</div></main>';
     return;
   }
   renderCanonicalAccommodation(canonicalAccommodationState());
@@ -8287,15 +8321,19 @@ function renderSettings(){
 function renderPeopleDatabaseSection(){
   var current=getCurrentConference();
   var linked=!!(current&&getCanonicalConferenceCoreLink(current.id));
+  var canView=!linked||currentConferenceSectionCapability('people');
+  var canManage=!linked||currentConferenceSectionCapability('peopleManage');
   var canonicalState=linked&&window.PlatformIntegration&&typeof window.PlatformIntegration.getConferenceParticipationState==='function'?window.PlatformIntegration.getConferenceParticipationState(current.id):null;
-  var people=linked?(canonicalState?canonicalState.items:[]):getPeopleList();
+  var people=linked?(canView&&canonicalState?canonicalState.items:[]):getPeopleList();
   var h = '<section class="settings-section settings-branding-section settings-ui-accordion"><button type="button" class="settings-branding-toggle" aria-expanded="false" onclick="var content=this.nextElementSibling;var isOpen=content.classList.toggle(\'settings-branding-content-open\');content.setAttribute(\'aria-hidden\',isOpen?\'false\':\'true\');this.setAttribute(\'aria-expanded\',isOpen?\'true\':\'false\');this.querySelector(\'.settings-branding-toggle-arrow\').textContent=isOpen?\'▲\':\'▼\'"><span class="settings-accordion-heading">قاعدة بيانات الأشخاص <b class="settings-count-badge">'+people.length+'</b></span><span class="settings-branding-toggle-arrow" aria-hidden="true">▼</span></button><div class="settings-branding-content settings-ui-accordion-content" aria-hidden="true">';
   h += '<div class="settings-people-toolbar">';
   if(!linked)h += '<button class="btn btn-blue" onclick="openPeopleExcelImport()">📥 استيراد ملف إكسل</button>';
-  h += '<button class="btn btn-purple" onclick="openPersonDialog()" '+(linked&&!canonicalState?'disabled':'')+'>➕ إضافة شخص جديد</button>';
+  if(canManage)h += '<button class="btn btn-purple" onclick="openPersonDialog()" '+(linked&&!canonicalState?'disabled':'')+'>➕ إضافة شخص جديد</button>';
   h += '</div>';
-  if(linked&&!canonicalState){
-    h += '<div class="settings-empty-state">...</div>';
+  if(linked&&!canView){
+    h += '<div class="settings-empty-state" role="alert">ليس لديك صلاحية مشاهدة الأشخاص.</div>';
+  } else if(linked&&!canonicalState){
+    h += '<div class="settings-empty-state" role="alert">تعذر تحميل بيانات الأشخاص. <button type="button" class="btn btn-blue btn-sm" onclick="retryCanonicalConferencePeople()">إعادة المحاولة</button></div>';
   } else if(!people.length){
     h += '<div class="settings-empty-state">لا توجد بيانات أشخاص بعد.</div>';
   } else {
@@ -8305,10 +8343,10 @@ function renderPeopleDatabaseSection(){
       h += '<div class="settings-list-item">';
       h += '<div><div style="font-weight:700">' + esc(person.fullName) + '</div><div style="font-size:10px;color:#5a7a9a">' + esc(linked?canonicalParticipantMetaText(p):personMetaText(person) || '-') + '</div></div>';
       h += '<div class="row" style="gap:4px">';
-      if(linked)h += '<button class="btn btn-gray btn-sm" onclick="openPersonDialog(\''+p.participationId+'\')">✏️ تعديل</button>';
-      if(linked)h += '<button class="btn btn-gray btn-sm" onclick="setCanonicalParticipantStatus(\''+p.participationId+'\',\''+(p.status==='active'?'apologized':'active')+'\')">'+(p.status==='active'?'اعتذار':'تفعيل')+'</button>';
-      else h += '<button class="btn btn-gray btn-sm" onclick="openPersonDialog(\'' + p.id + '\')">✏️ تعديل</button>';
-      h += '<button class="btn btn-red btn-sm" onclick="deletePersonFromDatabase(\'' + (linked?p.participationId:p.id) + '\')">🗑️ حذف</button>';
+      if(linked){
+        if(canManage)h += '<button class="btn btn-gray btn-sm" onclick="openPersonDialog(\''+p.participationId+'\')">✏️ تعديل</button><button class="btn btn-gray btn-sm" onclick="setCanonicalParticipantStatus(\''+p.participationId+'\',\''+(p.status==='active'?'apologized':'active')+'\')">'+(p.status==='active'?'اعتذار':'تفعيل')+'</button>';
+      } else h += '<button class="btn btn-gray btn-sm" onclick="openPersonDialog(\'' + p.id + '\')">✏️ تعديل</button>';
+      if(canManage)h += '<button class="btn btn-red btn-sm" onclick="deletePersonFromDatabase(\'' + (linked?p.participationId:p.id) + '\')">🗑️ حذف</button>';
       h += '</div>';
       h += '</div>';
     });
@@ -8425,6 +8463,7 @@ function openPersonDialog(personId){
   ge('personCanonicalSuggestions').style.display='none';ge('personCanonicalSuggestions').textContent='';
   var current=getCurrentConference();
   var linked=!!(current&&getCanonicalConferenceCoreLink(current.id));
+  if(linked&&!currentConferenceSectionCapability('peopleManage')){showToast('ليس لديك صلاحية إدارة الأشخاص.','#E74C3C');return false;}
   if(linked&&personId){
     var state=window.PlatformIntegration&&window.PlatformIntegration.getConferenceParticipationState(current.id);
     var selected=state&&state.items.find(function(item){return item.participationId===String(personId);});
@@ -8447,7 +8486,7 @@ function openPersonDialog(personId){
       ge('person_age_field').style.display='';ge('person_date_of_birth_field').style.display='';
       ge('person_notes_field').style.display='none';
       ge('personModalTitle').textContent='تعديل بيانات الشخص في الدليل المركزي';
-      ge('personModal').style.display='flex';return true;
+      ge('personModal').style.display='flex';setTimeout(function(){ge('person_full_name').focus();},0);return true;
     }).catch(function(){showToast('تعذر تحميل بيانات الشخص الحالية.','#E74C3C');return false;});
   }
   var person = personId ? getPersonById(personId) : null;
@@ -8466,6 +8505,7 @@ function openPersonDialog(personId){
   ge('person_notes_field').style.display=linked?'none':'';
   ge('personModalTitle').textContent = person ? '✏️ تعديل شخص' : '➕ إضافة شخص جديد';
   ge('personModal').style.display = 'flex';
+  setTimeout(function(){ge('person_full_name').focus();},0);
 }
 
 function closePersonDialog(){
@@ -8485,6 +8525,7 @@ function deletePersonFromDatabase(personId){
 }
 
 function deleteCanonicalConferenceParticipation(linkedCurrent,participationId){
+  if(!currentConferenceSectionCapability('peopleManage')){showToast('ليس لديك صلاحية إدارة الأشخاص.','#E74C3C');return false;}
   var integration=window.PlatformIntegration;
   var state=integration&&integration.getConferenceParticipationState(linkedCurrent.id);
   var participation=state&&state.items.find(function(item){return item.participationId===String(participationId||'');});
@@ -8566,6 +8607,7 @@ function isCanonicalParticipationDuplicate(error){
 }
 function saveCanonicalConferenceParticipant(linkedCurrent,personId){
   if(canonicalPersonSavePending)return false;
+  if(!currentConferenceSectionCapability('peopleManage')){showToast('ليس لديك صلاحية إدارة الأشخاص.','#E74C3C');return false;}
   if(personDialogContext.guestRowId||personDialogContext.childRowId)return false;
   if(personId){
     var snapshot=canonicalPersonSelectedSnapshot;
@@ -8652,6 +8694,7 @@ function saveLocalOnlyPersonDialog(personId){
 
 function setCanonicalParticipantStatus(participationId,status){
   var current=getCurrentConference();
+  if(!currentConferenceSectionCapability('peopleManage')){showToast('ليس لديك صلاحية إدارة الأشخاص.','#E74C3C');return false;}
   if(!current||!getCanonicalConferenceCoreLink(current.id))return false;
   return window.PlatformIntegration.setConferenceParticipationStatus(current.id,participationId,status).then(function(){renderSettings();showToast(status==='apologized'?'تم تسجيل الاعتذار وإزالة التسكين إن وُجد':'تم تفعيل المشاركة');return true;}).catch(function(){showToast('تعذر تحديث حالة المشارك.','#E74C3C');return false;});
 }
