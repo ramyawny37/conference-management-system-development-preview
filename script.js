@@ -2477,7 +2477,17 @@ function initializePlatformAdministrationContext(){
   return Promise.all([
     ensureUserManagementAccess(),
     ensureModulePermissionAdministrationAccess()
-  ]);
+  ]).then(function(){
+    var pending=[];
+    if(window.UserManagementUI&&typeof window.UserManagementUI.initialize==='function')
+      pending.push(window.UserManagementUI.initialize());
+    if(window.ModulePermissionAdministrationUI&&typeof window.ModulePermissionAdministrationUI.initialize==='function')
+      pending.push(window.ModulePermissionAdministrationUI.initialize());
+    return Promise.allSettled(pending).then(function(){
+      if(window.PlatformAdministrationUI&&typeof window.PlatformAdministrationUI.syncSidebar==='function')
+        window.PlatformAdministrationUI.syncSidebar();
+    });
+  });
 }
 
 function canEditCurrentConferenceData(){
