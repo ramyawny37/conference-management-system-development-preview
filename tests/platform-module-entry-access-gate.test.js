@@ -77,10 +77,10 @@ test('dispatcher delegates other operations and authorizes with the verified ses
 
 test('route restores use PlatformIntegration and deterministic assets remain aligned',()=>{
   assert.doesNotMatch(script,/platformRoute\.indexOf\('\/warehouse'\)[\s\S]{0,180}openWarehouseWorkspace/);
-  assert.match(index,/js\/platform-integration\.js\?rev=platform-administration-canonical-sidebar-v1/);
-  assert.match(worker,/\.\/js\/platform-integration\.js\?rev=platform-administration-canonical-sidebar-v1/);
-  assert.match(index,/script\.js\?rev=platform-administration-canonical-sidebar-v1/);
-  assert.match(worker,/\.\/script\.js\?rev=platform-administration-canonical-sidebar-v1/);
+  assert.match(index,/js\/platform-integration\.js\?rev=platform-administration-canonical-sidebar-navigation-v2/);
+  assert.match(worker,/\.\/js\/platform-integration\.js\?rev=platform-administration-canonical-sidebar-navigation-v2/);
+  assert.match(index,/script\.js\?rev=platform-administration-canonical-sidebar-navigation-v2/);
+  assert.match(worker,/\.\/script\.js\?rev=platform-administration-canonical-sidebar-navigation-v2/);
   for(const asset of ['reservations-module.js','reservations-module.css']){
     const reference=`modules/reservations/${asset}?rev=${reservationsRevision}`;
     assert.ok(index.includes(reference),`index missing ${reference}`);
