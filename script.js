@@ -8555,6 +8555,15 @@ function savePersonDialog(){
 }
 
 var canonicalPersonSavePending=false;
+function refreshCanonicalPeopleAfterDuplicate(localId){
+  return hydrateCanonicalConferenceParticipations(localId,{silent:true}).then(function(){
+    renderSettings();closePersonDialog();showToast('الشخص موجود بالفعل في المؤتمر وتم تحديث القائمة.');return true;
+  }).catch(function(){showToast('الشخص موجود بالفعل في المؤتمر، لكن تعذر تحديث القائمة.','#E74C3C');return false;});
+}
+function isCanonicalParticipationDuplicate(error){
+  var code=error&&error.code,detail=error&&error.diagnostic;
+  return code==='CANONICAL_CONFERENCE_PERSON_ALREADY_PARTICIPATING'||code==='CONFERENCE_PARTICIPATION_ALREADY_EXISTS'||code==='PLATFORM_IDENTIFIER_ALREADY_EXISTS'&&detail&&detail.applicationCode==='CONFERENCE_PARTICIPATION_ALREADY_EXISTS';
+}
 function saveCanonicalConferenceParticipant(linkedCurrent,personId){
   if(canonicalPersonSavePending)return false;
   if(personDialogContext.guestRowId||personDialogContext.childRowId)return false;
@@ -8580,7 +8589,7 @@ function saveCanonicalConferenceParticipant(linkedCurrent,personId){
     if(linkedFullName!==canonicalPersonSelectedName){alert('أعد اختيار الشخص من نتائج البحث أو أنشئ شخصًا جديدًا.');return false;}
     var snapshot=canonicalPersonSelectedSnapshot;
     if(!snapshot||ge('person_church').value.trim()!==snapshot.church||ge('person_phone').value.trim()!==snapshot.phone||ge('person_gender').value.trim()!==snapshot.gender||ge('person_date_of_birth').value!==snapshot.dateOfBirth){alert('لا يتم تحديث الدليل المركزي تلقائيًا. أعد اختيار الشخص دون تعديل بياناته.');return false;}
-    return window.PlatformIntegration.createConferenceParticipationForExistingPerson(linkedCurrent.id,canonicalPersonSelectedId).then(function(){renderSettings();closePersonDialog();showToast('✅ تمت إضافة الشخص للمؤتمر');return true;}).catch(function(error){showToast(error&&error.code==='CANONICAL_CONFERENCE_PERSON_ALREADY_PARTICIPATING'?'الشخص موجود بالفعل في المؤتمر.':'تعذر إضافة الشخص للمؤتمر.','#E74C3C');return false;});
+    return window.PlatformIntegration.createConferenceParticipationForExistingPerson(linkedCurrent.id,canonicalPersonSelectedId).then(function(){renderSettings();closePersonDialog();showToast('✅ تمت إضافة الشخص للمؤتمر');return true;}).catch(function(error){if(isCanonicalParticipationDuplicate(error))return refreshCanonicalPeopleAfterDuplicate(linkedCurrent.id);showToast('تعذر إضافة الشخص للمؤتمر.','#E74C3C');return false;});
   }
   var genderValue=ge('person_gender').value.trim();
   if(genderValue==='ذكر')genderValue='male';
