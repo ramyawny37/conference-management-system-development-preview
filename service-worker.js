@@ -7,7 +7,7 @@ const CACHE_NAMESPACE = IS_DEVELOPMENT
   : '';
 const CACHE_PREFIX = CACHE_NAMESPACE + 'conference-manager-core-';
 const CACHE_REVISION = IS_DEVELOPMENT
-  ? 'platform-administration-canonical-sidebar-navigation-v2'
+  ? 'device-key-store-recovery-v1'
   : 'production-3-6-0-release-v6';
 const CACHE_NAME = CACHE_PREFIX + 'v' + APP_VERSION + '-' + CACHE_REVISION;
 const CORE_ASSETS = [
@@ -27,7 +27,7 @@ const CORE_ASSETS = [
   './js/supabase/public-config.js',
   './js/supabase/runtime-config.js',
   './js/supabase/device-storage-namespace.js?rev=project-device-storage-isolation-v1',
-  './js/supabase/device-session.js?rev=auth-bound-edge-session-v1',
+  './js/supabase/device-session.js?rev=device-key-store-recovery-v1',
   './js/supabase/conference-device-operation-contract.js?rev=generic-permission-resources-v1',
   './js/supabase/warehouse-device-operation-contract.js?rev=opening-balance-ux-correction-v1',
   './js/supabase/platform-device-operation-contract.js?rev=phase-w1-v1',
@@ -44,7 +44,7 @@ const CORE_ASSETS = [
   './js/sync/diagnostics-privacy-policy.js?rev=platform-capability-authority-v1',
   './js/sync/access-diagnostics-ui.js?rev=platform-first-login-coordinator-v1',
   './js/supabase/device-identity.js?rev=project-device-storage-isolation-v1',
-  './js/supabase/device-enrollment.js?rev=revoked-rerequest-error-code-v1',
+  './js/supabase/device-enrollment.js?rev=device-key-store-recovery-v1',
 
   './js/supabase/device-authorization-administration-service.js?rev=runtime-syntax-repair-v2',
 
