@@ -9,6 +9,9 @@ on:
       - 'modules/reservations/reservations-module.css'
       - 'index.html'
       - 'service-worker.js'
+      - 'js/supabase/device-enrollment.js'
+      - 'js/supabase/device-session.js'
+      - 'tests/**'
   workflow_dispatch:
 permissions:
   contents: read
