@@ -68,6 +68,6 @@
     global.PlatformIntegration.registerModule({id:'platform-administration',mount:mount,reconcileRoute:function(context){return renderRoute(context&&context.route);},unmount:unmount});
     return true;
   }
-  global.PlatformAdministrationUI=Object.freeze({initialize:initialize,renderRoute:renderRoute,refresh:refresh,isMounted:isMounted,routeSection:routeSection,navigationState:navigationState});
+  global.PlatformAdministrationUI=Object.freeze({initialize:initialize,renderRoute:renderRoute,refresh:refresh,syncSidebar:syncSidebar,isMounted:isMounted,routeSection:routeSection,navigationState:navigationState});
   initialize();
 })(window);
