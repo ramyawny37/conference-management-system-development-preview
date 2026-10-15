@@ -31,7 +31,7 @@ function runtime(beginFlights,platformResponse){
     throw new Error('unexpected action');
   }}};
   const indexedDB={open(){
-    const opening={result:{transaction(){return {objectStore(){return {getAll(){
+    const opening={result:{objectStoreNames:{contains(name){return name==='keys';}},transaction(){return {objectStore(){return {getAll(){
       const request={result:[record]};queueMicrotask(()=>request.onsuccess());return request;
     }};}};},close(){}}};
     queueMicrotask(()=>opening.onsuccess());return opening;
