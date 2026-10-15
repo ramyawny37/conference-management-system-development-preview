@@ -25,7 +25,7 @@ test('10 business mutation uses canonical protected operation',()=>assert.match(
 test('11 administration resource picker uses the generic protected operation',()=>assert.match(service,/list_module_permission_resources_for_administration/));
 test('12 administration resource picker avoids ordinary module reads',()=>assert.doesNotMatch(service,/warehouse\.store\.view|['"]list_stores['"]|['"]discover_stores['"]|get_booking_creation_context/));
 test('13 exact resource scope is metadata-driven',()=>assert.match(ui,/mutateBusiness\('grant',button,type,selectNode\.value,null\)/));
-test('14 Store UUID is passed without rewriting',()=>assert.match(service,/args\.p_resource_id=input\.resourceId==null\?null:String\(input\.resourceId\)/));
+test('14 Store UUID is passed without rewriting',()=>{assert.match(service,/args\.p_resource_id=foundation\?null:input\.resourceId==null\?null:String\(input\.resourceId\)/);assert.match(service,/args\.p_resource_type=foundation\?null:input\.resourceType==null\?null:String\(input\.resourceType\)/);});
 test('15 module.access controls exist',()=>assert.match(ui,/foundationRow\(state\.moduleKey\+'\.module\.access'/));
 test('16 module.manage controls are owner-confirmation restricted',()=>assert.match(ui,/foundationRow\(state\.moduleKey\+'\.module\.manage'[\s\S]*true\)/));
 test('17 Module Manager cannot appoint another manager through UI',()=>assert.match(ui,/permission===state\.moduleKey\+'\.module\.manage'&&!state\.ownerConfirmed/));
