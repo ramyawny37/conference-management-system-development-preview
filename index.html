@@ -588,8 +588,8 @@
   });
 </script>
 <script>
-  window.APP_SHELL_REVISION=window.location.pathname.indexOf(
-    '/conference-management-system-development-preview/')===0
+  window.APP_SHELL_REVISION=window.BrowserStorageNamespace &&
+    window.BrowserStorageNamespace.environment==='development'
     ? 'conference-section-capabilities-v2'
     : 'production-3-6-0-release-v1';
 </script>
