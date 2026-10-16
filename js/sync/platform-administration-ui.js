@@ -55,6 +55,8 @@
     var sectionChanged=nextSection!==currentSection;
     if(!node)return false;
     if(mounted&&!sectionChanged&&nextSection==='devices'){
+      var usersNode=global.document.getElementById('user_management_screen');
+      if(usersNode&&global.UserManagementUI&&typeof global.UserManagementUI.renderSection==='function')usersNode.outerHTML=global.UserManagementUI.renderSection();
       syncSidebar();
       return true;
     }
