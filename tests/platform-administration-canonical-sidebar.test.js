@@ -113,3 +113,9 @@ test('sidebar group remains visible while permissions data is loading if user ac
   state.moduleDefinition.mount({route:'/platform-administration/users'});
   assert.equal(state.sidebarItems.find(item=>item.section==='users').hidden,false);
 });
+
+test('device route updates selected user details without replacing pending approval root',()=>{
+  assert.match(source,/getElementById\('user_management_screen'\)/);
+  assert.match(source,/usersNode\.outerHTML=global\.UserManagementUI\.renderSection\(\)/);
+  assert.match(source,/mounted&&!sectionChanged&&nextSection==='devices'/);
+});
