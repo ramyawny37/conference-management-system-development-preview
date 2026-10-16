@@ -129,3 +129,11 @@ test('pending device requests distinguish an unverified state from a verified em
   assert.match(deviceUi,/اعتماد الجهاز/);
   assert.match(deviceUi,/رفض الطلب/);
 });
+
+test('owner passkey enrollment is exposed only for enrollment_required',()=>{
+  const ui=fs.readFileSync('js/sync/device-authorization-administration-ui.js','utf8');
+  assert.match(ui,/state\.platformStatus==='enrollment_required'\?/);
+  assert.match(ui,/DeviceAuthorizationAdministrationUI\.enrollPlatformCredential\(\)/);
+  assert.match(ui,/تسجيل مفتاح مرور المالك/);
+  assert.match(ui,/enrollSystemOwnerCredential\(token\)/);
+});
