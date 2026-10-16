@@ -119,3 +119,13 @@ test('device route updates selected user details without replacing pending appro
   assert.match(source,/usersNode\.outerHTML=global\.UserManagementUI\.renderSection\(\)/);
   assert.match(source,/mounted&&!sectionChanged&&nextSection==='devices'/);
 });
+
+test('pending device requests distinguish an unverified state from a verified empty list',()=>{
+  const deviceUi=fs.readFileSync('js/sync/device-authorization-administration-ui.js','utf8');
+  assert.match(deviceUi,/لم يتم التحقق من طلبات الاعتماد بعد/);
+  assert.match(deviceUi,/state\.pendingStatus==='loaded'\?'لا توجد طلبات اعتماد معلقة في القائمة المحمية/);
+  assert.match(deviceUi,/result\.status==='listed'&&result\.data&&Array\.isArray\(result\.data\.devices\)/);
+  assert.match(deviceUi,/الاعتماد المحمي غير جاهز/);
+  assert.match(deviceUi,/اعتماد الجهاز/);
+  assert.match(deviceUi,/رفض الطلب/);
+});
