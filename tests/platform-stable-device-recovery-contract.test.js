@@ -5,6 +5,7 @@ const fs=require('node:fs');
 const path=require('node:path');
 const root=path.resolve(__dirname,'..');
 const migration=fs.readFileSync(path.join(root,'supabase/migrations/20261016154342_platform_owner_passkey_recovery_canonicalization.sql'),'utf8');
+const counterGuard=fs.readFileSync(path.join(root,'supabase/migrations/20261016163453_platform_owner_passkey_recovery_counter_guard.sql'),'utf8');
 const edge=fs.readFileSync(path.join(root,'supabase/functions/platform-device-authorization/index.ts'),'utf8');
 const page=fs.readFileSync(path.join(root,'platform-device-recovery-login-v2.html'),'utf8');
 const browser=fs.readFileSync(path.join(root,'js/platform-stable-device-recovery.js'),'utf8');
@@ -85,6 +86,17 @@ test('completion serializes and consumes challenge and authorization after exact
     'set consumed_at=pg_catalog.statement_timestamp() where id=recovery.id']
     .forEach(value=>assert.ok(completion.replace(/\s+/g,' ').includes(value.replace(/\s+/g,' ')),value));
   assert.ok(completion.indexOf("item.status='pending'")<completion.indexOf("set status='approved'"));
+});
+
+test('credential lifecycle guard derives its counter-only recovery exception from atomic database evidence',()=>{
+  ['stable_device_recovery_authorizations','stable_device_recovery_challenges',
+    "issuance_basis='reviewed_platform_owner_passkey_recovery'","challenge.verified_at is not null",
+    "challenge.verification_context->'userVerified'='true'::jsonb","target_authorization.status='pending'",
+    "target_device.lifecycle_status='active'",'recovery.consumed_at is null',
+    "array['sign_count','last_used_at']::text[]",'new.sign_count<old.sign_count',
+    'require_canonical_device_authorization'].forEach(value=>assert.ok(counterGuard.includes(value),value));
+  assert.doesNotMatch(counterGuard,/current_setting|set_config|request\.jwt|session_user/i);
+  assert.doesNotMatch(counterGuard,/disable\s+trigger|drop\s+trigger/i);
 });
 
 test('begin serializes concurrent ceremonies and preserves expired challenges as failed history',()=>{
