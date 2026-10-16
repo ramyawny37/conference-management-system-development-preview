@@ -70,7 +70,7 @@
     return true;
   }
   function mount(context){mounted=true;return renderRoute(context&&context.route);}
-  function unmount(){mounted=false;initialized=false;var node=root();if(node)node.innerHTML='';}
+  function unmount(){mounted=false;initialized=false;currentSection='users';var node=root();if(node)node.innerHTML='';}
   function isMounted(){return mounted;}
   function refresh(){if(!mounted)return false;return renderRoute();}
   function initialize(){
