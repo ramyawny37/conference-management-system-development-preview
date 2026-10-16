@@ -6,6 +6,8 @@ const vm=require('node:vm');
 
 const source=fs.readFileSync('js/sync/platform-administration-ui.js','utf8');
 const script=fs.readFileSync('script.js','utf8');
+const styles=fs.readFileSync('style.css','utf8');
+const integration=fs.readFileSync('js/platform-integration.js','utf8');
 
 function runtime(route){
   const calls=[];
@@ -69,4 +71,14 @@ test('unmount clears the shared workspace without mutating authorization state',
   state.moduleDefinition.unmount();
   assert.equal(state.nodes['platform-administrationWorkspace'].innerHTML,'');
   assert.equal(state.window.PlatformAdministrationUI.isMounted(),false);
+});
+
+test('canonical shell owns administration workspace visibility alongside all peer modules',()=>{
+  const visibilityRule=styles.match(/\.platform-conference-active \.platform-home[^\n]*\.platform-platform-administration-active #platform-administrationWorkspace\{display:flex\}/);
+  assert.ok(visibilityRule,'administration must be included in the canonical active-module CSS rule');
+  assert.match(visibilityRule[0],/\.platform-platform-administration-active \.platform-home\{display:none\}/);
+  assert.match(visibilityRule[0],/\.platform-platform-administration-active \.platform-module-switcher\{display:flex\}/);
+  assert.match(integration,/function syncModuleContainers\(activeId\)[\s\S]*?container\.hidden=!visible/);
+  assert.match(integration,/shell\.classList\.add\('platform-'\+id\+'-active'\)/);
+  assert.match(integration,/function moduleContainer\(id\)\{return global\.document&&global\.document\.getElementById\(id\+'Workspace'\);\}/);
 });
