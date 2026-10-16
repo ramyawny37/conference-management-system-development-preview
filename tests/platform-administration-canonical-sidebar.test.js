@@ -91,3 +91,25 @@ test('Development PWA serves the same revisioned canonical administration visibi
   assert.ok(worker.includes("'./"+asset+"'"),'service worker must precache the revised stylesheet');
   assert.match(worker,/development-administration-workspace-visibility-v1/);
 });
+
+
+test('device administration stays mounted through unrelated user refreshes',()=>{
+  const state=runtime('/platform-administration/devices');
+  state.moduleDefinition.mount({route:'/platform-administration/devices'});
+  const before=state.nodes['platform-administrationWorkspace'].innerHTML;
+  const deviceInitializations=state.calls.filter(call=>call[0]==='devices-init').length;
+  assert.equal(deviceInitializations,1);
+  state.window.PlatformAdministrationUI.refresh();
+  assert.equal(state.nodes['platform-administrationWorkspace'].innerHTML,before);
+  assert.equal(state.calls.filter(call=>call[0]==='devices-init').length,1);
+  state.moduleDefinition.unmount();
+  state.moduleDefinition.mount({route:'/platform-administration/devices'});
+  assert.equal(state.calls.filter(call=>call[0]==='devices-init').length,2);
+});
+
+test('sidebar group remains visible while permissions data is loading if user access is confirmed',()=>{
+  const state=runtime('/platform-administration/users');
+  state.window.ModulePermissionAdministrationUI.getNavigationState=()=>({status:'loading',available:false});
+  state.moduleDefinition.mount({route:'/platform-administration/users'});
+  assert.equal(state.sidebarItems.find(item=>item.section==='users').hidden,false);
+});
