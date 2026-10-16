@@ -4,7 +4,7 @@ create schema platform_private;
 do $$ begin
   if not exists(select 1 from pg_roles where rolname='anon') then create role anon; end if;
   if not exists(select 1 from pg_roles where rolname='authenticated') then create role authenticated; end if;
-exception when duplicate_object or unique_violation then null; end $;
+exception when duplicate_object or unique_violation then null; end $$;
 
 create table platform.devices(
   id uuid primary key,lifecycle_status text not null,retired_at timestamptz,compromised_at timestamptz
