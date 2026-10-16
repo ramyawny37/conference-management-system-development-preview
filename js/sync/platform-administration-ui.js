@@ -4,6 +4,7 @@
   var sections={users:true,roles:true,devices:true,audit:true,security:true};
   var currentSection='users';
   var mounted=false;
+  var initialized=false;
 
   function routeSection(route){
     var match=/^\/platform-administration\/(users|roles|devices|audit|security)(?:\/|$)/.exec(String(route||''));
@@ -33,7 +34,7 @@
     });
     var group=global.document.querySelector('[data-platform-nav-group="platform-administration"]');
     if(group){
-      group.hidden=access.pending||!Object.keys(sections).some(function(section){return access[section]===true;});
+      group.hidden=!Object.keys(sections).some(function(section){return access[section]===true;});
       var toggle=group.querySelector('[data-platform-nav-toggle="platform-administration"]');
       var subnav=group.querySelector('.canonical-platform-subnav');
       if(toggle)toggle.setAttribute('aria-expanded','true');
@@ -50,17 +51,26 @@
   }
   function renderRoute(route){
     var node=root();
-    currentSection=routeSection(route||global.ApplicationRouting&&global.ApplicationRouting.getLogicalPathname&&global.ApplicationRouting.getLogicalPathname());
+    var nextSection=routeSection(route||global.ApplicationRouting&&global.ApplicationRouting.getLogicalPathname&&global.ApplicationRouting.getLogicalPathname());
+    var sectionChanged=nextSection!==currentSection;
     if(!node)return false;
+    if(mounted&&!sectionChanged&&nextSection==='devices'){
+      syncSidebar();
+      return true;
+    }
+    currentSection=nextSection;
     node.innerHTML='<div class="platform-administration-screen" dir="rtl"><header class="platform-administration-heading"><span>إدارة المنصة</span><h2>'+({users:'المستخدمون والحسابات',roles:'الأدوار والصلاحيات',devices:'اعتماد الأجهزة',audit:'سجل التدقيق',security:'إعدادات الأمان'}[currentSection])+'</h2></header>'+sectionContent()+'</div>';
     syncSidebar();
-    if(global.UserManagementUI)global.UserManagementUI.initialize();
-    if(global.ModulePermissionAdministrationUI)global.ModulePermissionAdministrationUI.initialize();
+    if(!initialized){
+      initialized=true;
+      if(global.UserManagementUI)global.UserManagementUI.initialize();
+      if(global.ModulePermissionAdministrationUI)global.ModulePermissionAdministrationUI.initialize();
+    }
     if(currentSection==='devices'&&global.DeviceAuthorizationAdministrationUI)global.DeviceAuthorizationAdministrationUI.initialize();
     return true;
   }
   function mount(context){mounted=true;return renderRoute(context&&context.route);}
-  function unmount(){mounted=false;var node=root();if(node)node.innerHTML='';}
+  function unmount(){mounted=false;initialized=false;var node=root();if(node)node.innerHTML='';}
   function isMounted(){return mounted;}
   function refresh(){if(!mounted)return false;return renderRoute();}
   function initialize(){
