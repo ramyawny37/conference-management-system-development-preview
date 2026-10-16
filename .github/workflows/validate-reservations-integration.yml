@@ -71,6 +71,8 @@ jobs:
         run: sudo apt-get update -qq && sudo apt-get install -y postgresql-client
       - name: Conference Development platform regression tests
         run: node --test $(find tests -maxdepth 1 -name 'platform-*.test.js' ! -name 'platform-promotion-readiness.test.js' -print | sort)
+      - name: Owner synced-passkey canonical policy regression
+        run: node tests/system-owner-synced-passkey-policy-reconciliation.test.js
       - name: Production promotion readiness (diagnostic only; never a Development acceptance gate)
         continue-on-error: true
         run: node --test tests/platform-promotion-readiness.test.js
