@@ -90,7 +90,7 @@ test('sidebar visibility follows protected capability state and routes remain fa
   assert.match(platformAdministration,/capabilities\.canManageSecurity===true/);
   assert.match(platformAdministration,/permissions\.available===true/);
   assert.match(platformAdministration,/item\.hidden=!access\.pending&&access\[section\]!==true/);
-  assert.match(platformAdministration,/group\.hidden=access\.pending\|\|!/);
+  assert.match(platformAdministration,/group\.hidden=!Object\.keys\(sections\)\.some/);
 });
 
 test('permission module switches preserve the selected account and unify effective authority',()=>{
