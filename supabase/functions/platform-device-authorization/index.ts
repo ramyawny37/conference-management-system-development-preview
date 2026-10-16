@@ -107,6 +107,8 @@ Deno.serve(async (request) => {
     const stableRecoveryAction = action === 'get-stable-development-recovery-state'
       || action === 'begin-stable-development-recovery'
       || action === 'finish-stable-development-recovery';
+    const recoveryTargetDeviceId = stableRecoveryAction
+      ? uuid(body.targetDeviceId, 'RECOVERY_TARGET_DEVICE_ID') : null;
     const actorDeviceId = stableRecoveryAction ? null : uuid(body.actorDeviceId, 'ACTOR_DEVICE_ID');
     const env = environment();
     const call = async (name: string, args: Record<string, unknown>) => {
@@ -118,6 +120,15 @@ Deno.serve(async (request) => {
       try {
         await call('fail_system_owner_device_possession_challenge', {
           p_actor_user_id: actorUserId, p_actor_device_id: actorDeviceId,
+          p_session_id: uuid(payload.sessionId, 'SESSION_ID'),
+          p_challenge_id: uuid(payload.challengeId, 'CHALLENGE_ID'), p_failure_code: code,
+        });
+      } catch (_) { /* The original verification failure remains authoritative. */ }
+    };
+    const failStableRecoveryChallenge = async (payload: Record<string, unknown>, code: string) => {
+      try {
+        await call('fail_stable_development_platform_device_recovery', {
+          p_actor_user_id: actorUserId, p_actor_device_id: recoveryTargetDeviceId,
           p_session_id: uuid(payload.sessionId, 'SESSION_ID'),
           p_challenge_id: uuid(payload.challengeId, 'CHALLENGE_ID'), p_failure_code: code,
         });
@@ -136,7 +147,7 @@ Deno.serve(async (request) => {
 
     if (action === 'get-stable-development-recovery-state') {
       const result = await call('get_stable_development_platform_device_recovery_state', {
-        p_actor_user_id: actorUserId, p_actor_device_id: null,
+        p_actor_user_id: actorUserId, p_actor_device_id: recoveryTargetDeviceId,
       });
       return json(200, { ok: true, status: result.status,
         data: { status: result.status, credentialId: result.credentialId } });
@@ -200,15 +211,14 @@ Deno.serve(async (request) => {
 
     if (action === 'begin-stable-development-recovery') {
       const recoveryState = await call('get_stable_development_platform_device_recovery_state', {
-        p_actor_user_id: actorUserId, p_actor_device_id: null,
+        p_actor_user_id: actorUserId, p_actor_device_id: recoveryTargetDeviceId,
       });
-      const recoveryActorDeviceId = uuid(recoveryState.serverActorDeviceId, 'RECOVERY_ACTOR_DEVICE_ID');
       const sessionId = crypto.randomUUID();
       const options = await generateAuthenticationOptions({
         rpID, userVerification: 'required', timeout: 120000, allowCredentials: [],
       });
       const result = await call('begin_stable_development_platform_device_recovery', {
-        p_actor_user_id: actorUserId, p_actor_device_id: recoveryActorDeviceId,
+        p_actor_user_id: actorUserId, p_actor_device_id: recoveryTargetDeviceId,
         p_credential_id: uuid(recoveryState.credentialId, 'CREDENTIAL_ID'), p_session_id: sessionId,
         p_challenge_hash: bytea(await sha256(base64ToBytes(options.challenge))), p_environment: env,
       });
@@ -225,12 +235,11 @@ Deno.serve(async (request) => {
 
     if (action === 'finish-stable-development-recovery') {
       const recoveryState = await call('get_stable_development_platform_device_recovery_state', {
-        p_actor_user_id: actorUserId, p_actor_device_id: null,
+        p_actor_user_id: actorUserId, p_actor_device_id: recoveryTargetDeviceId,
       });
-      const recoveryActorDeviceId = uuid(recoveryState.serverActorDeviceId, 'RECOVERY_ACTOR_DEVICE_ID');
       const challenge = String(body.challenge || '');
       const material = await call('get_stable_development_platform_device_recovery_material', {
-        p_actor_user_id: actorUserId, p_actor_device_id: recoveryActorDeviceId,
+        p_actor_user_id: actorUserId, p_actor_device_id: recoveryTargetDeviceId,
         p_session_id: uuid(body.sessionId, 'SESSION_ID'),
         p_challenge_id: uuid(body.challengeId, 'CHALLENGE_ID'),
       });
@@ -246,17 +255,22 @@ Deno.serve(async (request) => {
           },
         });
       } catch (error) {
+        await failStableRecoveryChallenge(body, 'ASSERTION_VERIFICATION_FAILED');
         logSafeDiagnostic('stable-development-recovery-verification', error);
         throw error;
       }
-      if (!verification.verified) throw new Error('WEBAUTHN_ASSERTION_INVALID');
+      if (!verification.verified) {
+        await failStableRecoveryChallenge(body, 'ASSERTION_NOT_VERIFIED');
+        throw new Error('WEBAUTHN_ASSERTION_INVALID');
+      }
       const info = verification.authenticationInfo;
       const context = verificationContext(info);
       if (context.userVerified !== true || (context.backupState && !context.backupEligible)) {
+        await failStableRecoveryChallenge(body, 'CREDENTIAL_POLICY_DENIED');
         throw new Error('WEBAUTHN_CREDENTIAL_POLICY_DENIED');
       }
       const result = await call('complete_stable_development_platform_device_recovery', {
-        p_actor_user_id: actorUserId, p_actor_device_id: recoveryActorDeviceId,
+        p_actor_user_id: actorUserId, p_actor_device_id: recoveryTargetDeviceId,
         p_credential_id: uuid(material.credentialId, 'CREDENTIAL_ID'),
         p_session_id: uuid(body.sessionId, 'SESSION_ID'),
         p_challenge_id: uuid(body.challengeId, 'CHALLENGE_ID'),
