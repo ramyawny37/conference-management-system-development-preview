@@ -12,6 +12,7 @@ on:
       - 'js/supabase/device-enrollment.js'
       - 'js/supabase/device-session.js'
       - 'tests/**'
+      - 'supabase/migrations/**'
   workflow_dispatch:
 permissions:
   contents: read
