@@ -8,6 +8,8 @@ const source=fs.readFileSync('js/sync/platform-administration-ui.js','utf8');
 const script=fs.readFileSync('script.js','utf8');
 const styles=fs.readFileSync('style.css','utf8');
 const integration=fs.readFileSync('js/platform-integration.js','utf8');
+const index=fs.readFileSync('index.html','utf8');
+const worker=fs.readFileSync('service-worker.js','utf8');
 
 function runtime(route){
   const calls=[];
@@ -81,4 +83,11 @@ test('canonical shell owns administration workspace visibility alongside all pee
   assert.match(integration,/function syncModuleContainers\(activeId\)[\s\S]*?container\.hidden=!visible/);
   assert.match(integration,/shell\.classList\.add\('platform-'\+id\+'-active'\)/);
   assert.match(integration,/function moduleContainer\(id\)\{return global\.document&&global\.document\.getElementById\(id\+'Workspace'\);\}/);
+});
+
+test('Development PWA serves the same revisioned canonical administration visibility CSS',()=>{
+  const asset='style.css?rev=platform-administration-workspace-visibility-v1';
+  assert.ok(index.includes(asset),'HTML must request revised workspace stylesheet');
+  assert.ok(worker.includes("'./"+asset+"'"),'service worker must precache the revised stylesheet');
+  assert.match(worker,/development-administration-workspace-visibility-v1/);
 });
