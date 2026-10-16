@@ -66,7 +66,7 @@ function finalDefinition(sql,name){
   const marker='create or replace function public.'+name+'(';
   const start=sql.toLowerCase().lastIndexOf(marker);
   assert.ok(start>=0,'canonical definition missing: '+name);
-  const end=sql.indexOf('end; $;',start);
+  const end=sql.indexOf('end; '+String.fromCharCode(36,36)+';',start);
   assert.ok(end>start,'canonical definition unterminated: '+name);
   return sql.slice(start,end+8);
 }
