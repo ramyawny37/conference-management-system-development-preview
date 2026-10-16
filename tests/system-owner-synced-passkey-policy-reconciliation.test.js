@@ -60,4 +60,22 @@ assert.match(edge,/APP_ORIGIN_DENIED/);
 assert.doesNotMatch(edge,/Access-Control-Allow-Origin':\s*'\*'/);
 assert.match(edge,/expectedOrigin, expectedRPID: rpID/);
 
+
+const canonical=fs.readFileSync(path.join(root,'supabase/migrations/20260920221928_canonical_platform_device_authority_reconciliation.sql'),'utf8');
+function finalDefinition(sql,name){
+  const marker='create or replace function public.'+name+'(';
+  const start=sql.toLowerCase().lastIndexOf(marker);
+  assert.ok(start>=0,'canonical definition missing: '+name);
+  const end=sql.indexOf('end; $;',start);
+  assert.ok(end>start,'canonical definition unterminated: '+name);
+  return sql.slice(start,end+8);
+}
+for(const name of ['get_system_owner_platform_device_administration_state','require_system_owner_webauthn_actor']){
+  const definition=finalDefinition(canonical,name);
+  assert.match(definition,/require_canonical_device_authorization\(/i,'approved device guard: '+name);
+  assert.match(definition,/lifecycle_status='active'/i,'active credential: '+name);
+  assert.match(definition,/\(not stored\.backup_state or stored\.backup_eligible\)/i,'synced-passkey policy: '+name);
+  assert.doesNotMatch(definition,/stored\.backup_eligible=false|stored\.backup_state=false/i,'obsolete passkey rejection: '+name);
+}
+
 console.log('system-owner synced passkey policy reconciliation contracts: passed');
