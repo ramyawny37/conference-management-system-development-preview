@@ -83,7 +83,7 @@ function effectiveDefinition(name){
 }
 for(const name of ['get_system_owner_platform_device_administration_state','require_system_owner_webauthn_actor']){
   const effective=effectiveDefinition(name),definition=effective.definition;
-  assert.match(effective.migration,/reconcile_system_owner_synced_passkey_runtime_policy\.sql$/,
+  assert.match(effective.migration,/restore_canonical_owner_webauthn_device_administration\.sql$/,
     'forward reconciliation must own effective definition: '+name);
   assert.match(definition,/is_canonical_platform_owner\(p_actor_user_id\)/i,'owner guard: '+name);
   assert.match(definition,/require_canonical_device_authorization\(/i,'approved device guard: '+name);
@@ -97,16 +97,18 @@ for(const name of ['get_system_owner_platform_device_administration_state','requ
 function administrationAllowed(change){
   const value=Object.assign({owner:true,deviceStatus:'approved',deviceRevoked:false,
     credentialKind:'platform_primary',credentialStatus:'active',userVerificationPolicy:'required',
-    backupEligible:true,backupState:true,serviceRole:true},change||{});
+    backupEligible:true,backupState:true,credentialDevice:'old',actorDevice:'current',serviceRole:true},change||{});
   return value.serviceRole&&value.owner&&value.deviceStatus==='approved'&&!value.deviceRevoked
     &&value.credentialKind==='platform_primary'&&value.credentialStatus==='active'
-    &&value.userVerificationPolicy==='required'&&(!value.backupState||value.backupEligible);
+    &&value.userVerificationPolicy==='required'&&(!value.backupState||value.backupEligible)
+    &&((value.backupEligible&&value.backupState)||value.credentialDevice===value.actorDevice);
 }
 assert.strictEqual(administrationAllowed(),true,'synced owner passkey on approved device is accepted');
-assert.strictEqual(administrationAllowed({backupEligible:true,backupState:false}),true,'eligible non-backed-up passkey is accepted');
-assert.strictEqual(administrationAllowed({backupEligible:false,backupState:false}),true,'single-device passkey is accepted');
+assert.strictEqual(administrationAllowed({backupEligible:true,backupState:false,credentialDevice:'current'}),true,'eligible non-backed-up passkey is accepted only on its device');
+assert.strictEqual(administrationAllowed({backupEligible:false,backupState:false,credentialDevice:'current'}),true,'single-device passkey is accepted on its device');
 [
   ['invalid backup flags',{backupEligible:false,backupState:true}],
+  ['cross-device non-synced credential',{backupEligible:false,backupState:false}],
   ['UV policy not required',{userVerificationPolicy:'preferred'}],
   ['inactive credential',{credentialStatus:'revoked'}],
   ['wrong credential kind',{credentialKind:'recovery'}],
