@@ -61,21 +61,59 @@ assert.doesNotMatch(edge,/Access-Control-Allow-Origin':\s*'\*'/);
 assert.match(edge,/expectedOrigin, expectedRPID: rpID/);
 
 
-const canonical=fs.readFileSync(path.join(root,'supabase/migrations/20260920221928_canonical_platform_device_authority_reconciliation.sql'),'utf8');
-function finalDefinition(sql,name){
+const migrationDirectory=path.join(root,'supabase/migrations');
+const orderedMigrations=fs.readdirSync(migrationDirectory)
+  .filter(name=>/^\d.*\.sql$/.test(name))
+  .sort()
+  .map(name=>({name,sql:fs.readFileSync(path.join(migrationDirectory,name),'utf8')}));
+function definitionInMigration(sql,name){
   const marker='create or replace function public.'+name+'(';
   const start=sql.toLowerCase().lastIndexOf(marker);
-  assert.ok(start>=0,'canonical definition missing: '+name);
+  if(start<0)return null;
   const end=sql.indexOf('end; '+String.fromCharCode(36,36)+';',start);
-  assert.ok(end>start,'canonical definition unterminated: '+name);
+  assert.ok(end>start,'definition unterminated: '+name);
   return sql.slice(start,end+8);
 }
+function effectiveDefinition(name){
+  for(let index=orderedMigrations.length-1;index>=0;index--){
+    const definition=definitionInMigration(orderedMigrations[index].sql,name);
+    if(definition)return {definition,migration:orderedMigrations[index].name};
+  }
+  assert.fail('effective definition missing: '+name);
+}
 for(const name of ['get_system_owner_platform_device_administration_state','require_system_owner_webauthn_actor']){
-  const definition=finalDefinition(canonical,name);
+  const effective=effectiveDefinition(name),definition=effective.definition;
+  assert.match(effective.migration,/reconcile_system_owner_synced_passkey_runtime_policy\.sql$/,
+    'forward reconciliation must own effective definition: '+name);
+  assert.match(definition,/is_canonical_platform_owner\(p_actor_user_id\)/i,'owner guard: '+name);
   assert.match(definition,/require_canonical_device_authorization\(/i,'approved device guard: '+name);
+  assert.match(definition,/credential_kind='platform_primary'/i,'primary credential: '+name);
   assert.match(definition,/lifecycle_status='active'/i,'active credential: '+name);
+  assert.match(definition,/user_verification_policy='required'/i,'UV policy: '+name);
   assert.match(definition,/\(not stored\.backup_state or stored\.backup_eligible\)/i,'synced-passkey policy: '+name);
   assert.doesNotMatch(definition,/stored\.backup_eligible=false|stored\.backup_state=false/i,'obsolete passkey rejection: '+name);
 }
+
+function administrationAllowed(change){
+  const value=Object.assign({owner:true,deviceStatus:'approved',deviceRevoked:false,
+    credentialKind:'platform_primary',credentialStatus:'active',userVerificationPolicy:'required',
+    backupEligible:true,backupState:true,serviceRole:true},change||{});
+  return value.serviceRole&&value.owner&&value.deviceStatus==='approved'&&!value.deviceRevoked
+    &&value.credentialKind==='platform_primary'&&value.credentialStatus==='active'
+    &&value.userVerificationPolicy==='required'&&(!value.backupState||value.backupEligible);
+}
+assert.strictEqual(administrationAllowed(),true,'synced owner passkey on approved device is accepted');
+assert.strictEqual(administrationAllowed({backupEligible:true,backupState:false}),true,'eligible non-backed-up passkey is accepted');
+assert.strictEqual(administrationAllowed({backupEligible:false,backupState:false}),true,'single-device passkey is accepted');
+[
+  ['invalid backup flags',{backupEligible:false,backupState:true}],
+  ['UV policy not required',{userVerificationPolicy:'preferred'}],
+  ['inactive credential',{credentialStatus:'revoked'}],
+  ['wrong credential kind',{credentialKind:'recovery'}],
+  ['pending actor device',{deviceStatus:'pending'}],
+  ['revoked actor device',{deviceRevoked:true}],
+  ['non-owner actor',{owner:false}],
+  ['non-service caller',{serviceRole:false}],
+].forEach(([label,change])=>assert.strictEqual(administrationAllowed(change),false,label+' is rejected'));
 
 console.log('system-owner synced passkey policy reconciliation contracts: passed');
