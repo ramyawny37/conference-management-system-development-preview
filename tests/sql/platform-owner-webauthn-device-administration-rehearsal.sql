@@ -25,6 +25,15 @@ create table platform.user_device_authorizations(
 create table platform.device_key_bindings(id uuid primary key,user_id uuid,device_id uuid,
   device_authorization_id uuid,lifecycle_status text,revoked_at timestamptz,retired_at timestamptz);
 create table platform.test_audit(id uuid default gen_random_uuid(),action text,operation_id uuid);
+create table platform_private.stable_device_recovery_authorizations(
+  id uuid primary key,owner_user_id uuid,credential_id uuid,target_authorization_id uuid,
+  target_device_id uuid,issuance_basis text,review_reference text,environment text,
+  expected_origin text,expected_rp_id text,issued_at timestamptz,expires_at timestamptz,
+  consumed_at timestamptz);
+create table platform_private.stable_device_recovery_challenges(
+  recovery_authorization_id uuid,credential_id uuid,verified_at timestamptz,
+  consumed_at timestamptz,failed_at timestamptz,expires_at timestamptz,
+  verification_context jsonb);
 
 create table public.device_security_credentials(
   id uuid primary key,webauthn_credential_id bytea,user_id uuid,device_id uuid,
@@ -119,6 +128,8 @@ end $$;
 \ir ../../supabase/migrations/20261017113705_restore_canonical_owner_webauthn_device_administration.sql
 \ir ../../supabase/migrations/20261017115255_reconcile_owner_device_challenge_expiration_anchor.sql
 \ir ../../supabase/migrations/20261017121130_restore_compact_owner_webauthn_verification_material.sql
+\ir ../../supabase/migrations/20261016163453_platform_owner_passkey_recovery_counter_guard.sql
+\ir ../../supabase/migrations/20261017141821_reconcile_synced_owner_assertion_counter_device_guard.sql
 
 insert into auth.users values
  ('10000000-0000-4000-8000-000000000001','owner@example.test'),
@@ -160,6 +171,9 @@ values
  ('40000000-0000-4000-8000-000000000001',decode(repeat('aa',32),'hex'),'10000000-0000-4000-8000-000000000001','20000000-0000-4000-8000-000000000099','platform_primary',decode(repeat('ab',77),'hex'),-7,array['hybrid'],0,true,true,'required','active',now(),now()),
  ('40000000-0000-4000-8000-000000000002',decode(repeat('bb',32),'hex'),'10000000-0000-4000-8000-000000000001','20000000-0000-4000-8000-000000000002','platform_primary',decode('a1','hex'),-7,array['internal'],0,false,false,'required','active',now(),now()),
  ('40000000-0000-4000-8000-000000000003',decode(repeat('cc',32),'hex'),'10000000-0000-4000-8000-000000000001','20000000-0000-4000-8000-000000000001','platform_primary',decode('a1','hex'),-7,array['internal'],0,false,false,'required','revoked',now(),now());
+create trigger device_security_credentials_lifecycle_guard
+before insert or update or delete on public.device_security_credentials
+for each row execute function public.guard_device_security_credential_lifecycle();
 
 do $$
 declare state jsonb; credential public.device_security_credentials%rowtype;
@@ -269,6 +283,12 @@ do $$ declare listed jsonb; begin
   if jsonb_array_length(listed->'devices')<>2 then raise exception 'PENDING_LIST_FILTER_FAILED'; end if;
 end $$;
 do $$ begin
+  update public.device_security_credentials
+  set last_used_at=statement_timestamp()
+  where id='40000000-0000-4000-8000-000000000001';
+  raise exception 'ORPHAN_SYNCED_CREDENTIAL_COUNTER_UPDATE_WITHOUT_VERIFIED_CHALLENGE_ACCEPTED';
+exception when insufficient_privilege then null; end $$;
+do $$ begin
   perform public.complete_system_owner_pending_device_listing(
     '10000000-0000-4000-8000-000000000001','20000000-0000-4000-8000-000000000001',
     '40000000-0000-4000-8000-000000000001','50000000-0000-4000-8000-000000000001',
@@ -368,7 +388,7 @@ do $$ declare listed jsonb; begin
   end if;
 end $$;
 
-select pg_catalog.jsonb_build_object('status','pass','positive',8,'negative',11,
+select pg_catalog.jsonb_build_object('status','pass','positive',8,'negative',12,
   'audits',(select count(*) from public.privileged_device_authorization_audit_log),
   'operations',(select count(*) from public.system_owner_device_authorization_operations),
   'pendingAfter',(select count(*) from platform.user_device_authorizations where status='pending'));

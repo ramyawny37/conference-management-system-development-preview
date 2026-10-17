@@ -1,0 +1,119 @@
+-- Keep credential identity immutable and device-bound credentials anchored to
+-- their enrolled device. A synced owner passkey may advance its counter from a
+-- separately approved actor device only inside the transaction of a verified,
+-- unconsumed, purpose-bound WebAuthn challenge.
+create or replace function public.guard_device_security_credential_lifecycle()
+returns trigger language plpgsql security definer set search_path='' as $$
+declare recovery_counter_update boolean:=false;
+  owner_assertion_counter_update boolean:=false;
+  counter_only_update boolean:=false;
+begin
+  if tg_op='INSERT' then
+    if new.lifecycle_status<>'enrollment_pending' then
+      raise exception 'DEVICE_SECURITY_CREDENTIAL_MUST_ENROLL_PENDING' using errcode='42501';
+    end if;
+    perform platform_private.require_canonical_device_authorization(new.user_id,new.device_id,true);
+    return new;
+  end if;
+  if tg_op='DELETE' then
+    raise exception 'DEVICE_SECURITY_CREDENTIAL_DELETE_FORBIDDEN' using errcode='42501';
+  end if;
+  if new.id<>old.id or new.webauthn_credential_id<>old.webauthn_credential_id
+    or new.user_id<>old.user_id or new.device_id<>old.device_id
+    or new.credential_kind<>old.credential_kind or new.public_key_cose<>old.public_key_cose
+    or new.public_key_algorithm<>old.public_key_algorithm or new.aaguid is distinct from old.aaguid
+    or new.transports<>old.transports or new.backup_eligible<>old.backup_eligible
+    or new.backup_state<>old.backup_state or new.user_verification_policy<>old.user_verification_policy
+    or new.created_at<>old.created_at then
+    raise exception 'DEVICE_SECURITY_CREDENTIAL_IDENTITY_IMMUTABLE' using errcode='42501';
+  end if;
+  if (old.enrolled_at is not null and new.enrolled_at is distinct from old.enrolled_at)
+    or (old.activated_at is not null and new.activated_at is distinct from old.activated_at)
+    or (old.revoked_at is not null and new.revoked_at is distinct from old.revoked_at) then
+    raise exception 'DEVICE_SECURITY_CREDENTIAL_SECURITY_TIME_IMMUTABLE' using errcode='42501';
+  end if;
+  if old.lifecycle_status='revoked'
+    or (old.lifecycle_status='enrollment_pending' and new.lifecycle_status not in ('enrollment_pending','active','revoked'))
+    or (old.lifecycle_status='active' and new.lifecycle_status not in ('active','rotation_pending','recovery_required','revoked'))
+    or (old.lifecycle_status='rotation_pending' and new.lifecycle_status not in ('rotation_pending','active','recovery_required','revoked'))
+    or (old.lifecycle_status='recovery_required' and new.lifecycle_status not in ('recovery_required','revoked')) then
+    raise exception 'DEVICE_SECURITY_CREDENTIAL_TRANSITION_INVALID' using errcode='42501';
+  end if;
+  if new.sign_count<old.sign_count then
+    raise exception 'DEVICE_SECURITY_CREDENTIAL_COUNTER_REGRESSION' using errcode='42501';
+  end if;
+
+  counter_only_update:=new.lifecycle_status='active' and old.lifecycle_status='active'
+    and (pg_catalog.to_jsonb(new)-array['sign_count','last_used_at']::text[])
+      =(pg_catalog.to_jsonb(old)-array['sign_count','last_used_at']::text[])
+    and new.last_used_at is not null
+    and (old.last_used_at is null or new.last_used_at>=old.last_used_at);
+
+  if counter_only_update and new.credential_kind='platform_primary'
+    and new.user_verification_policy='required' and new.backup_eligible and new.backup_state then
+    select exists(
+      select 1 from public.device_possession_challenges challenge
+      join platform.user_device_authorizations actor_authorization
+        on actor_authorization.user_id=challenge.user_id
+       and actor_authorization.device_id=challenge.actor_device_id
+      join platform.devices actor_device on actor_device.id=challenge.actor_device_id
+      join platform.profiles actor_profile on actor_profile.user_id=challenge.user_id
+      where challenge.user_id=new.user_id and challenge.credential_id=new.id
+        and challenge.purpose in ('SYSTEM_OWNER_PENDING_DEVICE_LIST',
+          'SYSTEM_OWNER_PENDING_DEVICE_APPROVE','SYSTEM_OWNER_PENDING_DEVICE_REJECT')
+        and challenge.verified_at is not null and challenge.consumed_at is null
+        and challenge.failed_at is null and challenge.expires_at>pg_catalog.statement_timestamp()
+        and challenge.verification_context->'userVerified'='true'::jsonb
+        and (challenge.verification_context->>'backupEligible')::boolean is true
+        and (challenge.verification_context->>'backupState')::boolean is true
+        and actor_authorization.status='approved' and actor_authorization.revoked_at is null
+        and actor_device.lifecycle_status='active' and actor_device.retired_at is null
+        and actor_device.compromised_at is null and actor_profile.account_status='approved'
+        and platform_private.is_canonical_platform_owner(challenge.user_id)
+        and exists(select 1 from platform.device_key_bindings binding
+          where binding.user_id=actor_authorization.user_id
+            and binding.device_id=actor_authorization.device_id
+            and binding.device_authorization_id=actor_authorization.id
+            and binding.lifecycle_status='active' and binding.revoked_at is null
+            and binding.retired_at is null)
+    ) into owner_assertion_counter_update;
+  end if;
+
+  if counter_only_update and not owner_assertion_counter_update then
+    select exists(
+      select 1 from platform_private.stable_device_recovery_authorizations recovery
+      join platform_private.stable_device_recovery_challenges challenge
+        on challenge.recovery_authorization_id=recovery.id and challenge.credential_id=recovery.credential_id
+      join platform.user_device_authorizations target_authorization
+        on target_authorization.id=recovery.target_authorization_id
+       and target_authorization.user_id=recovery.owner_user_id
+       and target_authorization.device_id=recovery.target_device_id
+      join platform.devices target_device on target_device.id=recovery.target_device_id
+      where recovery.owner_user_id=new.user_id and recovery.credential_id=new.id
+        and recovery.issuance_basis='reviewed_platform_owner_passkey_recovery'
+        and recovery.review_reference is not null and recovery.environment='development_preview'
+        and recovery.expected_origin='https://ramyawny37.github.io'
+        and recovery.expected_rp_id='ramyawny37.github.io' and recovery.consumed_at is null
+        and pg_catalog.statement_timestamp() between recovery.issued_at and recovery.expires_at
+        and target_authorization.status='pending' and target_authorization.revoked_at is null
+        and target_device.lifecycle_status='active' and target_device.retired_at is null
+        and target_device.compromised_at is null and challenge.verified_at is not null
+        and challenge.consumed_at is null and challenge.failed_at is null
+        and challenge.expires_at>pg_catalog.statement_timestamp()
+        and challenge.verification_context->'userVerified'='true'::jsonb
+        and (challenge.verification_context->>'backupEligible')::boolean is not distinct from new.backup_eligible
+        and (challenge.verification_context->>'backupState')::boolean is not distinct from new.backup_state
+        and (not (challenge.verification_context->>'backupState')::boolean
+          or (challenge.verification_context->>'backupEligible')::boolean)
+    ) into recovery_counter_update;
+  end if;
+
+  if new.lifecycle_status='active'
+    and not recovery_counter_update and not owner_assertion_counter_update then
+    perform platform_private.require_canonical_device_authorization(new.user_id,new.device_id,true);
+  end if;
+  return new;
+end; $$;
+
+revoke all on function public.guard_device_security_credential_lifecycle()
+  from public,anon,authenticated;
