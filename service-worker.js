@@ -45,7 +45,7 @@ const CORE_ASSETS = [
   './js/sync/diagnostics-privacy-policy.js?rev=platform-capability-authority-v1',
   './js/sync/access-diagnostics-ui.js?rev=platform-first-login-coordinator-v1',
   './js/supabase/device-identity.js?rev=project-device-storage-isolation-v1',
-  './js/supabase/device-enrollment.js?rev=device-key-store-recovery-v1',
+  './js/supabase/device-enrollment.js?rev=account-scoped-device-key-selection-v1',
 
   './js/supabase/device-authorization-administration-service.js?rev=runtime-syntax-repair-v2',
 
