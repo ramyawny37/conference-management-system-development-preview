@@ -39,6 +39,9 @@ create table public.device_possession_challenges(
   replaced_device_id uuid,replacement_device_id uuid,operation_id uuid,expected_origin text,
   expected_rp_id text,environment text,expires_at timestamptz,verified_at timestamptz,
   consumed_at timestamptz,failed_at timestamptz,failure_code text,verification_context jsonb,
+  created_at timestamptz not null default now(),
+  constraint device_possession_challenges_expiration
+    check(expires_at>created_at and expires_at<=created_at+interval '2 minutes'),
   constraint device_possession_challenges_credential_fk
     foreign key(credential_id,user_id,actor_device_id)
     references public.device_security_credentials(id,user_id,device_id));
@@ -114,6 +117,7 @@ begin
 end $$;
 
 \ir ../../supabase/migrations/20261017113705_restore_canonical_owner_webauthn_device_administration.sql
+\ir ../../supabase/migrations/20261017115255_reconcile_owner_device_challenge_expiration_anchor.sql
 
 insert into auth.users values
  ('10000000-0000-4000-8000-000000000001','owner@example.test'),
@@ -200,6 +204,7 @@ do $$ begin
 exception when insufficient_privilege then null; end $$;
 
 create temp table ceremony_state(name text primary key,id uuid);
+select pg_sleep(0.02);
 do $$ declare result jsonb; begin
   result:=public.begin_system_owner_device_possession_challenge(
     '10000000-0000-4000-8000-000000000001','20000000-0000-4000-8000-000000000001',
@@ -208,6 +213,32 @@ do $$ declare result jsonb; begin
     'https://ramyawny37.github.io','ramyawny37.github.io',decode(repeat('01',32),'hex'));
   insert into ceremony_state values('list',(result->>'challengeId')::uuid);
 end $$;
+do $$ declare created timestamptz; expires timestamptz; begin
+  select created_at,expires_at into created,expires
+  from public.device_possession_challenges
+  where id=(select id from ceremony_state where name='list');
+  if expires-created<>interval '2 minutes' then
+    raise exception 'CHALLENGE_EXPIRATION_NOT_EXACTLY_TWO_MINUTES';
+  end if;
+end $$;
+do $$ declare result jsonb; begin
+  result:=public.begin_system_owner_device_possession_challenge(
+    '10000000-0000-4000-8000-000000000001','20000000-0000-4000-8000-000000000001',
+    '40000000-0000-4000-8000-000000000001','50000000-0000-4000-8000-000000000004',
+    'SYSTEM_OWNER_PENDING_DEVICE_LIST',null,null,null,'development_preview',
+    'https://ramyawny37.github.io','ramyawny37.github.io',decode(repeat('07',32),'hex'));
+  insert into ceremony_state values('expired',(result->>'challengeId')::uuid);
+  update public.device_possession_challenges
+  set created_at=statement_timestamp()-interval '3 minutes',
+      expires_at=statement_timestamp()-interval '1 minute'
+  where id=(result->>'challengeId')::uuid;
+end $$;
+do $$ begin
+  perform public.get_system_owner_device_challenge_verification_material(
+    '10000000-0000-4000-8000-000000000001','20000000-0000-4000-8000-000000000001',
+    '50000000-0000-4000-8000-000000000004',(select id from ceremony_state where name='expired'));
+  raise exception 'EXPIRED_CHALLENGE_ACCEPTED';
+exception when insufficient_privilege then null; end $$;
 select public.get_system_owner_device_challenge_verification_material(
   '10000000-0000-4000-8000-000000000001','20000000-0000-4000-8000-000000000001',
   '50000000-0000-4000-8000-000000000001',(select id from ceremony_state where name='list'));
@@ -324,7 +355,7 @@ do $$ declare listed jsonb; begin
   end if;
 end $$;
 
-select pg_catalog.jsonb_build_object('status','pass','positive',8,'negative',10,
+select pg_catalog.jsonb_build_object('status','pass','positive',8,'negative',11,
   'audits',(select count(*) from public.privileged_device_authorization_audit_log),
   'operations',(select count(*) from public.system_owner_device_authorization_operations),
   'pendingAfter',(select count(*) from platform.user_device_authorizations where status='pending'));
