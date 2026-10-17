@@ -3,6 +3,7 @@ const assert=require('assert'),fs=require('fs'),path=require('path');
 const root=path.resolve(__dirname,'..');
 const migration=fs.readFileSync(path.join(root,'supabase/migrations/20260827130503_webauthn_time_boundary_reconciliation_6_20_5.sql'),'utf8');
 const effectiveMigration=fs.readFileSync(path.join(root,'supabase/migrations/20261017115255_reconcile_owner_device_challenge_expiration_anchor.sql'),'utf8');
+const materialMigration=fs.readFileSync(path.join(root,'supabase/migrations/20261017121130_restore_compact_owner_webauthn_verification_material.sql'),'utf8');
 
 assert.match(migration,/^begin;[\s\S]*commit;\s*$/i);
 assert.strictEqual((migration.match(/^CREATE OR REPLACE FUNCTION public\./gm)||[]).length,2);
@@ -33,5 +34,9 @@ assert.match(effectiveMigration,/challenge_created_at,challenge_created_at\+inte
 assert.doesNotMatch(effectiveMigration,/environment,expires_at\)[\s\S]*statement_timestamp\(\)\+interval '2 minutes'/);
 assert.match(effectiveMigration,/credential:=public\.require_system_owner_webauthn_actor/);
 assert.match(effectiveMigration,/grant execute[\s\S]*to service_role/i);
+assert.match(materialMigration,/get_system_owner_device_challenge_verification_material/);
+assert.match(materialMigration,/replace\(pg_catalog\.replace\([\s\S]*pg_catalog\.chr\(10\)[\s\S]*pg_catalog\.chr\(13\)/);
+assert.doesNotMatch(materialMigration,/translate\([\s\S]*E'\\\\n\\\\r'/);
+assert.match(materialMigration,/grant execute[\s\S]*to service_role/i);
 
 console.log('WebAuthn time-boundary reconciliation contracts: passed');

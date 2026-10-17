@@ -118,6 +118,7 @@ end $$;
 
 \ir ../../supabase/migrations/20261017113705_restore_canonical_owner_webauthn_device_administration.sql
 \ir ../../supabase/migrations/20261017115255_reconcile_owner_device_challenge_expiration_anchor.sql
+\ir ../../supabase/migrations/20261017121130_restore_compact_owner_webauthn_verification_material.sql
 
 insert into auth.users values
  ('10000000-0000-4000-8000-000000000001','owner@example.test'),
@@ -156,7 +157,7 @@ insert into public.device_security_credentials(id,webauthn_credential_id,user_id
   credential_kind,public_key_cose,public_key_algorithm,transports,sign_count,backup_eligible,
   backup_state,user_verification_policy,lifecycle_status,enrolled_at,activated_at)
 values
- ('40000000-0000-4000-8000-000000000001',decode(repeat('aa',32),'hex'),'10000000-0000-4000-8000-000000000001','20000000-0000-4000-8000-000000000099','platform_primary',decode('a1','hex'),-7,array['hybrid'],0,true,true,'required','active',now(),now()),
+ ('40000000-0000-4000-8000-000000000001',decode(repeat('aa',32),'hex'),'10000000-0000-4000-8000-000000000001','20000000-0000-4000-8000-000000000099','platform_primary',decode(repeat('ab',77),'hex'),-7,array['hybrid'],0,true,true,'required','active',now(),now()),
  ('40000000-0000-4000-8000-000000000002',decode(repeat('bb',32),'hex'),'10000000-0000-4000-8000-000000000001','20000000-0000-4000-8000-000000000002','platform_primary',decode('a1','hex'),-7,array['internal'],0,false,false,'required','active',now(),now()),
  ('40000000-0000-4000-8000-000000000003',decode(repeat('cc',32),'hex'),'10000000-0000-4000-8000-000000000001','20000000-0000-4000-8000-000000000001','platform_primary',decode('a1','hex'),-7,array['internal'],0,false,false,'required','revoked',now(),now());
 
@@ -239,9 +240,21 @@ do $$ begin
     '50000000-0000-4000-8000-000000000004',(select id from ceremony_state where name='expired'));
   raise exception 'EXPIRED_CHALLENGE_ACCEPTED';
 exception when insufficient_privilege then null; end $$;
-select public.get_system_owner_device_challenge_verification_material(
-  '10000000-0000-4000-8000-000000000001','20000000-0000-4000-8000-000000000001',
-  '50000000-0000-4000-8000-000000000001',(select id from ceremony_state where name='list'));
+do $$ declare material jsonb; encoded text; begin
+  material:=public.get_system_owner_device_challenge_verification_material(
+    '10000000-0000-4000-8000-000000000001','20000000-0000-4000-8000-000000000001',
+    '50000000-0000-4000-8000-000000000001',(select id from ceremony_state where name='list'));
+  encoded:=material->>'publicKeyCose';
+  if encoded~'[[:space:]]' or length(encoded)%4<>0
+    or decode(encoded,'base64')<>decode(repeat('ab',77),'hex') then
+    raise exception 'PUBLIC_KEY_COSE_BASE64_CONTRACT_INVALID';
+  end if;
+  encoded:=material->>'credentialExternalId';
+  if encoded~'[[:space:]]' or length(encoded)%4<>0
+    or decode(encoded,'base64')<>decode(repeat('aa',32),'hex') then
+    raise exception 'CREDENTIAL_EXTERNAL_ID_BASE64_CONTRACT_INVALID';
+  end if;
+end $$;
 select public.complete_system_owner_pending_device_listing(
   '10000000-0000-4000-8000-000000000001','20000000-0000-4000-8000-000000000001',
   '40000000-0000-4000-8000-000000000001','50000000-0000-4000-8000-000000000001',
