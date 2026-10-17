@@ -48,3 +48,21 @@ test('native enrollment remains the only server enrollment path',()=>{
   assert.equal((edge.match(/enroll_new_device_key/g)||[]).length,1);
   assert.doesNotMatch(enrollment,/binding_recovery|ownership_handoff|lost_private_key|resetCurrent/);
 });
+
+test('device enrollment source parses and selects the account device rather than newest unrelated key',async()=>{
+  const vm=require('node:vm');
+  assert.doesNotThrow(()=>new Function(enrollment));
+  const start=enrollment.indexOf('function active(deviceId)');
+  const end=enrollment.indexOf('function verifyNonExportable',start);
+  assert.ok(start>=0&&end>start);
+  const rows=[
+    {deviceId:'device-A',state:'active',privateKey:{},bindingId:'binding-A',createdAt:'2026-10-15T12:00:00Z'},
+    {deviceId:'device-B',state:'active',privateKey:{},bindingId:'binding-B',createdAt:'2026-10-16T12:00:00Z'}
+  ];
+  const active=vm.runInNewContext('('+enrollment.slice(start,end).trim()+')',{rows:()=>Promise.resolve(rows),Promise});
+  assert.equal((await active('device-A')).bindingId,'binding-A');
+  assert.equal((await active('device-B')).bindingId,'binding-B');
+  assert.equal(await active('device-C'),null);
+  assert.match(enrollment,/return active\(identity&&identity\.id\)/);
+  assert.match(enrollment,/return currentAuth\(\)\.then\(function\(auth\)/);
+});
