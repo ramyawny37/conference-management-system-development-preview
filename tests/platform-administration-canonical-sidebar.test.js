@@ -141,14 +141,24 @@ test('roles route retains its bound DOM on same-route reconciliation and delegat
   assert.equal(state.calls.filter(call=>call[0]==='roles-activate').length,2);
 });
 
-test('users, audit and security do not lose their active DOM on same-route reconciliation',()=>{
-  for(const section of ['users','audit','security']){
+test('user selection and account data refresh repaint the active users view',()=>{
+  const state=runtime('/platform-administration/users');
+  state.moduleDefinition.mount({route:'/platform-administration/users'});
+  const node=state.nodes['platform-administrationWorkspace'];
+  node.innerHTML+='<!-- stale-account-details -->';
+  state.window.PlatformAdministrationUI.refresh();
+  assert.doesNotMatch(node.innerHTML,/stale-account-details/);
+  assert.match(node.innerHTML,/user_management_screen/);
+});
+
+test('audit and security refresh their data while roles and devices preserve event-bound roots',()=>{
+  for(const section of ['audit','security']){
     const state=runtime('/platform-administration/'+section);
     state.moduleDefinition.mount({route:'/platform-administration/'+section});
     const node=state.nodes['platform-administrationWorkspace'];
-    node.innerHTML+='<!-- preserve-live-section -->';
-    state.moduleDefinition.reconcileRoute({route:'/platform-administration/'+section});
-    assert.match(node.innerHTML,/preserve-live-section/,section);
+    node.innerHTML+='<!-- stale-admin-data -->';
+    state.window.PlatformAdministrationUI.refresh();
+    assert.doesNotMatch(node.innerHTML,/stale-admin-data/,section);
   }
 });
 
