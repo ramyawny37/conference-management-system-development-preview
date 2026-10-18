@@ -55,6 +55,10 @@
     var sectionChanged=nextSection!==currentSection;
     var firstRender=!initialized;
     if(!node)return false;
+    if(mounted&&!sectionChanged&&nextSection==='devices'&&!firstRender){
+      syncSidebar();
+      return true;
+    }
     currentSection=nextSection;
     node.innerHTML='<div class="platform-administration-screen" dir="rtl"><header class="platform-administration-heading"><span>إدارة المنصة</span><h2>'+({users:'المستخدمون والحسابات',roles:'الأدوار والصلاحيات',devices:'اعتماد الأجهزة',audit:'سجل التدقيق',security:'إعدادات الأمان'}[currentSection])+'</h2></header>'+sectionContent()+'</div>';
     syncSidebar();
