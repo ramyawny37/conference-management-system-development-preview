@@ -51,3 +51,22 @@ test('device administration initializes on entry, not on every workspace refresh
   w.adminModule.reconcileRoute({route:'/platform-administration/devices'});
   assert.equal(deviceLoads,2);
 });
+
+test('user overview refresh preserves mounted pending-device controls',()=>{
+  const dom=new JSDOM('<div id="platform-administrationWorkspace"></div>');
+  const w=dom.window;
+  let loads=0;
+  w.ApplicationRouting={getLogicalPathname:()=>'/platform-administration/devices'};
+  w.PlatformIntegration={registerModule:definition=>{w.adminModule=definition;}};
+  w.UserManagementUI={getNavigationState:()=>({status:'loaded',capabilities:{canViewDevices:true}}),renderSection:()=>'<div id="user_management_screen"></div>',initialize:()=>{}};
+  w.ModulePermissionAdministrationUI={getNavigationState:()=>({status:'ready',available:true}),initialize:()=>{}};
+  w.DeviceAuthorizationAdministrationUI={initialize:()=>{loads++;w.document.getElementById('device_authorization_administration_root').innerHTML='<button id="approve-pending">Approve</button>';}};
+  vm.runInNewContext(source,{window:w});
+  w.adminModule.mount({route:'/platform-administration/devices'});
+  const button=w.document.getElementById('approve-pending');
+  assert.ok(button);
+  w.PlatformAdministrationUI.refresh();
+  assert.equal(w.document.getElementById('approve-pending'),button);
+  assert.equal(loads,1);
+  assert.equal(w.document.getElementById('user_management_screen'),null);
+});
