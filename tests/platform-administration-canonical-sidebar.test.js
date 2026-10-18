@@ -122,7 +122,23 @@ test('device route preserves the pending approval root across background refresh
   assert.equal(state.window.PlatformAdministrationUI.refresh(),true);
   assert.equal(state.nodes['platform-administrationWorkspace'].innerHTML,original);
   assert.equal(state.calls.filter(call=>call[0]==='devices-init').length,1);
-  assert.match(source,/mounted&&!sectionChanged&&nextSection==='devices'/);
+  assert.match(source,/mounted&&!sectionChanged&&\(nextSection==='devices'\|\|nextSection==='roles'\)/);
+});
+
+test('roles route retains its bound DOM on same-route reconciliation and delegates refresh to its owner',()=>{
+  const state=runtime('/platform-administration/roles');
+  state.window.ModulePermissionAdministrationUI.activate=()=>{state.calls.push(['roles-activate']);return Promise.resolve(true);};
+  state.moduleDefinition.mount({route:'/platform-administration/roles'});
+  const original=state.nodes['platform-administrationWorkspace'].innerHTML;
+  state.nodes['platform-administrationWorkspace'].innerHTML=original+'<!-- bound-role-controls -->';
+  state.moduleDefinition.reconcileRoute({route:'/platform-administration/roles'});
+  assert.match(state.nodes['platform-administrationWorkspace'].innerHTML,/bound-role-controls/);
+  assert.equal(state.window.PlatformAdministrationUI.refresh(),true);
+  assert.match(state.nodes['platform-administrationWorkspace'].innerHTML,/bound-role-controls/);
+  assert.equal(state.calls.filter(call=>call[0]==='roles-activate').length,1);
+  state.moduleDefinition.reconcileRoute({route:'/platform-administration/users'});
+  state.moduleDefinition.reconcileRoute({route:'/platform-administration/roles'});
+  assert.equal(state.calls.filter(call=>call[0]==='roles-activate').length,2);
 });
 
 test('pending device requests distinguish an unverified state from a verified empty list',()=>{
