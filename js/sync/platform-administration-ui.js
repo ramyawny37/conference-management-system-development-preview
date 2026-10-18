@@ -74,7 +74,7 @@
   function mount(context){mounted=true;return renderRoute(context&&context.route);}
   function unmount(){mounted=false;initialized=false;currentSection='users';var node=root();if(node)node.innerHTML='';}
   function isMounted(){return mounted;}
-  function refresh(){if(!mounted)return false;return renderRoute();}
+  function refresh(){if(!mounted)return false;return renderRoute('/platform-administration/'+currentSection);}
   function initialize(){
     if(!global.PlatformIntegration||typeof global.PlatformIntegration.registerModule!=='function')return false;
     global.PlatformIntegration.registerModule({id:'platform-administration',mount:mount,reconcileRoute:function(context){return renderRoute(context&&context.route);},unmount:unmount});
