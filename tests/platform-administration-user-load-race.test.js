@@ -24,3 +24,21 @@ test('older user search response cannot replace newer filter results',async()=>{
   assert.equal(ui.getNavigationState().status,'loaded');
   assert.equal(ui.renderSection().includes('Stale'),false);
 });
+
+test('rejected user listing leaves loading state and permits a retry',async()=>{
+  let attempts=0;
+  const service={
+    listUsers:()=>{attempts++;return attempts===1?Promise.reject(new Error('network unavailable')):Promise.resolve({ok:true,data:{users:[],audit:[],security:{},capabilities:{canOpenUserManagement:true}}});},
+    getOverview:()=>Promise.resolve({ok:false,status:'denied'})
+  };
+  const window={UserManagementReadService:service,document:{getElementById:()=>null}};
+  window.window=window;
+  vm.runInNewContext(source,{window});
+  const ui=window.UserManagementUI;
+  const failure=await ui.refreshUsers();
+  assert.equal(failure.ok,false);
+  assert.equal(ui.getNavigationState().status,'error');
+  const retry=await ui.refreshUsers();
+  assert.equal(retry.ok,true);
+  assert.equal(ui.getNavigationState().status,'loaded');
+});
