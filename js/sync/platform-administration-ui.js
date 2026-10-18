@@ -55,7 +55,7 @@
     var sectionChanged=nextSection!==currentSection;
     var firstRender=!initialized;
     if(!node)return false;
-    if(mounted&&!sectionChanged&&!firstRender){
+    if(mounted&&!sectionChanged&&!firstRender&&currentSection!=='users'&&currentSection!=='audit'&&currentSection!=='security'){
       syncSidebar();
       return true;
     }
