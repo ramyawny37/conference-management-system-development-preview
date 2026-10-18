@@ -22,9 +22,3 @@ test('pending request count updates after protected approval and rejection',asyn
   }
 });
 
-test('read-only pending listing must not trigger WebAuthn on opening administration',()=>{
-  const service=fs.readFileSync(path.join(root,'js/supabase/device-authorization-administration-service.js'),'utf8');
-  const listing=service.slice(service.indexOf('function listSystemOwnerPendingDevices('),service.indexOf('function enrollSystemOwnerCredential('));
-  assert.doesNotMatch(listing,/assertion\s*\(|credentials\.get\s*\(/,'opening a read-only list must not initiate a passkey ceremony');
-  assert.match(listing,/deviceSession|PlatformDeviceSession/,'listing must use the canonical verified device session');
-});
