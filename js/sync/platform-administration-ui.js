@@ -55,7 +55,7 @@
     var sectionChanged=nextSection!==currentSection;
     var firstRender=!initialized;
     if(!node)return false;
-    if(mounted&&!sectionChanged&&nextSection==='devices'&&!firstRender){
+    if(mounted&&!sectionChanged&&(nextSection==='devices'||nextSection==='roles')&&!firstRender){
       syncSidebar();
       return true;
     }
@@ -74,7 +74,7 @@
   function mount(context){mounted=true;return renderRoute(context&&context.route);}
   function unmount(){mounted=false;initialized=false;currentSection='users';var node=root();if(node)node.innerHTML='';}
   function isMounted(){return mounted;}
-  function refresh(){if(!mounted)return false;return renderRoute('/platform-administration/'+currentSection);}
+  function refresh(){if(!mounted)return false;if(currentSection==='roles'){if(global.ModulePermissionAdministrationUI&&typeof global.ModulePermissionAdministrationUI.activate==='function')global.ModulePermissionAdministrationUI.activate();syncSidebar();return true;}return renderRoute('/platform-administration/'+currentSection);}
   function initialize(){
     if(!global.PlatformIntegration||typeof global.PlatformIntegration.registerModule!=='function')return false;
     global.PlatformIntegration.registerModule({id:'platform-administration',mount:mount,reconcileRoute:function(context){return renderRoute(context&&context.route);},unmount:unmount});
