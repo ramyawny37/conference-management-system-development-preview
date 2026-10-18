@@ -69,7 +69,7 @@
       if(global.UserManagementUI)global.UserManagementUI.initialize();
       if(global.ModulePermissionAdministrationUI)global.ModulePermissionAdministrationUI.initialize();
     }
-    if(currentSection==='devices'&&global.DeviceAuthorizationAdministrationUI)global.DeviceAuthorizationAdministrationUI.initialize();
+    if(currentSection==='devices'&&sectionChanged&&global.DeviceAuthorizationAdministrationUI)global.DeviceAuthorizationAdministrationUI.initialize();
     return true;
   }
   function mount(context){mounted=true;return renderRoute(context&&context.route);}
