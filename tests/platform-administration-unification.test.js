@@ -116,7 +116,7 @@ test('cache references are atomically consistent for every changed runtime asset
     assert.ok(index.includes(asset+'?rev='+(asset==='style.css'?styleRevision:asset==='js/sync/user-management-ui.js'?deviceListRevision:revision)),asset+' missing from index');
     assert.ok(worker.includes('./'+asset+'?rev='+(asset==='style.css'?styleRevision:asset==='js/sync/user-management-ui.js'?deviceListRevision:revision)),asset+' missing from worker');
   }
-  assert.match(worker,/\? 'development-canonical-device-revocation-v1'/);
+  assert.match(worker,/\? 'development-canonical-owner-session-list-v1'/);
 });
 
 test('retired tenancy, direct database clients and local permission fallbacks remain absent',()=>{

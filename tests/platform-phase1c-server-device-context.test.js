@@ -6,7 +6,7 @@ const initialHandoff=fs.readFileSync("supabase/migrations/20260902020000_platfor
 const recoveryHandoff=fs.readFileSync("supabase/migrations/20260903120000_device_key_binding_lost_private_key_rotation.sql","utf8");
 const contractSource=fs.readFileSync("js/supabase/conference-device-operation-contract.js","utf8");
 const sandbox={window:{}};vm.runInNewContext(contractSource,sandbox);const contract=sandbox.window.ConferenceDeviceOperationContract;
-const platformAdmin=new Set(["list_pending_device_authorizations","approve_pending_device_authorization"]);
+const platformAdmin=new Set(["list_system_owner_pending_device_authorizations"]);
 
 test("Phase 1C context revalidates every session and canonical authority dimension",()=>{
   for(const fragment of ["session.id=v_session_id","session.user_id=p_user_id","session.device_id=p_device_id",
@@ -33,9 +33,9 @@ test("dispatcher alone establishes context and denies actor-device overrides",()
   assert.doesNotMatch(migration,/grant execute[^;]+validated_phase1c_device_authorization[^;]+to/i);
 });
 
-test("41 guarded and 2 Platform-admin operations retain the post-membership boundary",()=>{
-  assert.equal(contract.EDGE_ONLY_PROTECTED.length,23);
-  assert.equal(contract.EDGE_ONLY_PROTECTED.filter(x=>platformAdmin.has(x.operation)).length,2);
+test("41 guarded and one Platform-admin read retain the post-membership boundary",()=>{
+  assert.equal(contract.EDGE_ONLY_PROTECTED.length,22);
+  assert.equal(contract.EDGE_ONLY_PROTECTED.filter(x=>platformAdmin.has(x.operation)).length,1);
   assert.equal(contract.EDGE_ONLY_PROTECTED.filter(x=>!platformAdmin.has(x.operation)).length,21);
   assert.match(migration,/validated_phase1c_device_authorization\(current_user_id,p_actor_device_id\)/);
   assert.match(migration,/validated_phase1c_device_authorization\([\s\S]*p_user_id/);
@@ -63,6 +63,6 @@ test("runtime handoff sources are removed and native enrollment contains no devi
 });
 
 test("DIRECT EDGE INTERNAL POLICY cardinalities reflect snapshot retirement",()=>{
-  assert.deepEqual([contract.DIRECT_BROWSER_REQUIRED.length,contract.EDGE_ONLY_PROTECTED.length,contract.INTERNAL_ONLY.length,contract.POLICY_HELPER_BROWSER_READ.length],[6,23,16,4]);
+  assert.deepEqual([contract.DIRECT_BROWSER_REQUIRED.length,contract.EDGE_ONLY_PROTECTED.length,contract.INTERNAL_ONLY.length,contract.POLICY_HELPER_BROWSER_READ.length],[6,22,16,4]);
   assert.equal(contract.INTERNAL_ONLY.filter(x=>!/device_session|device_ownership_handoff|execute_(?:conference_)?device_operation|require_exact_jsonb_keys/.test(x)).length,10);
 });
