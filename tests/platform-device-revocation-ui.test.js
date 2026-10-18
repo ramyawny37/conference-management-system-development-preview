@@ -9,14 +9,14 @@ const serviceSource=fs.readFileSync('js/supabase/device-authorization-administra
 const userId='11111111-1111-4111-8111-111111111111';
 const deviceId='22222222-2222-4222-8222-222222222222';
 
-function uiHarness(result){
+function uiHarness(result,currentDeviceId){
   let revoked=false,revocations=0,overviewReads=0;
   const view=()=>({selectedUser:{userId,displayName:'Target',email:'target@example.test'},
     account:{status:'loaded',data:{accountStatus:'approved'}},capabilities:{canViewAccount:true,canViewDevices:true},
     devices:{status:revoked?'empty':'loaded',data:{items:revoked?[]:[{deviceId,deviceName:'Laptop',platform:'Browser',authorizationStatus:'approved',capabilities:{canRevoke:true}}]}}});
   const read={listUsers:()=>Promise.resolve({ok:true,data:{users:[{userId,displayName:'Target',email:'target@example.test',accountStatus:'approved',deviceCount:revoked?0:1}],audit:null,security:null,capabilities:{canViewDevices:true}}}),getOverview:()=>{overviewReads++;return Promise.resolve({ok:true,data:{overview:view()}});}};
   const administration={revokeSystemOwnerDevice:()=>{revocations++;if(result.ok)revoked=true;return Promise.resolve(result);}};
-  const sandbox={window:null,Promise,Object,Array,String,JSON,console,confirm:()=>true,document:{getElementById:()=>null},UserManagementReadService:read,DeviceAuthorizationAdministrationService:administration};sandbox.window=sandbox;
+  const sandbox={window:null,Promise,Object,Array,String,JSON,console,confirm:()=>true,document:{getElementById:()=>null},UserManagementReadService:read,DeviceAuthorizationAdministrationService:administration,SupabaseDeviceIdentity:{getCurrent:()=>currentDeviceId?{id:currentDeviceId}:null}};sandbox.window=sandbox;
   vm.runInNewContext(uiSource,sandbox);
   return {api:sandbox.UserManagementUI,revocations:()=>revocations,overviewReads:()=>overviewReads};
 }
@@ -59,4 +59,13 @@ test('canonical client performs revocation through one WebAuthn Edge flow and re
   assert.equal(calls[2].targetDeviceId,deviceId);
 });
 
-test('current device is labeled and cannot expose a self-revocation action',async()=>{const h=uiHarness({ok:true,status:'applied'});const original=uiSource;assert.match(original,/SupabaseDeviceIdentity\.getCurrent/);assert.match(original,/isCurrent\?' — هذا الجهاز'/);assert.match(original,/canRevoke=!isCurrent&&item\.authorizationStatus/);assert.match(original,/معرّف الجهاز/);});
+test('current device is identified by exact account-scoped device ID and has no revoke button',async()=>{
+  const currentId=deviceId;
+  const h=uiHarness({ok:true,status:'applied'},currentId);
+  await h.api.initialize();
+  const html=h.api.renderSection();
+  assert.match(html,/Laptop — هذا الجهاز/);
+  assert.match(html,/معرّف الجهاز/);
+  assert.match(html,/22222222/);
+  assert.doesNotMatch(html,/إلغاء اعتماد الجهاز/);
+});
