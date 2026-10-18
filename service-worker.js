@@ -8,7 +8,7 @@ const CACHE_NAMESPACE = IS_DEVELOPMENT
   : '';
 const CACHE_PREFIX = CACHE_NAMESPACE + 'conference-manager-core-';
 const CACHE_REVISION = IS_DEVELOPMENT
-  ? 'development-administration-workspace-visibility-v1'
+  ? 'development-canonical-device-revocation-v1'
   : 'production-3-6-0-release-v6';
 const CACHE_NAME = CACHE_PREFIX + 'v' + APP_VERSION + '-' + CACHE_REVISION;
 const CORE_ASSETS = [
@@ -47,7 +47,7 @@ const CORE_ASSETS = [
   './js/supabase/device-identity.js?rev=project-device-storage-isolation-v1',
   './js/supabase/device-enrollment.js?rev=account-scoped-device-key-selection-v1',
 
-  './js/supabase/device-authorization-administration-service.js?rev=runtime-syntax-repair-v2',
+  './js/supabase/device-authorization-administration-service.js?rev=canonical-device-revocation-v1',
 
   './js/sync/device-authorization-administration-ui.js?rev=platform-only-device-administration-v1',
   './js/sync/startup-conference-discovery.js?rev=shared-template-library-v1',
@@ -59,7 +59,7 @@ const CORE_ASSETS = [
   './js/sync/startup-access-gate.js?rev=revoked-rerequest-error-code-v1',
   './js/sync/conference-activation-authorization.js?rev=canonical-conference-id-v1',
   './js/sync/user-management-read-service.js?rev=platform-administration-unification-v1',
-  './js/sync/user-management-ui.js?rev=platform-account-devices-readonly-clarity-v1',
+  './js/sync/user-management-ui.js?rev=canonical-device-revocation-v1',
   './js/sync/module-permission-administration-service.js?rev=platform-administration-unification-v1',
   './js/sync/module-permission-administration-ui.js?rev=platform-administration-canonical-sidebar-navigation-v2',
   './js/sync/platform-administration-ui.js?rev=platform-administration-canonical-sidebar-navigation-v2',

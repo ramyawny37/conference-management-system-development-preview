@@ -111,12 +111,12 @@ test('account, device and audit reads use granular Platform permissions',()=>{
 test('cache references are atomically consistent for every changed runtime asset',()=>{
   const revision='platform-administration-canonical-sidebar-navigation-v2';
   const styleRevision='platform-administration-workspace-visibility-v1';
-  const deviceListRevision='platform-account-devices-readonly-clarity-v1';
+  const deviceListRevision='canonical-device-revocation-v1';
   for(const asset of ['style.css','canonical-platform-shell.css','js/platform-integration.js','js/sync/user-management-ui.js','js/sync/module-permission-administration-ui.js','js/sync/platform-administration-ui.js','script.js']){
     assert.ok(index.includes(asset+'?rev='+(asset==='style.css'?styleRevision:asset==='js/sync/user-management-ui.js'?deviceListRevision:revision)),asset+' missing from index');
     assert.ok(worker.includes('./'+asset+'?rev='+(asset==='style.css'?styleRevision:asset==='js/sync/user-management-ui.js'?deviceListRevision:revision)),asset+' missing from worker');
   }
-  assert.match(worker,/\? 'development-administration-workspace-visibility-v1'/);
+  assert.match(worker,/\? 'development-canonical-device-revocation-v1'/);
 });
 
 test('retired tenancy, direct database clients and local permission fallbacks remain absent',()=>{

@@ -21,7 +21,7 @@ runNode(['--check', 'service-worker.js']);
 
 const indexSource = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 const serviceWorkerSource = fs.readFileSync(path.join(root, 'service-worker.js'), 'utf8');
-const deviceAdminAsset = 'js/supabase/device-authorization-administration-service.js?rev=runtime-syntax-repair-v2';
+const deviceAdminAsset = 'js/supabase/device-authorization-administration-service.js?rev=canonical-device-revocation-v1';
 if (!indexSource.includes(deviceAdminAsset) || !serviceWorkerSource.includes('./' + deviceAdminAsset)) {
   throw new Error('DEVICE_ADMIN_RUNTIME_CACHE_REVISION_MISMATCH');
 }
@@ -31,7 +31,6 @@ if (/platform-authority-cutover-v2/.test(serviceWorkerSource)) {
 
 const runtimePages = [
   'index.html',
-  'platform-device-admin.html',
   'platform-device-recovery-login-v2.html',
   'platform-device-recovery.html',
   'platform-device-session.html',
@@ -54,6 +53,7 @@ for (const script of [...runtimeScripts].sort()) runNode(['--check', script]);
 runNode(['tests/browser-storage-isolation.test.js']);
 
 const retiredAuthorityArtifacts = [
+  'platform-device-admin.html',
   'js/sync/device-authorization-operation-repository.js',
   'js/supabase/current-device-authorization-service.js',
   'js/sync/current-device-authorization-ui.js',

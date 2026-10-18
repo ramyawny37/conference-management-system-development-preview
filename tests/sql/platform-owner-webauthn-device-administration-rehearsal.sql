@@ -130,22 +130,29 @@ end $$;
 \ir ../../supabase/migrations/20261017121130_restore_compact_owner_webauthn_verification_material.sql
 \ir ../../supabase/migrations/20261016163453_platform_owner_passkey_recovery_counter_guard.sql
 \ir ../../supabase/migrations/20261017141821_reconcile_synced_owner_assertion_counter_device_guard.sql
+\ir ../../supabase/migrations/20261018132246_canonical_platform_device_revocation.sql
 
 insert into auth.users values
  ('10000000-0000-4000-8000-000000000001','owner@example.test'),
  ('10000000-0000-4000-8000-000000000002','member@example.test'),
  ('10000000-0000-4000-8000-000000000003','approve@example.test'),
  ('10000000-0000-4000-8000-000000000004','reject@example.test'),
- ('10000000-0000-4000-8000-000000000005','history@example.test');
+ ('10000000-0000-4000-8000-000000000005','history@example.test'),
+ ('10000000-0000-4000-8000-000000000006','single-device@example.test'),
+ ('10000000-0000-4000-8000-000000000007','second-owner@example.test');
 insert into platform.roles values('11000000-0000-4000-8000-000000000001','platform','platform_owner');
 insert into platform.profiles values
  ('10000000-0000-4000-8000-000000000001','Owner','approved'),
  ('10000000-0000-4000-8000-000000000002','Member','approved'),
  ('10000000-0000-4000-8000-000000000003','Approve target','approved'),
  ('10000000-0000-4000-8000-000000000004','Reject target','approved'),
- ('10000000-0000-4000-8000-000000000005','Historical target','approved');
+ ('10000000-0000-4000-8000-000000000005','Historical target','approved'),
+ ('10000000-0000-4000-8000-000000000006','Single device member','approved'),
+ ('10000000-0000-4000-8000-000000000007','Second owner','approved');
 insert into platform.user_roles values(
  '10000000-0000-4000-8000-000000000001','11000000-0000-4000-8000-000000000001',
+ 'platform',null,null,null),(
+ '10000000-0000-4000-8000-000000000007','11000000-0000-4000-8000-000000000001',
  'platform',null,null,null);
 insert into platform.devices values
  ('20000000-0000-4000-8000-000000000001','10000000-0000-4000-8000-000000000001','Current owner','MacIntel','active',null,null),
@@ -153,14 +160,20 @@ insert into platform.devices values
  ('20000000-0000-4000-8000-000000000003','10000000-0000-4000-8000-000000000003','Approve me','Win32','active',null,null),
  ('20000000-0000-4000-8000-000000000004','10000000-0000-4000-8000-000000000004','Reject me','Linux','active',null,null),
  ('20000000-0000-4000-8000-000000000005','10000000-0000-4000-8000-000000000005','Rejected history','Linux','active',null,null),
- ('20000000-0000-4000-8000-000000000006','10000000-0000-4000-8000-000000000002','Member device','Linux','active',null,null);
+ ('20000000-0000-4000-8000-000000000006','10000000-0000-4000-8000-000000000002','Member device','Linux','active',null,null),
+ ('20000000-0000-4000-8000-000000000007','10000000-0000-4000-8000-000000000002','Member other device','Linux','active',null,null),
+ ('20000000-0000-4000-8000-000000000008','10000000-0000-4000-8000-000000000006','Single member device','Linux','active',null,null),
+ ('20000000-0000-4000-8000-000000000009','10000000-0000-4000-8000-000000000007','Second owner only device','MacIntel','active',null,null);
 insert into platform.user_device_authorizations(id,user_id,device_id,status,approved_at,revoked_at) values
  ('30000000-0000-4000-8000-000000000001','10000000-0000-4000-8000-000000000001','20000000-0000-4000-8000-000000000001','approved',now(),null),
  ('30000000-0000-4000-8000-000000000002','10000000-0000-4000-8000-000000000001','20000000-0000-4000-8000-000000000002','approved',now(),null),
  ('30000000-0000-4000-8000-000000000003','10000000-0000-4000-8000-000000000003','20000000-0000-4000-8000-000000000003','pending',null,null),
  ('30000000-0000-4000-8000-000000000004','10000000-0000-4000-8000-000000000004','20000000-0000-4000-8000-000000000004','pending',null,null),
  ('30000000-0000-4000-8000-000000000005','10000000-0000-4000-8000-000000000005','20000000-0000-4000-8000-000000000005','revoked',null,now()),
- ('30000000-0000-4000-8000-000000000006','10000000-0000-4000-8000-000000000002','20000000-0000-4000-8000-000000000006','approved',now(),null);
+ ('30000000-0000-4000-8000-000000000006','10000000-0000-4000-8000-000000000002','20000000-0000-4000-8000-000000000006','approved',now(),null),
+ ('30000000-0000-4000-8000-000000000007','10000000-0000-4000-8000-000000000002','20000000-0000-4000-8000-000000000007','approved',now(),null),
+ ('30000000-0000-4000-8000-000000000008','10000000-0000-4000-8000-000000000006','20000000-0000-4000-8000-000000000008','approved',now(),null),
+ ('30000000-0000-4000-8000-000000000009','10000000-0000-4000-8000-000000000007','20000000-0000-4000-8000-000000000009','approved',now(),null);
 insert into platform.device_key_bindings
 select gen_random_uuid(),user_id,device_id,id,'active',null,null
 from platform.user_device_authorizations;
@@ -374,21 +387,131 @@ select public.complete_system_owner_pending_device_operation(
   '20000000-0000-4000-8000-000000000004','reject',0,'https://ramyawny37.github.io',
   'ramyawny37.github.io','{"userVerified":true,"backupEligible":true,"backupState":true}'::jsonb);
 
+-- Revoke one of two employee devices through a separately verified ceremony.
+do $$ declare result jsonb; begin
+  result:=public.begin_system_owner_device_possession_challenge(
+    '10000000-0000-4000-8000-000000000001','20000000-0000-4000-8000-000000000001',
+    '40000000-0000-4000-8000-000000000001','50000000-0000-4000-8000-000000000005',
+    'SYSTEM_OWNER_DEVICE_REVOKE','10000000-0000-4000-8000-000000000002',
+    '20000000-0000-4000-8000-000000000006','52000000-0000-4000-8000-000000000003',
+    'development_preview','https://ramyawny37.github.io','ramyawny37.github.io',decode(repeat('08',32),'hex'));
+  insert into ceremony_state values('revoke-member',(result->>'challengeId')::uuid);
+end $$;
+do $$ begin
+  perform public.complete_system_owner_pending_device_operation(
+    '10000000-0000-4000-8000-000000000001','20000000-0000-4000-8000-000000000001',
+    '40000000-0000-4000-8000-000000000001','50000000-0000-4000-8000-000000000005',
+    'development_preview',(select id from ceremony_state where name='revoke-member'),decode(repeat('08',32),'hex'),
+    '52000000-0000-4000-8000-000000000003','10000000-0000-4000-8000-000000000002',
+    '20000000-0000-4000-8000-000000000007','revoke',0,'https://ramyawny37.github.io',
+    'ramyawny37.github.io','{"userVerified":true,"backupEligible":true,"backupState":true}'::jsonb);
+  raise exception 'REVOCATION_TARGET_SUBSTITUTION_ACCEPTED';
+exception when insufficient_privilege then null; end $$;
+do $$ begin
+  perform public.complete_system_owner_pending_device_operation(
+    '10000000-0000-4000-8000-000000000001','20000000-0000-4000-8000-000000000001',
+    '40000000-0000-4000-8000-000000000001','50000000-0000-4000-8000-000000000005',
+    'development_preview',(select id from ceremony_state where name='revoke-member'),decode(repeat('08',32),'hex'),
+    '52000000-0000-4000-8000-000000000003','10000000-0000-4000-8000-000000000002',
+    '20000000-0000-4000-8000-000000000006','revoke',0,'https://ramyawny37.github.io',
+    'ramyawny37.github.io','{"userVerified":false,"backupEligible":true,"backupState":true}'::jsonb);
+  raise exception 'REVOCATION_WITHOUT_USER_VERIFICATION_ACCEPTED';
+exception when insufficient_privilege then null; end $$;
+select public.complete_system_owner_pending_device_operation(
+  '10000000-0000-4000-8000-000000000001','20000000-0000-4000-8000-000000000001',
+  '40000000-0000-4000-8000-000000000001','50000000-0000-4000-8000-000000000005',
+  'development_preview',(select id from ceremony_state where name='revoke-member'),decode(repeat('08',32),'hex'),
+  '52000000-0000-4000-8000-000000000003','10000000-0000-4000-8000-000000000002',
+  '20000000-0000-4000-8000-000000000006','revoke',0,'https://ramyawny37.github.io',
+  'ramyawny37.github.io','{"userVerified":true,"backupEligible":true,"backupState":true}'::jsonb);
+-- Exact retry returns the immutable stored result without consuming another challenge.
+select public.complete_system_owner_pending_device_operation(
+  '10000000-0000-4000-8000-000000000001','20000000-0000-4000-8000-000000000001',
+  '40000000-0000-4000-8000-000000000001','50000000-0000-4000-8000-000000000005',
+  'development_preview',(select id from ceremony_state where name='revoke-member'),decode(repeat('08',32),'hex'),
+  '52000000-0000-4000-8000-000000000003','10000000-0000-4000-8000-000000000002',
+  '20000000-0000-4000-8000-000000000006','revoke',0,'https://ramyawny37.github.io',
+  'ramyawny37.github.io','{"userVerified":true,"backupEligible":true,"backupState":true}'::jsonb);
+do $$ declare v_authorization uuid; begin
+  begin
+    perform platform_private.require_canonical_device_authorization(
+      '10000000-0000-4000-8000-000000000002','20000000-0000-4000-8000-000000000006',true);
+    raise exception 'REVOKED_DEVICE_STILL_AUTHORIZED';
+  exception when insufficient_privilege then null; end;
+  v_authorization:=platform_private.require_canonical_device_authorization(
+    '10000000-0000-4000-8000-000000000002','20000000-0000-4000-8000-000000000007',true);
+  if v_authorization is null then raise exception 'OTHER_EMPLOYEE_DEVICE_REJECTED'; end if;
+end $$;
+
+-- Revoking an employee's last approved device is allowed.
+do $$ declare result jsonb; begin
+  result:=public.begin_system_owner_device_possession_challenge(
+    '10000000-0000-4000-8000-000000000001','20000000-0000-4000-8000-000000000001',
+    '40000000-0000-4000-8000-000000000001','50000000-0000-4000-8000-000000000006',
+    'SYSTEM_OWNER_DEVICE_REVOKE','10000000-0000-4000-8000-000000000006',
+    '20000000-0000-4000-8000-000000000008','52000000-0000-4000-8000-000000000004',
+    'development_preview','https://ramyawny37.github.io','ramyawny37.github.io',decode(repeat('09',32),'hex'));
+  insert into ceremony_state values('revoke-last-member',(result->>'challengeId')::uuid);
+end $$;
+select public.complete_system_owner_pending_device_operation(
+  '10000000-0000-4000-8000-000000000001','20000000-0000-4000-8000-000000000001',
+  '40000000-0000-4000-8000-000000000001','50000000-0000-4000-8000-000000000006',
+  'development_preview',(select id from ceremony_state where name='revoke-last-member'),decode(repeat('09',32),'hex'),
+  '52000000-0000-4000-8000-000000000004','10000000-0000-4000-8000-000000000006',
+  '20000000-0000-4000-8000-000000000008','revoke',0,'https://ramyawny37.github.io',
+  'ramyawny37.github.io','{"userVerified":true,"backupEligible":true,"backupState":true}'::jsonb);
+
+-- A non-actor owner device may be revoked while another approved owner device remains.
+do $$ declare result jsonb; begin
+  result:=public.begin_system_owner_device_possession_challenge(
+    '10000000-0000-4000-8000-000000000001','20000000-0000-4000-8000-000000000001',
+    '40000000-0000-4000-8000-000000000001','50000000-0000-4000-8000-000000000007',
+    'SYSTEM_OWNER_DEVICE_REVOKE','10000000-0000-4000-8000-000000000001',
+    '20000000-0000-4000-8000-000000000002','52000000-0000-4000-8000-000000000005',
+    'development_preview','https://ramyawny37.github.io','ramyawny37.github.io',decode(repeat('0a',32),'hex'));
+  insert into ceremony_state values('revoke-owner-other',(result->>'challengeId')::uuid);
+end $$;
+select public.complete_system_owner_pending_device_operation(
+  '10000000-0000-4000-8000-000000000001','20000000-0000-4000-8000-000000000001',
+  '40000000-0000-4000-8000-000000000001','50000000-0000-4000-8000-000000000007',
+  'development_preview',(select id from ceremony_state where name='revoke-owner-other'),decode(repeat('0a',32),'hex'),
+  '52000000-0000-4000-8000-000000000005','10000000-0000-4000-8000-000000000001',
+  '20000000-0000-4000-8000-000000000002','revoke',0,'https://ramyawny37.github.io',
+  'ramyawny37.github.io','{"userVerified":true,"backupEligible":true,"backupState":true}'::jsonb);
+do $$ begin
+  perform public.begin_system_owner_device_possession_challenge(
+    '10000000-0000-4000-8000-000000000001','20000000-0000-4000-8000-000000000001',
+    '40000000-0000-4000-8000-000000000001',gen_random_uuid(),
+    'SYSTEM_OWNER_DEVICE_REVOKE','10000000-0000-4000-8000-000000000007',
+    '20000000-0000-4000-8000-000000000009',gen_random_uuid(),'development_preview',
+    'https://ramyawny37.github.io','ramyawny37.github.io',decode(repeat('0b',32),'hex'));
+  raise exception 'LAST_OWNER_DEVICE_REVOCATION_ACCEPTED';
+exception when insufficient_privilege then null; end $$;
+do $$ begin
+  perform public.begin_system_owner_device_possession_challenge(
+    '10000000-0000-4000-8000-000000000001','20000000-0000-4000-8000-000000000001',
+    '40000000-0000-4000-8000-000000000001',gen_random_uuid(),
+    'SYSTEM_OWNER_DEVICE_REVOKE','10000000-0000-4000-8000-000000000001',
+    '20000000-0000-4000-8000-000000000001',gen_random_uuid(),'development_preview',
+    'https://ramyawny37.github.io','ramyawny37.github.io',decode(repeat('0c',32),'hex'));
+  raise exception 'ACTOR_DEVICE_REVOCATION_ACCEPTED';
+exception when insufficient_privilege then null; end $$;
+
 do $$ declare listed jsonb; begin
   listed:=public.list_system_owner_pending_device_authorizations(
     '10000000-0000-4000-8000-000000000001','20000000-0000-4000-8000-000000000001',
     '50000000-0000-4000-8000-000000000001','development_preview',decode(repeat('02',32),'hex'));
   if jsonb_array_length(listed->'devices')<>0 then raise exception 'DECIDED_DEVICES_STILL_LISTED'; end if;
-  if (select count(*) from public.privileged_device_authorization_audit_log)<>3 then
+  if (select count(*) from public.privileged_device_authorization_audit_log)<>6 then
     raise exception 'PRIVILEGED_AUDIT_COUNT_INVALID';
   end if;
-  if (select count(*) from platform.test_audit)<>2 then raise exception 'PLATFORM_AUDIT_COUNT_INVALID'; end if;
-  if (select count(*) from public.system_owner_device_authorization_operations)<>2 then
+  if (select count(*) from platform.test_audit)<>5 then raise exception 'PLATFORM_AUDIT_COUNT_INVALID'; end if;
+  if (select count(*) from public.system_owner_device_authorization_operations)<>5 then
     raise exception 'OPERATION_LEDGER_COUNT_INVALID';
   end if;
 end $$;
 
-select pg_catalog.jsonb_build_object('status','pass','positive',8,'negative',12,
+select pg_catalog.jsonb_build_object('status','pass','positive',15,'negative',17,
   'audits',(select count(*) from public.privileged_device_authorization_audit_log),
   'operations',(select count(*) from public.system_owner_device_authorization_operations),
   'pendingAfter',(select count(*) from platform.user_device_authorizations where status='pending'));

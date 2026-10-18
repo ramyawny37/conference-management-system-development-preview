@@ -5,7 +5,6 @@ const fs = require("node:fs");
 const test = require("node:test");
 
 const migration = fs.readFileSync("supabase/migrations/20260831040000_platform_device_administration_contract.sql", "utf8");
-const page = fs.readFileSync("platform-device-admin.html", "utf8");
 const canonicalClient = fs.readFileSync("js/supabase/device-authorization-administration-service.js", "utf8");
 
 test("Platform SQL administration remains actor-device, permission, pending, and audit guarded", () => {
@@ -22,9 +21,10 @@ test("Gateway administration is fully removed and the static admin assets retain
   assert.equal(fs.existsSync("server/platform-gateway.cjs"), false);
   assert.equal(fs.existsSync("api/gateway.js"), false);
   assert.equal(fs.existsSync("js/platform-device-admin.js"), false);
+  assert.equal(fs.existsSync("platform-device-admin.html"), false);
   assert.doesNotMatch(canonicalClient, /deviceSecret|device_secret|refreshToken|refresh_token/);
   assert.doesNotMatch(canonicalClient, /CurrentDeviceAuthorization|public\.user_device_authorizations/);
   assert.match(canonicalClient, /approveSystemOwnerPendingDevice/);
   assert.match(canonicalClient, /rejectSystemOwnerPendingDevice/);
-  assert.doesNotMatch(page, /applicationBody|data-platform-module|StartupAccessGate/);
+  assert.match(canonicalClient, /revokeSystemOwnerDevice/);
 });

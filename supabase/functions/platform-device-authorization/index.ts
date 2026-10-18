@@ -283,13 +283,15 @@ Deno.serve(async (request) => {
       return json(200, { ok: true, status: result.status, data: result });
     }
 
-    if (action.startsWith('begin-pending-device-')) {
-      const mode = action.slice('begin-pending-device-'.length);
-      if (!['list', 'approval', 'rejection'].includes(mode)) throw new Error('ACTION_NOT_SUPPORTED');
+    if (action.startsWith('begin-pending-device-') || action === 'begin-device-revocation') {
+      const mode = action === 'begin-device-revocation'
+        ? 'revocation' : action.slice('begin-pending-device-'.length);
+      if (!['list', 'approval', 'rejection', 'revocation'].includes(mode)) throw new Error('ACTION_NOT_SUPPORTED');
       const sessionId = crypto.randomUUID();
       const operationId = mode === 'list' ? null : uuid(body.operationId, 'OPERATION_ID');
       const purpose = mode === 'list' ? 'SYSTEM_OWNER_PENDING_DEVICE_LIST'
-        : mode === 'approval' ? 'SYSTEM_OWNER_PENDING_DEVICE_APPROVE' : 'SYSTEM_OWNER_PENDING_DEVICE_REJECT';
+        : mode === 'approval' ? 'SYSTEM_OWNER_PENDING_DEVICE_APPROVE'
+        : mode === 'rejection' ? 'SYSTEM_OWNER_PENDING_DEVICE_REJECT' : 'SYSTEM_OWNER_DEVICE_REVOKE';
       const options = await generateAuthenticationOptions({ rpID, userVerification: 'required', timeout: 120000,
         allowCredentials: [] });
       const result = await call('begin_system_owner_device_possession_challenge', {
@@ -307,9 +309,10 @@ Deno.serve(async (request) => {
         publicKeyCose: result.publicKeyCose, signCount: result.signCount } });
     }
 
-    if (action.startsWith('finish-pending-device-')) {
-      const mode = action.slice('finish-pending-device-'.length);
-      if (!['list', 'approval', 'rejection'].includes(mode)) throw new Error('ACTION_NOT_SUPPORTED');
+    if (action.startsWith('finish-pending-device-') || action === 'finish-device-revocation') {
+      const mode = action === 'finish-device-revocation'
+        ? 'revocation' : action.slice('finish-pending-device-'.length);
+      if (!['list', 'approval', 'rejection', 'revocation'].includes(mode)) throw new Error('ACTION_NOT_SUPPORTED');
       const challenge = String(body.challenge || '');
       const material = await call('get_system_owner_device_challenge_verification_material', {
         p_actor_user_id: actorUserId, p_actor_device_id: actorDeviceId,
@@ -362,7 +365,7 @@ Deno.serve(async (request) => {
         const completionPayload = { ...common,
           p_operation_id: uuid(body.operationId, 'OPERATION_ID'), p_target_user_id: uuid(body.targetUserId, 'TARGET_USER_ID'),
           p_target_device_id: uuid(body.targetDeviceId, 'TARGET_DEVICE_ID'),
-          p_action: mode === 'approval' ? 'approve' : 'reject' };
+          p_action: mode === 'approval' ? 'approve' : mode === 'rejection' ? 'reject' : 'revoke' };
         phase = 'before-completion-rpc';
         phase = 'completion-rpc';
         const result = await call('complete_system_owner_pending_device_operation', completionPayload);
