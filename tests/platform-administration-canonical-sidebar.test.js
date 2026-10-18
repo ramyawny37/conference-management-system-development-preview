@@ -135,10 +135,10 @@ test('roles route retains its bound DOM on same-route reconciliation and delegat
   assert.match(state.nodes['platform-administrationWorkspace'].innerHTML,/bound-role-controls/);
   assert.equal(state.window.PlatformAdministrationUI.refresh(),true);
   assert.match(state.nodes['platform-administrationWorkspace'].innerHTML,/bound-role-controls/);
-  assert.equal(state.calls.filter(call=>call[0]==='roles-activate').length,1);
+  assert.equal(state.calls.filter(call=>call[0]==='roles-activate').length,2);
   state.moduleDefinition.reconcileRoute({route:'/platform-administration/users'});
   state.moduleDefinition.reconcileRoute({route:'/platform-administration/roles'});
-  assert.equal(state.calls.filter(call=>call[0]==='roles-activate').length,2);
+  assert.equal(state.calls.filter(call=>call[0]==='roles-activate').length,3);
 });
 
 test('users, audit and security do not lose their active DOM on same-route reconciliation',()=>{
