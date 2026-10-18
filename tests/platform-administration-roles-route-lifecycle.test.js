@@ -70,3 +70,19 @@ test('user overview refresh preserves mounted pending-device controls',()=>{
   assert.equal(loads,1);
   assert.equal(w.document.getElementById('user_management_screen'),null);
 });
+
+test('asynchronous user refresh does not redirect the active administration section',()=>{
+  const dom=new JSDOM('<div id="platform-administrationWorkspace"></div>');
+  const w=dom.window;
+  w.ApplicationRouting={getLogicalPathname:()=>'/platform-administration/users'};
+  w.PlatformIntegration={registerModule:definition=>{w.adminModule=definition;}};
+  w.UserManagementUI={getNavigationState:()=>({status:'loaded',capabilities:{canOpenUserManagement:true,canViewAudit:true}}),renderSection:()=>'<div id="user_management_screen">Users</div>',renderAuditSection:()=>'<div id="platform_audit_screen">Audit</div>',initialize:()=>{}};
+  w.ModulePermissionAdministrationUI={getNavigationState:()=>({status:'ready',available:true}),renderSection:()=>'',initialize:()=>{}};
+  vm.runInNewContext(source,{window:w});
+  w.adminModule.mount({route:'/platform-administration/users'});
+  w.adminModule.reconcileRoute({route:'/platform-administration/audit'});
+  assert.ok(w.document.getElementById('platform_audit_screen'));
+  w.PlatformAdministrationUI.refresh();
+  assert.ok(w.document.getElementById('platform_audit_screen'));
+  assert.equal(w.document.getElementById('user_management_screen'),null);
+});
