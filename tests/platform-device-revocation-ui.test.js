@@ -58,3 +58,5 @@ test('canonical client performs revocation through one WebAuthn Edge flow and re
   assert.equal(calls[2].targetUserId,userId);
   assert.equal(calls[2].targetDeviceId,deviceId);
 });
+
+test('current device is labeled and cannot expose a self-revocation action',async()=>{const h=uiHarness({ok:true,status:'applied'});const original=uiSource;assert.match(original,/SupabaseDeviceIdentity\.getCurrent/);assert.match(original,/isCurrent\?' — هذا الجهاز'/);assert.match(original,/canRevoke=!isCurrent&&item\.authorizationStatus/);assert.match(original,/معرّف الجهاز/);});
