@@ -46,3 +46,22 @@ test('legacy WebAuthn listing actions are absent from the active Edge contract',
   assert.doesNotMatch(edge,/begin-pending-device-list|finish-pending-device-list|list-pending-devices|complete_system_owner_pending_device_listing/);
   assert.match(edge,/begin-pending-device-approval/);assert.match(edge,/begin-pending-device-rejection/);assert.match(edge,/begin-device-revocation/);
 });
+
+test('older pending-device list responses cannot overwrite newer results',async()=>{
+  const h=harness();
+  let releaseOld;
+  let calls=0;
+  h.sandbox.DeviceAuthorizationAdministrationService.listSystemOwnerPendingDevices=()=>{
+    calls++;
+    if(calls===1)return new Promise(resolve=>{releaseOld=resolve;});
+    return Promise.resolve({ok:true,status:'listed',data:{devices:[]}});
+  };
+  const first=h.api.refreshPlatformPendingRequests();
+  const second=h.api.refreshPlatformPendingRequests();
+  await second;
+  assert.match(h.element.innerHTML,/طلبات اعتماد الأجهزة \(0\)/);
+  releaseOld({ok:true,status:'listed',data:{devices:[{targetUserId:'11111111-1111-4111-8111-111111111111',deviceId:'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',displayName:'Stale'}]}});
+  await first;
+  assert.match(h.element.innerHTML,/طلبات اعتماد الأجهزة \(0\)/);
+  assert.doesNotMatch(h.element.innerHTML,/Stale/);
+});
