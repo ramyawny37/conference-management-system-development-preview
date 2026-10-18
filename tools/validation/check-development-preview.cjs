@@ -21,7 +21,7 @@ runNode(['--check', 'service-worker.js']);
 
 const indexSource = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 const serviceWorkerSource = fs.readFileSync(path.join(root, 'service-worker.js'), 'utf8');
-const deviceAdminAsset = 'js/supabase/device-authorization-administration-service.js?rev=canonical-device-revocation-v1';
+const deviceAdminAsset = 'js/supabase/device-authorization-administration-service.js?rev=canonical-owner-session-list-v1';
 if (!indexSource.includes(deviceAdminAsset) || !serviceWorkerSource.includes('./' + deviceAdminAsset)) {
   throw new Error('DEVICE_ADMIN_RUNTIME_CACHE_REVISION_MISMATCH');
 }

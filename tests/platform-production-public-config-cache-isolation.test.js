@@ -10,6 +10,9 @@ const worker=fs.readFileSync(path.join(root,'service-worker.js'),'utf8');
 const publicConfig=fs.readFileSync(
   path.join(root,'js/supabase/public-config.js'),'utf8'
 );
+const developmentValidator=fs.readFileSync(
+  path.join(root,'tools/validation/check-development-preview.cjs'),'utf8'
+);
 
 test('Production public config is isolated from stale Development caches',()=>{
   const revisions=worker.match(
@@ -21,6 +24,7 @@ test('Production public config is isolated from stale Development caches',()=>{
   );
   assert.notStrictEqual(revisions[1],'conference-owner-preflight-correction-v1');
   assert.strictEqual(revisions[2],'production-3-6-0-release-v6');
+  assert.match(developmentValidator,/device-authorization-administration-service\.js\?rev=canonical-owner-session-list-v1/);
 
   assert.match(publicConfig,/mpezfbvcdfxpgflehuot/);
   assert.match(publicConfig,/gppwltrifgfxrkzvvxoe/);
