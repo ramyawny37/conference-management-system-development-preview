@@ -98,3 +98,5 @@ test('Development installs the canonical foundation cache without changing Produ
   assert.doesNotMatch(worker,/conference-owner-preflight-correction-v1/);
   assert.match(worker,/: 'production-3-6-0-release-v6'/);
 });
+
+test('active sidebar entries are reconciled from the canonical route and module, not stale click state',()=>{const integration=fs.readFileSync(path.join(root,'js/platform-integration.js'),'utf8');assert.match(integration,/function reflectActiveModule\(id\)/);assert.match(integration,/shell\.querySelectorAll\('\[data-platform-module\],\[data-platform-route\]'\)/);assert.match(integration,/item\.classList\.toggle\('active',selected\)/);assert.match(integration,/item\.removeAttribute\('aria-current'\)/);});
