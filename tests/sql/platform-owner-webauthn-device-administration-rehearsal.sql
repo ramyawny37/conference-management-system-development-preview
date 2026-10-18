@@ -131,6 +131,7 @@ end $$;
 \ir ../../supabase/migrations/20261016163453_platform_owner_passkey_recovery_counter_guard.sql
 \ir ../../supabase/migrations/20261017141821_reconcile_synced_owner_assertion_counter_device_guard.sql
 \ir ../../supabase/migrations/20261018132246_canonical_platform_device_revocation.sql
+\ir ../../supabase/migrations/20261018232937_allow_owner_revoke_without_target_key_binding.sql
 
 insert into auth.users values
  ('10000000-0000-4000-8000-000000000001','owner@example.test'),
@@ -176,7 +177,11 @@ insert into platform.user_device_authorizations(id,user_id,device_id,status,appr
  ('30000000-0000-4000-8000-000000000009','10000000-0000-4000-8000-000000000007','20000000-0000-4000-8000-000000000009','approved',now(),null);
 insert into platform.device_key_bindings
 select gen_random_uuid(),user_id,device_id,id,'active',null,null
-from platform.user_device_authorizations;
+from platform.user_device_authorizations
+where id not in (
+  '30000000-0000-4000-8000-000000000006',
+  '30000000-0000-4000-8000-000000000008'
+);
 insert into public.device_security_credentials(id,webauthn_credential_id,user_id,device_id,
   credential_kind,public_key_cose,public_key_algorithm,transports,sign_count,backup_eligible,
   backup_state,user_verification_policy,lifecycle_status,enrolled_at,activated_at)
@@ -388,6 +393,17 @@ select public.complete_system_owner_pending_device_operation(
   'ramyawny37.github.io','{"userVerified":true,"backupEligible":true,"backupState":true}'::jsonb);
 
 -- Revoke one of two employee devices through a separately verified ceremony.
+-- The target intentionally has no device_key_binding; only the acting owner
+-- device must retain its canonical active binding.
+do $$ begin
+  perform public.begin_system_owner_device_possession_challenge(
+    '10000000-0000-4000-8000-000000000001','20000000-0000-4000-8000-000000000001',
+    '40000000-0000-4000-8000-000000000001',gen_random_uuid(),
+    'SYSTEM_OWNER_DEVICE_REVOKE','10000000-0000-4000-8000-000000000005',
+    '20000000-0000-4000-8000-000000000005',gen_random_uuid(),'development_preview',
+    'https://ramyawny37.github.io','ramyawny37.github.io',decode(repeat('0d',32),'hex'));
+  raise exception 'ALREADY_REVOKED_DEVICE_ACCEPTED';
+exception when insufficient_privilege then null; end $$;
 do $$ declare result jsonb; begin
   result:=public.begin_system_owner_device_possession_challenge(
     '10000000-0000-4000-8000-000000000001','20000000-0000-4000-8000-000000000001',
@@ -511,7 +527,7 @@ do $$ declare listed jsonb; begin
   end if;
 end $$;
 
-select pg_catalog.jsonb_build_object('status','pass','positive',15,'negative',17,
+select pg_catalog.jsonb_build_object('status','pass','positive',15,'negative',18,
   'audits',(select count(*) from public.privileged_device_authorization_audit_log),
   'operations',(select count(*) from public.system_owner_device_authorization_operations),
   'pendingAfter',(select count(*) from platform.user_device_authorizations where status='pending'));

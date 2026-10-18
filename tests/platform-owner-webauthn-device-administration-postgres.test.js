@@ -17,7 +17,7 @@ test('owner WebAuthn device administration is executable, bound, replay-safe, an
     const result=execFileSync(tool('psql'),['-X','-At','-v','ON_ERROR_STOP=1','-d',database,
       '-f','tests/sql/platform-owner-webauthn-device-administration-rehearsal.sql'],{encoding:'utf8'});
     const report=JSON.parse(result.trim().split('\n').filter(line=>line.startsWith('{')).at(-1));
-    assert.deepEqual(report,{status:'pass',positive:15,negative:17,audits:6,operations:5,pendingAfter:0});
+    assert.deepEqual(report,{status:'pass',positive:15,negative:18,audits:6,operations:5,pendingAfter:0});
   }finally{
     execFileSync(tool('dropdb'),['--if-exists',database]);
   }
