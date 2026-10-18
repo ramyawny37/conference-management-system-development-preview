@@ -65,3 +65,13 @@ test('older pending-device list responses cannot overwrite newer results',async(
   assert.match(h.element.innerHTML,/طلبات اعتماد الأجهزة \(0\)/);
   assert.doesNotMatch(h.element.innerHTML,/Stale/);
 });
+
+test('pending-device list rejection displays an error without leaking a rejected promise',async()=>{
+  const h=harness();
+  h.sandbox.DeviceAuthorizationAdministrationService.listSystemOwnerPendingDevices=()=>Promise.reject({code:'DEVICE_SESSION_INVALID'});
+  const result=await h.api.refreshPlatformPendingRequests();
+  assert.equal(result.ok,false);
+  assert.equal(result.status,'unavailable');
+  assert.match(h.element.innerHTML,/تعذر تحميل طلبات اعتماد الأجهزة/);
+  assert.match(h.element.innerHTML,/DEVICE_SESSION_INVALID/);
+});
