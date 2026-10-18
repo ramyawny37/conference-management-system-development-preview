@@ -56,7 +56,6 @@
     var firstRender=!initialized;
     if(!node)return false;
     if(mounted&&!sectionChanged&&!firstRender){
-      if(nextSection==='roles'&&global.ModulePermissionAdministrationUI&&typeof global.ModulePermissionAdministrationUI.activate==='function')global.ModulePermissionAdministrationUI.activate();
       syncSidebar();
       return true;
     }
