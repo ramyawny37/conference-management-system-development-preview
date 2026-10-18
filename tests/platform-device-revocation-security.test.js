@@ -5,6 +5,7 @@ const test=require('node:test');
 
 const migration=fs.readFileSync('supabase/migrations/20261018132246_canonical_platform_device_revocation.sql','utf8');
 const correction=fs.readFileSync('supabase/migrations/20261018232937_allow_owner_revoke_without_target_key_binding.sql','utf8');
+const lifecycle=fs.readFileSync('supabase/migrations/20261019000421_canonical_device_revocation_lifecycle.sql','utf8');
 const edge=fs.readFileSync('supabase/functions/platform-device-authorization/index.ts','utf8');
 const dispatcher=fs.readFileSync('supabase/migrations/20261010201800_flatten_platform_device_operation_dispatcher.sql','utf8');
 const sessionGuard=fs.readFileSync('supabase/migrations/20260909120555_production_validated_phase1c_variable_disambiguation.sql','utf8');
@@ -34,6 +35,19 @@ test('target key binding is waived only for revoke in both challenge phases',()=
   assert.match(correction,/ACTOR_DEVICE_REVOCATION_FORBIDDEN/);
   assert.match(correction,/OWNER_LAST_APPROVED_DEVICE_REVOCATION_FORBIDDEN/);
   assert.match(correction,/p_verification_context->'userVerified' is distinct from 'true'/);
+});
+
+test('canonical revocation atomically retires target credentials, challenges, sessions, bindings and authorization',()=>{
+  assert.match(lifecycle,/else 'device_revoked' end/);
+  assert.doesNotMatch(lifecycle,/approved_device_revoked/);
+  assert.match(lifecycle,/update public\.device_security_credentials set lifecycle_status='revoked'/);
+  assert.match(lifecycle,/update platform_private\.device_session_challenges set failed_at=operation_at/);
+  assert.match(lifecycle,/update platform_private\.device_sessions set revoked_at=operation_at/);
+  assert.match(lifecycle,/update platform\.device_key_bindings set lifecycle_status='revoked'/);
+  assert.match(lifecycle,/update platform\.user_device_authorizations set/);
+  assert.match(lifecycle,/insert into public\.system_owner_device_authorization_operations/);
+  assert.match(lifecycle,/insert into public\.privileged_device_authorization_audit_log/);
+  assert.match(lifecycle,/write_audit_event/);
 });
 
 test('privileged mutation RPCs remain server-only and expose no direct authenticated fallback',()=>{

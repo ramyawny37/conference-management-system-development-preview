@@ -3,6 +3,12 @@ create schema platform;
 create schema platform_private;
 create schema extensions;
 create extension pgcrypto with schema extensions;
+create function auth.uid() returns uuid language sql stable as $$
+  select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid
+$$;
+create function auth.role() returns text language sql stable as $$
+  select nullif(current_setting('request.jwt.claim.role',true),'')
+$$;
 do $$ begin
   if not exists(select 1 from pg_roles where rolname='anon') then create role anon; end if;
   if not exists(select 1 from pg_roles where rolname='authenticated') then create role authenticated; end if;
@@ -23,7 +29,10 @@ create table platform.user_device_authorizations(
   created_at timestamptz default now(),updated_at timestamptz default now(),
   unique(user_id,device_id));
 create table platform.device_key_bindings(id uuid primary key,user_id uuid,device_id uuid,
-  device_authorization_id uuid,lifecycle_status text,revoked_at timestamptz,retired_at timestamptz);
+  device_authorization_id uuid,public_key_jwk jsonb,public_key_thumbprint text,
+  algorithm text,lifecycle_status text,migration_source text,created_at timestamptz default now(),
+  activated_at timestamptz default now(),replaced_by_binding_id uuid,rotated_at timestamptz,
+  revoked_at timestamptz,retired_at timestamptz,audit_event_id uuid);
 create table platform.test_audit(id uuid default gen_random_uuid(),action text,operation_id uuid);
 create table platform_private.stable_device_recovery_authorizations(
   id uuid primary key,owner_user_id uuid,credential_id uuid,target_authorization_id uuid,
@@ -125,6 +134,7 @@ begin
   return result;
 end $$;
 
+\ir ../../supabase/migrations/20260902122033_platform_device_session_foundation_1b.sql
 \ir ../../supabase/migrations/20261017113705_restore_canonical_owner_webauthn_device_administration.sql
 \ir ../../supabase/migrations/20261017115255_reconcile_owner_device_challenge_expiration_anchor.sql
 \ir ../../supabase/migrations/20261017121130_restore_compact_owner_webauthn_verification_material.sql
@@ -132,6 +142,7 @@ end $$;
 \ir ../../supabase/migrations/20261017141821_reconcile_synced_owner_assertion_counter_device_guard.sql
 \ir ../../supabase/migrations/20261018132246_canonical_platform_device_revocation.sql
 \ir ../../supabase/migrations/20261018232937_allow_owner_revoke_without_target_key_binding.sql
+\ir ../../supabase/migrations/20261019000421_canonical_device_revocation_lifecycle.sql
 
 insert into auth.users values
  ('10000000-0000-4000-8000-000000000001','owner@example.test'),
@@ -141,7 +152,9 @@ insert into auth.users values
  ('10000000-0000-4000-8000-000000000005','history@example.test'),
  ('10000000-0000-4000-8000-000000000006','single-device@example.test'),
  ('10000000-0000-4000-8000-000000000007','second-owner@example.test');
-insert into platform.roles values('11000000-0000-4000-8000-000000000001','platform','platform_owner');
+insert into platform.roles values
+ ('11000000-0000-4000-8000-000000000001','platform','platform_owner'),
+ ('11000000-0000-4000-8000-000000000002','conference','conference_member');
 insert into platform.profiles values
  ('10000000-0000-4000-8000-000000000001','Owner','approved'),
  ('10000000-0000-4000-8000-000000000002','Member','approved'),
@@ -154,7 +167,9 @@ insert into platform.user_roles values(
  '10000000-0000-4000-8000-000000000001','11000000-0000-4000-8000-000000000001',
  'platform',null,null,null),(
  '10000000-0000-4000-8000-000000000007','11000000-0000-4000-8000-000000000001',
- 'platform',null,null,null);
+ 'platform',null,null,null),(
+ '10000000-0000-4000-8000-000000000006','11000000-0000-4000-8000-000000000002',
+ 'conference','70000000-0000-4000-8000-000000000001',null,null);
 insert into platform.devices values
  ('20000000-0000-4000-8000-000000000001','10000000-0000-4000-8000-000000000001','Current owner','MacIntel','active',null,null),
  ('20000000-0000-4000-8000-000000000002','10000000-0000-4000-8000-000000000001','Other owner','MacIntel','active',null,null),
@@ -175,12 +190,15 @@ insert into platform.user_device_authorizations(id,user_id,device_id,status,appr
  ('30000000-0000-4000-8000-000000000007','10000000-0000-4000-8000-000000000002','20000000-0000-4000-8000-000000000007','approved',now(),null),
  ('30000000-0000-4000-8000-000000000008','10000000-0000-4000-8000-000000000006','20000000-0000-4000-8000-000000000008','approved',now(),null),
  ('30000000-0000-4000-8000-000000000009','10000000-0000-4000-8000-000000000007','20000000-0000-4000-8000-000000000009','approved',now(),null);
-insert into platform.device_key_bindings
-select gen_random_uuid(),user_id,device_id,id,'active',null,null
+insert into platform.device_key_bindings(id,user_id,device_id,device_authorization_id,
+  public_key_jwk,public_key_thumbprint,algorithm,lifecycle_status,migration_source)
+select gen_random_uuid(),user_id,device_id,id,
+  '{"kty":"EC","crv":"P-256","x":"test","y":"test"}'::jsonb,
+  encode(extensions.digest(device_id::text,'sha256'),'hex'),'ECDSA_P256_SHA256',
+  'active','native_device_enrollment'
 from platform.user_device_authorizations
 where id not in (
-  '30000000-0000-4000-8000-000000000006',
-  '30000000-0000-4000-8000-000000000008'
+  '30000000-0000-4000-8000-000000000006'
 );
 insert into public.device_security_credentials(id,webauthn_credential_id,user_id,device_id,
   credential_kind,public_key_cose,public_key_algorithm,transports,sign_count,backup_eligible,
@@ -188,7 +206,52 @@ insert into public.device_security_credentials(id,webauthn_credential_id,user_id
 values
  ('40000000-0000-4000-8000-000000000001',decode(repeat('aa',32),'hex'),'10000000-0000-4000-8000-000000000001','20000000-0000-4000-8000-000000000099','platform_primary',decode(repeat('ab',77),'hex'),-7,array['hybrid'],0,true,true,'required','active',now(),now()),
  ('40000000-0000-4000-8000-000000000002',decode(repeat('bb',32),'hex'),'10000000-0000-4000-8000-000000000001','20000000-0000-4000-8000-000000000002','platform_primary',decode('a1','hex'),-7,array['internal'],0,false,false,'required','active',now(),now()),
- ('40000000-0000-4000-8000-000000000003',decode(repeat('cc',32),'hex'),'10000000-0000-4000-8000-000000000001','20000000-0000-4000-8000-000000000001','platform_primary',decode('a1','hex'),-7,array['internal'],0,false,false,'required','revoked',now(),now());
+ ('40000000-0000-4000-8000-000000000003',decode(repeat('cc',32),'hex'),'10000000-0000-4000-8000-000000000001','20000000-0000-4000-8000-000000000001','platform_primary',decode('a1','hex'),-7,array['internal'],0,false,false,'required','revoked',now(),now()),
+ ('40000000-0000-4000-8000-000000000004',decode(repeat('dd',32),'hex'),'10000000-0000-4000-8000-000000000002','20000000-0000-4000-8000-000000000006','recovery_security_key',decode('a1','hex'),-7,array['internal'],0,false,false,'required','active',now(),now()),
+ ('40000000-0000-4000-8000-000000000005',decode(repeat('ee',32),'hex'),'10000000-0000-4000-8000-000000000006','20000000-0000-4000-8000-000000000008','recovery_security_key',decode('a1','hex'),-7,array['internal'],0,false,false,'required','active',now(),now());
+
+insert into platform_private.device_session_challenges(id,user_id,device_id,
+  device_authorization_id,binding_id,public_key_thumbprint,purpose,origin,nonce,
+  signing_payload,signing_payload_hash,issued_at,expires_at,consumed_at,session_id)
+select '61000000-0000-4000-8000-000000000001',authz.user_id,
+  authz.device_id,authz.id,binding.id,binding.public_key_thumbprint,
+  'PLATFORM_DEVICE_SESSION_ESTABLISH','https://ramyawny37.github.io',repeat('n',43),
+  'test-session-payload',decode(repeat('31',32),'hex'),now()-interval '1 minute',
+  now()+interval '1 minute',now()-interval '30 seconds',
+  '62000000-0000-4000-8000-000000000001'
+from platform.user_device_authorizations authz
+join platform.device_key_bindings binding on binding.device_authorization_id=authz.id
+where authz.id='30000000-0000-4000-8000-000000000002';
+insert into platform_private.device_session_challenges(id,user_id,device_id,
+  device_authorization_id,binding_id,public_key_thumbprint,purpose,origin,nonce,
+  signing_payload,signing_payload_hash,issued_at,expires_at,consumed_at,session_id)
+select '61000000-0000-4000-8000-000000000002',authz.user_id,
+  authz.device_id,authz.id,binding.id,binding.public_key_thumbprint,
+  'PLATFORM_DEVICE_SESSION_ESTABLISH','https://ramyawny37.github.io',repeat('m',43),
+  'rollback-session-payload',decode(repeat('33',32),'hex'),now()-interval '1 minute',
+  now()+interval '1 minute',now()-interval '30 seconds',
+  '62000000-0000-4000-8000-000000000002'
+from platform.user_device_authorizations authz
+join platform.device_key_bindings binding on binding.device_authorization_id=authz.id
+where authz.id='30000000-0000-4000-8000-000000000008';
+insert into platform_private.device_sessions(id,user_id,device_id,device_authorization_id,
+  binding_id,public_key_thumbprint,token_hash,purpose,created_at,expires_at,challenge_id)
+select '62000000-0000-4000-8000-000000000002',authz.user_id,
+  authz.device_id,authz.id,binding.id,binding.public_key_thumbprint,
+  decode(repeat('34',32),'hex'),'PLATFORM_DEVICE_SESSION',now()-interval '30 seconds',
+  now()+interval '4 minutes 30 seconds','61000000-0000-4000-8000-000000000002'
+from platform.user_device_authorizations authz
+join platform.device_key_bindings binding on binding.device_authorization_id=authz.id
+where authz.id='30000000-0000-4000-8000-000000000008';
+insert into platform_private.device_sessions(id,user_id,device_id,device_authorization_id,
+  binding_id,public_key_thumbprint,token_hash,purpose,created_at,expires_at,challenge_id)
+select '62000000-0000-4000-8000-000000000001',authz.user_id,
+  authz.device_id,authz.id,binding.id,binding.public_key_thumbprint,
+  decode(repeat('32',32),'hex'),'PLATFORM_DEVICE_SESSION',now()-interval '30 seconds',
+  now()+interval '4 minutes 30 seconds','61000000-0000-4000-8000-000000000001'
+from platform.user_device_authorizations authz
+join platform.device_key_bindings binding on binding.device_authorization_id=authz.id
+where authz.id='30000000-0000-4000-8000-000000000002';
 create trigger device_security_credentials_lifecycle_guard
 before insert or update or delete on public.device_security_credentials
 for each row execute function public.guard_device_security_credential_lifecycle();
@@ -457,6 +520,10 @@ do $$ declare v_authorization uuid; begin
   v_authorization:=platform_private.require_canonical_device_authorization(
     '10000000-0000-4000-8000-000000000002','20000000-0000-4000-8000-000000000007',true);
   if v_authorization is null then raise exception 'OTHER_EMPLOYEE_DEVICE_REJECTED'; end if;
+  if (select lifecycle_status from public.device_security_credentials
+      where id='40000000-0000-4000-8000-000000000004')<>'revoked' then
+    raise exception 'TARGET_WEBAUTHN_CREDENTIAL_NOT_REVOKED';
+  end if;
 end $$;
 
 -- Revoking an employee's last approved device is allowed.
@@ -469,6 +536,52 @@ do $$ declare result jsonb; begin
     'development_preview','https://ramyawny37.github.io','ramyawny37.github.io',decode(repeat('09',32),'hex'));
   insert into ceremony_state values('revoke-last-member',(result->>'challengeId')::uuid);
 end $$;
+create function public.fail_test_device_revocation_audit() returns trigger language plpgsql as $$
+begin
+  if new.action='device_revoked'
+    and new.target_device_id='20000000-0000-4000-8000-000000000008' then
+    raise exception 'FORCED_DEVICE_REVOCATION_AUDIT_FAILURE';
+  end if;
+  return new;
+end $$;
+create trigger fail_test_device_revocation_audit before insert
+  on public.privileged_device_authorization_audit_log for each row
+  execute function public.fail_test_device_revocation_audit();
+do $$ begin
+  perform public.complete_system_owner_pending_device_operation(
+    '10000000-0000-4000-8000-000000000001','20000000-0000-4000-8000-000000000001',
+    '40000000-0000-4000-8000-000000000001','50000000-0000-4000-8000-000000000006',
+    'development_preview',(select id from ceremony_state where name='revoke-last-member'),decode(repeat('09',32),'hex'),
+    '52000000-0000-4000-8000-000000000004','10000000-0000-4000-8000-000000000006',
+    '20000000-0000-4000-8000-000000000008','revoke',0,'https://ramyawny37.github.io',
+    'ramyawny37.github.io','{"userVerified":true,"backupEligible":true,"backupState":true}'::jsonb);
+  raise exception 'FORCED_AUDIT_FAILURE_NOT_ENFORCED';
+exception when raise_exception then
+  if sqlerrm<>'FORCED_DEVICE_REVOCATION_AUDIT_FAILURE' then raise; end if;
+end $$;
+do $$ begin
+  if (select status from platform.user_device_authorizations
+      where id='30000000-0000-4000-8000-000000000008')<>'approved'
+    or (select revoked_at from platform.user_device_authorizations
+      where id='30000000-0000-4000-8000-000000000008') is not null
+    or (select lifecycle_status from public.device_security_credentials
+      where id='40000000-0000-4000-8000-000000000005')<>'active'
+    or (select revoked_at from platform_private.device_sessions
+      where id='62000000-0000-4000-8000-000000000002') is not null
+    or (select lifecycle_status from platform.device_key_bindings
+      where device_authorization_id='30000000-0000-4000-8000-000000000008')<>'active'
+    or exists(select 1 from public.system_owner_device_authorization_operations
+      where operation_id='52000000-0000-4000-8000-000000000004')
+    or exists(select 1 from public.privileged_device_authorization_audit_log
+      where operation_id='52000000-0000-4000-8000-000000000004')
+    or exists(select 1 from public.device_possession_challenges
+      where id=(select id from ceremony_state where name='revoke-last-member')
+        and (verified_at is not null or consumed_at is not null)) then
+    raise exception 'DEVICE_REVOCATION_ATOMIC_ROLLBACK_FAILED';
+  end if;
+end $$;
+drop trigger fail_test_device_revocation_audit on public.privileged_device_authorization_audit_log;
+drop function public.fail_test_device_revocation_audit();
 select public.complete_system_owner_pending_device_operation(
   '10000000-0000-4000-8000-000000000001','20000000-0000-4000-8000-000000000001',
   '40000000-0000-4000-8000-000000000001','50000000-0000-4000-8000-000000000006',
@@ -476,6 +589,20 @@ select public.complete_system_owner_pending_device_operation(
   '52000000-0000-4000-8000-000000000004','10000000-0000-4000-8000-000000000006',
   '20000000-0000-4000-8000-000000000008','revoke',0,'https://ramyawny37.github.io',
   'ramyawny37.github.io','{"userVerified":true,"backupEligible":true,"backupState":true}'::jsonb);
+do $$ begin
+  if (select count(*) from platform.user_roles where user_id='10000000-0000-4000-8000-000000000006')<>1
+    or (select lifecycle_status from public.device_security_credentials
+      where id='40000000-0000-4000-8000-000000000005')<>'revoked'
+    or (select revoked_at from platform_private.device_sessions
+      where id='62000000-0000-4000-8000-000000000002') is null
+    or (select lifecycle_status from platform.device_key_bindings
+      where device_authorization_id='30000000-0000-4000-8000-000000000008')<>'revoked'
+    or not exists(select 1 from public.privileged_device_authorization_audit_log
+      where operation_id='52000000-0000-4000-8000-000000000004'
+        and action='device_revoked' and result='applied') then
+    raise exception 'DEVICE_REVOCATION_LIFECYCLE_INCOMPLETE';
+  end if;
+end $$;
 
 -- A non-actor owner device may be revoked while another approved owner device remains.
 do $$ declare result jsonb; begin
@@ -494,6 +621,33 @@ select public.complete_system_owner_pending_device_operation(
   '52000000-0000-4000-8000-000000000005','10000000-0000-4000-8000-000000000001',
   '20000000-0000-4000-8000-000000000002','revoke',0,'https://ramyawny37.github.io',
   'ramyawny37.github.io','{"userVerified":true,"backupEligible":true,"backupState":true}'::jsonb);
+do $$ declare target_binding uuid; begin
+  select id into target_binding from platform.device_key_bindings
+  where device_authorization_id='30000000-0000-4000-8000-000000000002';
+  if (select lifecycle_status from public.device_security_credentials
+      where id='40000000-0000-4000-8000-000000000002')<>'revoked'
+    or (select revoked_at from platform_private.device_sessions
+      where id='62000000-0000-4000-8000-000000000001') is null
+    or (select lifecycle_status from platform.device_key_bindings where id=target_binding)<>'revoked' then
+    raise exception 'BOUND_DEVICE_REVOCATION_LIFECYCLE_INCOMPLETE';
+  end if;
+  perform set_config('request.jwt.claim.sub','10000000-0000-4000-8000-000000000001',true);
+  begin
+    perform platform.begin_device_session_challenge(target_binding);
+    raise exception 'REVOKED_DEVICE_ISSUED_NEW_SESSION_CHALLENGE';
+  exception when insufficient_privilege then null; end;
+  perform set_config('request.jwt.claim.role','service_role',true);
+  begin
+    perform platform.verify_device_session('10000000-0000-4000-8000-000000000001',
+      '62000000-0000-4000-8000-000000000001',decode(repeat('32',32),'hex'));
+    raise exception 'REVOKED_DEVICE_OLD_SESSION_ACCEPTED';
+  exception when insufficient_privilege then null; end;
+  begin
+    perform platform_private.require_canonical_device_authorization(
+      '10000000-0000-4000-8000-000000000001','20000000-0000-4000-8000-000000000002',true);
+    raise exception 'REVOKED_DEVICE_CENTRAL_AUTHORITY_ACCEPTED';
+  exception when insufficient_privilege then null; end;
+end $$;
 do $$ begin
   perform public.begin_system_owner_device_possession_challenge(
     '10000000-0000-4000-8000-000000000001','20000000-0000-4000-8000-000000000001',
@@ -527,7 +681,7 @@ do $$ declare listed jsonb; begin
   end if;
 end $$;
 
-select pg_catalog.jsonb_build_object('status','pass','positive',15,'negative',18,
+select pg_catalog.jsonb_build_object('status','pass','positive',15,'negative',22,
   'audits',(select count(*) from public.privileged_device_authorization_audit_log),
   'operations',(select count(*) from public.system_owner_device_authorization_operations),
   'pendingAfter',(select count(*) from platform.user_device_authorizations where status='pending'));
