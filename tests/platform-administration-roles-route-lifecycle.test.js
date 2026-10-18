@@ -31,3 +31,23 @@ test('permission UI publishes explicit activation rather than relying on one-tim
   assert.match(permissionSource,/function activate\(\)\{paint\(\);return state\.status==='idle'\?loadModule\(\):Promise\.resolve\(true\);\}/);
   assert.match(permissionSource,/initialize:initialize,activate:activate/);
 });
+
+test('device administration initializes on entry, not on every workspace refresh',()=>{
+  const dom=new JSDOM('<div id="platform-administrationWorkspace"></div>');
+  const w=dom.window;
+  let deviceLoads=0;
+  w.ApplicationRouting={getLogicalPathname:()=>'/platform-administration/devices'};
+  w.PlatformIntegration={registerModule:definition=>{w.adminModule=definition;}};
+  w.UserManagementUI={getNavigationState:()=>({status:'loaded',capabilities:{canOpenUserManagement:true,canViewDevices:true}}),renderSection:()=>'<div id="user_management_screen">Users</div>',initialize:()=>{}};
+  w.ModulePermissionAdministrationUI={getNavigationState:()=>({status:'ready',available:true}),renderSection:()=>'',initialize:()=>{}};
+  w.DeviceAuthorizationAdministrationUI={initialize:()=>{deviceLoads++;}};
+  vm.runInNewContext(source,{window:w});
+  w.adminModule.mount({route:'/platform-administration/devices'});
+  assert.equal(deviceLoads,1);
+  w.PlatformAdministrationUI.refresh();
+  w.PlatformAdministrationUI.refresh();
+  assert.equal(deviceLoads,1);
+  w.adminModule.reconcileRoute({route:'/platform-administration/users'});
+  w.adminModule.reconcileRoute({route:'/platform-administration/devices'});
+  assert.equal(deviceLoads,2);
+});
