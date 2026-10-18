@@ -114,9 +114,14 @@ test('sidebar group remains visible while permissions data is loading if user ac
   assert.equal(state.sidebarItems.find(item=>item.section==='users').hidden,false);
 });
 
-test('device route updates selected user details without replacing pending approval root',()=>{
-  assert.match(source,/getElementById\('user_management_screen'\)/);
-  assert.match(source,/usersNode\.outerHTML=global\.UserManagementUI\.renderSection\(\)/);
+test('device route preserves the pending approval root across background refresh',()=>{
+  const state=runtime('/platform-administration/devices');
+  state.moduleDefinition.mount({route:'/platform-administration/devices'});
+  const original=state.nodes['platform-administrationWorkspace'].innerHTML;
+  assert.match(original,/device_authorization_administration_root/);
+  assert.equal(state.window.PlatformAdministrationUI.refresh(),true);
+  assert.equal(state.nodes['platform-administrationWorkspace'].innerHTML,original);
+  assert.equal(state.calls.filter(call=>call[0]==='devices-init').length,1);
   assert.match(source,/mounted&&!sectionChanged&&nextSection==='devices'/);
 });
 
