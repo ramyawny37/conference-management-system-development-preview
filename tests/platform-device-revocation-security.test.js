@@ -76,7 +76,7 @@ test('all protected module entry points reject a revoked authorization on the ne
 });
 
 test('runtime and Service Worker use only the canonical in-app administration assets',()=>{
-  const revisions={'js/supabase/device-authorization-administration-service.js':'canonical-owner-session-list-v1','js/sync/user-management-ui.js':'canonical-device-revocation-v1'};
+  const revisions={'js/supabase/device-authorization-administration-service.js':'canonical-owner-session-list-v1','js/sync/user-management-ui.js':'platform-admin-security-retirement-v1'};
   for(const asset of Object.keys(revisions)){
     assert.ok(index.includes(asset+'?rev='+revisions[asset]));
     assert.ok(worker.includes('./'+asset+'?rev='+revisions[asset]));
