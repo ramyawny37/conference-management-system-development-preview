@@ -22,6 +22,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - name: Install locked test dependencies
+        run: npm ci --ignore-scripts
       - name: Check canonical access service syntax
         run: node --check js/supabase/system-access-service.js
       - name: Test canonical account access and offline fail-closed behavior
