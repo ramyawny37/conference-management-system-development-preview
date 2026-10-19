@@ -1352,3 +1352,8 @@ tr:nth-child(even) td{background:#F7FBFF}
 .accommodation-canonical-summary>.card strong{font-size:clamp(1.5rem,2.5vw,2rem);font-weight:800;color:#174e82;font-variant-numeric:tabular-nums}
 @media(max-width:900px){.accommodation-canonical-summary{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:420px){.accommodation-canonical-summary{gap:8px}.accommodation-canonical-summary>.card{padding:12px 8px}}
+
+/* User account actions are distinct from account status metadata. */
+.user-management-account-action{display:inline-flex;align-items:center;justify-content:center;min-height:36px;margin-top:14px;padding:8px 16px;font-size:13px;font-weight:700;cursor:pointer}
+.user-management-account-action:focus-visible{outline:3px solid #2e77c7;outline-offset:3px}
+.user-management-device-meta dd{overflow-wrap:anywhere;unicode-bidi:plaintext}
