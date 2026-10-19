@@ -1,0 +1,21 @@
+name: Validate canonical system access
+on:
+  workflow_dispatch:
+  push:
+    branches: [develop]
+    paths:
+      - 'js/supabase/system-access-service.js'
+      - 'tests/system-access-foundation.test.js'
+      - '.github/workflows/validate-canonical-system-access.yml'
+jobs:
+  validate-system-access:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check canonical access service syntax
+        run: node --check js/supabase/system-access-service.js
+      - name: Test canonical account access and offline fail-closed behavior
+        run: node tests/system-access-foundation.test.js
