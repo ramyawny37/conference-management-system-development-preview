@@ -63,15 +63,14 @@ test('accounts load automatically, search is optional, and paging remains select
 });
 
 test('Platform administration uses the canonical Platform sidebar with one route per concern',()=>{
-  for(const route of ['users','roles','devices','audit','security'])assert.match(index,new RegExp('data-platform-route="/platform-administration/'+route+'"'));
-  for(const label of ['المستخدمون والحسابات','الأدوار والصلاحيات','اعتماد الأجهزة','سجل التدقيق','إعدادات الأمان'])assert.equal((index.match(new RegExp(label,'g'))||[]).length,1,label);
+  for(const route of ['users','roles','devices','audit'])assert.match(index,new RegExp('data-platform-route="/platform-administration/'+route+'"'));
+  for(const label of ['المستخدمون والحسابات','الأدوار والصلاحيات','اعتماد الأجهزة','سجل التدقيق'])assert.equal((index.match(new RegExp(label,'g'))||[]).length,1,label);
   assert.match(index,/canonical-platform-sidebar[\s\S]*data-platform-nav-group="platform-administration"/);
   assert.doesNotMatch(script,/settings-nav-group-label[^\n]*إدارة المنصة/);
   assert.doesNotMatch(script,/switchSettingsTab\('(users|module-permissions|platform-devices|platform-audit|platform-security)'\)/);
   assert.doesNotMatch(index,/platform-administration-shell|admin-shell/);
   assert.match(platformAdministration,/device_authorization_administration_root/);
   assert.match(userUi,/platform_audit_screen/);
-  assert.match(userUi,/platform_security_screen/);
 });
 
 test('independent administration routes mount without a selected Conference and reuse current services',()=>{
@@ -87,7 +86,6 @@ test('sidebar visibility follows protected capability state and routes remain fa
   assert.match(platformAdministration,/capabilities\.canOpenUserManagement===true/);
   assert.match(platformAdministration,/capabilities\.canViewDevices===true\|\|capabilities\.canManageDevices===true/);
   assert.match(platformAdministration,/capabilities\.canViewAudit===true/);
-  assert.match(platformAdministration,/capabilities\.canManageSecurity===true/);
   assert.match(platformAdministration,/permissions\.available===true/);
   assert.match(platformAdministration,/item\.hidden=!access\.pending&&access\[section\]!==true/);
   assert.match(platformAdministration,/group\.hidden=!Object\.keys\(sections\)\.some/);

@@ -1,13 +1,13 @@
 (function(global){
   'use strict';
   var rootId='platform-administrationWorkspace';
-  var sections={users:true,roles:true,devices:true,audit:true,security:true};
+  var sections={users:true,roles:true,devices:true,audit:true};
   var currentSection='users';
   var mounted=false;
   var initialized=false;
 
   function routeSection(route){
-    var match=/^\/platform-administration\/(users|roles|devices|audit|security)(?:\/|$)/.exec(String(route||''));
+    var match=/^\/platform-administration\/(users|roles|devices|audit)(?:\/|$)/.exec(String(route||''));
     return match?match[1]:'users';
   }
   function root(){return global.document&&global.document.getElementById(rootId);}
@@ -20,7 +20,6 @@
       roles:permissions.available===true,
       devices:capabilities.canViewDevices===true||capabilities.canManageDevices===true,
       audit:capabilities.canViewAudit===true,
-      security:capabilities.canManageSecurity===true,
       pending:users.status==='idle'||users.status==='loading'||permissions.status==='idle'||permissions.status==='loading'
     };
   }
@@ -45,7 +44,6 @@
   function sectionContent(){
     if(currentSection==='roles')return global.ModulePermissionAdministrationUI&&typeof global.ModulePermissionAdministrationUI.renderSection==='function'?global.ModulePermissionAdministrationUI.renderSection():unavailable();
     if(currentSection==='audit')return global.UserManagementUI&&typeof global.UserManagementUI.renderAuditSection==='function'?global.UserManagementUI.renderAuditSection():unavailable();
-    if(currentSection==='security')return global.UserManagementUI&&typeof global.UserManagementUI.renderSecuritySection==='function'?global.UserManagementUI.renderSecuritySection():unavailable();
     if(currentSection==='devices')return '<div id="device_authorization_administration_root"></div>';
     return global.UserManagementUI&&typeof global.UserManagementUI.renderSection==='function'?global.UserManagementUI.renderSection():unavailable();
   }
@@ -55,12 +53,12 @@
     var sectionChanged=nextSection!==currentSection;
     var firstRender=!initialized;
     if(!node)return false;
-    if(mounted&&!sectionChanged&&!firstRender&&currentSection!=='users'&&currentSection!=='audit'&&currentSection!=='security'){
+    if(mounted&&!sectionChanged&&!firstRender&&currentSection!=='users'&&currentSection!=='audit'){
       syncSidebar();
       return true;
     }
     currentSection=nextSection;
-    node.innerHTML='<div class="platform-administration-screen" dir="rtl"><header class="platform-administration-heading"><span>إدارة المنصة</span><h2>'+({users:'المستخدمون والحسابات',roles:'الأدوار والصلاحيات',devices:'اعتماد الأجهزة',audit:'سجل التدقيق',security:'إعدادات الأمان'}[currentSection])+'</h2></header>'+sectionContent()+'</div>';
+    node.innerHTML='<div class="platform-administration-screen" dir="rtl"><header class="platform-administration-heading"><span>إدارة المنصة</span><h2>'+({users:'المستخدمون والحسابات',roles:'الأدوار والصلاحيات',devices:'اعتماد الأجهزة',audit:'سجل التدقيق',}[currentSection])+'</h2></header>'+sectionContent()+'</div>';
     syncSidebar();
     if(currentSection==='roles'&&initialized&&global.ModulePermissionAdministrationUI&&typeof global.ModulePermissionAdministrationUI.activate==='function')global.ModulePermissionAdministrationUI.activate();
     if(!initialized){

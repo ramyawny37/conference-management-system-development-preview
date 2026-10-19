@@ -16,9 +16,8 @@ function runtime(route){
   const nodes={
     'platform-administrationWorkspace':{innerHTML:''},
     'platform_audit_screen':{},
-    'platform_security_screen':{},
   };
-  const sidebarItems=['users','roles','devices','audit','security'].map(section=>({section,hidden:false,attributes:{},getAttribute(name){return name==='data-platform-administration-section'?section:this.attributes[name];},setAttribute(name,value){this.attributes[name]=value;},removeAttribute(name){delete this.attributes[name];}}));
+  const sidebarItems=['users','roles','devices','audit'].map(section=>({section,hidden:false,attributes:{},getAttribute(name){return name==='data-platform-administration-section'?section:this.attributes[name];},setAttribute(name,value){this.attributes[name]=value;},removeAttribute(name){delete this.attributes[name];}}));
   const subnav={hidden:true,querySelectorAll(){return sidebarItems;}};
   const toggle={attributes:{},setAttribute(name,value){this.attributes[name]=value;}};
   const group={hidden:false,querySelector(selector){return selector.includes('toggle')?toggle:subnav;}};
@@ -27,7 +26,7 @@ function runtime(route){
     document:{getElementById:id=>nodes[id]||null,querySelectorAll:()=>sidebarItems,querySelector:()=>group},
     ApplicationRouting:{getLogicalPathname:()=>route},
     PlatformIntegration:{registerModule(definition){moduleDefinition=definition;calls.push(['register',definition.id]);}},
-    UserManagementUI:{renderSection:()=>'<section id="user_management_screen">users</section>',renderAuditSection:()=>'<section id="platform_audit_screen">audit</section>',renderSecuritySection:()=>'<section id="platform_security_screen">security</section>',initialize(){calls.push(['users-init']);return Promise.resolve();},getNavigationState:()=>({status:'loaded',capabilities:{canOpenUserManagement:true,canViewDevices:true,canViewAudit:false,canManageSecurity:false}})},
+    UserManagementUI:{renderSection:()=>'<section id="user_management_screen">users</section>',renderAuditSection:()=>'<section id="platform_audit_screen">audit</section>',initialize(){calls.push(['users-init']);return Promise.resolve();},getNavigationState:()=>({status:'loaded',capabilities:{canOpenUserManagement:true,canViewDevices:true,canViewAudit:false,canManageSecurity:false}})},
     ModulePermissionAdministrationUI:{renderSection:()=>'<section id="module_permission_administration_screen">roles</section>',initialize(){calls.push(['roles-init']);return Promise.resolve();},getNavigationState:()=>({status:'ready',available:true})},
     DeviceAuthorizationAdministrationUI:{initialize(){calls.push(['devices-init']);return Promise.resolve();}},
   };
@@ -56,7 +55,6 @@ test('route reconciliation supports reload and permission-aware sidebar visibili
   assert.equal(state.sidebarItems.find(item=>item.section==='users').hidden,false);
   assert.equal(state.sidebarItems.find(item=>item.section==='roles').hidden,false);
   assert.equal(state.sidebarItems.find(item=>item.section==='audit').hidden,true);
-  assert.equal(state.sidebarItems.find(item=>item.section==='security').hidden,true);
   assert.equal(state.sidebarItems.find(item=>item.section==='audit').attributes['aria-current'],'page');
   assert.equal(state.toggle.attributes['aria-expanded'],'true');
   assert.equal(state.subnav.hidden,false);
@@ -68,8 +66,8 @@ test('authorized startup restores an administration deep link without requiring 
 });
 
 test('unmount clears the shared workspace without mutating authorization state',()=>{
-  const state=runtime('/platform-administration/security');
-  state.moduleDefinition.mount({route:'/platform-administration/security'});
+  const state=runtime('/platform-administration/audit');
+  state.moduleDefinition.mount({route:'/platform-administration/audit'});
   state.moduleDefinition.unmount();
   assert.equal(state.nodes['platform-administrationWorkspace'].innerHTML,'');
   assert.equal(state.window.PlatformAdministrationUI.isMounted(),false);
@@ -151,8 +149,8 @@ test('user selection and account data refresh repaint the active users view',()=
   assert.match(node.innerHTML,/user_management_screen/);
 });
 
-test('audit and security refresh their data while roles and devices preserve event-bound roots',()=>{
-  for(const section of ['audit','security']){
+test('audit refreshes its data while roles and devices preserve event-bound roots',()=>{
+  for(const section of ['audit']){
     const state=runtime('/platform-administration/'+section);
     state.moduleDefinition.mount({route:'/platform-administration/'+section});
     const node=state.nodes['platform-administrationWorkspace'];
