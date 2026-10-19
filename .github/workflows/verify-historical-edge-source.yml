@@ -1,0 +1,22 @@
+name: Verify historical controlled Edge source
+on:
+  workflow_dispatch:
+  push:
+    branches: [develop]
+    paths:
+      - '.github/workflows/verify-historical-edge-source.yml'
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Compare approved release source with historical commit
+        shell: bash
+        run: |
+          git show 6018023ac963e588296ab53c1811905b7bed1d6b:supabase/functions/platform-device-operation/index.ts > "$RUNNER_TEMP/historical-edge.ts"
+          node -e 'const fs=require("fs"),crypto=require("crypto"); const m=JSON.parse(fs.readFileSync("tools/production-release/controlled-production-manifest.json"));const expected=m.packageModel.futureIncrementalPromotion.edgeRelease.sourceSha256;const actual=crypto.createHash("sha256").update(fs.readFileSync(process.env.RUNNER_TEMP+"/historical-edge.ts")).digest("hex");console.log(JSON.stringify({historicalCommit:"6018023ac963e588296ab53c1811905b7bed1d6b",expected,actual,match:expected===actual},null,2));if(expected!==actual)process.exitCode=1;'
