@@ -1,0 +1,21 @@
+name: Validate historical release preflight
+on:
+  workflow_dispatch:
+  push:
+    branches: [develop]
+    paths:
+      - 'tools/release-preflight/verify-promotion-readiness.cjs'
+      - 'tests/platform-promotion-readiness.test.js'
+      - '.github/workflows/validate-release-preflight.yml'
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify release preflight tests
+        run: node --test tests/platform-promotion-readiness.test.js
