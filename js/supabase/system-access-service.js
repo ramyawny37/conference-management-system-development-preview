@@ -193,7 +193,7 @@
         var access={user_id:String(data.userId||''),account_status:String(data.accountStatus||'')};
         var roles=Array.isArray(data.systemRoles)?data.systemRoles.map(function(role){return {user_id:userId,role:String(role)};}):[];
         if(!validAccess(access,userId)||!validRoles(roles,userId)){
-          return setFailure('access_missing',userId,{code:'SYSTEM_ACCESS_MISSING',message:'The account has no valid Platform access record.'},cached);
+          return setFailure('access_missing',userId,{code:'SYSTEM_ACCESS_MISSING',message:'The account has no valid Platform access record.'});
         }
         var checkedAt=new Date().toISOString();
         return setFromRecord(userId,access,roles,'server',checkedAt,true);
@@ -205,7 +205,7 @@
         return setFailure(offline?'offline':'load_error',userId,{
           code:offline?'OFFLINE':'SYSTEM_ACCESS_LOAD_FAILED',
           message:'System access could not be loaded.'
-        },cached);
+        });
       })
       .finally(function(){
         if(loadPromise===flight)loadPromise=null;
