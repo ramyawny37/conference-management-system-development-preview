@@ -34,9 +34,9 @@ test("dispatcher alone establishes context and denies actor-device overrides",()
 });
 
 test("41 guarded and one Platform-admin read retain the post-membership boundary",()=>{
-  assert.equal(contract.EDGE_ONLY_PROTECTED.length,22);
+  assert.equal(contract.EDGE_ONLY_PROTECTED.length,21);
   assert.equal(contract.EDGE_ONLY_PROTECTED.filter(x=>platformAdmin.has(x.operation)).length,1);
-  assert.equal(contract.EDGE_ONLY_PROTECTED.filter(x=>!platformAdmin.has(x.operation)).length,21);
+  assert.equal(contract.EDGE_ONLY_PROTECTED.filter(x=>!platformAdmin.has(x.operation)).length,20);
   assert.match(migration,/validated_phase1c_device_authorization\(current_user_id,p_actor_device_id\)/);
   assert.match(migration,/validated_phase1c_device_authorization\([\s\S]*p_user_id/);
   assert.match(migration,/grant execute on function platform\.execute_conference_device_operation[^;]+to service_role/i);
@@ -63,6 +63,6 @@ test("runtime handoff sources are removed and native enrollment contains no devi
 });
 
 test("DIRECT EDGE INTERNAL POLICY cardinalities reflect snapshot retirement",()=>{
-  assert.deepEqual([contract.DIRECT_BROWSER_REQUIRED.length,contract.EDGE_ONLY_PROTECTED.length,contract.INTERNAL_ONLY.length,contract.POLICY_HELPER_BROWSER_READ.length],[6,22,16,4]);
-  assert.equal(contract.INTERNAL_ONLY.filter(x=>!/device_session|device_ownership_handoff|execute_(?:conference_)?device_operation|require_exact_jsonb_keys/.test(x)).length,10);
+  assert.deepEqual([contract.DIRECT_BROWSER_REQUIRED.length,contract.EDGE_ONLY_PROTECTED.length,contract.INTERNAL_ONLY.length,contract.POLICY_HELPER_BROWSER_READ.length],[6,21,17,4]);
+  assert.equal(contract.INTERNAL_ONLY.filter(x=>!/device_session|device_ownership_handoff|execute_(?:conference_)?device_operation|require_exact_jsonb_keys/.test(x)).length,11);
 });
