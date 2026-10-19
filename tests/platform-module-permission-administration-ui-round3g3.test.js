@@ -100,3 +100,9 @@ test('50 catalog store grant preserves backend grant',async()=>{var runtime=muta
 test('51 catalog revoke preserves backend revoke',async()=>{var runtime=mutationRuntime();await runtime.api.catalogMutation('warehouse',{action:'revoke',targetUserId:'cccccccc-cccc-4ccc-8ccc-cccccccccccc',permissionKey:'warehouse.example',grantId:'dddddddd-dddd-4ddd-8ddd-dddddddddddd'});assert.equal(runtime.calls[0].args.p_action,'revoke');});
 test('52 invalid UI action remains fail-closed',async()=>{var runtime=mutationRuntime();var result=await runtime.api.foundationMutation('warehouse',{action:'create',targetUserId:'cccccccc-cccc-4ccc-8ccc-cccccccccccc',permissionKey:'module.access'});assert.equal(result.ok,false);assert.equal(result.status,'invalid_input');assert.equal(runtime.calls.length,0);});
 test('53 UI vocabulary remains grant and each mutation receives a fresh operation UUID',async()=>{var runtime=mutationRuntime();await runtime.api.foundationMutation('warehouse',{action:'grant',targetUserId:'cccccccc-cccc-4ccc-8ccc-cccccccccccc',permissionKey:'warehouse.module.access'});await runtime.api.catalogMutation('warehouse',{action:'grant',targetUserId:'cccccccc-cccc-4ccc-8ccc-cccccccccccc',permissionKey:'warehouse.example'});assert.notEqual(runtime.calls[0].args.p_operation_id,runtime.calls[1].args.p_operation_id);assert.match(ui,/mutateFoundation\('grant'/);assert.match(ui,/mutateBusiness\('grant'/);});
+
+test('selected permissions account has a unique visible and accessible selection state',()=>{
+  assert.match(ui,/state\.selected&&state\.selected\.userId===item\.userId\?' module-permission-candidate-selected'/);
+  assert.match(ui,/aria-pressed="'\+\(!!state\.selected&&state\.selected\.userId===item\.userId\)/);
+  assert.match(css,/\.module-permission-candidates button\.module-permission-candidate-selected\{[^}]*border:2px solid #[0-9a-f]+;[^}]*background:#[0-9a-f]+;/i);
+});
