@@ -6,6 +6,13 @@ on:
     paths:
       - 'js/supabase/system-access-service.js'
       - 'tests/system-access-foundation.test.js'
+      - 'js/sync/user-management-ui.js'
+      - 'js/sync/user-management-read-service.js'
+      - 'js/sync/platform-administration-ui.js'
+      - 'js/sync/device-authorization-administration-ui.js'
+      - 'tests/user-management-account-actions.test.js'
+      - 'tests/user-management-device-ui.test.js'
+      - 'tests/platform-administration-roles-route-lifecycle.test.js'
       - '.github/workflows/validate-canonical-system-access.yml'
 jobs:
   validate-system-access:
@@ -19,3 +26,14 @@ jobs:
         run: node --check js/supabase/system-access-service.js
       - name: Test canonical account access and offline fail-closed behavior
         run: node tests/system-access-foundation.test.js
+      - name: Check administration UI syntax
+        run: |
+          node --check js/sync/user-management-ui.js
+          node --check js/sync/user-management-read-service.js
+          node --check js/sync/platform-administration-ui.js
+          node --check js/sync/device-authorization-administration-ui.js
+      - name: Test administration navigation and account/device controls
+        run: |
+          node tests/user-management-account-actions.test.js
+          node tests/user-management-device-ui.test.js
+          node --test tests/platform-administration-roles-route-lifecycle.test.js
