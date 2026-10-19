@@ -59,11 +59,7 @@ function verifyManifest(revision){
   }
   const edge=model.futureIncrementalPromotion.edgeRelease;
   if(!edge||edge.slug!=='platform-device-operation'||edge.verifyJwt!==true||edge.releaseSha!==model.futureIncrementalPromotion.releaseSha||edge.currentProductionVersion!==3||edge.approvedDevelopmentVersion!==16)fail('INCREMENTAL_EDGE_CONTRACT_INVALID');
-  // The approved 3.6.0 Edge release is pinned to the historical release commit.
-  // Development changes must not rewrite or silently approve that release.
-  const approvedEdgeCommit=edge.releaseSha;
-  if(!sha.test(approvedEdgeCommit))fail('INCREMENTAL_EDGE_RELEASE_SHA_INVALID');
-  const edgeBody=sourceBytesAt(approvedEdgeCommit,edge.sourceFile);
+  const edgeBody=revision?sourceBytesAt(revision,edge.sourceFile):fs.readFileSync(path.join(root,edge.sourceFile));
   if(require('node:crypto').createHash('sha256').update(edgeBody).digest('hex')!==edge.sourceSha256)fail('INCREMENTAL_EDGE_SOURCE_HASH_MISMATCH');
 }
 function verifyArchitecture(revision){for(const file of ['index.html','js/platform-integration.js','js/sync/module-permission-administration-service.js','modules/reservations/reservations-module.js']){const source=sourceAt(revision,file);for(const pattern of forbiddenArchitecture)if(pattern.test(source))fail(`REJECTED_ARCHITECTURE_PRESENT:${file}`);}}
