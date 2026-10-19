@@ -8,7 +8,7 @@ const CACHE_NAMESPACE = IS_DEVELOPMENT
   : '';
 const CACHE_PREFIX = CACHE_NAMESPACE + 'conference-manager-core-';
 const CACHE_REVISION = IS_DEVELOPMENT
-  ? 'development-canonical-owner-session-list-v1'
+  ? 'development-platform-admin-security-retirement-v1'
   : 'production-3-6-0-release-v6';
 const CACHE_NAME = CACHE_PREFIX + 'v' + APP_VERSION + '-' + CACHE_REVISION;
 const CORE_ASSETS = [
@@ -59,10 +59,10 @@ const CORE_ASSETS = [
   './js/sync/startup-access-gate.js?rev=revoked-rerequest-error-code-v1',
   './js/sync/conference-activation-authorization.js?rev=canonical-conference-id-v1',
   './js/sync/user-management-read-service.js?rev=platform-administration-unification-v1',
-  './js/sync/user-management-ui.js?rev=canonical-device-revocation-v1',
+  './js/sync/user-management-ui.js?rev=platform-admin-security-retirement-v1',
   './js/sync/module-permission-administration-service.js?rev=platform-administration-unification-v1',
   './js/sync/module-permission-administration-ui.js?rev=platform-administration-canonical-sidebar-navigation-v2',
-  './js/sync/platform-administration-ui.js?rev=platform-administration-canonical-sidebar-navigation-v2',
+  './js/sync/platform-administration-ui.js?rev=platform-admin-security-retirement-v1',
   './js/sync/conference-linking-attempt-store.js',
   './js/sync/discovered-conference-open-service.js?rev=conference-section-capabilities-v2',
   './utils.js',
