@@ -180,9 +180,10 @@ async function run(){
   });
   var cachedState=await offline.SystemAccessService.load();
   assert.strictEqual(cachedState.status,'offline');
-  assert.strictEqual(cachedState.accountStatus,'approved');
-  assert.strictEqual(cachedState.source,'cache');
+  assert.strictEqual(cachedState.profileLoaded,false);
   assert.strictEqual(cachedState.fresh,false);
+  assert.strictEqual(cachedState.isSystemOwner,false);
+  assert.strictEqual(cachedState.accountStatus,null);
 
   var failed=loadService({
     auth:auth(userId),
