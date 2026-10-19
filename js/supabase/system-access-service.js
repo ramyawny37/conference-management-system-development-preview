@@ -1,12 +1,6 @@
 (function(global){
   'use strict';
 
-  var namespace=global.BrowserStorageNamespace||{
-    key:function(name){return name;}
-  };
-  var CACHE_PREFIX=namespace.key(
-    'conference_system_access_v1:'
-  );
   var state=createState('idle');
   var loadPromise=null;
   var initializationPromise=null;
@@ -61,35 +55,6 @@
       session&&session.user||null;
   }
 
-  function cacheKey(userId){
-    return CACHE_PREFIX+userId;
-  }
-
-  function readCache(storage,userId){
-    if(!storage||typeof storage.getItem!=='function')return null;
-    try{
-      var parsed=JSON.parse(storage.getItem(cacheKey(userId))||'null');
-      if(!parsed||parsed.userId!==userId||
-        ['pending','approved','blocked'].indexOf(parsed.accountStatus)<0||
-        !Array.isArray(parsed.roles)||!parsed.checkedAt){
-        return null;
-      }
-      return parsed;
-    }catch(error){
-      return null;
-    }
-  }
-
-  function writeCache(storage,value){
-    if(!storage||typeof storage.setItem!=='function')return false;
-    try{
-      storage.setItem(cacheKey(value.userId),JSON.stringify(value));
-      return true;
-    }catch(error){
-      return false;
-    }
-  }
-
   function setUnauthenticated(){
     loadGeneration++;
     state=createState('not_authenticated');
@@ -116,16 +81,8 @@
     return getState();
   }
 
-  function setFailure(status,userId,error,cached){
-    if(cached){
-      setFromRecord(userId,{
-        account_status:cached.accountStatus,
-      },cached.roles,'cache',cached.checkedAt,false);
-      state.status=status;
-      state.error=error||null;
-      applyUi();
-      return getState();
-    }
+  function setFailure(status,userId,error){
+    // Never promote cached account status or roles into runtime authority.
     state=createState(status);
     state.authenticated=true;
     state.userId=userId;
@@ -205,12 +162,11 @@
     if(!uuid(userId))return Promise.resolve(setUnauthenticated());
     var generation=++loadGeneration;
 
-    var cached=readCache(d.storage,userId);
     if(d.navigator&&d.navigator.onLine===false){
       return Promise.resolve(setFailure('offline',userId,{
         code:'OFFLINE',
         message:'System access could not be refreshed while offline.'
-      },cached));
+      }));
     }
     var client=d.clientLayer&&
       typeof d.clientLayer.getClient==='function'
@@ -219,7 +175,7 @@
       return Promise.resolve(setFailure('configuration_error',userId,{
         code:'SUPABASE_UNAVAILABLE',
         message:'System access service is not configured.'
-      },cached));
+      }));
     }
 
     state=createState('loading');
@@ -240,7 +196,6 @@
           return setFailure('access_missing',userId,{code:'SYSTEM_ACCESS_MISSING',message:'The account has no valid Platform access record.'},cached);
         }
         var checkedAt=new Date().toISOString();
-        writeCache(d.storage,{userId:userId,accountStatus:access.account_status,roles:roles.map(function(row){return {role:row.role};}),checkedAt:checkedAt,source:'server'});
         return setFromRecord(userId,access,roles,'server',checkedAt,true);
       })
       .catch(function(error){
