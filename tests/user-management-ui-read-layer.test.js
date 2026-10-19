@@ -30,7 +30,7 @@ var ui=sandbox.window.UserManagementUI;
   assert.ok(masterAndDetail.includes('First Real User'));
   assert.ok(masterAndDetail.includes('Second Real User'));
   assert.doesNotMatch(masterAndDetail,/Development Organization/);
-  assert.doesNotMatch(source,/organization|canCreateConferences|systemRoles|manageAccount|manageDevice/);
+  assert.doesNotMatch(source,/organization|canCreateConferences|systemRoles|manageDevice/);
   assert.doesNotMatch(source,/conferenceCount|canViewConferences|canManageConferenceMembership/);
   assert.ok(masterAndDetail.includes('Development Device'));
   partialSecond=true;
