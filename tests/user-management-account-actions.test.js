@@ -24,7 +24,7 @@ vm.runInNewContext(source,{window:win,Promise});
  await ui.initialize();
  assert.doesNotMatch(ui.renderSection(),/onclick="UserManagementUI.manageAccount/,'owner must not be actionable');
  await ui.selectUser(member);
- assert.match(ui.renderSection(),/تعطيل الحساب/);
+ assert.match(ui.renderSection(),/تعطيل الحساب/);assert.match(ui.renderSection(),/btn btn-red btn-sm user-management-account-action/);
  canBlock=false;await ui.selectUser(owner);await ui.selectUser(member);
  assert.doesNotMatch(ui.renderSection(),/onclick="UserManagementUI.manageAccount/,'target capability required');
  assert.equal((await ui.manageAccount('block')).status,'forbidden');assert.equal(mutations,0);
