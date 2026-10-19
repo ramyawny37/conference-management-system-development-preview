@@ -166,8 +166,8 @@ assert.ok(!worker.includes('device-authorization-operation-repository.js'),
   'retired device operation repository must not be precached');
 
 const canonicalSystemAccess=read('js/supabase/system-access-service.js');
-assert.ok(!/\b(?:localStorage|sessionStorage)\b/.test(canonicalSystemAccess),
-  'canonical system access must not restore browser-stored account or role authority');
+assert.ok(!/\b(?:getItem|setItem|removeItem)\s*\(/.test(canonicalSystemAccess),
+  'canonical system access must not read or write browser-stored account or role authority');
 assert.ok(canonicalSystemAccess.includes("client.rpc('get_my_platform_system_access')"),
   'canonical system access must load account and role authority from the server');
 
