@@ -9,106 +9,10 @@
    intermediate wrapping <=700px when needed; mobile <=600px.
    RTL is the default. Prefer logical properties; LTR is limited to layout shells whose
    columns require it, with Arabic content restored to RTL. Avoid unintended overflow. */
-:root{
-  --app-primary:var(--platform-primary);
-  --app-primary-dark:var(--platform-primary-dark);
-  --app-primary-secondary:var(--platform-secondary);
-  --app-primary-active:var(--platform-primary-active);
-  --app-success:var(--platform-success);
-  --app-warning:var(--platform-warning);
-  --app-danger:var(--platform-danger);
-  --app-danger-strong:#c63e35;
-  --app-purple:#8e44ad;
-  --app-neutral:#708196;
-  --app-success-soft:#e5f6ed;
-  --app-warning-soft:#fff2df;
-  --app-danger-soft:#fff1ef;
-  --app-primary-soft:#e8f1fc;
-  --app-neutral-soft:#eef2f6;
-  --app-text:var(--platform-text);
-  --app-text-secondary:var(--platform-text-secondary);
-  --app-text-muted:var(--platform-text-muted);
-  --app-text-on-color:#fff;
-  --app-bg:var(--platform-background);
-  --app-page-background:radial-gradient(ellipse at 7% 16%,rgba(174,208,247,.3) 0,rgba(174,208,247,0) 36%),radial-gradient(ellipse at 94% 70%,rgba(232,205,176,.18) 0,rgba(232,205,176,0) 39%),radial-gradient(ellipse at 48% 100%,rgba(176,207,242,.22) 0,rgba(176,207,242,0) 46%),linear-gradient(145deg,#fcfdff 0%,#f2f7fc 56%,#fcf8f4 100%);
-  --app-surface:var(--platform-surface);
-  --app-surface-soft:var(--platform-surface-soft);
-  --app-surface-glass:var(--platform-surface-glass);
-  --app-surface-glass-compact:rgba(255,255,255,.58);
-  --app-surface-near-solid:rgba(255,255,255,.92);
-  --app-overlay:rgba(17,39,61,.55);
-  --app-border:var(--platform-border);
-  --app-border-strong:var(--platform-border-strong);
-  --app-input-border:var(--platform-input-border);
-  --app-focus-ring:var(--platform-focus-ring);
-  --app-radius-sm:var(--platform-radius-sm);
-  --app-radius-control:var(--platform-radius-control);
-  --app-radius-md:var(--platform-radius-md);
-  --app-radius-card:var(--platform-radius-card);
-  --app-radius-lg:var(--platform-radius-lg);
-  --app-radius-pill:999px;
-  --app-shadow-sm:var(--platform-shadow-sm);
-  --app-shadow-md:var(--platform-shadow-md);
-  --app-shadow-active:var(--platform-shadow-active);
-  --app-shadow-modal:var(--platform-shadow-dialog);
-  --app-glass-highlight:inset 0 1px 0 rgba(255,255,255,.8);
-  --app-blur-sm:8px;
-  --app-blur-md:9px;
-  --app-blur-header:12px;
-  --app-space-1:4px;
-  --app-space-2:6px;
-  --app-space-3:8px;
-  --app-space-4:10px;
-  --app-space-5:12px;
-  --app-space-6:16px;
-  --app-space-7:20px;
-  --app-space-8:24px;
-  --app-control-height-sm:31px;
-  --app-control-height:36px;
-  --app-touch-target:40px;
-  --app-page-max:1480px;
-  --app-font-family:'Segoe UI',Arial,sans-serif;
-  --app-font-size-xs:8px;
-  --app-font-size-sm:10px;
-  --app-font-size-body:12px;
-  --app-font-size-section:12px;
-  --app-font-size-heading:16px;
-  --app-font-weight-medium:600;
-  --app-font-weight-bold:800;
-  --app-font-weight-heavy:900;
-
-  /* Legacy design-system aliases: only exact-value matches are aliased in Phase 1. */
-  --ds-app-bg:#f4f7fb;
-  --ds-surface:var(--app-surface);
-  --ds-primary:#0f4fae;
-  --ds-primary-dark:#093b82;
-  --ds-success:#169b57;
-  --ds-warning:#f47a0b;
-  --ds-danger:var(--app-danger);
-  --ds-text:var(--app-text);
-  --ds-text-muted:var(--app-text-muted);
-  --ds-border:#dbe5ef;
-  --ds-shadow-sm:var(--app-shadow-sm);
-  --ds-shadow-md:var(--app-shadow-md);
-  --ds-radius-sm:var(--app-radius-sm);
-  --ds-radius-md:13px;
-  --ds-radius-lg:17px;
-  --ds-space-1:var(--app-space-1);
-  --ds-space-2:var(--app-space-3);
-  --ds-space-3:var(--app-space-5);
-  --ds-space-4:var(--app-space-6);
-  --ds-space-5:var(--app-space-8);
-  --ds-page-max:var(--app-page-max);
-  --ds-nav-height:120px;
-  --ds-card-padding:16px;
-  --ds-input-height:56px;
-  --ds-button-height:38px;
-}
 .app-icon{display:inline-block;width:1em;height:1em;flex:0 0 auto;vertical-align:-.14em}
 *{margin:0;padding:0}
 .logo{color:#fff;font-size:15px;font-weight:800;padding:10px 4px;white-space:nowrap}
 .application-page-heading{display:none}
-.body{max-width:1100px;margin:0 auto;padding:12px 8px 16px}
 .global-conference-header{direction:rtl;background:linear-gradient(135deg,#fff,#f3fbf6);border:1px solid #dce9e1;border-right:5px solid #27ae60;border-radius:15px;padding:13px 16px;margin-bottom:12px;box-shadow:0 3px 13px rgba(31,78,121,.07)}
 #splash-screen{position:fixed;inset:0;z-index:10001;display:flex;flex-direction:column;align-items:center;justify-content:center;background-color:#123e7a;color:#fff;transition:opacity .25s ease-out}
 #splash-screen img{width:150px;height:150px;border-radius:50%;box-shadow:0 5px 20px rgba(0,0,0,.2)}
@@ -248,8 +152,6 @@
 .seat.shared{background:#EDE7F6;border-color:#8E44AD;color:#4A235A}
 .chip{background:#EAF4FC;border:1.5px solid #BDD7EE;border-radius:14px;padding:3px 9px;font-size:10px;cursor:pointer;font-weight:600;color:#1F4E79;display:inline-block;margin:2px}
 .chip:hover{background:#BDD7EE}
-.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#27AE60;color:#fff;border-radius:10px;padding:9px 20px;font-weight:700;font-size:12px;box-shadow:0 4px 20px rgba(0,0,0,.2);z-index:9999;display:none}
-.toast.offline{background:#E74C3C}
 .update-bar{position:fixed;bottom:0;left:0;right:0;background:linear-gradient(135deg,#8E44AD,#6C3483);color:#fff;padding:10px 15px;display:flex;justify-content:space-between;align-items:center;z-index:10000;box-shadow:0 -4px 20px rgba(0,0,0,.2);transform:translateY(100%);transition:transform .3s ease-in-out}
 .update-bar.show{transform:translateY(0)}
 .update-bar span{font-weight:700;font-size:12px}
@@ -770,7 +672,7 @@ tr:nth-child(even) td{background:#F7FBFF}
 .accommodation-edit-mode-toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 12px;padding:10px;border:1px solid #dce7f0;border-radius:10px;background:#f8fbfd}
 .accommodation-edit-state{font-size:11px;color:#5a6f82;font-weight:700}
 
-.body{max-width:var(--app-page-max);padding:12px 24px 24px}
+.body{max-width:var(--app-page-max);margin:0 auto;padding:12px 24px 24px}
 @media(max-width:600px){.body{padding:10px 8px 20px}}
 
 /* Accommodation dashboard visual system */

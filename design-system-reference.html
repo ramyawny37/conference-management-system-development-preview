@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Platform Design System Reference</title>
+  <link rel="stylesheet" href="shared-design-tokens.css?rev=platform-design-system-consolidation-v2">
+</head>
+<body>
+  <main class="design-system-reference">
+    <header>
+      <h1>Platform Design System Reference</h1>
+      <p>Development-only reference using the production component classes. It has no application data, navigation registration, or protected operations.</p>
+    </header>
+
+    <section class="design-system-reference__section" aria-labelledby="actions-title">
+      <h2 id="actions-title">Actions and status</h2>
+      <div class="card row">
+        <button class="btn btn-blue" type="button">Primary</button>
+        <button class="btn btn-green" type="button">Success</button>
+        <button class="btn btn-red" type="button">Destructive</button>
+        <button class="btn btn-gray" type="button" disabled>Disabled</button>
+        <button class="ui-icon-button" type="button" aria-label="Example icon action">＋</button>
+        <span class="ui-badge ui-badge--success">Success</span>
+        <span class="ui-badge ui-badge--warning">Warning</span>
+        <span class="ui-badge ui-badge--danger">Error</span>
+      </div>
+    </section>
+
+    <section class="design-system-reference__section" aria-labelledby="forms-title">
+      <h2 id="forms-title">Form and filter contracts</h2>
+      <div class="ui-toolbar">
+        <label class="ui-field ui-search"><span class="lbl">Search</span><input type="search" placeholder="Search value"><small class="ui-field__hint">Shared searchable input</small></label>
+        <label class="ui-field"><span class="lbl">Status</span><select><option>All</option><option>Active</option></select></label>
+        <label class="ui-field"><span class="lbl">Date</span><input type="date"></label>
+        <label class="ui-choice"><input type="checkbox" checked> Checkbox</label>
+        <label class="ui-choice"><input type="radio" name="reference-choice" checked> Radio</label>
+      </div>
+      <div class="ui-tabs" role="tablist" aria-label="Reference tabs">
+        <button class="ui-tab" type="button" role="tab" aria-selected="true">Selected</button>
+        <button class="ui-tab" type="button" role="tab" aria-selected="false">Default</button>
+      </div>
+    </section>
+
+    <section class="design-system-reference__section" aria-labelledby="data-title">
+      <h2 id="data-title">KPI, table, and pagination</h2>
+      <div class="ui-kpi-grid"><article class="ui-kpi"><span>Total</span><strong>128</strong></article><article class="ui-kpi"><span>Pending</span><strong>7</strong></article></div>
+      <div class="ui-table-wrap"><table class="ui-table"><thead><tr><th>Item</th><th>Status</th><th>Action</th></tr></thead><tbody><tr><td>Example record</td><td><span class="ui-badge ui-badge--success">Active</span></td><td><button class="btn btn-blue btn-sm" type="button">Open</button></td></tr></tbody></table></div>
+      <nav class="ui-pagination" aria-label="Reference pagination"><button type="button" disabled>Previous</button><button type="button" aria-current="page">1</button><button type="button">2</button><button type="button">Next</button></nav>
+    </section>
+
+    <section class="design-system-reference__section" aria-labelledby="states-title">
+      <h2 id="states-title">Loading, empty, error, and denied</h2>
+      <div class="grid3">
+        <div class="ui-state ui-state--loading" role="status"><span class="ui-skeleton ui-skeleton--wide"></span>Loading</div>
+        <div class="ui-state" role="status">Empty state</div>
+        <div class="ui-state ui-state--error" role="alert">Error state</div>
+        <div class="ui-state ui-state--denied" role="alert">Permission denied</div>
+      </div>
+      <div class="ui-feedback ui-feedback--success" role="status">Operation completed.</div>
+      <div class="ui-feedback ui-feedback--error" role="alert">Operation failed.</div>
+    </section>
+
+    <section class="design-system-reference__section" aria-labelledby="dialog-title">
+      <h2 id="dialog-title">Dialog content contract</h2>
+      <div class="ui-dialog" role="dialog" aria-modal="false" aria-labelledby="dialog-heading"><h3 id="dialog-heading">Confirmation</h3><p>Dialog content and actions use the same shared controls.</p><div class="ui-dialog__actions"><button class="btn btn-gray" type="button">Cancel</button><button class="btn btn-red" type="button">Confirm</button></div></div>
+    </section>
+  </main>
+</body>
+</html>

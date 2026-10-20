@@ -56,8 +56,9 @@ test('shared tokens remain the global source and the shell owns only local layou
   assert.match(css,/var\(--platform-v2-border\)/);
   assert.match(tokens,/--platform-touch-target:44px/);
   assert.match(tokens,/--platform-safe-area-bottom:max\(16px,env\(safe-area-inset-bottom,0px\)\)/);
-  assert.match(tokens,/--platform-v2-primary:#0a6cff/);
-  assert.match(tokens,/--platform-v2-navy:#0b2747/);
+  assert.doesNotMatch(tokens,/--platform-v2-primary:/);
+  assert.match(tokens,/--platform-v2-navy:var\(--platform-primary-dark\)/);
+  assert.match(tokens,/--platform-v2-border:var\(--platform-border\)/);
 });
 
 test('the shell has intentional desktop and mobile layout contracts',()=>{
@@ -95,7 +96,7 @@ test('module workspaces do not reintroduce a second brand, topbar, or account sh
 });
 
 test('Development installs the canonical foundation cache without changing Production revision',()=>{
-  assert.match(worker,/\? 'development-platform-design-conference-v1'/);
+  assert.match(worker,/\? 'development-platform-design-system-v2'/);
   assert.doesNotMatch(worker,/conference-owner-preflight-correction-v1/);
   assert.match(worker,/: 'production-3-6-0-release-v6'/);
 });

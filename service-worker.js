@@ -8,14 +8,15 @@ const CACHE_NAMESPACE = IS_DEVELOPMENT
   : '';
 const CACHE_PREFIX = CACHE_NAMESPACE + 'conference-manager-core-';
 const CACHE_REVISION = IS_DEVELOPMENT
-  ? 'development-platform-design-conference-v1'
+  ? 'development-platform-design-system-v2'
   : 'production-3-6-0-release-v6';
 const CACHE_NAME = CACHE_PREFIX + 'v' + APP_VERSION + '-' + CACHE_REVISION;
 const CORE_ASSETS = [
   './',
   './index.html',
-  './shared-design-tokens.css?rev=platform-design-system-foundation-v1',
-  './style.css?rev=conference-accommodation-design-round4-v1',
+  './design-system-reference.html',
+  './shared-design-tokens.css?rev=platform-design-system-consolidation-v2',
+  './style.css?rev=platform-design-system-consolidation-v2',
   './canonical-platform-shell.css?rev=platform-administration-canonical-sidebar-navigation-v2',
   './modules/reservations/reservations-module.css?rev=reservations-person-live-0d9db39-v1',
   './js/application-routing.js?rev=canonical-conference-routing-v1',
