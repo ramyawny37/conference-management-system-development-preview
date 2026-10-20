@@ -29,7 +29,10 @@ function runtime(storedTab,routeTab){
     localStorage:{getItem(key){return key==='conference_manager_last_tab'
       ?storage.last:null;},setItem(key,value){if(key==='conference_manager_last_tab')
       storage.last=String(value);},removeItem(){storage.removed+=1;}},
-    document:{querySelectorAll(){return Array.from({length:7},()=>({style:{}}));}},
+    document:{
+      querySelector(selector){var match=/data-conference-tab="(\d)"/.exec(selector);return match?{hidden:false,style:{}}:null;},
+      querySelectorAll(selector){return selector==='[data-conference-tab]'?Array.from({length:7},()=>({style:{}})):[];}
+    },
     ge:id=>elements[id]||{style:{}},isFinite,parseInt,
     getPlatformShellPathname:()=>'/conference',
     getCanonicalConferenceRoute:()=>routeTab===undefined?null:

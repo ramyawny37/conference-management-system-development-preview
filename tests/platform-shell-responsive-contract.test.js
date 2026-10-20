@@ -24,7 +24,8 @@ test('the document exposes exactly one canonical shell, sidebar, header, and wor
   assert.strictEqual((html.match(/data-platform-module="conference"/g)||[]).length,1);
   assert.strictEqual((html.match(/data-platform-module="reservations"/g)||[]).length,1);
   assert.strictEqual((html.match(/data-platform-module="warehouse"/g)||[]).length,1);
-  assert.match(html,/class="topbar conference-module-nav" id="applicationTopbar"/);
+  assert.match(html,/class="conference-context-toolbar" id="applicationTopbar"/);
+  assert.doesNotMatch(html,/class="main-tabs"|class="[^"]*\bmain-tab\b/);
   assert.match(html,/id="conferenceWorkspace"/);
   assert.match(html,/id="warehouseWorkspace"/);
   assert.match(html,/id="reservationsWorkspace"/);
@@ -94,7 +95,7 @@ test('module workspaces do not reintroduce a second brand, topbar, or account sh
 });
 
 test('Development installs the canonical foundation cache without changing Production revision',()=>{
-  assert.match(worker,/\? 'development-platform-admin-security-retirement-v1'/);
+  assert.match(worker,/\? 'development-unified-platform-shell-v1'/);
   assert.doesNotMatch(worker,/conference-owner-preflight-correction-v1/);
   assert.match(worker,/: 'production-3-6-0-release-v6'/);
 });

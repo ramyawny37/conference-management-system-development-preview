@@ -57,7 +57,7 @@ test('module cards use static-safe hash routes and open peer modules',async()=>{
 
 test('one hash listener owns Back and Forward reconciliation',async()=>{
   const state=integrationRuntime('/conference');
-  assert.deepStrictEqual(Object.keys(state.listeners).sort(),['hashchange','platform-session-reset']);
+  assert.deepStrictEqual(Object.keys(state.listeners).sort(),['conference-section-change','hashchange','platform-session-reset']);
   await state.listeners.hashchange();
   assert.strictEqual(JSON.stringify(state.calls),JSON.stringify([['protected','conference','check_module_access',{}],['conference-route','/conference']]));
   state.calls.length=0;
@@ -112,7 +112,7 @@ test('route replay stops when startup gate resolves to a non-allowed state',()=>
 
 test('routing has one hashchange owner and no competing popstate owner',()=>{
   const state=integrationRuntime('/');
-  assert.deepStrictEqual(Object.keys(state.listeners).sort(),['hashchange','platform-session-reset']);
+  assert.deepStrictEqual(Object.keys(state.listeners).sort(),['conference-section-change','hashchange','platform-session-reset']);
   assert.doesNotMatch(integrationSource,/addEventListener\(['"]popstate/);
 });
 

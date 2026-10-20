@@ -1442,7 +1442,7 @@ function isValidApplicationTab(tabId){
 
   if(!isFinite(parsedTabId)) return false;
   if (getValidApplicationTabIds().indexOf(parsedTabId) === -1) return false;
-  var tabButton = document.querySelectorAll('.tab')[parsedTabId];
+  var tabButton = document.querySelector('[data-conference-tab="' + parsedTabId + '"]');
   var tabContent = ge('tab' + parsedTabId);
   return !!(tabButton && tabContent && !tabButton.hidden && tabButton.style.display !== 'none' && !tabContent.hidden);
 }
@@ -1526,20 +1526,22 @@ function switchTab(n,options){
   document.body.classList.toggle('accommodation-shell-active',tabId===0);
   if(tabId===2&&previousTab!==2)v3AccordionOpenSection='';
   saveApplicationView('application');
-  var homeTabButton = ge('homeTabButton');
-  if(homeTabButton) homeTabButton.classList.remove('active', 'main-tab-active');
-  document.querySelectorAll('.tab').forEach(function(t,i){t.className='tab main-tab'+(i===tabId?' active main-tab-active':'')});
+  document.querySelectorAll('[data-conference-tab]').forEach(function(button){
+    var selected=parseInt(button.getAttribute('data-conference-tab'),10)===tabId;
+    button.classList.toggle('active',selected);
+    if(selected)button.setAttribute('aria-current','page');else button.removeAttribute('aria-current');
+  });
   getValidApplicationTabIds().forEach(function(id){ge('tab'+id).style.display=id===tabId?'':'none';});
   renderTab(tabId);
   saveLastTab(tabId);
+  if(window.dispatchEvent&&window.CustomEvent)window.dispatchEvent(new CustomEvent('conference-section-change',{detail:{tabId:tabId}}));
   if(options.preserveRoute!==true)setConferenceApplicationPathname(tabId,{push:true});
   return true;
 }
 
 function getApplicationTabIdByName(tabName){
-  var tabButton=document.querySelector('.tab[data-tab-name="'+tabName+'"]');
-  if(!tabButton)return null;
-  var tabId=parseInt(tabButton.getAttribute('data-tab-id'),10);
+  var tabIds={accommodation:0,transportation:1,accounts:2,reports:3,cards:4,search:5,settings:6};
+  var tabId=Object.prototype.hasOwnProperty.call(tabIds,tabName)?tabIds[tabName]:null;
   return isValidApplicationTab(tabId)?tabId:null;
 }
 
@@ -7089,11 +7091,10 @@ function openStartupScreen(options){
     var content=ge('tab'+id);
     if(content)content.style.display='none';
   });
-  document.querySelectorAll('.tab').forEach(function(tab){
-    tab.classList.remove('active','main-tab-active');
+  document.querySelectorAll('[data-conference-tab]').forEach(function(tab){
+    tab.classList.remove('active');
+    tab.removeAttribute('aria-current');
   });
-  var homeTabButton=ge('homeTabButton');
-  if(homeTabButton)homeTabButton.classList.add('active','main-tab-active');
   currentApplicationView='startup';
   if(persistView)saveApplicationView('startup');
   var platformRoute=getPlatformShellPathname();

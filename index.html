@@ -13,7 +13,6 @@
 <link rel="stylesheet" href="shared-design-tokens.css?rev=platform-shell-phase2b-v1">
 <link rel="stylesheet" href="style.css?rev=platform-administration-workspace-visibility-v1">
 <link rel="stylesheet" href="modules/reservations/reservations-module.css?rev=reservations-person-live-0d9db39-v1">
-<link rel="stylesheet" href="modules/reservations/reservations-visual-prototype.css?rev=reservations-prototype-fidelity-v2">
 <link rel="stylesheet" href="canonical-platform-shell.css?rev=platform-administration-canonical-sidebar-navigation-v2">
 </head>
 <body>
@@ -38,7 +37,22 @@
   </div>
   <nav class="canonical-platform-nav">
     <button type="button" class="canonical-platform-nav__item" data-platform-home onclick="showPlatformModules()" aria-label="فتح الرئيسية"><span data-app-icon="home"></span><span>الرئيسية</span></button>
-    <button type="button" class="canonical-platform-nav__item" data-platform-module="conference"><span data-app-icon="building"></span><span>المؤتمرات</span></button>
+    <div class="canonical-platform-nav__group" data-platform-nav-group="conference">
+      <div class="canonical-platform-nav__group-row">
+        <button type="button" class="canonical-platform-nav__item" data-platform-module="conference"><span data-app-icon="building"></span><span>المؤتمرات</span></button>
+        <button type="button" class="canonical-platform-nav__toggle" data-platform-nav-toggle="conference" aria-expanded="false" aria-controls="conferencePlatformSubnav" aria-label="إظهار أقسام المؤتمر">⌄</button>
+      </div>
+      <div class="canonical-platform-subnav" id="conferencePlatformSubnav" hidden>
+        <button type="button" data-conference-home>الرئيسية</button>
+        <button type="button" data-conference-tab="0">التسكين والبيوت والأشخاص</button>
+        <button type="button" data-conference-tab="1">المواصلات</button>
+        <button type="button" data-conference-tab="2">الحسابات</button>
+        <button type="button" data-conference-tab="3">التقارير</button>
+        <button type="button" data-conference-tab="4">الكروت</button>
+        <button type="button" data-conference-tab="5">البحث</button>
+        <button type="button" data-conference-tab="6">الإعدادات</button>
+      </div>
+    </div>
     <div class="canonical-platform-nav__group" data-platform-nav-group="reservations">
       <div class="canonical-platform-nav__group-row">
         <button type="button" class="canonical-platform-nav__item" data-platform-module="reservations"><span data-app-icon="note"></span><span>الحجوزات</span></button>
@@ -92,20 +106,8 @@
   </div>
 </header>
 
-<div class="topbar conference-module-nav" id="applicationTopbar" style="display:none">
+<div class="conference-context-toolbar" id="applicationTopbar" style="display:none" aria-label="سياق المؤتمر الحالي">
   <div id="globalConferenceHeader"></div>
-  <div class="application-brand-logo"><img src="assets/make-a-difference-logo.png" alt="MAKE A DIFFERENCE MISSION — ارسالية اصنع فرق"></div>
-  <div class="application-account-entry" id="logo-text"><span class="application-account-icon" data-app-icon="user"></span><span class="application-account-label">صاحب الحساب</span><span class="application-account-chevron" data-app-icon="chevronDown"></span></div>
-  <div class="main-tabs">
-    <div class="main-tab" id="homeTabButton" onclick="showHomePage()"><span class="main-tab-icon" data-app-icon="home"></span><span class="main-tab-label">الرئيسية</span></div>
-    <div class="tab main-tab" onclick="switchTab(0)"><span class="main-tab-icon" data-app-icon="bed"></span><span class="main-tab-label">التسكين</span></div>
-    <div class="tab main-tab" onclick="switchTab(1)"><span class="main-tab-icon" data-app-icon="bus"></span><span class="main-tab-label">المواصلات</span></div>
-    <div class="tab main-tab" onclick="switchTab(2)"><span class="main-tab-icon" data-app-icon="money"></span><span class="main-tab-label">الحسابات</span></div>
-    <div class="tab main-tab" onclick="switchTab(3)"><span class="main-tab-icon" data-app-icon="chart"></span><span class="main-tab-label">التقارير</span></div>
-    <div class="tab main-tab" onclick="switchTab(4)"><span class="main-tab-icon" data-app-icon="user"></span><span class="main-tab-label">كروت</span></div>
-    <div class="tab main-tab" onclick="switchTab(5)"><span class="main-tab-icon" data-app-icon="search"></span><span class="main-tab-label">بحث</span></div>
-    <div class="tab main-tab" data-tab-id="6" data-tab-name="settings" onclick="switchTab(6)"><span class="main-tab-icon" data-app-icon="settings"></span><span class="main-tab-label">إعدادات</span></div>
-  </div>
   <div class="application-utility-actions" style="margin-right:auto;display:flex;gap:6px;padding:6px 0;align-items:center">
     <div class="sync-bar live" id="syncBar">✔</div>
     <label class="btn btn-orange application-import-action">📂<input type="file" accept=".html,.json" style="display:none" onchange="loadFromFile(event)"></label>
@@ -179,7 +181,6 @@
     </div>
     <div id="warehouseWorkspace" class="conference-workspace" tabindex="-1"></div>
     <div id="reservationsWorkspace" class="conference-workspace" tabindex="-1"></div>
-    <div id="reservations-prototypeWorkspace" class="conference-workspace" tabindex="-1"></div>
     <div id="platform-administrationWorkspace" class="conference-workspace platform-administration-workspace" tabindex="-1"></div>
   </div>
   <div id="appVersionLabel" class="startup-version"></div>
@@ -523,7 +524,6 @@
 <script src="js/supabase/canonical-conference-transport.js?rev=p6i-b2-v1"></script>
 <script src="js/supabase/canonical-conference-restaurant.js?rev=p6i-b3-v1"></script>
 <script src="modules/reservations/reservations-module.js?rev=reservations-person-live-0d9db39-v1"></script>
-<script src="modules/reservations/reservations-visual-prototype.js?rev=reservations-prototype-fidelity-v2"></script>
 <script src="js/supabase/system-access-service.js?rev=account-status-only-v1"></script>
 <script src="js/sync/diagnostics-privacy-policy.js?rev=platform-capability-authority-v1"></script>
 <script src="js/supabase/first-system-bootstrap-service.js?rev=first-owner-bootstrap-hardening-v1"></script>
