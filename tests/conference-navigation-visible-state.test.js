@@ -78,6 +78,9 @@ test('rapid repeated Conference navigation keeps URL, subnav, and visible conten
   for(const [tabId,route] of [[6,'/conference/app/settings'],[0,'/conference/app/accommodation'],[6,'/conference/app/settings'],[0,'/conference/app/accommodation']]){
     assert.equal(state.context.navigateConferenceRoute(route),true);
     assertVisible(state,tabId,route);
+    assert.equal(state.window.document.getElementById('startupScreen').style.display,'flex');
+    assert.equal(state.window.document.getElementById('conferenceWorkspace').hidden,true);
+    assert.equal(state.window.document.getElementById('applicationBody').style.display,'');
     assert.equal(state.currentId(),'conference-1');
   }
 });
@@ -87,6 +90,8 @@ test('Conference Houses is visible without an active conference',()=>{
   const route='/conference/app/settings/houses';
   assert.equal(state.context.navigateConferenceRoute(route),true);
   assertVisible(state,6,route);
+  assert.equal(state.window.document.getElementById('startupScreen').style.display,'flex');
+  assert.equal(state.window.document.getElementById('conferenceWorkspace').hidden,true);
   assert.equal(state.currentId(),null);
 });
 
