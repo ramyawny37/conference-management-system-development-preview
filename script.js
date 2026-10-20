@@ -7056,9 +7056,16 @@ function setApplicationMode(mode){
   var startupScreen = ge('startupScreen');
   var topbar = ge('applicationTopbar');
   var body = ge('applicationBody');
-  if(startupScreen) startupScreen.style.display = startup ? 'flex' : 'none';
-  if(topbar) topbar.style.display = startup ? 'none' : '';
+  // The platform shell owns module navigation in both startup and conference views.
+  // Conference tabs live in applicationBody; never hide the shared shell to show them.
+  if(startupScreen) startupScreen.style.display = 'flex';
+  if(topbar) topbar.style.display = 'none';
   if(body) body.style.display = startup ? 'none' : '';
+  var conferenceWorkspace=ge('conferenceWorkspace');
+  if(!startup&&conferenceWorkspace){
+    conferenceWorkspace.hidden=true;
+    conferenceWorkspace.setAttribute('aria-hidden','true');
+  }
   if(startup){
     updateStartupDateTime();
     if(!startupClockTimer) startupClockTimer = setInterval(updateStartupDateTime, 30000);
