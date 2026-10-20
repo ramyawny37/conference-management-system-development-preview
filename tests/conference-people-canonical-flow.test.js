@@ -131,5 +131,7 @@ test('conference change cursor advances only after canonical projections refresh
  assert.match(source,/if\(!changed\.length\)\{watch\.eventId=newest\|\|previous;return null;\}/);
  assert.match(source,/return Promise\.all\(refresh\)\.then\(function\(\)\{if\(conferenceChangeWatch===watch&&epoch===sessionEpoch\)\{watch\.eventId=newest\|\|previous;notifyConferenceSourceChange\(watch,changed\);\}\}\)/);
  assert.doesNotMatch(source,/watch\.eventId=newest\|\|previous;conferenceActivities/);
- assert.match(source,/\.catch\(function\(\)\{\}\)\.then\(function\(\)\{if\(conferenceChangeWatch!==watch\)return;watch\.inFlight=false;scheduleConferenceChangeWatch\(watch\);\}\)/);
+ assert.doesNotMatch(source,/\.catch\(function\(\)\{\}\)/);
+ assert.match(integration,/registerOperationalSyncTask\('conference_changes',4000/);
+ assert.match(integration,/emitOperationalSync\('error',\{taskId:task\.id,code:task\.lastError\}\)/);
 });
