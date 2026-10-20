@@ -295,7 +295,7 @@ function hydrateCanonicalConferenceActivity(localConferenceId,options){
   if(!integration||typeof integration.hydrateConferenceActivity!=='function')return Promise.reject({code:'CANONICAL_CONFERENCE_ACTIVITY_UNAVAILABLE'});
   return integration.hydrateConferenceActivity(String(localConferenceId),String(link.remoteConferenceId)).then(function(result){var current=getCurrentConference();if(current&&String(current.id)===String(localConferenceId)&&currentTab===6)renderActivityLog();if(typeof integration.startConferenceChangeWatch==='function')integration.startConferenceChangeWatch(String(localConferenceId),String(link.remoteConferenceId));return result}).catch(function(error){if(options.silent!==true&&typeof showToast==='function')showToast('تعذر تحميل سجل العمليات.','#E74C3C');throw error});
 }
-if(window.addEventListener)window.addEventListener('platform-conference-source-change',function(event){var detail=event&&event.detail||{},current=getCurrentConference();if(!current||String(current.id)!==String(detail.localConferenceId||''))return;if(typeof renderTab==='function')renderTab(currentTab);});
+if(window.addEventListener)window.addEventListener('platform-conference-source-change',function(event){var detail=event&&event.detail||{},current=getCurrentConference();if(!current||String(current.id)!==String(detail.localConferenceId||''))return;if(typeof renderTab==='function')renderTab(currentTab,{skipHydration:true});});
 function hydrateCanonicalConferenceAccommodation(localConferenceId,options){
   options=options||{};
   var link=getCanonicalConferenceCoreLink(localConferenceId);
