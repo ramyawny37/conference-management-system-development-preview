@@ -18,10 +18,10 @@ test('runtime owns one canonical header, sidebar and workspace host',()=>{
   assert.match(html,/class="conference-context-toolbar" id="applicationTopbar"/);
 });
 
-test('conference sections use the canonical expandable sidebar and established switchTab owner',()=>{
+test('conference sections use the canonical expandable sidebar and Conference route owner',()=>{
   assert.match(html,/data-platform-nav-group="conference"[\s\S]*id="conferencePlatformSubnav"/);
   for(let tab=0;tab<=6;tab++)assert.match(html,new RegExp(`data-conference-tab="${tab}"`));
-  assert.match(integration,/conferenceTab[\s\S]*global\.switchTab\(parseInt\(conferenceTab\.getAttribute\('data-conference-tab'\)/);
+  assert.match(integration,/conferenceTab[\s\S]*resolveConferenceTabRoute[\s\S]*global\.navigateConferenceRoute\(targetRoute\)/);
   assert.match(integration,/conference-section-change/);
 });
 

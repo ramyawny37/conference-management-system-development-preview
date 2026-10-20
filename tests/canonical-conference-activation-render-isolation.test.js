@@ -7,11 +7,9 @@ const source=fs.readFileSync('script.js','utf8');
 const start=source.indexOf('function activatePersistedConferenceById(');
 const end=source.indexOf('function downloadFullApplicationBackup(',start);
 const activation=source.slice(start,end);
-test('conference activation distinguishes essential state steps from nonfatal render steps',()=>{
+test('conference activation renders only the requested tab after essential state steps',()=>{
   assert.ok(start>=0&&end>start);
-  assert.match(activation,/runMemberActivationRenderStep\('render_accommodation'/);
-  assert.match(activation,/runMemberActivationRenderStep\('render_transports'/);
-  assert.match(activation,/runMemberActivationRenderStep\('render_settings'/);
+  assert.doesNotMatch(activation,/runMemberActivationRenderStep\('render_(?:accommodation|transports|settings)'/);
   assert.match(activation,/runMemberActivationRenderStep\('render_current_tab'/);
   assert.match(activation,/runMemberActivationStep\(essentialSteps\[stepIndex\]\[0\]/);
 });
