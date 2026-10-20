@@ -2,7 +2,7 @@ import { createClient } from '@supabase/supabase-js';
 const ORIGIN='https://ramyawny37.github.io';
 const cors={'Access-Control-Allow-Origin':ORIGIN,'Access-Control-Allow-Headers':'authorization, x-client-info, apikey, content-type','Access-Control-Allow-Methods':'POST, OPTIONS','Vary':'Origin'};
 const allowed=new Set([
-  'create_canonical_conference','mutate_conference_core','get_conference_core','list_conference_participations','create_conference_participation','set_conference_participation_status','set_conference_participation_guardian','delete_conference_participation','get_conference_accommodation','create_accommodation_house','update_accommodation_house','delete_accommodation_house','create_accommodation_floor','update_accommodation_floor','delete_accommodation_floor','create_accommodation_room','update_accommodation_room','delete_accommodation_room','assign_conference_accommodation','move_conference_accommodation','remove_conference_accommodation',
+  'create_canonical_conference','mutate_conference_core','get_conference_core','list_conference_participations','create_conference_participation','set_conference_participation_status','set_conference_participation_guardian','delete_conference_participation','list_conference_houses','mutate_conference_house_directory','assign_conference_house','get_conference_accommodation','assign_conference_accommodation','move_conference_accommodation','remove_conference_accommodation',
   'acquire_conference_lock','renew_conference_lock','release_conference_lock','get_conference_lock','acquire_conference_section_lock','renew_conference_section_lock','release_conference_section_lock','get_conference_section_lock'
 ]);
 allowed.add('list_accessible_conferences');

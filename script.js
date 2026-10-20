@@ -2728,6 +2728,24 @@ function canonicalAccommodationStructure(operation,args,message){
   return canonicalAccommodationMutation(integration.mutateConferenceAccommodationStructure(current.id,operation,args),message);
 }
 
+function chooseCanonicalConferenceHouse(){
+  var current=getCurrentConference(),service=window.CanonicalConferenceHouses;
+  if(!current||!service)return false;
+  return service.hydrate().then(function(directory){
+    var assigned={};(canonicalAccommodationState().houses||[]).forEach(function(item){assigned[item.houseId]=true;});
+    var available=(directory.houses||[]).filter(function(item){return item.isActive&& !assigned[item.houseId];});
+    if(!available.length){showToast('لا توجد بيوت متاحة للاختيار.','#5A7A9A');return false;}
+    var answer=prompt(available.map(function(item,index){return (index+1)+' - '+item.name;}).join('\n'));
+    var selected=available[parseInt(answer,10)-1];if(!selected)return false;
+    return service.assign(current.id,selected.houseId,true,null).then(function(){renderAccommodation();showToast('✅ تم اختيار بيت المؤتمر');return true;});
+  }).catch(function(){showToast('تعذر اختيار بيت المؤتمر.','#E74C3C');return false;});
+}
+
+function unassignCanonicalConferenceHouse(houseId,revision){
+  var current=getCurrentConference();if(!current||!confirm('إلغاء إتاحة البيت لهذا المؤتمر؟'))return false;
+  return window.CanonicalConferenceHouses.assign(current.id,houseId,false,revision).then(function(){renderAccommodation();showToast('✅ تم إلغاء إتاحة البيت');return true;},function(){showToast('لا يمكن إلغاء البيت مع وجود إشغالات.','#E74C3C');return false;});
+}
+
 function createCanonicalAccommodationHouse(){
   var state=canonicalAccommodationState(),name=prompt('اسم البيت:');
   if(!name)return false;
@@ -2872,17 +2890,17 @@ function renderCanonicalAccommodation(state){
   });
   h+='</div>';
   h+='<div class="accommodation-search-count" aria-live="polite">الغرف المعروضة: '+matchingRooms.length+' من '+rooms.length+'</div>';
-  if(canManage)h+='<div class="accommodation-edit-toolbar"><button class="btn btn-blue" onclick="createCanonicalAccommodationHouse()">➕ إضافة بيت تسكين</button></div>';
+  if(canManage)h+='<div class="accommodation-edit-toolbar"><button class="btn btn-blue" onclick="chooseCanonicalConferenceHouse()">اختيار بيت من بيوت المؤتمرات</button></div>';
   h+='</section>';
   h+='<div class="accommodation-canonical-summary" role="group" aria-label="ملخص التسكين"><div class="card">إجمالي الغرف <strong>'+rooms.length+'</strong></div><div class="card">الغرف المشغولة <strong>'+occupiedRooms+'</strong></div><div class="card">الغرف الفارغة <strong>'+emptyOpenRooms+'</strong></div><div class="card">الغرف المغلقة <strong>'+closedRooms+'</strong></div><div class="card">النزلاء <strong>'+occupied+'</strong></div><div class="card">الأسرة الإضافية المستخدمة <strong>'+extraBedsUsed+'</strong></div><div class="card">الأسرة المتاحة <strong>'+Math.max(0,usableCapacity-openOccupancies)+'</strong></div></div>';
   if((query||filter!=='all')&&!matchingRooms.length&&rooms.length)h+='<div class="ui-state" role="status">لا توجد غرف مطابقة للبحث أو الفلتر.</div>';
-  if(!houses.length)h+='<div class="ui-state" role="status">لا توجد بيوت تسكين في بيانات المؤتمر المركزية. يمكنك إضافة بيت من الزر أعلاه.</div>';
+  if(!houses.length)h+='<div class="ui-state" role="status">لا توجد بيوت متاحة لهذا المؤتمر. استخدم زر اختيار بيت من بيوت المؤتمرات.</div>';
   state.houses.forEach(function(house){
-    h+='<section class="card accommodation-house section-card"><div class="accommodation-house-title"><span>'+accommodationIcon('building')+'</span><strong>'+esc(house.name)+'</strong>'+(canManage?'<div class="row"><button class="btn btn-blue btn-sm" onclick="editCanonicalAccommodationHouse(\''+house.houseId+'\')">✏️ تعديل</button><button class="btn btn-green btn-sm" onclick="createCanonicalAccommodationFloor(\''+house.houseId+'\')">➕ دور</button><button class="btn btn-red btn-sm" onclick="deleteCanonicalAccommodationHouse(\''+house.houseId+'\')">🗑️ حذف</button></div>':'')+'</div>';
+    h+='<section class="card accommodation-house section-card"><div class="accommodation-house-title"><span>'+accommodationIcon('building')+'</span><strong>'+esc(house.name)+'</strong>'+(canManage?'<div class="row"><button class="btn btn-red btn-sm" onclick="unassignCanonicalConferenceHouse(\''+house.houseId+'\','+Number(house.assignmentRevision||1)+')">إلغاء الإتاحة</button></div>':'')+'</div>';
     (house.floors||[]).forEach(function(floor){
-      h+='<div class="floor-section"><div class="floor-title"><strong>'+esc(floor.name)+'</strong>'+(canManage?'<div class="row"><button class="btn btn-blue btn-sm" onclick="editCanonicalAccommodationFloor(\''+floor.floorId+'\')">✏️ تعديل</button><button class="btn btn-green btn-sm" onclick="createCanonicalAccommodationRoom(\''+floor.floorId+'\')">➕ غرفة</button><button class="btn btn-red btn-sm" onclick="deleteCanonicalAccommodationFloor(\''+floor.floorId+'\')">🗑️ حذف</button></div>':'')+'</div><div class="rooms-grid">';
+      h+='<div class="floor-section"><div class="floor-title"><strong>'+esc(floor.name)+'</strong></div><div class="rooms-grid">';
       (floor.rooms||[]).filter(function(room){return matchingRooms.indexOf(room)>=0;}).forEach(function(room){
-        h+='<article class="room-card'+(room.isClosed?' room-closed':'')+'"><div class="room-card-header"><strong>غرفة '+esc(room.roomNumber)+'</strong><span>'+(room.isClosed?'مغلقة · ':'')+(room.occupancies||[]).length+'/'+(Number(room.baseCapacity||0)+Number(room.extraBedCapacity||0))+'</span></div>'+(canManage?'<div class="row accommodation-room-toolbar"><button class="btn btn-green btn-sm" '+(room.isClosed||(room.occupancies||[]).length>=Number(room.baseCapacity||0)+Number(room.extraBedCapacity||0)?'disabled title="الغرفة مغلقة أو ممتلئة"':'onclick="assignCanonicalAccommodation(\''+room.roomId+'\')"')+'>➕ إضافة نزيل</button><button class="btn btn-blue btn-sm" onclick="editCanonicalAccommodationRoom(\''+room.roomId+'\')">✏️ تعديل</button><button class="btn btn-gray btn-sm" onclick="toggleCanonicalAccommodationRoom(\''+room.roomId+'\')">'+(room.isClosed?'🔓':'🔒')+'</button><button class="btn btn-red btn-sm" onclick="deleteCanonicalAccommodationRoom(\''+room.roomId+'\')">🗑️</button></div>':'');
+        h+='<article class="room-card'+(room.isClosed?' room-closed':'')+'"><div class="room-card-header"><strong>غرفة '+esc(room.roomNumber)+'</strong><span>'+(room.isClosed?'مغلقة · ':'')+(room.occupancies||[]).length+'/'+(Number(room.baseCapacity||0)+Number(room.extraBedCapacity||0))+'</span></div>'+(canManage?'<div class="row accommodation-room-toolbar"><button class="btn btn-green btn-sm" '+(room.isClosed||(room.occupancies||[]).length>=Number(room.baseCapacity||0)+Number(room.extraBedCapacity||0)?'disabled title="الغرفة مغلقة أو ممتلئة"':'onclick="assignCanonicalAccommodation(\''+room.roomId+'\')"')+'>➕ إضافة نزيل</button></div>':'');
         (room.occupancies||[]).forEach(function(occupancy){h+='<div class="guest-row"><div><strong>'+esc(occupancy.person.fullName)+'</strong><div class="accommodation-guest-meta">'+esc(occupancy.person.church||occupancy.person.phone||'')+' • '+(occupancy.bedType==='extra'?'سرير إضافي':'سرير أساسي')+'</div></div>'+(canManage?'<div class="row"><button class="btn btn-blue btn-sm" onclick="moveCanonicalAccommodation(\''+occupancy.occupancyId+'\')">↔️ نقل</button><button class="btn btn-red btn-sm" onclick="removeCanonicalAccommodation(\''+occupancy.occupancyId+'\')">🗑️ حذف</button></div>':'')+'</div>';});
         h+='</article>';
       });
@@ -8725,9 +8743,12 @@ function renderTrashSection(){
 }
 
 function renderHouseTemplatesSettings() {
-  var templates = appData.houseTemplates || [];
-  appData.houseTemplates = templates;
-  var selected = ensureSelectedHouseTemplate();
+  var service=window.CanonicalConferenceHouses;
+  var state=service&&service.getState();
+  if(!state){if(service)service.hydrate().then(renderSettings,function(){showToast('تعذر تحميل بيوت المؤتمرات.','#E74C3C');});return '<div class="card"><div class="ui-state ui-state--loading" role="status">جارٍ تحميل بيوت المؤتمرات...</div></div>';}
+  var templates=state.houses||[];
+  var selected=templates.filter(function(item){return String(item.houseId)===String(selectedHouseTemplateId);})[0]||templates[0]||null;
+  selectedHouseTemplateId=selected?selected.houseId:null;
   var h = '<div class="card">';
   if (selected) {
     h += '<div class="house-templates-heading"><div class="card-title">🏠 '+esc(selected.name || 'بيت غير مسمى')+'</div>';
@@ -8742,10 +8763,9 @@ function renderHouseTemplatesSettings() {
   h += '<div class="house-template-list">';
   if (templates.length) {
     templates.forEach(function(ht) {
-      normalizeHouseTemplateStructure(ht);
-      var active = selected && selected.id === ht.id;
-      var templateRooms=getHouseTemplateRooms(ht);
-      h += '<button type="button" class="house-template-list-card'+(active?' selected':'')+'" onclick="selectHouseTemplate(\'' + ht.id + '\')">';
+      var active = selected && selected.houseId === ht.houseId;
+      var templateRooms=[];(ht.floors||[]).forEach(function(floor){templateRooms=templateRooms.concat(floor.rooms||[]);});
+      h += '<button type="button" class="house-template-list-card'+(active?' selected':'')+'" onclick="selectCanonicalHouse(\'' + ht.houseId + '\')">';
       h += '<strong>' + esc(ht.name || 'بيت غير مسمى') + '</strong>';
       h += '<span>إجمالي الغرف: '+templateRooms.length+'</span>';
       h += '</button>';
@@ -8755,13 +8775,27 @@ function renderHouseTemplatesSettings() {
   }
   h += '</div></aside>';
   h += '<main class="house-template-details">';
-  h += renderHouseTemplateDetails(selected);
+  if(selected){h+='<div class="house-template-detail-heading"><h3>'+esc(selected.name)+'</h3><div class="row"><button class="btn btn-blue btn-sm" onclick="editCanonicalHouseDirectory(\''+selected.houseId+'\')">✏️ تعديل</button><button class="btn btn-green btn-sm" onclick="addCanonicalHouseFloor(\''+selected.houseId+'\')">➕ دور</button><button class="btn btn-gray btn-sm" onclick="deactivateCanonicalHouse(\''+selected.houseId+'\')">إيقاف</button></div></div>';(selected.floors||[]).forEach(function(floor){h+='<section class="floor-section"><div class="floor-title"><strong>'+esc(floor.name)+'</strong><div class="row"><button class="btn btn-blue btn-sm" onclick="editCanonicalHouseFloor(\''+floor.floorId+'\')">✏️</button><button class="btn btn-green btn-sm" onclick="addCanonicalHouseRoom(\''+floor.floorId+'\')">➕ غرفة</button><button class="btn btn-red btn-sm" onclick="deleteCanonicalHouseFloor(\''+floor.floorId+'\')">🗑️</button></div></div><div class="rooms-grid">';(floor.rooms||[]).forEach(function(room){h+='<article class="room-card"><strong>غرفة '+esc(room.roomNumber)+'</strong><span>'+Number(room.baseCapacity||0)+' + '+Number(room.extraBedCapacity||0)+'</span><div class="row"><button class="btn btn-blue btn-sm" onclick="editCanonicalHouseRoom(\''+room.roomId+'\')">✏️</button><button class="btn btn-red btn-sm" onclick="deleteCanonicalHouseRoom(\''+room.roomId+'\')">🗑️</button></div></article>';});h+='</div></section>';});}else h+='<div class="ui-state ui-state--empty">لا توجد بيوت محفوظة بعد</div>';
   h += '</main></div>';
   h += '</div>';
   return h;
 }
 
-function createHouseTemplate() {
+function refreshCanonicalHouseDirectory(message){return window.CanonicalConferenceHouses.hydrate().then(function(){renderSettings();if(message)showToast(message);return true;},function(){showToast('تعذر حفظ بيت المؤتمر.','#E74C3C');return false;});}
+if(window.addEventListener)window.addEventListener('conference-house-directory-change',function(){if(settingsTab==='houses')renderSettings();});
+function selectCanonicalHouse(id){selectedHouseTemplateId=id;renderSettings();}
+function createHouseTemplate(){var name=prompt('اسم البيت:');if(!name||!name.trim())return false;return window.CanonicalConferenceHouses.mutate('create_house',{name:name.trim(),description:'',position:0}).then(function(){return refreshCanonicalHouseDirectory('✅ تم إنشاء البيت');},function(){showToast('تعذر إنشاء البيت.','#E74C3C');return false;});}
+function editCanonicalHouseDirectory(id){var state=window.CanonicalConferenceHouses.getState(),house=(state.houses||[]).filter(function(item){return item.houseId===id;})[0],name=house&&prompt('اسم البيت:',house.name);if(!name||!name.trim())return false;return window.CanonicalConferenceHouses.mutate('update_house',{houseId:id,expectedRevision:house.revision,name:name.trim(),description:house.description||'',position:house.position,isActive:house.isActive}).then(function(){return refreshCanonicalHouseDirectory('✅ تم حفظ البيت');});}
+function deactivateCanonicalHouse(id){var state=window.CanonicalConferenceHouses.getState(),house=(state.houses||[]).filter(function(item){return item.houseId===id;})[0];if(!house||!confirm('إيقاف البيت عن الاستخدام الجديد؟'))return false;return window.CanonicalConferenceHouses.mutate('deactivate_house',{houseId:id,expectedRevision:house.revision}).then(function(){return refreshCanonicalHouseDirectory('✅ تم إيقاف البيت');});}
+function addCanonicalHouseFloor(id){var name=prompt('اسم الدور:');if(!name||!name.trim())return false;return window.CanonicalConferenceHouses.mutate('create_floor',{houseId:id,name:name.trim(),position:0}).then(function(){return refreshCanonicalHouseDirectory('✅ تم حفظ الدور');});}
+function addCanonicalHouseRoom(id){var number=prompt('رقم الغرفة:');if(!number||!number.trim())return false;var capacity=parseInt(prompt('عدد الأسرة الأساسية:','1'),10);if(!isFinite(capacity)||capacity<0)return false;return window.CanonicalConferenceHouses.mutate('create_room',{floorId:id,roomNumber:number.trim(),baseCapacity:capacity,extraBedCapacity:0,notes:'',position:0}).then(function(){return refreshCanonicalHouseDirectory('✅ تم حفظ الغرفة');});}
+function findCanonicalHouseDirectoryEntity(kind,id){var state=window.CanonicalConferenceHouses.getState(),found=null;(state&&state.houses||[]).some(function(house){if(kind==='house'&&house.houseId===id){found=house;return true;}return (house.floors||[]).some(function(floor){if(kind==='floor'&&floor.floorId===id){found=floor;return true;}return (floor.rooms||[]).some(function(room){if(kind==='room'&&room.roomId===id){found=room;return true;}return false;});});});return found;}
+function editCanonicalHouseFloor(id){var floor=findCanonicalHouseDirectoryEntity('floor',id),name=floor&&prompt('اسم الدور:',floor.name);if(!name||!name.trim())return false;return window.CanonicalConferenceHouses.mutate('update_floor',{floorId:id,expectedRevision:floor.revision,name:name.trim(),position:floor.position}).then(function(){return refreshCanonicalHouseDirectory('✅ تم حفظ الدور');});}
+function deleteCanonicalHouseFloor(id){var floor=findCanonicalHouseDirectoryEntity('floor',id);if(!floor||!confirm('حذف الدور؟'))return false;return window.CanonicalConferenceHouses.mutate('delete_floor',{floorId:id,expectedRevision:floor.revision}).then(function(){return refreshCanonicalHouseDirectory('✅ تم حذف الدور');});}
+function editCanonicalHouseRoom(id){var room=findCanonicalHouseDirectoryEntity('room',id),number=room&&prompt('رقم الغرفة:',room.roomNumber);if(!number||!number.trim())return false;var base=parseInt(prompt('عدد الأسرة الأساسية:',String(room.baseCapacity)),10),extra=parseInt(prompt('عدد الأسرة الإضافية:',String(room.extraBedCapacity)),10);if(!isFinite(base)||base<0||!isFinite(extra)||extra<0)return false;return window.CanonicalConferenceHouses.mutate('update_room',{roomId:id,expectedRevision:room.revision,roomNumber:number.trim(),baseCapacity:base,extraBedCapacity:extra,notes:room.notes||'',position:room.position}).then(function(){return refreshCanonicalHouseDirectory('✅ تم حفظ الغرفة');});}
+function deleteCanonicalHouseRoom(id){var room=findCanonicalHouseDirectoryEntity('room',id);if(!room||!confirm('حذف الغرفة؟'))return false;return window.CanonicalConferenceHouses.mutate('delete_room',{roomId:id,expectedRevision:room.revision}).then(function(){return refreshCanonicalHouseDirectory('✅ تم حذف الغرفة');});}
+
+function createLegacyHouseTemplate() {
   editHouseTemplateId = null;
   selectedHouseTemplateId = null;
   ge('ht_title').textContent = '🏠 إنشاء خريطة بيت جديدة';
