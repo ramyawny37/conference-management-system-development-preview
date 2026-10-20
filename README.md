@@ -8,4 +8,4 @@ its public Supabase configuration from the Development-only repository secrets.
 The approved Development project ref is `gppwltrifgfxrkzvvxoe`; the Production
 canonical configuration is never copied into the deployed artifact.
 
-Last preview refresh trigger: 2026-10-20 — Platform `70f80b29ffeebc484d179ebcb7eb5beae3f83438` canonical Conference houses.
+Last preview refresh trigger: 2026-10-20 — Platform `131361523b832986c3034cb707b10c99ca66308c` canonical Conference houses.
