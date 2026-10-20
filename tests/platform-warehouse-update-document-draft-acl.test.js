@@ -4,7 +4,7 @@ const path=require('node:path');
 const test=require('node:test');
 
 const root=path.join(__dirname,'..');
-const migration=fs.readFileSync(path.join(root,'supabase/migrations/20261020054417_close_warehouse_update_document_draft_direct_execute.sql'),'utf8');
+const migration=fs.readFileSync(path.join(root,'supabase/migrations/20261020054724_close_warehouse_update_document_draft_direct_execute.sql'),'utf8');
 const dispatcher=fs.readFileSync(path.join(root,'supabase/migrations/20261010201800_flatten_platform_device_operation_dispatcher.sql'),'utf8');
 const edge=fs.readFileSync(path.join(root,'supabase/functions/platform-device-operation/index.ts'),'utf8');
 const signature='warehouse.update_document_draft(uuid, uuid, text, uuid, bigint, jsonb)';
