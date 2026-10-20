@@ -1657,12 +1657,6 @@ function reconcileConferenceRoute(){
   if(!route)return false;
   if(route.kind==='home')return showHomePage();
   var current=getCurrentConference();
-  if(route.kind==='application'&&route.tabName==='settings'&&route.settingsView==='houses'){
-    openConferenceWorkspace();
-    setApplicationMode('application');
-    settingsTab='houses';
-    return switchTab(route.tabId,{preserveRoute:true});
-  }
   var authorization=window.ConferenceActivationAuthorization;
   var routeDecision=currentConferenceRuntimeActivationDecision;
   if(route.kind!=='application'||!current||!authorization||
