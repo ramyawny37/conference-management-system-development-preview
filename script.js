@@ -1221,14 +1221,17 @@ function saveToFile(){
 }
 
 function switchSettingsTab(tab) {
+  var view=tab==='houses'?'houses':'general';
+  var routing=window.ApplicationRouting;
+  var pathname=routing&&routing.resolveConferenceSettingsRoute
+    ?routing.resolveConferenceSettingsRoute(view):null;
+  if(!pathname)return false;
   if(window.ConferenceTemplateHousesEditor){
     window.ConferenceTemplateHousesEditor.close();
   }
-  settingsTab = tab || 'general';
-  var routing=window.ApplicationRouting,pathname=routing&&routing.resolveConferenceSettingsRoute?routing.resolveConferenceSettingsRoute(settingsTab):null;
-  if(pathname&&getPlatformShellPathname()!==pathname)pushPlatformShellPathname(pathname);
-  renderSettings();
-  resetAdministrativeViewScroll();
+  var opened=navigateConferenceRoute(pathname);
+  if(opened)resetAdministrativeViewScroll();
+  return opened;
 }
 
 function mountSyncSettingsSection(){
@@ -8761,7 +8764,20 @@ function renderTrashSection(){
 function renderHouseTemplatesSettings() {
   var service=window.CanonicalConferenceHouses;
   var state=service&&service.getState();
-  if(!state){if(service)service.hydrate().then(renderSettings,function(){showToast('تعذر تحميل بيوت المؤتمرات.','#E74C3C');});return '<div class="card"><div class="ui-state ui-state--loading" role="status">جارٍ تحميل بيوت المؤتمرات...</div></div>';}
+  if(!state){
+    if(service)service.hydrate().then(function(){
+      var route=getCanonicalConferenceRoute();
+      if(route&&route.kind==='application'&&route.tabName==='settings'&&route.settingsView==='houses'&&currentTab===6){
+        renderSettings();
+      }
+    },function(){
+      var route=getCanonicalConferenceRoute();
+      if(route&&route.kind==='application'&&route.tabName==='settings'&&route.settingsView==='houses'&&currentTab===6){
+        showToast('تعذر تحميل بيوت المؤتمرات.','#E74C3C');
+      }
+    });
+    return '<div class="card"><div class="ui-state ui-state--loading" role="status">جارٍ تحميل بيوت المؤتمرات...</div></div>';
+  }
   var templates=state.houses||[];
   var selected=templates.filter(function(item){return String(item.houseId)===String(selectedHouseTemplateId);})[0]||templates[0]||null;
   selectedHouseTemplateId=selected?selected.houseId:null;
