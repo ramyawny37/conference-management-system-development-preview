@@ -1666,7 +1666,6 @@ function reconcileConferenceRoute(){
     openStartupScreen({clearCurrentConference:false,persistView:false});
     return false;
   }
-  openConferenceWorkspace();
   setApplicationMode('application');
   if(route.tabName==='settings')settingsTab=route.settingsView==='houses'?'houses':'general';
   return switchTab(route.tabId,{preserveRoute:true});
@@ -7062,9 +7061,18 @@ function setApplicationMode(mode){
   if(topbar) topbar.style.display = 'none';
   if(body) body.style.display = startup ? 'none' : '';
   var conferenceWorkspace=ge('conferenceWorkspace');
-  if(!startup&&conferenceWorkspace){
-    conferenceWorkspace.hidden=true;
-    conferenceWorkspace.setAttribute('aria-hidden','true');
+  if(!startup){
+    if(startupScreen)startupScreen.classList.add('platform-conference-active');
+    var homeWorkspace=ge('platformHomeWorkspace');
+    if(homeWorkspace){
+      homeWorkspace.hidden=true;
+      homeWorkspace.classList.remove('is-active');
+      homeWorkspace.setAttribute('aria-hidden','true');
+    }
+    if(conferenceWorkspace){
+      conferenceWorkspace.hidden=true;
+      conferenceWorkspace.setAttribute('aria-hidden','true');
+    }
   }
   if(startup){
     updateStartupDateTime();
