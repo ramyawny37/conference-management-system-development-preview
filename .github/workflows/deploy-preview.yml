@@ -22,11 +22,10 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+  build:
     runs-on: ubuntu-latest
+    outputs:
+      platform_sha: ${{ steps.source_meta.outputs.platform_sha }}
 
     steps:
       - name: Checkout Platform Development source
@@ -37,6 +36,7 @@ jobs:
           path: source/platform
           fetch-depth: 1
 
+      # Full precached runtime syntax validation
       - name: Capture and verify source provenance
         id: source_meta
         shell: bash
@@ -94,6 +94,16 @@ jobs:
           PGUSER: postgres
           PGPASSWORD: preview_validation_only
         run: npm run check:development-preview
+
+      # Validate authorized cloud startup without legacy local-entry assumptions.
+      - name: Validate canonical conference opening before publish
+        working-directory: source/platform
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check script.js
+          node --check js/sync/discovered-conference-open-service.js
+          node --test tests/discovered-conference-open-service.test.js tests/platform-resource-lease-client.test.js tests/startup-canonical-discovery-view.test.js
 
       - name: Prepare isolated preview artifact
         shell: bash
@@ -196,6 +206,15 @@ jobs:
         with:
           path: site
 
+  deploy:
+    needs: build
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Report canonical Platform device source
+        run: echo "Deploying Platform develop SHA ${{ needs.build.outputs.platform_sha }}"
       - name: Deploy preview
         id: deployment
         uses: actions/deploy-pages@v4
