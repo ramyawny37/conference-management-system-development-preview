@@ -16,7 +16,7 @@ const conferencePeoplePatches=[
   'supabase/migrations/20261014210000_conference_canonical_person_revision_update.sql',
   'supabase/migrations/20261014220000_conference_canonical_person_exact_read.sql',
 ].map(read).join('\n');
-const conferenceHousePatch=read('supabase/migrations/20261020143000_canonical_central_conference_houses.sql');
+const conferenceHousePatch=read('supabase/migrations/20261020143000_canonical_central_conference_houses.sql')+'\n'+read('supabase/migrations/20261020131411_conference_room_assignment_foundation.sql');
 const dispatcher=migration.match(/create or replace function platform\.execute_device_operation\([\s\S]*?end \$\$;/i)?.[0]||'';
 const dispatcherPatches=read('supabase/migrations/20261013141000_reservations_canonical_people_device_dispatch.sql');
 const ownerPendingReadPatch=read('supabase/migrations/20261018214500_canonical_owner_pending_device_session_read.sql');

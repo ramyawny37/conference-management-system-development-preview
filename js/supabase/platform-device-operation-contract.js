@@ -17,6 +17,8 @@
     ['list_conference_houses','public.list_conference_houses(uuid)'],
     ['mutate_conference_house_directory','public.mutate_conference_house_directory(uuid,uuid,text,jsonb)'],
     ['assign_conference_house','public.assign_conference_house(uuid,uuid,uuid,uuid,boolean,bigint)'],
+    ['list_conference_house_room_options','public.list_conference_house_room_options(uuid,uuid)'],
+    ['assign_conference_room','public.assign_conference_room(uuid,uuid,uuid,uuid,boolean,bigint)'],
     ['get_conference_accommodation','public.get_conference_accommodation(uuid,uuid)'],
     ['assign_conference_accommodation','public.assign_conference_accommodation(uuid,uuid,uuid,uuid,integer,integer,text,text)'],
     ['move_conference_accommodation','public.move_conference_accommodation(uuid,uuid,uuid,bigint,uuid,integer,integer,text,text)'],
