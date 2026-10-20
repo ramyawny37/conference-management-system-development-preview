@@ -222,7 +222,7 @@ function refreshCanonicalConferenceCorePresentation(localConferenceId){
   if(!current||String(current.id)!==String(localConferenceId||''))return;
   setCurrentConference(current);
   syncCurrentConferenceRefs();
-  if(typeof renderTab==='function')renderTab(currentTab);
+  if(typeof renderTab==='function')renderTab(currentTab,{skipHydration:true});
 }
 function hydrateCanonicalConferenceCore(localConferenceId,options){
   options=options||{};
@@ -256,7 +256,7 @@ function hydrateCanonicalConferenceParticipations(localConferenceId,options){
   }
   return integration.hydrateConferenceParticipations(String(localConferenceId),String(link.remoteConferenceId)).then(function(result){
     var current=getCurrentConference();
-    if(current&&String(current.id)===String(localConferenceId)&&typeof renderTab==='function')renderTab(currentTab);
+    if(current&&String(current.id)===String(localConferenceId)&&typeof renderTab==='function')renderTab(currentTab,{skipHydration:true});
     return result;
   }).catch(function(error){
     if(options.silent!==true&&typeof showToast==='function')showToast('تعذر تحميل بيانات المشاركين المحدثة.','#E74C3C');
@@ -1638,8 +1638,8 @@ function hydrateConferenceTabDataOnDemand(tabId){
   });
   return conferenceTabHydrationFlights[key];
 }
-function renderTab(n){
-  if(typeof hydrateConferenceTabDataOnDemand==='function')hydrateConferenceTabDataOnDemand(n);
+function renderTab(n,options){
+  if(!(options&&options.skipHydration)&&typeof hydrateConferenceTabDataOnDemand==='function')hydrateConferenceTabDataOnDemand(n);
   if (n === 0) {
     var conferenceHeader=ge('globalConferenceHeader');
     if(conferenceHeader){conferenceHeader.innerHTML='';conferenceHeader.style.display='none';}
