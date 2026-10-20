@@ -8,7 +8,7 @@ const CACHE_NAMESPACE = IS_DEVELOPMENT
   : '';
 const CACHE_PREFIX = CACHE_NAMESPACE + 'conference-manager-core-';
 const CACHE_REVISION = IS_DEVELOPMENT
-  ? 'development-unified-platform-state-home-v1'
+  ? 'development-reservations-platform-summary-v1'
   : 'production-3-6-0-release-v6';
 const CACHE_NAME = CACHE_PREFIX + 'v' + APP_VERSION + '-' + CACHE_REVISION;
 const CORE_ASSETS = [
@@ -35,7 +35,7 @@ const CORE_ASSETS = [
   './js/supabase/client.js?rev=target-device-argument-preservation-v1',
   './js/supabase/auth.js?rev=account-session-identity-v1',
   './js/platform-integration.js?rev=platform-administration-canonical-sidebar-navigation-v2',
-  './js/platform-home-dashboard.js?rev=unified-platform-state-home-v1',
+  './js/platform-home-dashboard.js?rev=unified-platform-state-home-v2',
   './js/supabase/canonical-conference-discovery.js?rev=conference-section-capabilities-v2',
   './js/supabase/canonical-conference-transport.js?rev=p6i-b2-v1',
   './js/supabase/canonical-conference-restaurant.js?rev=p6i-b3-v1',
