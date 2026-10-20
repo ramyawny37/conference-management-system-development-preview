@@ -2838,8 +2838,8 @@ function renderCanonicalAccommodation(state){
   var h='<main class="accommodation-dashboard">';
   if(!state){
     var loadState=typeof window.getConferenceAccommodationLoadState==='function'?window.getConferenceAccommodationLoadState(getCurrentConference().id):{status:'idle'};
-    if(loadState.status==='loading')h+='<div class="card" role="status">جارٍ تحميل بيانات التسكين المركزية...</div>';
-    else h+='<div class="card" role="alert">تعذر تحميل بيانات التسكين. <button type="button" class="btn btn-blue btn-sm" onclick="retryCanonicalConferenceAccommodation()">إعادة المحاولة</button></div>';
+    if(loadState.status==='loading')h+='<div class="ui-state ui-state--loading" role="status">جارٍ تحميل بيانات التسكين المركزية...</div>';
+    else h+='<div class="ui-state ui-state--error" role="alert">تعذر تحميل بيانات التسكين. <button type="button" class="btn btn-blue btn-sm" onclick="retryCanonicalConferenceAccommodation()">إعادة المحاولة</button></div>';
     h+='</main>';ge('tab0').innerHTML=h;return;
   }
   var canManage=currentConferenceSectionCapability('accommodationManage');
@@ -2864,6 +2864,7 @@ function renderCanonicalAccommodation(state){
     if(filter==='available'&&(room.isClosed||guests.length>=Number(room.baseCapacity||0)+Number(room.extraBedCapacity||0)))return false;
     return true;
   });
+  h+='<section class="accommodation-toolbar" aria-label="أدوات البحث وفلترة التسكين">';
   h+=renderAccommodationSearchControls(matchingRooms.length,!!query);
   h+='<div class="accommodation-quick-filters" role="group" aria-label="فلترة الغرف">';
   [['all','كل الغرف'],['occupied','الغرف المشغولة'],['empty','الغرف الفارغة'],['available','بها أماكن'],['closed','الغرف المغلقة']].forEach(function(item){
@@ -2872,16 +2873,17 @@ function renderCanonicalAccommodation(state){
   h+='</div>';
   h+='<div class="accommodation-search-count" aria-live="polite">الغرف المعروضة: '+matchingRooms.length+' من '+rooms.length+'</div>';
   if(canManage)h+='<div class="accommodation-edit-toolbar"><button class="btn btn-blue" onclick="createCanonicalAccommodationHouse()">➕ إضافة بيت تسكين</button></div>';
+  h+='</section>';
   h+='<div class="accommodation-canonical-summary" role="group" aria-label="ملخص التسكين"><div class="card">إجمالي الغرف <strong>'+rooms.length+'</strong></div><div class="card">الغرف المشغولة <strong>'+occupiedRooms+'</strong></div><div class="card">الغرف الفارغة <strong>'+emptyOpenRooms+'</strong></div><div class="card">الغرف المغلقة <strong>'+closedRooms+'</strong></div><div class="card">النزلاء <strong>'+occupied+'</strong></div><div class="card">الأسرة الإضافية المستخدمة <strong>'+extraBedsUsed+'</strong></div><div class="card">الأسرة المتاحة <strong>'+Math.max(0,usableCapacity-openOccupancies)+'</strong></div></div>';
-  if((query||filter!=='all')&&!matchingRooms.length&&rooms.length)h+='<div class="card" role="status">لا توجد غرف مطابقة للبحث أو الفلتر.</div>';
-  if(!houses.length)h+='<div class="card" role="status" style="text-align:center;padding:20px;color:#95a5a6;">لا توجد بيوت تسكين في بيانات المؤتمر المركزية. يمكنك إضافة بيت من الزر أعلاه.</div>';
+  if((query||filter!=='all')&&!matchingRooms.length&&rooms.length)h+='<div class="ui-state" role="status">لا توجد غرف مطابقة للبحث أو الفلتر.</div>';
+  if(!houses.length)h+='<div class="ui-state" role="status">لا توجد بيوت تسكين في بيانات المؤتمر المركزية. يمكنك إضافة بيت من الزر أعلاه.</div>';
   state.houses.forEach(function(house){
     h+='<section class="card accommodation-house section-card"><div class="accommodation-house-title"><span>'+accommodationIcon('building')+'</span><strong>'+esc(house.name)+'</strong>'+(canManage?'<div class="row"><button class="btn btn-blue btn-sm" onclick="editCanonicalAccommodationHouse(\''+house.houseId+'\')">✏️ تعديل</button><button class="btn btn-green btn-sm" onclick="createCanonicalAccommodationFloor(\''+house.houseId+'\')">➕ دور</button><button class="btn btn-red btn-sm" onclick="deleteCanonicalAccommodationHouse(\''+house.houseId+'\')">🗑️ حذف</button></div>':'')+'</div>';
     (house.floors||[]).forEach(function(floor){
       h+='<div class="floor-section"><div class="floor-title"><strong>'+esc(floor.name)+'</strong>'+(canManage?'<div class="row"><button class="btn btn-blue btn-sm" onclick="editCanonicalAccommodationFloor(\''+floor.floorId+'\')">✏️ تعديل</button><button class="btn btn-green btn-sm" onclick="createCanonicalAccommodationRoom(\''+floor.floorId+'\')">➕ غرفة</button><button class="btn btn-red btn-sm" onclick="deleteCanonicalAccommodationFloor(\''+floor.floorId+'\')">🗑️ حذف</button></div>':'')+'</div><div class="rooms-grid">';
       (floor.rooms||[]).filter(function(room){return matchingRooms.indexOf(room)>=0;}).forEach(function(room){
-        h+='<article class="room-card'+(room.isClosed?' room-closed':'')+'"><div class="room-card-header"><strong>غرفة '+esc(room.roomNumber)+'</strong><span>'+(room.isClosed?'مغلقة · ':'')+(room.occupancies||[]).length+'/'+(Number(room.baseCapacity||0)+Number(room.extraBedCapacity||0))+'</span></div>'+(canManage?'<div class="row" style="gap:4px;flex-wrap:wrap"><button class="btn btn-green btn-sm" '+(room.isClosed||(room.occupancies||[]).length>=Number(room.baseCapacity||0)+Number(room.extraBedCapacity||0)?'disabled title="الغرفة مغلقة أو ممتلئة"':'onclick="assignCanonicalAccommodation(\''+room.roomId+'\')"')+'>➕ إضافة نزيل</button><button class="btn btn-blue btn-sm" onclick="editCanonicalAccommodationRoom(\''+room.roomId+'\')">✏️ تعديل</button><button class="btn btn-gray btn-sm" onclick="toggleCanonicalAccommodationRoom(\''+room.roomId+'\')">'+(room.isClosed?'🔓':'🔒')+'</button><button class="btn btn-red btn-sm" onclick="deleteCanonicalAccommodationRoom(\''+room.roomId+'\')">🗑️</button></div>':'');
-        (room.occupancies||[]).forEach(function(occupancy){h+='<div class="guest-row"><div><strong>'+esc(occupancy.person.fullName)+'</strong><div style="font-size:10px;color:#5a7a9a">'+esc(occupancy.person.church||occupancy.person.phone||'')+' • '+(occupancy.bedType==='extra'?'سرير إضافي':'سرير أساسي')+'</div></div>'+(canManage?'<div class="row"><button class="btn btn-blue btn-sm" onclick="moveCanonicalAccommodation(\''+occupancy.occupancyId+'\')">↔️ نقل</button><button class="btn btn-red btn-sm" onclick="removeCanonicalAccommodation(\''+occupancy.occupancyId+'\')">🗑️ حذف</button></div>':'')+'</div>';});
+        h+='<article class="room-card'+(room.isClosed?' room-closed':'')+'"><div class="room-card-header"><strong>غرفة '+esc(room.roomNumber)+'</strong><span>'+(room.isClosed?'مغلقة · ':'')+(room.occupancies||[]).length+'/'+(Number(room.baseCapacity||0)+Number(room.extraBedCapacity||0))+'</span></div>'+(canManage?'<div class="row accommodation-room-toolbar"><button class="btn btn-green btn-sm" '+(room.isClosed||(room.occupancies||[]).length>=Number(room.baseCapacity||0)+Number(room.extraBedCapacity||0)?'disabled title="الغرفة مغلقة أو ممتلئة"':'onclick="assignCanonicalAccommodation(\''+room.roomId+'\')"')+'>➕ إضافة نزيل</button><button class="btn btn-blue btn-sm" onclick="editCanonicalAccommodationRoom(\''+room.roomId+'\')">✏️ تعديل</button><button class="btn btn-gray btn-sm" onclick="toggleCanonicalAccommodationRoom(\''+room.roomId+'\')">'+(room.isClosed?'🔓':'🔒')+'</button><button class="btn btn-red btn-sm" onclick="deleteCanonicalAccommodationRoom(\''+room.roomId+'\')">🗑️</button></div>':'');
+        (room.occupancies||[]).forEach(function(occupancy){h+='<div class="guest-row"><div><strong>'+esc(occupancy.person.fullName)+'</strong><div class="accommodation-guest-meta">'+esc(occupancy.person.church||occupancy.person.phone||'')+' • '+(occupancy.bedType==='extra'?'سرير إضافي':'سرير أساسي')+'</div></div>'+(canManage?'<div class="row"><button class="btn btn-blue btn-sm" onclick="moveCanonicalAccommodation(\''+occupancy.occupancyId+'\')">↔️ نقل</button><button class="btn btn-red btn-sm" onclick="removeCanonicalAccommodation(\''+occupancy.occupancyId+'\')">🗑️ حذف</button></div>':'')+'</div>';});
         h+='</article>';
       });
       h+='</div></div>';
@@ -2894,11 +2896,11 @@ function renderCanonicalAccommodation(state){
 function renderAccommodation() {
   var current = getCurrentConference();
   if (!current || !getCanonicalConferenceCoreLink(current.id)) {
-    ge('tab0').innerHTML = '<main class="accommodation-dashboard"><div class="card" role="status">لا تتوفر بيانات تسكين سحابية للمؤتمر الحالي. افتح المؤتمر من قائمة المؤتمرات بالمنصة لإعادة تحميل سياقه تلقائيًا؛ لا يلزم إنشاء ربط يدوي.</div></main>';
+    ge('tab0').innerHTML = '<main class="accommodation-dashboard"><div class="ui-state" role="status">لا تتوفر بيانات تسكين سحابية للمؤتمر الحالي. افتح المؤتمر من قائمة المؤتمرات بالمنصة لإعادة تحميل سياقه تلقائيًا؛ لا يلزم إنشاء ربط يدوي.</div></main>';
     return;
   }
   if(!currentConferenceSectionCapability('accommodation')){
-    ge('tab0').innerHTML='<main class="accommodation-dashboard"><div class="card" role="alert">ليس لديك صلاحية مشاهدة التسكين.</div></main>';
+    ge('tab0').innerHTML='<main class="accommodation-dashboard"><div class="ui-state ui-state--denied" role="alert">ليس لديك صلاحية مشاهدة التسكين.</div></main>';
     return;
   }
   renderCanonicalAccommodation(canonicalAccommodationState());
@@ -7175,11 +7177,11 @@ function renderStartupConferenceCards(conferences, status){
     var cardClass = status === 'active' ? 'startup-conference-card-active' : 'startup-conference-card-completed';
     if(conf.__startupDiscoveredRemoteId&&
       startupDiscoveredOpenBusy[conf.__startupDiscoveredRemoteId]){
-      html += '<article class="startup-conference-card '+cardClass+'" aria-disabled="true">';
+      html += '<article class="startup-conference-card '+cardClass+'" aria-disabled="true" aria-busy="true">';
     }else if(conf.__startupDiscoveredRemoteId){
-      html += '<article class="startup-conference-card '+cardClass+'" onclick="openDiscoveredConferenceFromStartup(\''+conf.__startupDiscoveredRemoteId+'\')">';
+      html += '<article class="startup-conference-card '+cardClass+'" role="button" tabindex="0" onclick="openDiscoveredConferenceFromStartup(\''+conf.__startupDiscoveredRemoteId+'\')" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();openDiscoveredConferenceFromStartup(\''+conf.__startupDiscoveredRemoteId+'\');}">';
     }else{
-      html += '<article class="startup-conference-card '+cardClass+'" onclick="openConferenceFromStartup(\''+conf.id+'\')">';
+      html += '<article class="startup-conference-card '+cardClass+'" role="button" tabindex="0" onclick="openConferenceFromStartup(\''+conf.id+'\')" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();openConferenceFromStartup(\''+conf.id+'\');}">';
     }
     html += '<div class="startup-conference-head"><span class="startup-status-badge '+statusClass+'">'+conferenceStatusText(conf)+'</span><strong>'+esc(conf.name || ((conf.conf || {}).name) || 'المؤتمر')+'</strong></div>';
     html += '<div class="startup-conference-meta">';

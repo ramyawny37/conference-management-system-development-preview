@@ -57,6 +57,14 @@
   --platform-launcher-max:1240px;
   --platform-landing-offset:clamp(24px,7vh,84px);
   --platform-font-family:'Segoe UI',Arial,sans-serif;
+  --platform-font-size-xs:10px;
+  --platform-font-size-sm:12px;
+  --platform-font-size-body:14px;
+  --platform-font-size-section:16px;
+  --platform-font-size-heading:24px;
+  --platform-font-weight-medium:600;
+  --platform-font-weight-bold:700;
+  --platform-font-weight-heavy:800;
   --platform-breakpoint-mobile:600px;
   --platform-breakpoint-tablet:820px;
   --platform-breakpoint-compact:1100px;
@@ -80,3 +88,28 @@
   --platform-v2-radius-lg:16px;
   --platform-v2-shadow:0 2px 10px rgba(15,43,82,.07);
 }
+
+/* Shared component foundation. Module files may arrange these components, but do not
+   redefine their color, typography, focus, disabled, or surface contracts. */
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;min-height:100vh;background:var(--platform-page-background);color:var(--platform-text);font-family:var(--platform-font-family);direction:rtl}
+.card{margin-bottom:var(--platform-space-5);padding:var(--platform-space-6);border:1px solid var(--platform-border);border-radius:var(--platform-radius-card);background:var(--platform-surface);box-shadow:var(--platform-shadow-sm)}
+.card-title{margin-bottom:var(--platform-space-4);color:var(--platform-primary-dark);font-size:var(--platform-font-size-section);font-weight:var(--platform-font-weight-bold)}
+.grid3{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:var(--platform-space-4)}
+.row{display:flex;align-items:flex-end;flex-wrap:wrap;gap:var(--platform-space-3)}
+label.lbl{display:block;margin-bottom:var(--platform-space-1);color:var(--platform-text-secondary);font-size:var(--platform-font-size-sm);font-weight:var(--platform-font-weight-medium)}
+input,select,textarea{width:100%;min-height:var(--platform-control-height);padding:8px 10px;border:1px solid var(--platform-input-border);border-radius:var(--platform-radius-control);outline:none;background:var(--platform-surface);color:var(--platform-text);font:inherit;direction:rtl}
+input:focus,select:focus,textarea:focus{border-color:var(--platform-secondary);box-shadow:var(--platform-focus-ring)}
+.btn{display:inline-flex;min-height:var(--platform-control-height-sm);align-items:center;justify-content:center;gap:var(--platform-space-2);padding:7px 13px;border:1px solid transparent;border-radius:var(--platform-radius-control);font:var(--platform-font-weight-bold) var(--platform-font-size-sm)/1.35 var(--platform-font-family);text-align:center;cursor:pointer;transition:transform .15s ease,opacity .15s ease,box-shadow .15s ease}
+.btn:hover:not(:disabled){transform:translateY(-1px);box-shadow:var(--platform-shadow-sm)}
+.btn:focus-visible{outline:2px solid var(--platform-primary-active);outline-offset:2px}
+.btn:disabled,.btn[aria-disabled="true"]{cursor:not-allowed;opacity:.5;transform:none;box-shadow:none}
+.btn-blue{background:var(--platform-secondary);color:var(--platform-text-on-color)}.btn-green{background:var(--platform-success);color:var(--platform-text-on-color)}
+.btn-orange{background:var(--platform-warning);color:var(--platform-text-on-color)}.btn-red{background:var(--platform-danger);color:var(--platform-text-on-color)}
+.btn-gray{background:var(--platform-neutral);color:var(--platform-text-on-color)}.btn-purple{background:var(--platform-auxiliary);color:var(--platform-text-on-color)}
+.btn-teal{background:#168b83;color:var(--platform-text-on-color)}.btn-dark{background:var(--platform-primary-dark);color:var(--platform-text-on-color)}
+.btn-sm{min-height:30px;padding:4px 9px;font-size:var(--platform-font-size-xs)}
+.ui-state{display:grid;min-height:112px;place-items:center;align-content:center;gap:var(--platform-space-3);padding:var(--platform-space-7);border:1px dashed var(--platform-border-strong);border-radius:var(--platform-radius-card);background:var(--platform-surface-soft);color:var(--platform-text-muted);text-align:center;line-height:1.7}
+.ui-state--loading{cursor:progress}.ui-state--error{border-style:solid;border-color:color-mix(in srgb,var(--platform-danger) 32%,var(--platform-border));background:#fff5f4;color:var(--platform-danger-strong)}
+.ui-state--denied{border-style:solid;background:var(--platform-surface);color:var(--platform-text-secondary)}
+@media(max-width:600px){.btn{min-height:var(--platform-touch-target)}.grid3{grid-template-columns:1fr}.ui-state{min-height:96px;padding:var(--platform-space-6)}}

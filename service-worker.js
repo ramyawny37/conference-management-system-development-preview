@@ -8,14 +8,14 @@ const CACHE_NAMESPACE = IS_DEVELOPMENT
   : '';
 const CACHE_PREFIX = CACHE_NAMESPACE + 'conference-manager-core-';
 const CACHE_REVISION = IS_DEVELOPMENT
-  ? 'development-reservations-platform-summary-v1'
+  ? 'development-platform-design-conference-v1'
   : 'production-3-6-0-release-v6';
 const CACHE_NAME = CACHE_PREFIX + 'v' + APP_VERSION + '-' + CACHE_REVISION;
 const CORE_ASSETS = [
   './',
   './index.html',
-  './shared-design-tokens.css?rev=platform-shell-phase2b-v1',
-  './style.css?rev=platform-administration-workspace-visibility-v1',
+  './shared-design-tokens.css?rev=platform-design-system-foundation-v1',
+  './style.css?rev=conference-accommodation-design-round4-v1',
   './canonical-platform-shell.css?rev=platform-administration-canonical-sidebar-navigation-v2',
   './modules/reservations/reservations-module.css?rev=reservations-person-live-0d9db39-v1',
   './js/application-routing.js?rev=canonical-conference-routing-v1',
@@ -81,7 +81,7 @@ const CORE_ASSETS = [
   './js/warehouse/party-management.js?rev=warehouse-party-management-v1',
   './js/warehouse/remaining-operations.js?rev=adjustment-conversion-ux-v1',
   './js/warehouse/workspace.js?rev=item-unit-add-ui-v1',
-  './script.js?rev=platform-administration-canonical-sidebar-navigation-v2',
+  './script.js?rev=conference-accommodation-design-round4-v1',
   './version.js',
   './pwa.js?rev=pwa-update-state-consistency-v1',
   './libs/html2canvas.min.js',
