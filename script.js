@@ -1607,10 +1607,12 @@ function showPlatformModules(options){
   if(options.preservePathname!==true&&getPlatformShellPathname()!=='/'){
     replacePlatformShellPathname('/');
   }
-  shell.classList.remove('platform-warehouse-active','platform-reservations-active');
-  shell.classList.add('platform-conference-active');
-  var dashboard=ge('conferenceWorkspace');
+  shell.classList.remove('platform-conference-active','platform-warehouse-active','platform-reservations-active','platform-platform-administration-active');
+  var dashboard=ge('platformHomeWorkspace');
+  if(dashboard){dashboard.hidden=false;dashboard.classList.add('is-active');dashboard.setAttribute('aria-hidden','false');}
+  ['conferenceWorkspace','warehouseWorkspace','reservationsWorkspace','platform-administrationWorkspace'].forEach(function(id){var workspace=ge(id);if(workspace){workspace.hidden=true;workspace.setAttribute('aria-hidden','true');}});
   if(dashboard)dashboard.focus();
+  if(window.PlatformHomeDashboard&&typeof window.PlatformHomeDashboard.activate==='function')window.PlatformHomeDashboard.activate();
   if(options.fromIntegration!==true&&window.PlatformIntegration&&typeof window.PlatformIntegration.reconcileRoute==='function')window.PlatformIntegration.reconcileRoute();
   return true;
 }
@@ -1627,6 +1629,8 @@ function openConferenceWorkspace(options){
   if(!shell||!workspace)return false;
   shell.classList.remove('platform-warehouse-active');
   shell.classList.add('platform-conference-active');
+  var home=ge('platformHomeWorkspace');if(home){home.hidden=true;home.classList.remove('is-active');home.setAttribute('aria-hidden','true');}
+  workspace.hidden=false;workspace.setAttribute('aria-hidden','false');
   workspace.focus();
   return true;
 }

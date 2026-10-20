@@ -17,9 +17,14 @@ const startup=source.slice(
 
 function runtime(pathname,basePath='/'){
   const classes=new Set();
+  const workspace=()=>({hidden:true,classList:{add(){},remove(){}},setAttribute(){},focus(){}});
   const elements={
     startupScreen:{classList:{add:value=>classes.add(value),remove:value=>classes.delete(value)}},
-    conferenceWorkspace:{focus(){}},
+    platformHomeWorkspace:workspace(),
+    conferenceWorkspace:workspace(),
+    warehouseWorkspace:workspace(),
+    reservationsWorkspace:workspace(),
+    'platform-administrationWorkspace':workspace(),
     platformLauncherTitle:{focus(){}},
     homeTabButton:{classList:{add(){}}},
   };
@@ -49,28 +54,28 @@ test('authorized startup keeps direct Conference pathname authoritative',()=>{
   assert.strictEqual(state.classes.has('platform-conference-active'),true);
 });
 
-test('Conference query strings resolve by pathname and explicit home returns the operational dashboard',()=>{
+test('Conference query strings resolve by pathname and explicit home returns the independent platform dashboard',()=>{
   const state=runtime('/conference');
   state.sandbox.openStartupScreen({persistView:false});
   state.sandbox.showPlatformModules();
   assert.strictEqual(state.location.pathname,'/');
-  assert.strictEqual(state.classes.has('platform-conference-active'),true);
+  assert.strictEqual(state.classes.has('platform-conference-active'),false);
 });
 
-test('root startup enters the operational dashboard without a launcher step',()=>{
+test('root startup enters the independent platform dashboard without activating Conference',()=>{
   const state=runtime('/');
   state.sandbox.openStartupScreen({persistView:false});
   assert.strictEqual(state.location.pathname,'/');
-  assert.strictEqual(state.classes.has('platform-conference-active'),true);
+  assert.strictEqual(state.classes.has('platform-conference-active'),false);
 });
 
-test('repository-scoped Conference and Platform home share the operational dashboard',()=>{
+test('repository-scoped Conference returns to the independent Platform home',()=>{
   const state=runtime('/preview/conference','/preview/');
   state.sandbox.openStartupScreen({persistView:false});
   assert.strictEqual(state.classes.has('platform-conference-active'),true);
   state.sandbox.showPlatformModules();
   assert.strictEqual(state.location.pathname,'/preview/');
-  assert.strictEqual(state.classes.has('platform-conference-active'),true);
+  assert.strictEqual(state.classes.has('platform-conference-active'),false);
 });
 
 test('Conference route runtime script uses the same revision in index and cache',()=>{

@@ -114,7 +114,7 @@ test('cache references are atomically consistent for every changed runtime asset
     assert.ok(index.includes(asset+'?rev='+(asset==='style.css'?styleRevision:(asset==='js/sync/user-management-ui.js'||asset==='js/sync/platform-administration-ui.js')?deviceListRevision:revision)),asset+' missing from index');
     assert.ok(worker.includes('./'+asset+'?rev='+(asset==='style.css'?styleRevision:(asset==='js/sync/user-management-ui.js'||asset==='js/sync/platform-administration-ui.js')?deviceListRevision:revision)),asset+' missing from worker');
   }
-  assert.match(worker,/\? 'development-unified-platform-shell-v1'/);
+  assert.match(worker,/\? 'development-unified-platform-state-home-v1'/);
 });
 
 test('retired tenancy, direct database clients and local permission fallbacks remain absent',()=>{

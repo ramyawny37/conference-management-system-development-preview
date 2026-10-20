@@ -123,6 +123,19 @@
 
 <div id="startupScreen" class="canonical-platform-workspace-host startup-dashboard" data-canonical-platform-workspace-host style="display:none">
   <div class="canonical-platform-workspace startup-shell">
+    <section id="platformHomeWorkspace" class="platform-home-dashboard" tabindex="-1" aria-labelledby="platformHomeTitle">
+      <header class="platform-home-dashboard__heading">
+        <div><span>منصة الإدارة الموحدة</span><h2 id="platformHomeTitle">الرئيسية العامة</h2><p>ملخص مباشر من الخدمات المركزية المتاحة حسب صلاحيات الحساب والجهاز الحالي.</p></div>
+        <button type="button" class="btn btn-blue" data-platform-home-refresh>تحديث البيانات</button>
+      </header>
+      <div id="platformHomeConnectivity" class="platform-home-dashboard__notice" role="status"></div>
+      <section id="platformHomeModules" class="platform-home-dashboard__modules" aria-label="الموديلات المتاحة"></section>
+      <section class="platform-home-dashboard__grid">
+        <div id="platformHomeActivity" class="platform-home-dashboard__panel"></div>
+        <div id="platformHomeActions" class="platform-home-dashboard__panel"></div>
+        <div id="platformHomeAlerts" class="platform-home-dashboard__panel"></div>
+      </section>
+    </section>
     <div id="conferenceWorkspace" class="conference-workspace" tabindex="-1">
     <div class="conference-workspace-heading"><span>الوحدة المتاحة</span><h2>إدارة المؤتمرات</h2></div>
     <section class="startup-overview">
@@ -520,6 +533,7 @@
 <script src="js/supabase/client.js?rev=target-device-argument-preservation-v1"></script>
 <script src="js/supabase/auth.js?rev=account-session-identity-v1"></script>
 <script src="js/platform-integration.js?rev=platform-administration-canonical-sidebar-navigation-v2"></script>
+<script src="js/platform-home-dashboard.js?rev=unified-platform-state-home-v1"></script>
 <script src="js/supabase/canonical-conference-discovery.js?rev=conference-section-capabilities-v2"></script>
 <script src="js/supabase/canonical-conference-transport.js?rev=p6i-b2-v1"></script>
 <script src="js/supabase/canonical-conference-restaurant.js?rev=p6i-b3-v1"></script>
