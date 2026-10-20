@@ -75,7 +75,7 @@ function assertVisible(state,tabId,route){
 
 test('rapid repeated Conference navigation keeps URL, subnav, and visible content atomic',()=>{
   const state=runtime(true);
-  for(const [tabId,route] of [[6,'/conference/app/settings'],[0,'/conference/app/accommodation'],[6,'/conference/app/settings'],[0,'/conference/app/accommodation']]){
+  for(const [tabId,route] of [[6,'/conference/app/settings/houses'],[2,'/conference/app/accounts'],[0,'/conference/app/accommodation'],[6,'/conference/app/settings'],[2,'/conference/app/accounts'],[0,'/conference/app/accommodation']]){
     assert.equal(state.context.navigateConferenceRoute(route),true);
     assertVisible(state,tabId,route);
     assert.equal(state.window.document.getElementById('startupScreen').style.display,'flex');
