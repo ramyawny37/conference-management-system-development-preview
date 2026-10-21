@@ -1,0 +1,2 @@
+create index if not exists conference_bundle_operations_device_idx
+on platform_private.conference_bundle_operations(actor_device_id);

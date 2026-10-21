@@ -30,6 +30,9 @@ const reservations=new Set(['list_conference_options','get_booking_creation_cont
 for(const operation of ['search_module_permission_candidates','list_module_permission_catalog_for_administration','list_module_permission_resources_for_administration','manage_catalog_module_grant'])platform.add(operation);
 warehouse.add('list_permission_administration_stores');
 conference.add('check_module_access');
+conference.add('export_conference_canonical_bundle');
+conference.add('validate_conference_canonical_bundle');
+conference.add('restore_conference_canonical_bundle');
 warehouse.add('check_module_access');
 reservations.add('check_module_access');
 reservations.add('get_effective_capabilities');

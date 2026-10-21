@@ -505,12 +505,14 @@ function purgeTrashItem(type, trashId){
 // ═══════════════════════════════════════════════════════
 function exportJsonFile(){
   if(window.StartupAccessGate&&!window.StartupAccessGate.isAllowed())return false;
-  updateCurrentConferenceData();
-  var data=JSON.stringify(appData,null,2);
-  var a=document.createElement('a');
-  a.href=URL.createObjectURL(new Blob([data],{type:'application/json;charset=utf-8'}));
-  a.download='conference_'+new Date().toISOString().slice(0,10)+'.json';
-  a.click();showToast('✅ تم تصدير JSON');
+  var conference=getCurrentConference();
+  if(!conference||!window.ConferenceCanonicalBundle)return false;
+  return window.ConferenceCanonicalBundle.download(conference.id).then(function(){
+    showToast('✅ تم تصدير JSON');
+  }).catch(function(error){
+    console.error('تعذر تصدير حزمة المؤتمر المركزية:',error);
+    showToast('❌ تعذر تصدير بيانات المؤتمر من الخادم.','#E74C3C');
+  });
 }
 
 var memberActivationDiagnosticState={
@@ -906,186 +908,35 @@ function inspectFullApplicationBackup(event){
     input.value='';
   });
 }
-function createConferenceFromObject(data, name){
-  data=data&&typeof data==='object'?data:{};
-  var confObj=deepClone(data);
-  var conferenceName=name||confObj.name||(confObj.conf&&confObj.conf.name)||'المؤتمر';
-  confObj.id=confObj.id||uid();
-  confObj.name=conferenceName;
-  confObj.startDate=confObj.startDate||(confObj.conf&&confObj.conf.startDate)||'';
-  confObj.endDate=confObj.endDate||(confObj.conf&&confObj.conf.endDate)||'';
-  confObj.days=confObj.days||(confObj.conf&&confObj.conf.days)||1;
-  confObj.conf=confObj.conf||{name:conferenceName,startDate:confObj.startDate,endDate:confObj.endDate,days:confObj.days};
-  confObj.houses=Array.isArray(confObj.houses)?confObj.houses:[];
-  confObj.transports=Array.isArray(confObj.transports)?confObj.transports:[];
-  confObj.restaurant=confObj.restaurant||createDefaultRestaurant();
-  confObj.status=confObj.status||'active';
-  confObj.completedAt=confObj.completedAt||null;
-  confObj.createdAt=confObj.createdAt||new Date().toISOString();
-  confObj.updatedAt=confObj.updatedAt||new Date().toISOString();
-  confObj.activityLog=Array.isArray(confObj.activityLog)?confObj.activityLog:[];
-  normalizeConference(confObj);
-  return confObj;
-}
-function isImportableConferenceObject(value){
-  if(!value||typeof value!=='object'||Array.isArray(value))return false;
-  var hasIdentity=!!(value.id||value.name||(value.conf&&value.conf.name));
-  var hasConferenceData=!!(
-    value.conf||
-    Array.isArray(value.houses)||
-    Array.isArray(value.transports)||
-    value.restaurant||
-    value.startDate||
-    value.endDate||
-    value.status||
-    value.peopleDb
-  );
-  return hasIdentity&&hasConferenceData;
-}
-
-function getImportedConferenceCandidates(rawData){
-  if(!rawData||typeof rawData!=='object'||Array.isArray(rawData))return [];
-  var container=rawData.appData&&typeof rawData.appData==='object'?rawData.appData:rawData;
-  var candidates=[];
-  if(Array.isArray(container.conferences)){
-    candidates=container.conferences.filter(isImportableConferenceObject);
-  }else if(container.conference&&isImportableConferenceObject(container.conference)){
-    candidates=[container.conference];
-  }else if(container.data&&isImportableConferenceObject(container.data)){
-    candidates=[container.data];
-  }else if(isImportableConferenceObject(container)){
-    candidates=[container];
-  }
-  return candidates;
-}
-
-function selectImportedConference(candidates){
-  if(!candidates.length)return null;
-  if(candidates.length===1)return candidates[0];
-  var lines=['يحتوي الملف على عدة مؤتمرات. اكتب رقم المؤتمر المطلوب استيراده:'];
-  candidates.forEach(function(conference,index){
-    var name=conference.name||(conference.conf&&conference.conf.name)||'مؤتمر بدون اسم';
-    var status=conference.status==='completed'?'مكتمل':'نشط';
-    lines.push((index+1)+' - '+name+' ('+status+')');
-  });
-  var selected=prompt(lines.join('\n'),'1');
-  if(selected===null)return null;
-  var selectedIndex=parseInt(selected,10)-1;
-  if(selectedIndex<0||selectedIndex>=candidates.length||String(selectedIndex+1)!==String(parseInt(selected,10))){
-    alert('اختيار المؤتمر غير صالح.');
-    return null;
-  }
-  return candidates[selectedIndex];
-}
-
-function importSingleConferenceData(importedData){
-  if(window.StartupAccessGate&&!window.StartupAccessGate.isAllowed())return false;
-  var importedConference=createConferenceFromObject(importedData);
-  var previousConferences=deepClone(appData.conferences||[]);
-  var previousCurrentConferenceId=appData.currentConferenceId;
-  var existingIndex=-1;
-  (appData.conferences||[]).some(function(conference,index){
-    if(conference&&String(conference.id)===String(importedConference.id)){
-      existingIndex=index;
-      return true;
-    }
-    return false;
-  });
-
-  if(existingIndex!==-1){
-    var duplicateChoice=prompt(
-      'يوجد مؤتمر محفوظ بنفس المعرّف. ماذا تريد أن تفعل؟\n1 - استبدال المؤتمر الموجود\n2 - استيراده كنسخة جديدة\n3 - إلغاء',
-      '3'
-    );
-    if(duplicateChoice===null||duplicateChoice==='3')return false;
-    if(duplicateChoice==='1'){
-      appData.conferences[existingIndex]=importedConference;
-    }else if(duplicateChoice==='2'){
-      importedConference.id=uid();
-      importedConference.name=(importedConference.name||(importedConference.conf&&importedConference.conf.name)||'المؤتمر')+' - نسخة مستوردة';
-      if(importedConference.conf)importedConference.conf.name=importedConference.name;
-      appData.conferences.push(importedConference);
-    }else{
-      alert('اختيار غير صالح. لم يتم استيراد المؤتمر.');
-      return false;
-    }
-  }else{
-    appData.conferences.push(importedConference);
-  }
-
-  appData.currentConferenceId=null;
-  window.applicationPersistedConferenceCandidate=null;
-  if(!save()){
-    appData.conferences=previousConferences;
-    appData.currentConferenceId=previousCurrentConferenceId;
-    window.applicationPersistedConferenceCandidate=
-      String(previousCurrentConferenceId||'').trim()||null;
-    showToast('تعذر حفظ المؤتمر المستورد، وتمت استعادة بيانات المؤتمرات السابقة.','#E74C3C');
-    return false;
-  }
-
-  showSelectConferenceModal();
-  showToast('✅ تم استيراد المؤتمر وإضافته إلى المؤتمرات المحفوظة');
-  return true;
-}
-
 function loadFromFile(e){
   if(window.StartupAccessGate&&!window.StartupAccessGate.isAllowed())return false;
   var f=e.target.files[0];if(!f)return;
   var r=new FileReader();
   r.onload=function(ev){
-    var text=ev.target.result;
-    var loaded=false;
-    var rawData=null;
-
-    if(f.name.toLowerCase().endsWith('.json')){
-      try{rawData=JSON.parse(text);loaded=true;}catch(er){loaded=false;}
-    }
-
-    if(!loaded){
-      var m1=text.match(/\/\/__S__\nvar _d=([\s\S]*?);\n(appData|conf)=/);
-      if(m1){try{rawData=JSON.parse(m1[1]);loaded=true;}catch(er){loaded=false;}}
-    }
-
-    if(!loaded){
-      var m2=text.match(/\/\/__SEED_START__\nvar _s=([\s\S]*?);\nrooms=/);
-      if(m2){try{var d=JSON.parse(m2[1]);rawData={conf:d.conf||{name:'المؤتمر',startDate:'',endDate:'',days:1},rooms:d.rooms||[],transports:d.transports||d.extraTransports||[],restaurant:d.restaurant||createDefaultRestaurant()};loaded=true;}catch(er){loaded=false;}}
-    }
-
-    if(!loaded){
-      var m3=text.match(/\/ __DATA_SEED_START__\nvar _s=([\s\S]*?);\nrooms=/);
-      if(m3){try{var d=JSON.parse(m3[1]);var trans=[];if(d.busSeats&&d.busSeats.some(function(s){return s.name})){trans=[{id:'bus_main',name:'أتوبيس 1',icon:'🚌',capacity:50,seats:d.busSeats}];}if(d.extraTransports)trans=trans.concat(d.extraTransports);rawData={conf:d.conf||{name:'المؤتمر',startDate:'',endDate:'',days:1},rooms:d.rooms||[],transports:trans,restaurant:d.restaurant||createDefaultRestaurant()};loaded=true;}catch(er){loaded=false;}}
-    }
-
-    if(!loaded){
-      var m4=text.match(/var rooms\s*=\s*(\[[\s\S]*?\]);/);
-      if(m4){try{rawData={conf:{name:'المؤتمر',startDate:'',endDate:'',days:1},rooms:JSON.parse(m4[1]),transports:[],restaurant:createDefaultRestaurant()};loaded=true;}catch(er){loaded=false;}}
-    }
-
-    if(!loaded){
-      var m5=text.match(/"conf_v[0-9]+"[^{]*(\{[\s\S]*?\})\s*[,;]/);
-      if(m5){try{var d=JSON.parse(m5[1]);rawData={conf:d.conf||{name:'المؤتمر',startDate:'',endDate:'',days:1},rooms:d.rooms||[],transports:d.transports||[],restaurant:d.restaurant||createDefaultRestaurant()};loaded=true;}catch(er){loaded=false;}}
-    }
-
-    if(loaded && rawData){
-      var candidates=getImportedConferenceCandidates(rawData);
-      if(!candidates.length){
-        alert('لا يحتوي الملف على بيانات مؤتمر صالحة للاستيراد.');
-        e.target.value='';
-        return;
+    var service=window.ConferenceCanonicalBundle;
+    try{
+      if(!service)throw new Error('CONFERENCE_BUNDLE_SERVICE_UNAVAILABLE');
+      var bundle=service.parse(String(ev.target.result||''));
+      var sourceId=String(bundle.manifest&&bundle.manifest.sourceConferenceId||'');
+      var existing=(appData.conferences||[]).find(function(item){return String(item&&item.id||'')===sourceId;});
+      var options={mode:'new'};
+      if(existing){
+        if(!confirm('استبدال بيانات المؤتمر الموجودة يتطلب تأكيدًا صريحًا. هل تريد الاستبدال؟'))return;
+        options={mode:'replace',targetConferenceId:sourceId,expectedRevision:Number(existing.revision),confirmed:true};
       }
-      var importedData=selectImportedConference(candidates);
-      if(!importedData){
-        e.target.value='';
-        return;
-      }
-      if(!confirm('سيتم استيراد بيانات المؤتمر من الملف وإضافتها إلى المؤتمرات المحفوظة. لن تتأثر القوالب أو الأرشيفات أو النسخ الاحتياطية. هل تريد المتابعة؟')){
-        e.target.value = '';
-        return;
-      }
-      importSingleConferenceData(importedData);
-    } else {
-      alert('❌ لم يتم التعرف على صيغة الملف\nجرب "💾 حفظ ملف" من النسخة القديمة أولاً');
+      service.validate(bundle,options).then(function(result){
+        if(!result||result.valid!==true)throw new Error('CONFERENCE_BUNDLE_REFERENCE_VALIDATION_FAILED');
+        return service.restore(bundle,options);
+      }).then(function(){
+        showToast('✅ تم استيراد المؤتمر وإضافته إلى المؤتمرات المحفوظة');
+        setTimeout(function(){window.location.reload();},900);
+      }).catch(function(error){
+        console.error('تعذر استعادة حزمة المؤتمر المركزية:',error);
+        showToast('❌ تعذر استعادة حزمة المؤتمر.','#E74C3C');
+      });
+    }catch(error){
+      console.error('تعذر قراءة حزمة المؤتمر المركزية:',error);
+      alert('❌ لم يتم التعرف على صيغة الملف');
     }
   };
   r.readAsText(f,'utf-8');e.target.value='';

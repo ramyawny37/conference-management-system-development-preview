@@ -38,6 +38,9 @@
     ['mutate_conference_branding','public.mutate_conference_branding(uuid,uuid,uuid,text,bigint,jsonb)'],
     ['list_conference_activity','public.list_conference_activity(uuid,uuid)'],
     ['record_conference_output_event','public.record_conference_output_event(uuid,uuid,text)']
+    ,['export_conference_canonical_bundle','public.export_conference_canonical_bundle(uuid,uuid)']
+    ,['validate_conference_canonical_bundle','public.validate_conference_canonical_bundle(uuid,jsonb,text,uuid,bigint)']
+    ,['restore_conference_canonical_bundle','public.restore_conference_canonical_bundle(uuid,uuid,jsonb,text,uuid,bigint,boolean)']
   ].map(function(entry){return Object.freeze({module:'conference',operation:entry[0],signature:entry[1],dispatchable:true});});
   var platformResourceLeaseOperations=['acquire_resource_lease','renew_resource_lease','release_resource_lease','get_resource_lease'].map(function(operation){return Object.freeze({module:'conference',operation:operation,signature:'platform_private.'+operation+'(uuid,text,text,text,text'+(operation==='get_resource_lease'?'':operation==='release_resource_lease'?',uuid':',uuid,integer')+')',dispatchable:true});});
   var conference=canonicalConference.concat(platformResourceLeaseOperations).concat(global.ConferenceDeviceOperationContract.EDGE_ONLY_PROTECTED.map(function(entry){return Object.freeze({module:'conference',operation:entry.operation,signature:entry.signature,dispatchable:true});}));
