@@ -58,7 +58,7 @@
     if(!match)return route.indexOf('/conference')===0
       ?Object.freeze({kind:'invalid',tabId:null,tabName:null}):null;
     var tabId=conferenceTabNames.indexOf(match[1]);
-    return tabId<0?Object.freeze({kind:'invalid',tabId:null,tabName:null})
+    return tabId<0||(match[2]&&match[1]!=='settings')?Object.freeze({kind:'invalid',tabId:null,tabName:null})
       :Object.freeze(match[2]?{kind:'application',tabId:tabId,tabName:match[1],settingsView:match[2]}:{kind:'application',tabId:tabId,tabName:match[1]});
   }
 
