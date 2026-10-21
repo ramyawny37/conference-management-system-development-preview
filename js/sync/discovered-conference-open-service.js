@@ -33,21 +33,6 @@
     applyData(data);
     return data;
   }
-  function hydrate(conferenceId,capabilities){
-    var platform=global.PlatformIntegration;
-    var tasks=[];
-    capabilities=capabilities&&typeof capabilities==='object'?capabilities:{};
-    if(typeof global.clearConferenceCanonicalState!=='function')return Promise.reject({code:'CANONICAL_STATE_CLEAR_UNAVAILABLE'});
-    global.clearConferenceCanonicalState(conferenceId,capabilities);
-    function add(capability,target,name,args){if(capabilities[capability]===true)tasks.push({target:target,name:name,args:args});}
-    add('core',platform,'hydrateConferenceCore',[conferenceId,conferenceId]);add('people',platform,'hydrateConferenceParticipations',[conferenceId,conferenceId]);
-    add('accommodation',platform,'hydrateConferenceAccommodation',[conferenceId,conferenceId]);add('airConditioning',platform,'hydrateConferenceAirConditioning',[conferenceId,conferenceId]);
-    add('branding',global.CanonicalConferenceBranding,'hydrate',[conferenceId,conferenceId]);add('finance',global.CanonicalConferenceFinance,'hydrate',[conferenceId,conferenceId]);
-    add('transport',global.CanonicalConferenceTransport,'hydrate',[conferenceId,conferenceId]);add('restaurant',global.CanonicalConferenceRestaurant,'hydrate',[conferenceId,conferenceId]);
-    var missing=tasks.find(function(task){return !task.target||typeof task.target[task.name]!=='function';});
-    if(missing)return Promise.reject({code:'CANONICAL_HYDRATOR_UNAVAILABLE',owner:missing.name});
-    return Promise.all(tasks.map(function(task){return Promise.resolve().then(function(){return task.target[task.name].apply(task.target,task.args);});})).then(function(values){diagnostics.canonicalHydrationCount=values.length;return values;});
-  }
   function open(remoteConferenceId,options){
     options=options&&typeof options==='object'?options:{};
     var remoteId=String(remoteConferenceId||'');
@@ -57,8 +42,10 @@
     diagnostics.lastRemoteConferenceId=remoteId;
     var flight=available(remoteId,options).then(function(access){
       if(!access.ok||token!==generation)return token===generation?access:result(false,'stale');
-      return hydrate(remoteId,access.data.capabilities).then(function(){
-        if(token!==generation)return result(false,'stale');
+      if(typeof global.clearConferenceCanonicalState!=='function')return result(false,'canonical_state_unavailable');
+      global.clearConferenceCanonicalState(remoteId,access.data.capabilities);
+      diagnostics.canonicalHydrationCount=0;
+      if(token!==generation)return result(false,'stale');
         var authorization=global.ConferenceActivationAuthorization;
         if(!authorization||typeof authorization.authorizeCloud!=='function'){
           return result(false,'activation_authorization_unavailable');
@@ -81,8 +68,7 @@
         })===true;
         if(!activated)return result(false,'runtime_activation_failed');
         return result(true,'opened',{conferenceId:remoteId,canonicalAccess:true,capabilities:access.data.capabilities});
-      });
-    }).catch(function(error){if(token!==generation)return result(false,'stale');return result(false,'canonical_hydration_failed',null,{code:String(error&&error.code||error&&error.message||'CANONICAL_HYDRATION_FAILED')});}).finally(function(){if(flights[remoteId]===flight)delete flights[remoteId];});
+    }).catch(function(error){if(token!==generation)return result(false,'stale');return result(false,'open_failed',null,{code:String(error&&error.code||error&&error.message||'CONFERENCE_OPEN_FAILED')});}).finally(function(){if(flights[remoteId]===flight)delete flights[remoteId];});
     flights[remoteId]=flight;
     return flight;
   }

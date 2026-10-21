@@ -21,7 +21,7 @@ test('runtime owns one canonical header, sidebar and workspace host',()=>{
 test('conference sections use the canonical expandable sidebar and Conference route owner',()=>{
   assert.match(html,/data-platform-nav-group="conference"[\s\S]*id="conferencePlatformSubnav"/);
   for(let tab=0;tab<=6;tab++)assert.match(html,new RegExp(`data-conference-tab="${tab}"`));
-  assert.match(integration,/conferenceTab[\s\S]*resolveConferenceTabRoute[\s\S]*global\.navigateConferenceRoute\(targetRoute\)/);
+  assert.match(integration,/conferenceTab[\s\S]*resolveConferenceTabRoute[\s\S]*platformServices\(\)\.navigate\(targetRoute\)/);
   assert.match(integration,/conference-section-change/);
 });
 
@@ -34,5 +34,5 @@ test('reservations prototype is absent from runtime, cache and module ownership'
 test('responsive shell retains one right sidebar and mobile drawer',()=>{
   assert.match(shell,/\.canonical-platform-sidebar\{[^}]*inset:12px 12px 12px auto/);
   assert.match(shell,/@media\(max-width:900px\)[\s\S]*platform-navigation-open \.canonical-platform-sidebar\{transform:translateX\(0\)\}/);
-  assert.match(worker,/development-platform-design-system-v2/);
+  assert.match(worker,/development-conference-navigation-consolidation-v1/);
 });

@@ -19,7 +19,7 @@ function runtime(initialRoute,denyModule){
   const listeners={};
   const classes=new Set();
   const elements={startupScreen:{classList:{add:value=>classes.add(value),remove:value=>classes.delete(value)}},warehouseWorkspace:{},reservationsWorkspace:{}};
-  const window={document:{addEventListener(name,handler){listeners[name]=handler;},getElementById:id=>elements[id]||null},ApplicationRouting:{getLogicalPathname:()=>route,resolveLogicalRoute:value=>'#'+value,resolveConferenceTabRoute:id=>'/conference/app/'+['accommodation','transportation','accounts','reports','cards','search','settings'][id],resolveConferenceSettingsRoute:()=>'/conference/app/settings/houses'},history:{pushState(_s,_t,value){calls.push(['push',value]);route=value.slice(1);},replaceState(_s,_t,value){calls.push(['replace',value]);route=value.slice(1);}},addEventListener(name,handler){listeners[name]=handler;},showPlatformModules(){calls.push(['launcher']);},showToast(message){calls.push(['toast',message]);},openConferenceWorkspace(){calls.push(['conference']);return true;},reconcileConferenceRoute(){calls.push(['conference-route']);return true;},navigateConferenceRoute(value){calls.push(['navigate-conference',value]);route=value;return true;},openWarehouseWorkspace(){calls.push(['warehouse-mount']);return true;},PlatformDeviceSession:{invokeModuleProtected(module,operation,args){calls.push(['check',module,operation,args]);return module===denyModule?Promise.reject({code:'MODULE_PERMISSION_REQUIRED'}):Promise.resolve({status:'allowed',moduleKey:module});}}};
+  const window={document:{addEventListener(name,handler){listeners[name]=handler;},getElementById:id=>elements[id]||null},ApplicationRouting:{getLogicalPathname:()=>route,resolveLogicalRoute:value=>'#'+value,resolveConferenceTabRoute:id=>'/conference/app/'+['accommodation','transportation','accounts','reports','cards','search','settings'][id],resolveConferenceSettingsRoute:()=>'/conference/app/settings/houses'},history:{pushState(_s,_t,value){calls.push(['push',value]);route=value.slice(1);},replaceState(_s,_t,value){calls.push(['replace',value]);route=value.slice(1);}},addEventListener(name,handler){listeners[name]=handler;},showPlatformModules(){calls.push(['launcher']);},showToast(message){calls.push(['toast',message]);},openConferenceWorkspace(){calls.push(['conference']);return true;},reconcileConferenceRoute(){calls.push(['conference-route']);return true;},openWarehouseWorkspace(){calls.push(['warehouse-mount']);return true;},PlatformDeviceSession:{invokeModuleProtected(module,operation,args){calls.push(['check',module,operation,args]);return module===denyModule?Promise.reject({code:'MODULE_PERMISSION_REQUIRED'}):Promise.resolve({status:'allowed',moduleKey:module});}}};
   vm.runInNewContext(integration,{window,Promise,Object,JSON,String,Error});
   window.PlatformIntegration.registerModule({id:'reservations',mount(){calls.push(['reservations-mount']);return true;}});
   return {window,calls,classes,listeners,getRoute:()=>route};
@@ -66,7 +66,7 @@ test('active Conference subnav navigates immediately without another access chec
   state.calls.length=0;
   const item={getAttribute:name=>name==='data-conference-tab'?'0':'',closest:selector=>selector==='[data-conference-tab]'?item:null};
   state.listeners.click({target:item});
-  assert.deepEqual(state.calls,[['navigate-conference','/conference/app/accommodation']]);
+  assert.deepEqual(state.calls,[['push','#/conference/app/accommodation'],['conference-route']]);
   assert.equal(state.getRoute(),'/conference/app/accommodation');
 });
 
@@ -87,10 +87,10 @@ test('dispatcher delegates other operations and authorizes with the verified ses
 
 test('route restores use PlatformIntegration and deterministic assets remain aligned',()=>{
   assert.doesNotMatch(script,/platformRoute\.indexOf\('\/warehouse'\)[\s\S]{0,180}openWarehouseWorkspace/);
-  assert.match(index,/js\/platform-integration\.js\?rev=conference-navigation-v1/);
-  assert.match(worker,/\.\/js\/platform-integration\.js\?rev=conference-navigation-v1/);
-  assert.match(index,/script\.js\?rev=conference-navigation-v1/);
-  assert.match(worker,/\.\/script\.js\?rev=conference-navigation-v1/);
+  assert.match(index,/js\/platform-integration\.js\?rev=conference-navigation-consolidation-v1/);
+  assert.match(worker,/\.\/js\/platform-integration\.js\?rev=conference-navigation-consolidation-v1/);
+  assert.match(index,/script\.js\?rev=conference-navigation-consolidation-v1/);
+  assert.match(worker,/\.\/script\.js\?rev=conference-navigation-consolidation-v1/);
   for(const asset of ['reservations-module.js','reservations-module.css']){
     const reference=`modules/reservations/${asset}?rev=${reservationsRevision}`;
     assert.ok(index.includes(reference),`index missing ${reference}`);
