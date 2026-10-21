@@ -1508,8 +1508,9 @@ function switchTab(n,options){
   });
   renderTab(tabId);
   saveLastTab(tabId);
-  if(window.dispatchEvent&&window.CustomEvent)window.dispatchEvent(new CustomEvent('conference-section-change',{detail:{tabId:tabId}}));
+  // Publish the canonical route before notifying the shell; listeners read the URL.
   if(options.preserveRoute!==true)setConferenceApplicationPathname(tabId,{push:true});
+  if(window.dispatchEvent&&window.CustomEvent)window.dispatchEvent(new CustomEvent('conference-section-change',{detail:{tabId:tabId}}));
   return true;
 }
 
