@@ -16,11 +16,12 @@ test('retired snapshot-only files and cache entries are absent',()=>{
   const retired=['js/supabase/snapshot-sync.js','js/sync/sync-queue.js','js/sync/sync-processor.js','js/sync/realtime.js','js/sync/offline-first-integration.js','js/sync/conference-realtime-manager.js','js/sync/automatic-sync-orchestrator.js','js/sync/conflict-resolution.js','js/sync/conflict-resolution-ui.js','js/storage/conference-publishing-engine.js','js/storage/conference-publish-recovery.js'];
   for(const file of retired){assert.equal(fs.existsSync(file),false,file);assert.equal(runtime.includes(file),false,file);}
 });
-test('local-only persistence remains while linked save exits before persistence',()=>{
+test('artifact persistence remains while canonical conference save fails before persistence',()=>{
   const repository=read('js/storage/storage-repository.js');
   assert.match(repository,/persistence\.saveAppData/);
   assert.doesNotMatch(repository,/OfflineFirstIntegration|AutomaticSyncOrchestrator|operationType/);
-  assert.match(read('state.js'),/linkedConference&&linkedConference\.remoteConferenceId[\s\S]*?return true;[\s\S]*?StorageRepository\.saveAppData/);
+  const state=read('state.js');
+  assert.match(state,/currentConference&&String\(currentConference\.id[\s\S]*?CANONICAL_CONFERENCE_MUTATION_CONTRACT_REQUIRED[\s\S]*?return false;[\s\S]*?StorageRepository\.saveAppData/);
 });
 test('canonical link records carry identity only, without whole-document conflict authority',()=>{
   const links=read('js/sync/conference-link-store.js');

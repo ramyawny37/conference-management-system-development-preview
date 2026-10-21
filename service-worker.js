@@ -23,7 +23,6 @@ const CORE_ASSETS = [
   './js/storage/environment-namespace.js',
   './js/storage/indexeddb.js?rev=single-local-persistence-v1',
   './js/storage/storage-repository.js?rev=house-template-local-authority-v1',
-  './js/storage/conference-repository.js',
   './js/storage/full-backup.js?rev=canonical-conference-id-v1',
   './js/supabase/public-config.js',
   './js/supabase/runtime-config.js',

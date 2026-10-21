@@ -4,7 +4,6 @@ var appData = {
   version: '2.0.0',
   currentConferenceId: null,
   conferences: [],
-  conferenceLifecycle: { schemaVersion: 1, records: {} },
   templates: [],
   archives: [],
   backups: [],
@@ -233,14 +232,6 @@ function save(options){
     if(!options.skipCurrentConferenceUpdate)updateCurrentConferenceData();
     var currentConference=options.skipConferenceTracking
       ?null:getCurrentConference();
-    if(currentConference&&
-      window.ConferenceRepository&&
-      typeof window.ConferenceRepository.recordLocalChange==='function'){
-      var tracked=window.ConferenceRepository.recordLocalChange(
-        appData,currentConference.id
-      );
-      if(tracked&&tracked.ok)appData=tracked.data;
-    }
     var persistedData=cloneApplicationStorageData(appData);
     json=JSON.stringify(persistedData);
   }catch(e){
@@ -249,7 +240,9 @@ function save(options){
     return false;
   }
   if(currentConference&&String(currentConference.id||'').trim()){
-    return true;
+    applicationStorageState.lastStorageError=
+      new Error('CANONICAL_CONFERENCE_MUTATION_CONTRACT_REQUIRED');
+    return false;
   }
   if(window.StorageRepository&&
     typeof window.StorageRepository.saveAppData==='function'){
