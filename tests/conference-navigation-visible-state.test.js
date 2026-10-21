@@ -28,7 +28,7 @@ function extract(name){
 
 function runtime(withConference=true){
   const dom=new JSDOM('<body><main id="startupScreen"><section id="platformHomeWorkspace"></section><section id="conferenceWorkspace"></section></main><header id="applicationTopbar"></header><section id="applicationBody">'+
-    '<button data-conference-tab="0"></button><button data-conference-tab="6"></button>'+Array.from({length:7},(_,id)=>'<div id="tab'+id+'"'+(id?' style="display:none"':'')+'></div>').join('')+'</section></body>',{url:'https://example.test/#/conference/app/accommodation'});
+    Array.from({length:7},(_,id)=>'<button data-conference-tab="'+id+'"></button>').join('')+Array.from({length:7},(_,id)=>'<div id="tab'+id+'"'+(id?' style="display:none"':'')+'></div>').join('')+'</section></body>',{url:'https://example.test/#/conference/app/accommodation'});
   const window=dom.window;
   let route='/conference/app/accommodation';
   const conference={id:'conference-1'};
