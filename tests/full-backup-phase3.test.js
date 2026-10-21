@@ -278,6 +278,21 @@ async function testNoSideEffectsOrNetwork(){
   assert.deepStrictEqual(loaded.sandbox.appData,{sentinel:true});
 }
 
+async function testPersistenceVerificationComparesExactCandidate(api){
+  var candidate=data();
+  var error=await rejectsCode(api.persistFullRestoreCandidate(candidate,{
+    repository:{
+      saveAppData:function(){return Promise.resolve({ok:true});},
+      getAppData:function(){
+        var changed=plain(candidate);
+        changed.templates=[];
+        return Promise.resolve({data:changed});
+      }
+    }
+  }),'FULL_RESTORE_VERIFICATION_MISMATCH');
+  assert.strictEqual(error.failedStage,'verification');
+}
+
 async function run(){
   var api=load().api;
   assert.strictEqual(api.getMaximumFullBackupFileSize(),100*1024*1024);
@@ -286,6 +301,7 @@ async function run(){
   testCandidateCloneAndSchemas(api);
   testCandidateIds(api);
   testPreviewUsesCandidate(api);
+  await testPersistenceVerificationComparesExactCandidate(api);
   await testNoSideEffectsOrNetwork();
   console.log('Full backup phase 3 tests passed.');
 }

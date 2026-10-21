@@ -918,7 +918,14 @@
       }catch(error){
         indexedJson='';
       }
-      if(!record||!isPlainObject(record.data)||!indexedJson){
+      var candidateJson;
+      try{
+        candidateJson=JSON.stringify(candidate);
+      }catch(error){
+        candidateJson='';
+      }
+      if(!record||!isPlainObject(record.data)||!indexedJson||
+        !candidateJson||indexedJson!==candidateJson){
         var verificationError=codedError(
           'FULL_RESTORE_VERIFICATION_MISMATCH',
           'The persisted restore candidate did not match the source.'
