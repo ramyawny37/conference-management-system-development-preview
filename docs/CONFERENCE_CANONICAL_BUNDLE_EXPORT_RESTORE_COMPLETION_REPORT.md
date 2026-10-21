@@ -41,6 +41,6 @@ All operational tables reference `platform.profiles` through actor columns. Rest
 | Browser device-session E2E | BLOCKED | Development had zero active Platform Owner device sessions during verification. No bypass or fallback was added. |
 | Development database | PASS | Migrations applied to Development only. |
 | Development Edge | PASS | `platform-device-operation` version 32 is ACTIVE with JWT verification. |
-| Source workflows | PENDING | Updated after the final `develop` push and workflow verification. |
+| Source workflows | PASS | Conference canonical people flow and Reservations integration both completed successfully for commit `e492fcc`. |
 
 Supabase advisors report the established protected-RPC pattern as `RLS enabled, no policy`; the new private operation ledger is explicitly revoked from browser roles. The new device foreign key has a covering index. Existing project-wide advisor findings are outside this bundle change.
