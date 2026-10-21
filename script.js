@@ -7067,7 +7067,11 @@ function setApplicationMode(mode){
   // Conference tabs live in applicationBody; never hide the shared shell to show them.
   if(startupScreen) startupScreen.style.display = 'flex';
   if(topbar) topbar.style.display = 'none';
-  if(body) body.style.display = startup ? 'none' : '';
+  if(body){
+    body.style.display = startup ? 'none' : '';
+    body.hidden = startup;
+    body.setAttribute('aria-hidden',startup?'true':'false');
+  }
   var conferenceWorkspace=ge('conferenceWorkspace');
   if(!startup){
     if(startupScreen)startupScreen.classList.add('platform-conference-active');
