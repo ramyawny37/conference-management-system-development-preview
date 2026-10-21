@@ -116,3 +116,41 @@ test('late and failed hydration cannot repaint a previously active tab',async()=
   await assert.rejects(failed,/HYDRATION_FAILED/);
   assert.equal(transportRenders,0);
 });
+
+test('Conference reentry restores the shared application body after peer module concealment',()=>{
+  const state=runtime(true);
+  const body=state.window.document.getElementById('applicationBody');
+  body.hidden=true;
+  body.style.display='none';
+  body.setAttribute('aria-hidden','true');
+  assert.equal(state.context.navigateConferenceRoute('/conference/app/accommodation'),true);
+  assert.equal(body.hidden,false);
+  assert.equal(body.style.display,'');
+  assert.equal(body.getAttribute('aria-hidden'),'false');
+  assertVisible(state,0,'/conference/app/accommodation');
+});
+
+test('section-change listeners observe the destination route, never the previous route',()=>{
+  const state=runtime(true);
+  const observed=[];
+  state.window.addEventListener('conference-section-change',event=>{
+    observed.push({route:state.getRoute(),tabId:event.detail.tabId});
+  });
+  assert.equal(state.context.switchTab(6),true);
+  assert.equal(state.context.switchTab(0),true);
+  assert.deepEqual(observed,[
+    {route:'/conference/app/settings',tabId:6},
+    {route:'/conference/app/accommodation',tabId:0}
+  ]);
+});
+
+test('Conference route parser rejects houses suffix on non-settings tabs',()=>{
+  const routingSource=fs.readFileSync('js/application-routing.js','utf8');
+  const dom=new JSDOM('',{url:'https://example.test/#/conference'});
+  vm.runInNewContext(routingSource,{window:dom.window,location:dom.window.location,isFinite,parseInt,String,Object});
+  const routing=dom.window.ApplicationRouting;
+  assert.equal(routing.getConferenceRoute('/conference/app/settings/houses').settingsView,'houses');
+  for(const name of ['accommodation','transportation','accounts','reports','cards','search']){
+    assert.equal(routing.getConferenceRoute('/conference/app/'+name+'/houses').kind,'invalid');
+  }
+});
