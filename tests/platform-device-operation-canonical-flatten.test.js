@@ -20,7 +20,8 @@ const conferenceHousePatch=read('supabase/migrations/20261020143000_canonical_ce
 const dispatcher=migration.match(/create or replace function platform\.execute_device_operation\([\s\S]*?end \$\$;/i)?.[0]||'';
 const dispatcherPatches=read('supabase/migrations/20261013141000_reservations_canonical_people_device_dispatch.sql');
 const ownerPendingReadPatch=read('supabase/migrations/20261018214500_canonical_owner_pending_device_session_read.sql');
-const effectiveDispatcher=dispatcher+dispatcherPatches+ownerPendingReadPatch;
+const canonicalTemplateReadPatch=read('supabase/migrations/20261021193000_canonical_library_template_read.sql');
+const effectiveDispatcher=dispatcher+dispatcherPatches+ownerPendingReadPatch+canonicalTemplateReadPatch;
 
 function edgeOperations(module){
   const initial=edge.match(new RegExp(`const ${module}=new Set\\(\\[([^;]+)\\]\\)`));

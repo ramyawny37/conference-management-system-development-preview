@@ -160,11 +160,13 @@ function saveTemplate(){
   if(!name) return;
   updateCurrentConferenceData();
   var conferenceTemplate={id:uid(),name:name,createdAt:new Date().toISOString(),data:deepClone(getCurrentConference())};
+  var previousTemplates=deepClone(appData.templates||[]);
   appData.templates.push(conferenceTemplate);
-  if(!saveTemplateOnly())return false;
-  renderSettings();
-  showToast('✅ تم حفظ القالب');
-  return true;
+  return saveTemplateOnly({conferenceTemplateId:conferenceTemplate.id}).then(function(){
+    renderSettings();
+    showToast('✅ تم حفظ القالب');
+    return true;
+  },function(){appData.templates=previousTemplates;return false;});
 }
 function restoreBackup(id){
   var backup = null;
@@ -401,14 +403,16 @@ function moveTemplateToTrash(id){
   (appData.templates || []).forEach(function(t){ if (!target && t.id === id) target = t; });
   if (!target) return;
   if (!confirm('حذف القالب؟ يمكن استعادته من سلة المحذوفات.')) return;
-  pushTrashItem('templates', target);
+  var previousTemplates=deepClone(appData.templates||[]);
   appData.templates = removeByIdFromArray(appData.templates, id);
-  if(window.ConferenceTemplateHousesEditor){
-    window.ConferenceTemplateHousesEditor.handleTemplateDeleted(id);
-  }
-  if(!saveTemplateOnly())return false;
-  renderSettings();
-  showToast('🗑️ تم نقل القالب إلى سلة المحذوفات');
+  return saveTemplateOnly({conferenceTemplateId:id}).then(function(){
+    if(window.ConferenceTemplateHousesEditor){
+      window.ConferenceTemplateHousesEditor.handleTemplateDeleted(id);
+    }
+    renderSettings();
+    showToast('🗑️ تم نقل القالب إلى سلة المحذوفات');
+    return true;
+  },function(){appData.templates=previousTemplates;return false;});
 }
 
 function moveArchiveToTrash(id){
@@ -441,10 +445,21 @@ function restoreTrashItem(type, trashId){
   list.forEach(function(x){ if (!item && x.id === trashId) item = x; });
   if (!item) return;
 
-  if (type === 'templates') appData.templates.push(item.payload);
-  else if (type === 'archives') appData.archives.push(item.payload);
+  if(type==='templates'||type==='houseTemplates'){
+    var templateType=type==='templates'?'conference':'house';
+    var templateId=String(item.payload&&item.payload.id||'');
+    if(!templateId)return false;
+    return window.CanonicalTemplateLibrary.mutate(
+      templateType,templateId,'upsert',deepClone(item.payload)
+    ).then(function(){
+      renderSettings();renderTab(currentTab);
+      showToast('✅ تم الاسترجاع من سلة المحذوفات');
+      return true;
+    },function(){return false;});
+  }
+
+  if (type === 'archives') appData.archives.push(item.payload);
   else if (type === 'backups') appData.backups.push(item.payload);
-  else if (type === 'houseTemplates') appData.houseTemplates.push(item.payload);
   else if (type === 'rooms') {
     var payload = item.payload || {};
     var conf = null;
@@ -8140,7 +8155,22 @@ function renderAirConditioningV3Settings(conference){
   return html;
 }
 
+var canonicalTemplateHydrationFlight=null;
+function hydrateCanonicalTemplatesForSettings(){
+  var library=window.CanonicalTemplateLibrary;
+  if(!library||typeof library.hydrate!=='function'||library.isHydrated()){
+    return Promise.resolve();
+  }
+  if(canonicalTemplateHydrationFlight)return canonicalTemplateHydrationFlight;
+  canonicalTemplateHydrationFlight=library.hydrate().then(function(value){
+    canonicalTemplateHydrationFlight=null;
+    if(currentTab===6)renderSettings();
+    return value;
+  },function(error){canonicalTemplateHydrationFlight=null;throw error;});
+  return canonicalTemplateHydrationFlight;
+}
 function renderSettings(){
+  hydrateCanonicalTemplatesForSettings().catch(function(){});
   var current = getCurrentConference();
   var activeSettingsTab = settingsTab || 'general';
   if(activeSettingsTab!=='general'&&activeSettingsTab!=='houses'){
@@ -8717,7 +8747,9 @@ function renderTrashSection(){
       h += '<div><div style="font-weight:700">' + title + '</div><div style="font-size:10px;color:#AAB5C0">' + esc(item.deletedAt || '') + '</div></div>';
       h += '<div class="row" style="gap:6px">';
       h += '<button class="btn btn-blue btn-sm" onclick="restoreTrashItem(\'' + t.key + '\', \'' + item.id + '\')">استرجاع</button>';
-      h += '<button class="btn btn-red btn-sm" onclick="purgeTrashItem(\'' + t.key + '\', \'' + item.id + '\')">حذف نهائي</button>';
+      if(t.key!=='templates'&&t.key!=='houseTemplates'){
+        h += '<button class="btn btn-red btn-sm" onclick="purgeTrashItem(\'' + t.key + '\', \'' + item.id + '\')">حذف نهائي</button>';
+      }
       h += '</div></div>';
     });
     h += '</div>';
@@ -8893,19 +8925,21 @@ function saveTemplateFloor() {
     templateFloorId:floor.id
   });
   selectedHouseTemplateId = house.id;
-  if(!saveTemplateOnly({houseTemplateId:house.id})){
+  return saveTemplateOnly({houseTemplateId:house.id}).then(function(){
+    var conferenceHeader=ge('globalConferenceHeader');
+    if(conferenceHeader)conferenceHeader.style.display='';
+    if (editHouseTemplateId === house.id && ge('houseTemplateModal').style.display !== 'none') {
+      ht_renderTemplate(house);
+    }
+    closeTemplateFloorModal();
+    conferenceRefresh.render();
+    renderSettings();
+    return true;
+  },function(){
     appData = previousAppData;
     selectedHouseTemplateId = previousSelectedHouseTemplateId;
     return false;
-  }
-  var conferenceHeader=ge('globalConferenceHeader');
-  if(conferenceHeader)conferenceHeader.style.display='';
-  if (editHouseTemplateId === house.id && ge('houseTemplateModal').style.display !== 'none') {
-    ht_renderTemplate(house);
-  }
-  closeTemplateFloorModal();
-  conferenceRefresh.render();
-  renderSettings();
+  });
 }
 
 function renderTemplateRoomModal() {
@@ -9049,16 +9083,18 @@ function saveTemplateRoom() {
     floor.rooms.push({ id: uid(), number: number, beds: beds, extraBeds: extraBeds, notes: notes, guests: [], children: [], closed: closed, closedDay: closedDay });
   }
   selectedHouseTemplateId = house.id;
-  if(!saveTemplateOnly({houseTemplateId:house.id})){
+  return saveTemplateOnly({houseTemplateId:house.id}).then(function(){
+    if (editHouseTemplateId === house.id && ge('houseTemplateModal').style.display !== 'none') {
+      ht_renderTemplate(house);
+    }
+    closeTemplateRoomModal();
+    renderSettings();
+    return true;
+  },function(){
     appData = previousAppData;
     selectedHouseTemplateId = previousSelectedHouseTemplateId;
     return false;
-  }
-  if (editHouseTemplateId === house.id && ge('houseTemplateModal').style.display !== 'none') {
-    ht_renderTemplate(house);
-  }
-  closeTemplateRoomModal();
-  renderSettings();
+  });
 }
 
 function saveSettings(){
@@ -9220,15 +9256,17 @@ function saveHouseTemplate() {
     appData.houseTemplates.push(template);
   }
     selectedHouseTemplateId = template.id;
-  if(!saveTemplateOnly({houseTemplateId:template.id})){
+  return saveTemplateOnly({houseTemplateId:template.id}).then(function(){
+    closeHouseTemplateEditor();
+    renderSettings();
+    showToast('✅ تم حفظ خريطة البيت بنجاح');
+    return true;
+  },function(){
     appData = previousAppData;
     selectedHouseTemplateId = previousSelectedHouseTemplateId;
     editHouseTemplateId = previousEditHouseTemplateId;
     return false;
-  }
-  closeHouseTemplateEditor();
-  renderSettings();
-  showToast('✅ تم حفظ خريطة البيت بنجاح');
+  });
 }
 
 function deleteHouseTemplate(id) {
@@ -9239,19 +9277,20 @@ function deleteHouseTemplate(id) {
   var previousAppData = deepClone(appData);
   var previousSelectedHouseTemplateId = selectedHouseTemplateId;
   var previousEditHouseTemplateId = editHouseTemplateId;
-  pushTrashItem('houseTemplates', target);
   appData.houseTemplates = removeByIdFromArray(appData.houseTemplates, id);
   if (selectedHouseTemplateId === id) {
     selectedHouseTemplateId = appData.houseTemplates.length ? appData.houseTemplates[0].id : null;
   }
-  if(!saveTemplateOnly({houseTemplateId:id})){
+  return saveTemplateOnly({houseTemplateId:id}).then(function(){
+    renderSettings();
+    showToast('🗑️ تم نقل خريطة البيت إلى سلة المحذوفات', '#E74C3C');
+    return true;
+  },function(){
     appData = previousAppData;
     selectedHouseTemplateId = previousSelectedHouseTemplateId;
     editHouseTemplateId = previousEditHouseTemplateId;
     return false;
-  }
-  renderSettings();
-  showToast('🗑️ تم نقل خريطة البيت إلى سلة المحذوفات', '#E74C3C');
+  });
 }
 
 function duplicateHouseTemplate(id) {
@@ -9286,11 +9325,14 @@ function duplicateHouseTemplate(id) {
     });
     newTemplate.floors.push(newFloor);
   });
+  var previousTemplates=deepClone(appData.houseTemplates||[]);
   appData.houseTemplates.push(newTemplate);
   selectedHouseTemplateId = newTemplate.id;
-  if(!saveTemplateOnly())return false;
-  renderSettings();
-  showToast('✅ تم نسخ الخريطة');
+  return saveTemplateOnly({houseTemplateId:newTemplate.id}).then(function(){
+    renderSettings();
+    showToast('✅ تم نسخ الخريطة');
+    return true;
+  },function(){appData.houseTemplates=previousTemplates;return false;});
 }
 
 var editHouseTemplateId = null;

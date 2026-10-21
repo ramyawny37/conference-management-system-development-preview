@@ -70,7 +70,13 @@ function ht_deleteRoomFromTemplate(houseId, floorId, roomId) {
   });
   floor.rooms = rooms;
   selectedHouseTemplateId = house.id;
-  if (!saveTemplateOnly({houseTemplateId:house.id})) {
+  return saveTemplateOnly({houseTemplateId:house.id}).then(function(){
+    if (editHouseTemplateId === house.id && ge('houseTemplateModal').style.display !== 'none') {
+      ht_renderTemplate(house);
+    }
+    renderSettings();
+    return true;
+  },function(){
     appData = previousAppData;
     selectedHouseTemplateId = previousSelectedHouseTemplateId;
     var restoredHouse = getHouseTemplateById(houseId);
@@ -79,11 +85,7 @@ function ht_deleteRoomFromTemplate(houseId, floorId, roomId) {
     }
     renderSettings();
     return false;
-  }
-  if (editHouseTemplateId === house.id && ge('houseTemplateModal').style.display !== 'none') {
-    ht_renderTemplate(house);
-  }
-  renderSettings();
+  });
 }
 
 function ht_roomHtml(floorId, room) {
@@ -147,7 +149,13 @@ function ht_deleteFloorFromTemplate(houseId, floorId) {
   });
   house.floors = floors;
   selectedHouseTemplateId = house.id;
-  if (!saveTemplateOnly({houseTemplateId:house.id})) {
+  return saveTemplateOnly({houseTemplateId:house.id}).then(function(){
+    if (editHouseTemplateId === house.id && ge('houseTemplateModal').style.display !== 'none') {
+      ht_renderTemplate(house);
+    }
+    renderSettings();
+    return true;
+  },function(){
     appData = previousAppData;
     selectedHouseTemplateId = previousSelectedHouseTemplateId;
     var restoredHouse = getHouseTemplateById(houseId);
@@ -156,9 +164,5 @@ function ht_deleteFloorFromTemplate(houseId, floorId) {
     }
     renderSettings();
     return false;
-  }
-  if (editHouseTemplateId === house.id && ge('houseTemplateModal').style.display !== 'none') {
-    ht_renderTemplate(house);
-  }
-  renderSettings();
+  });
 }

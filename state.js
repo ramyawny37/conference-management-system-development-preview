@@ -171,11 +171,21 @@ function restoreSafeSingleCurrentConferenceSelection(target){
 }
 
 function saveTemplateOnly(options){
-  return save({
-    skipCurrentConferenceUpdate:true,
-    skipConferenceTracking:true,
-    skipSyncQueue:true
+  options=options||{};
+  var type=options.conferenceTemplateId?'conference':
+    (options.houseTemplateId?'house':'');
+  var id=String(options.conferenceTemplateId||options.houseTemplateId||'');
+  var values=type==='conference'?appData.templates:appData.houseTemplates;
+  var payload=null;
+  (values||[]).some(function(item){
+    if(String(item&&item.id||'')!==id)return false;
+    payload=cloneApplicationStorageData(item);return true;
   });
+  var library=window.CanonicalTemplateLibrary;
+  if(!type||!id||!library||typeof library.mutate!=='function'){
+    return Promise.reject(new Error('CANONICAL_TEMPLATE_CONTRACT_REQUIRED'));
+  }
+  return library.mutate(type,id,payload?'upsert':'delete',payload);
 }
 
 function initializeApplicationStorage(){
@@ -233,6 +243,12 @@ function save(options){
     var currentConference=options.skipConferenceTracking
       ?null:getCurrentConference();
     var persistedData=cloneApplicationStorageData(appData);
+    persistedData.templates=[];
+    persistedData.houseTemplates=[];
+    if(persistedData.trash){
+      persistedData.trash.templates=[];
+      persistedData.trash.houseTemplates=[];
+    }
     json=JSON.stringify(persistedData);
   }catch(e){
     console.error('تعذر حفظ بيانات التطبيق:',e);

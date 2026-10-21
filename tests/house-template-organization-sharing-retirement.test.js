@@ -29,7 +29,8 @@ assert.doesNotMatch(editor+state,/HouseTemplateContentAuthorization/);
 for(const name of ['ht_addFloor','ht_deleteFloor','ht_addRoom','ht_deleteRoom','ht_addRoomToTemplate','ht_deleteRoomFromTemplate','ht_editFloorName','ht_deleteFloorFromTemplate']){
   assert.match(editor,new RegExp('function '+name+'\\('),name+' must remain');
 }
-assert.match(state,/function saveTemplateOnly\(options\)[\s\S]*return save\(\{[\s\S]*skipCurrentConferenceUpdate:true/);
+assert.match(state,/function saveTemplateOnly\(options\)[\s\S]*CanonicalTemplateLibrary[\s\S]*library\.mutate\(type,id,payload\?'upsert':'delete',payload\)/);
+assert.match(state,/persistedData\.templates=\[\][\s\S]*persistedData\.houseTemplates=\[\]/);
 assert.match(repository,/return persistence\.saveAppData\(appData\)/);
 assert.doesNotMatch(repository,/OrganizationTemplateSync|captureLocalSave|skipTemplateSync/);
 

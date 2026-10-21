@@ -58,22 +58,25 @@
     if(!Array.isArray(template.data.houses))template.data.houses=[];
     return true;
   }
-  function persist(){
-    return typeof global.save==='function'&&
-      global.save({skipCurrentConferenceUpdate:true,
-        skipConferenceTracking:true,skipSyncQueue:true})!==false;
+  function persist(template){
+    if(typeof global.saveTemplateOnly!=='function'){
+      return Promise.reject(new Error('CANONICAL_TEMPLATE_CONTRACT_REQUIRED'));
+    }
+    return global.saveTemplateOnly({conferenceTemplateId:template.id});
   }
   function mutate(operation){
     var template=currentTemplate();
     if(!template||!ensureHouses(template))return false;
     var before=clone(template.data.houses);
     if(operation(template)===false)return false;
-    if(!persist()){
+    return persist(template).then(function(){
+      render();
+      return true;
+    },function(){
       template.data.houses=before;
+      render();
       return false;
-    }
-    render();
-    return true;
+    });
   }
   function normalizeRoom(input,existing){
     input=input||{};

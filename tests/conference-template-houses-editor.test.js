@@ -38,7 +38,7 @@ function environment(){
     Math:Math,Number:Number,parseInt:parseInt,
     structuredClone:function(value){return plain(value);},
     uid:function(){ids++;return 'generated-'+ids;},
-    save:function(options){saves.push(plain(options));return true;},
+    saveTemplateOnly:function(options){saves.push(plain(options));return Promise.resolve(true);},
     confirm:function(){return true;},prompt:function(){return null;},
     getCurrentConference:function(){forbiddenCalls++;throw new Error('FORBIDDEN');},
     getHouseById:function(){forbiddenCalls++;throw new Error('FORBIDDEN');},
@@ -55,6 +55,7 @@ function environment(){
     modal:function(){return modal;}};
 }
 
+;(async function(){
 var env=environment();
 var api=env.sandbox.ConferenceTemplateHousesEditor;
 var conferencesBefore=plain(env.appData.conferences);
@@ -66,24 +67,24 @@ assert.strictEqual(env.appData.currentConferenceId,currentIdBefore);
 assert.ok(env.body.innerHTML.indexOf('لا توجد بيوت في القالب')>=0);
 assert.strictEqual(env.sandbox.editingConferenceTemplateId,'template-1');
 
-assert.strictEqual(api.addHouse({name:'House A',description:'Desc'}),true);
+assert.strictEqual(await api.addHouse({name:'House A',description:'Desc'}),true);
 var template=env.appData.templates[0];
 assert.strictEqual(template.data.houses.length,1);
 var house=template.data.houses[0];
 assert.strictEqual(house.name,'House A');
 assert.ok(env.body.innerHTML.indexOf('لا توجد أدوار داخل البيت')>=0);
 
-assert.strictEqual(api.updateHouse(house.id,{name:'House B',description:'Updated'}),true);
+assert.strictEqual(await api.updateHouse(house.id,{name:'House B',description:'Updated'}),true);
 assert.strictEqual(house.name,'House B');
 assert.strictEqual(house.description,'Updated');
 
-assert.strictEqual(api.addFloor(house.id,{name:'First'}),true);
+assert.strictEqual(await api.addFloor(house.id,{name:'First'}),true);
 var floor=house.floors[0];
 assert.ok(env.body.innerHTML.indexOf('لا توجد غرف داخل الدور')>=0);
-assert.strictEqual(api.updateFloor(house.id,floor.id,{name:'Ground'}),true);
+assert.strictEqual(await api.updateFloor(house.id,floor.id,{name:'Ground'}),true);
 assert.strictEqual(floor.name,'Ground');
 
-assert.strictEqual(api.addRoom(house.id,floor.id,{
+assert.strictEqual(await api.addRoom(house.id,floor.id,{
   number:'101',beds:2,extraBeds:1,notes:'Near lift',
   closed:true,closedDay:3
 }),true);
@@ -95,7 +96,7 @@ assert.deepStrictEqual(plain({
   number:'101',beds:2,extraBeds:1,notes:'Near lift',
   closed:true,closedDay:3
 });
-assert.strictEqual(api.updateRoom(house.id,floor.id,room.id,{
+assert.strictEqual(await api.updateRoom(house.id,floor.id,room.id,{
   number:'102',beds:4,extraBeds:2,notes:'Updated',
   closed:false,closedDay:9
 }),true);
@@ -107,11 +108,11 @@ assert.deepStrictEqual(plain({
   closed:false,closedDay:null
 });
 
-assert.strictEqual(api.removeRoom(house.id,floor.id,room.id,true),true);
+assert.strictEqual(await api.removeRoom(house.id,floor.id,room.id,true),true);
 assert.strictEqual(floor.rooms.length,0);
-assert.strictEqual(api.removeFloor(house.id,floor.id,true),true);
+assert.strictEqual(await api.removeFloor(house.id,floor.id,true),true);
 assert.strictEqual(house.floors.length,0);
-assert.strictEqual(api.removeHouse(house.id,true),true);
+assert.strictEqual(await api.removeHouse(house.id,true),true);
 assert.strictEqual(template.data.houses.length,0);
 
 assert.deepStrictEqual(plain(env.appData.conferences),conferencesBefore);
@@ -120,11 +121,7 @@ assert.strictEqual(env.appData.currentConferenceId,currentIdBefore);
 assert.strictEqual(env.forbiddenCalls(),0);
 assert.ok(env.saves.length>=9);
 env.saves.forEach(function(options){
-  assert.deepStrictEqual(options,{
-    skipCurrentConferenceUpdate:true,
-    skipConferenceTracking:true,
-    skipSyncQueue:true
-  });
+  assert.deepStrictEqual(options,{conferenceTemplateId:'template-1'});
 });
 
 api.close();
@@ -154,7 +151,8 @@ assert.ok(scriptSource.indexOf(
 )>=0);
 var indexSource=fs.readFileSync(path.join(root,'index.html'),'utf8');
 assert.ok(indexSource.indexOf(
-  '<script src="js/conference-template-houses-editor.js"></script>'
+  '<script src="js/conference-template-houses-editor.js?rev=canonical-template-write-v1"></script>'
 )>=0);
 
 console.log('conference template houses editor tests: passed');
+})().catch(function(error){console.error(error);process.exitCode=1;});
