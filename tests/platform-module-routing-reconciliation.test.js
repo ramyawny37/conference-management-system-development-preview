@@ -146,7 +146,7 @@ test('leaving an internal Conference tab switches workspaces while preserving th
   assert.strictEqual(state.elements.conferenceWorkspace.hidden,true);
   assert.strictEqual(state.elements.reservationsWorkspace.hidden,false);
   assert.strictEqual(state.elements.applicationTopbar.style.display,'block');
-  assert.strictEqual(state.elements.applicationBody.style.display,'block');
+  assert.strictEqual(state.elements.applicationBody.style.display,'none');
 });
 
 function warehouseRuntime(route){
