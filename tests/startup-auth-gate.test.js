@@ -19,6 +19,6 @@ function scenario(authenticated,accountStatus,deviceStatus){
   const script=fs.readFileSync(path.resolve(__dirname,'../script.js'),'utf8');
   assert.match(script,/window\.applicationStorageReadyPromise=null;[\s\S]*StartupAccessGate\.run/);
   assert.match(script,/completeApplicationStartup:completeAuthorizedApplicationStartup/);
-  ['switchTab','openSettingsFromHome','openNewConferenceModal','setCurrentConferenceById','loadFromFile','showSelectConferenceModal'].forEach(name=>assert.match(script,new RegExp('function '+name+'\\([^)]*\\)\\{\\s*if\\(window\\.StartupAccessGate')));
+  ['switchTab','openSettingsFromHome','openNewConferenceModal','loadFromFile','showSelectConferenceModal'].forEach(name=>assert.match(script,new RegExp('function '+name+'\\([^)]*\\)\\{\\s*if\\(window\\.StartupAccessGate')));
   console.log('startup auth gate tests: passed');
 })().catch(e=>{console.error(e);process.exitCode=1;});

@@ -8,7 +8,7 @@ const CACHE_NAMESPACE = IS_DEVELOPMENT
   : '';
 const CACHE_PREFIX = CACHE_NAMESPACE + 'conference-manager-core-';
 const CACHE_REVISION = IS_DEVELOPMENT
-  ? 'development-conference-navigation-consolidation-v1'
+  ? 'development-conference-canonical-refresh-v1'
   : 'production-3-6-0-release-v6';
 const CACHE_NAME = CACHE_PREFIX + 'v' + APP_VERSION + '-' + CACHE_REVISION;
 const CORE_ASSETS = [
@@ -56,7 +56,7 @@ const CORE_ASSETS = [
   './js/sync/template-diagnostic-export.js?rev=house-template-local-authority-v1',
   './js/sync/sync-settings-ui.js?rev=platform-first-login-coordinator-v1',
   './js/supabase/first-system-bootstrap-service.js?rev=first-owner-bootstrap-hardening-v1',
-  './js/sync/startup-access-gate.js?rev=revoked-rerequest-error-code-v1',
+  './js/sync/startup-access-gate.js?rev=conference-canonical-refresh-v1',
   './js/sync/conference-activation-authorization.js?rev=canonical-conference-id-v1',
   './js/sync/user-management-read-service.js?rev=platform-administration-unification-v1',
   './js/sync/user-management-ui.js?rev=platform-admin-security-retirement-v1',
@@ -71,7 +71,7 @@ const CORE_ASSETS = [
   './houses.js?rev=template-floor-conference-sync-v1',
   './transport.js',
   './houseTemplates.js?rev=house-template-local-authority-v1',
-  './state.js?rev=canonical-conference-id-v1',
+  './state.js?rev=conference-canonical-refresh-v1',
   './js/conference/accounts.js?rev=development-3-4-0-platform-foundation-v1',
   './js/conference-template-houses-editor.js',
   './cards.js',
@@ -82,7 +82,7 @@ const CORE_ASSETS = [
   './js/warehouse/party-management.js?rev=warehouse-party-management-v1',
   './js/warehouse/remaining-operations.js?rev=adjustment-conversion-ux-v1',
   './js/warehouse/workspace.js?rev=item-unit-add-ui-v1',
-  './script.js?rev=conference-navigation-consolidation-v1',
+  './script.js?rev=conference-canonical-refresh-v1',
   './version.js',
   './pwa.js?rev=pwa-update-state-consistency-v1',
   './libs/html2canvas.min.js',

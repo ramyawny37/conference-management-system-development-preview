@@ -22,16 +22,14 @@ test('startup open delegates to canonical discovery and never activates local-on
   const end=script.indexOf('\nvar conferenceBrandingDraft=',begin);
   assert.ok(begin>=0&&end>begin);
   const source=script.slice(begin,end);
-  let requestedId=null,localActivations=0;
+  let requestedId=null;
   const sandbox={
     window:{},
-    openDiscoveredConferenceFromStartup:id=>{requestedId=id;return false;},
-    setCurrentConferenceById:()=>{localActivations++;return true;}
+    openDiscoveredConferenceFromStartup:id=>{requestedId=id;return false;}
   };
   vm.runInNewContext(source+'\nthis.openLocal=openConferenceFromStartup;',sandbox);
   assert.equal(sandbox.openLocal('local-only'),false);
   assert.equal(requestedId,'local-only');
-  assert.equal(localActivations,0);
 });
 
 test('startup excludes browser-local conferences not returned by authorized discovery',()=>{

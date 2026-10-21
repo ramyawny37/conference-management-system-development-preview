@@ -48,6 +48,54 @@ var applicationStorageState = {
 var storageInitializationPromise = null;
 var applicationSelectionRestored = false;
 
+function conferenceSelectionPreferenceKey(){
+  var auth=window.SupabaseAuth;
+  var identity=auth&&typeof auth.getAccountIdentity==='function'
+    ?auth.getAccountIdentity():null;
+  var integration=window.PlatformIntegration;
+  var device=integration&&typeof integration.getDeviceIdentity==='function'
+    ?integration.getDeviceIdentity():null;
+  var userId=String(identity&&identity.userId||'').trim();
+  var deviceId=String(device&&device.id||'').trim();
+  if(!userId||!deviceId)return null;
+  return browserStorageNamespace.key(
+    'conference_selection:'+userId+':'+deviceId
+  );
+}
+
+function readConferenceSelectionPreference(){
+  var key=conferenceSelectionPreferenceKey();
+  if(!key)return null;
+  try{return String(localStorage.getItem(key)||'').trim()||null;}
+  catch(error){return null;}
+}
+
+function persistConferenceSelectionPreference(conferenceId){
+  var key=conferenceSelectionPreferenceKey();
+  if(!key)return false;
+  try{
+    var value=String(conferenceId||'').trim();
+    if(value)localStorage.setItem(key,value);else localStorage.removeItem(key);
+    window.applicationPersistedConferenceCandidate=value||null;
+    return true;
+  }catch(error){
+    applicationStorageState.lastStorageError=error;
+    return false;
+  }
+}
+
+function resetConferenceRuntimeSelection(){
+  if(appData)appData.currentConferenceId=null;
+  if(typeof currentConferenceRuntimeActivationDecision!=='undefined'){
+    currentConferenceRuntimeActivationDecision=null;
+  }
+  window.applicationPersistedConferenceCandidate=null;
+  applicationSelectionRestored=false;
+  storageInitializationPromise=null;
+  window.applicationStorageReadyPromise=null;
+  return true;
+}
+
 
 // ═══════════════════════════════════════════════════════
 // CORE STATE & PERSISTENCE FUNCTIONS
@@ -151,7 +199,7 @@ function initializeApplicationStorage(){
     })
     .then(function(selection){
       window.applicationPersistedConferenceCandidate=
-        String(selection.data.currentConferenceId||'').trim()||null;
+        readConferenceSelectionPreference();
       appData=cloneApplicationStorageData(selection.data);
       appData.currentConferenceId=null;
       normalizeAppData();
@@ -233,34 +281,8 @@ function save(options){
   return true;
 }
 
-function saveCurrentConferenceSelection(){
-  var json;
-  var persistedData=cloneApplicationStorageData(appData);
-  try{
-    json=JSON.stringify(persistedData);
-  }catch(e){
-    applicationStorageState.lastStorageError=e;
-    return false;
-  }
-  if(window.StorageRepository&&
-    typeof window.StorageRepository.saveAppData==='function'){
-    window.StorageRepository.saveAppData(persistedData)
-      .then(function(result){
-        applicationStorageState.lastIndexedDbSaveAt=new Date().toISOString();
-        if(result&&result.mirror&&result.mirror.ok){
-          applicationStorageState.lastLocalSaveAt=new Date().toISOString();
-        }
-      })
-      .catch(function(indexedDbError){
-        applicationStorageState.lastStorageError=indexedDbError;
-      });
-  }else{
-    var repositoryError=new Error('Application persistence repository is unavailable.');
-    repositoryError.code='LOCAL_PERSISTENCE_REPOSITORY_UNAVAILABLE';
-    applicationStorageState.lastStorageError=repositoryError;
-    return false;
-  }
-  return true;
+if(typeof window.addEventListener==='function'){
+  window.addEventListener('platform-session-reset',resetConferenceRuntimeSelection);
 }
 
 function getStorageUsageReport(){

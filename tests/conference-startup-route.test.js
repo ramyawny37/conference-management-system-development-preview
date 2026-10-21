@@ -92,7 +92,7 @@ test('authorized async restoration cannot override an explicit Conference home r
 });
 
 test('explicit Conference opening publishes a durable route and Home removes no selection',()=>{
-  const selection=source.slice(source.indexOf('function setCurrentConferenceById'),source.indexOf('function completeCurrentConference'));
+  const selection=source.slice(source.indexOf('function activatePersistedConferenceById'),source.indexOf('function downloadFullApplicationBackup'));
   const entry=source.slice(
     source.indexOf('function prepareCanonicalConferenceApplicationEntry'),
     source.indexOf('function traceMemberActivation')

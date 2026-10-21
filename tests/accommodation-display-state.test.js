@@ -18,8 +18,6 @@ var conference={id:'c1',houses:[{id:'h1',floors:[{id:'f1',rooms:[
 var conferenceEditAuthorized=false;
 var sandbox={window:null,appData:{currentConferenceId:'c1',conferences:[conference]},
   currentConferenceRuntimeActivationDecision:null,
-  ConferenceLinkStore:{get:function(id){return id==='c2'?{remoteConferenceId:'remote-c2',linkStatus:'linked'}:null;}},
-  ConferenceActivationAuthorization:{authorizeLocal:function(input){return {ok:true,active:true,conferenceId:input.conferenceId,capabilities:null,role:null};}},
   ConferenceEditLockManager:{canMutateAccommodation:function(){return true;}}};
 sandbox.window=sandbox;
 vm.runInNewContext([

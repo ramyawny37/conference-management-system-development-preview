@@ -53,8 +53,6 @@ assert.deepStrictEqual(member.accommodationDisplayedRoomIds,['room-active']);
 var tab={innerHTML:''};
 Object.assign(sandbox,{
   currentConferenceRuntimeActivationDecision:{ok:true,active:true,conferenceId:'conference-a',capabilities:{edit:false},role:null},
-  ConferenceLinkStore:{get:function(){return {remoteConferenceId:'remote-a',linkStatus:'linked'};}},
-  ConferenceActivationAuthorization:{authorizeLocal:function(input){return {ok:true,active:true,conferenceId:input.conferenceId,capabilities:null,role:null};}},
   getCurrentConference:function(){return member;},
   isCanonicalTransportConference:function(){return false;},
   getConferenceTransportVehicles:function(current){return current.transports||[];},
