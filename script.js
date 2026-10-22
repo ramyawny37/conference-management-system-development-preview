@@ -2980,6 +2980,9 @@ function renderCanonicalAccommodation(state){
     var searchable=[room.roomNumber].concat(guests.map(function(item){var person=item.person||{};return [person.fullName||'',person.phone||'',person.church||''].join(' ');})).join(' ');
     if(query&&normalizeAccommodationSearchText(searchable).indexOf(query)<0)return false;
     if(filter==='occupied'&&!guests.length)return false;
+    if(filter==='extra-beds'&&!guests.some(function(item){return item.bedType==='extra';}))return false;
+    if(filter==='children'&&!guests.some(function(item){return item.extraBedPersonType==='child';}))return false;
+    if(filter==='accompanied'&&!guests.some(function(item){return !!item.guardianParticipationId;}))return false;
     if(filter==='empty'&&(guests.length||room.isClosed))return false;
     if(filter==='closed'&&!room.isClosed)return false;
     if(filter==='available'&&(room.isClosed||guests.length>=Number(room.baseCapacity||0)+Number(room.extraBedCapacity||0)))return false;
@@ -2988,7 +2991,7 @@ function renderCanonicalAccommodation(state){
   h+='<section class="accommodation-toolbar" aria-label="أدوات البحث وفلترة التسكين">';
   h+=renderAccommodationSearchControls(matchingRooms.length,!!query);
   h+='<div class="accommodation-quick-filters" role="group" aria-label="فلترة الغرف">';
-  [['all','كل الغرف'],['occupied','الغرف المشغولة'],['empty','الغرف الفارغة'],['available','بها أماكن'],['closed','الغرف المغلقة']].forEach(function(item){
+  [['all','كل الغرف'],['occupied','الغرف المشغولة'],['empty','الغرف الفارغة'],['available','بها أماكن'],['extra-beds','بها أسرة إضافية مستخدمة'],['children','بها أطفال'],['accompanied','بها مرافقون'],['closed','الغرف المغلقة']].forEach(function(item){
     h+='<button type="button" class="filter-item '+(filter===item[0]?'active':'')+'" onclick="setAccommodationQuickFilter(\''+item[0]+'\')">'+item[1]+'</button>';
   });
   h+='</div>';
