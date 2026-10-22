@@ -66,7 +66,7 @@ test('Transportation derives child identity and requires the guardian current ac
 
 test('Restaurant, cards, summaries and air-conditioning consume canonical projections and intervals',()=>{
   const env=canonicalEnvironment(),s=env.sandbox;
-  assert.deepEqual(Array.from(s.getRestaurantV3People(env.conference),item=>item.name),['Canonical Child','Canonical Guardian','Canonical Unassigned']);
+  assert.deepEqual(Array.from(s.getRestaurantV3People(env.conference),item=>item.name),['Canonical Child']);
   assert.deepEqual(JSON.parse(JSON.stringify(s.personsOnDay(1))),{adults:0,children:1});
   assert.deepEqual(JSON.parse(JSON.stringify(s.personsOnDay(3))),{adults:0,children:0});
   const childCard=s.CardEngine.getPersonCards().find(card=>card.personId==='person-child');
@@ -96,7 +96,7 @@ test('guardian delete result removes every cascaded Participation from frontend 
 
 test('linked branches have no legacy fallback, mirror or guardian lookup through peopleDb',()=>{
   const restaurant=functionSource(script,'getRestaurantV3People');
-  assert.match(restaurant,/if\(linked&&window\.CanonicalConferenceRestaurant\)window\.CanonicalConferenceRestaurant\.getParticipations/);
+  assert.match(restaurant,/if\(linked&&window\.CanonicalConferenceRestaurant\)getConferenceOperationalResidents/);
   assert.match(restaurant,/else \{/);
   assert.doesNotMatch(restaurant.slice(0,restaurant.indexOf('else {')),/peopleDb|room\.guests|room\.children/);
   for(const source of [transport,functionSource(script,'getSeatEditorPersonId'),functionSource(script,'getEligibleSharedChildren')])assert.doesNotMatch(source,/peopleDb|getPeopleDb|getPeopleList/);

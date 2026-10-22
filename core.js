@@ -106,6 +106,25 @@ function getConferenceRoomPeopleOnDay(room,day,conference){
   });
 }
 
+function getConferenceOperationalResidents(conference,day){
+  conference=conference||getCurrentConference();
+  var result={adults:[],children:[],all:[],byParticipationId:{}};
+  if(!conference)return result;
+  getConferenceHouseRooms(conference).forEach(function(room){
+    if(typeof isRoomActiveOnDay==='function'&&!isRoomActiveOnDay(room,day))return;
+    getConferenceRoomPeopleOnDay(room,day,conference).forEach(function(person){
+      var participationId=String(person&&person.participationId||'');
+      var identity=participationId||String(person&&person.personId||'');
+      if(!identity||result.byParticipationId[identity])return;
+      var item=Object.assign({},person,{room:room.number||'',rid:room.id||''});
+      result.byParticipationId[identity]=item;
+      result.all.push(item);
+      if(item.isChild)result.children.push(item);else result.adults.push(item);
+    });
+  });
+  return result;
+}
+
 function getSelectedAccommodationRoomIds(conference){
   conference = conference || getCurrentConference();
   if(!conference || !Array.isArray(conference.accommodationDisplayedRoomIds)) return [];
@@ -514,7 +533,7 @@ function getMealBaseCount(day,mealKey,conference){
   if(!scheduleDay||!scheduleDay.meals[mealKey])return 0;
   var count=0;
   if(typeof window!=='undefined'&&window.CanonicalConferenceRestaurant&&window.CanonicalConferenceRestaurant.isLinked(conference.id)){
-    window.CanonicalConferenceRestaurant.getParticipations(conference.id).forEach(function(participation){if(participation.status==='active'&&isRestaurantV3PersonIncluded({participationId:participation.participationId},day,mealKey,conference))count++;});
+    getConferenceOperationalResidents(conference,day).all.forEach(function(person){if(isRestaurantV3PersonIncluded(person,day,mealKey,conference))count++;});
     return count;
   }
   var processedPeople={};
