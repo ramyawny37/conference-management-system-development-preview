@@ -23,7 +23,7 @@ function runtime(){
   const conference={id:'conference'};
   const accommodation={houses:[{houseId:'house',name:'House',floors:[{floorId:'floor',name:'Floor',rooms:[{roomId:'room',roomNumber:'101',baseCapacity:3,extraBedCapacity:0,isClosed:false,occupancies:[housed,child]}]}]}]};
   const vehicles=[{id:'vehicle',seats:[{seat:1,name:'Housed',participationId:'housed',riders:[]},{seat:2,name:'Unhoused',participationId:'unhoused',riders:[]},{seat:3,name:'',riders:[{r:{name:'Child',participationId:'child'}}]}]}];
-  const sandbox={window:null,console,JSON,Object,Array,String,Number,Date,Math,isFinite,appData:{currentConferenceId:'conference',conferences:[conference]},getCanonicalConferenceCoreLink:()=>({remoteConferenceId:'conference'}),PlatformIntegration:{getConferenceAccommodationState:()=>accommodation},CanonicalConferenceTransport:{isLinked:()=>true,getVehicles:()=>JSON.parse(JSON.stringify(vehicles))},isRoomActiveOnDay:()=>true,isPersonPresentOnDay:(person,day)=>person.arrivalDay<=day&&(!person.leaveDay||person.leaveDay>day),gl:()=>false,gn:value=>value.name};
+  const sandbox={window:null,console,JSON,Object,Array,String,Number,Date,Math,isFinite,appData:{currentConferenceId:'conference',conferences:[conference]},getCanonicalConferenceCoreLink:()=>({remoteConferenceId:'conference'}),PlatformIntegration:{getConferenceAccommodationState:()=>accommodation,getConferenceParticipationState:()=>({items:[{participationId:'housed',personId:'person-housed',status:'active',person:{fullName:'Housed'}},{participationId:'child',personId:'person-child',status:'active',person:{fullName:'Child'},guardianParticipationId:'housed'}]})},CanonicalConferenceTransport:{isLinked:()=>true,getVehicles:()=>JSON.parse(JSON.stringify(vehicles))},isRoomActiveOnDay:()=>true,isPersonPresentOnDay:(person,day)=>person.arrivalDay<=day&&(!person.leaveDay||person.leaveDay>day),gl:()=>false,gn:value=>value.name};
   sandbox.window=sandbox;
   vm.runInNewContext(core,sandbox);
   vm.runInNewContext(transport,sandbox);
@@ -62,7 +62,7 @@ test('tabs hydrate their real canonical dependencies and lifecycle refreshes bef
 });
 
 test('cards, accounts and reports remain occupancy-derived without local mirrors',()=>{
-  assert.match(cards,/getConferenceRoomPeople\(room,context\.conference\)/);
+  assert.match(cards,/getConferenceRoomPeopleOnDay\(room,day,context\.conference\)/);
   assert.match(accounts,/getConferenceRoomPeopleOnDay/);
   assert.match(script,/calculateAccommodationSummary\(conference\)/);
   assert.doesNotMatch(source('getRestaurantV3People','findRestaurantV3Person').split('else {')[0],/peopleDb|getPeopleList/);

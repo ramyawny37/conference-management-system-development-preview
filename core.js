@@ -98,12 +98,41 @@ function getConferenceRoomPeople(room,conference){
   return adults.concat(children);
 }
 
+function getConferenceOperationalDay(conference){
+  conference=conference||getCurrentConference();
+  var start=conference&&new Date(conference.startDate||conference.start_date||'');
+  var end=conference&&new Date(conference.endDate||conference.end_date||'');
+  if(!start||isNaN(start.getTime()))return 1;
+  start.setHours(0,0,0,0);
+  var today=new Date();today.setHours(0,0,0,0);
+  var day=Math.floor((today.getTime()-start.getTime())/86400000)+1;
+  var days=end&&!isNaN(end.getTime())?Math.floor((end.getTime()-start.getTime())/86400000)+1:day;
+  return Math.max(1,Math.min(Math.max(1,days),day));
+}
+
 function getConferenceRoomPeopleOnDay(room,day,conference){
+  if(day===undefined||day===null||day==='')day=getConferenceOperationalDay(conference);
   return getConferenceRoomPeople(room,conference).filter(function(person){
     if(person.participationStatus&&person.participationStatus!=='active')return false;
-    if(day===undefined||day===null||day==='')return person.participationStatus?true:!(typeof gl==='function'?gl(person):person.leftDay);
     return typeof isPersonPresentOnDay==='function'?isPersonPresentOnDay(person,day):true;
   });
+}
+
+function getConferenceAccommodationPeople(conference){
+  conference=conference||getCurrentConference();
+  var people={};
+  getConferenceHouseRooms(conference).forEach(function(room){
+    getConferenceRoomPeople(room,conference).forEach(function(person){
+      var key=String(person.participationId||person.personId||'');
+      if(!key)return;
+      var item=people[key]||(people[key]=Object.assign({},person));
+      item.arrivalDay=Math.min(Number(item.arrivalDay)||Infinity,Number(person.arrivalDay)||Infinity);
+      var oldLeave=Number(item.leftDay||item.leaveDay),newLeave=Number(person.leftDay||person.leaveDay);
+      if(!isFinite(oldLeave)||!isFinite(newLeave))item.leftDay=item.leaveDay=null;
+      else item.leftDay=item.leaveDay=Math.max(oldLeave,newLeave);
+    });
+  });
+  return Object.keys(people).map(function(key){if(!isFinite(Number(people[key].arrivalDay)))people[key].arrivalDay=1;return people[key];});
 }
 
 function getConferenceOperationalResidents(conference,day){
@@ -517,7 +546,7 @@ function isRestaurantV3PersonIncluded(person,day,mealKey,conference){
     var arrivalDay=Number(sourcePerson&&sourcePerson.arrivalDay);
     var leftDay=Number(sourcePerson&&sourcePerson.leftDay);
     if(!isFinite(arrivalDay)||arrivalDay<1)arrivalDay=1;
-    included=day>=Math.floor(arrivalDay)&&(!isFinite(leftDay)||leftDay<1||day<Math.floor(leftDay));
+    included=day>=Math.floor(arrivalDay)&&(!isFinite(leftDay)||leftDay<1||day<Math.floor(leftDay)||(day===Math.floor(leftDay)&&mealIndex===0));
   }
   var mealException=getRestaurantV3PersonMealException(personId,day,mealKey,conference);
   return mealException?mealException.included:included;
@@ -533,7 +562,7 @@ function getMealBaseCount(day,mealKey,conference){
   if(!scheduleDay||!scheduleDay.meals[mealKey])return 0;
   var count=0;
   if(typeof window!=='undefined'&&window.CanonicalConferenceRestaurant&&window.CanonicalConferenceRestaurant.isLinked(conference.id)){
-    getConferenceOperationalResidents(conference,day).all.forEach(function(person){if(isRestaurantV3PersonIncluded(person,day,mealKey,conference))count++;});
+    getConferenceAccommodationPeople(conference).forEach(function(person){if(isRestaurantV3PersonIncluded(person,day,mealKey,conference))count++;});
     return count;
   }
   var processedPeople={};
