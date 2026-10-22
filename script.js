@@ -241,7 +241,7 @@ function hydrateCanonicalConferenceCore(localConferenceId,options){
   return integration.hydrateConferenceCore(
     String(localConferenceId),String(link.remoteConferenceId)
   ).then(function(result){
-    refreshCanonicalConferenceCorePresentation(localConferenceId);
+    if(options.deferRender!==true)refreshCanonicalConferenceCorePresentation(localConferenceId);
     return result;
   }).catch(function(error){
     if(options.silent!==true&&typeof showToast==='function'){
@@ -260,7 +260,7 @@ function hydrateCanonicalConferenceParticipations(localConferenceId,options){
   }
   return integration.hydrateConferenceParticipations(String(localConferenceId),String(link.remoteConferenceId)).then(function(result){
     var current=getCurrentConference();
-    if(current&&String(current.id)===String(localConferenceId)&&typeof renderTab==='function')renderTab(currentTab,{skipHydration:true});
+    if(options.deferRender!==true&&current&&String(current.id)===String(localConferenceId)&&typeof renderTab==='function')renderTab(currentTab,{skipHydration:true});
     return result;
   }).catch(function(error){
     if(options.silent!==true&&typeof showToast==='function')showToast('تعذر تحميل بيانات المشاركين المحدثة.','#E74C3C');
@@ -283,8 +283,8 @@ function hydrateCanonicalConferenceBranding(localConferenceId,options){
     var current=getCurrentConference();
     if(current&&String(current.id)===String(localConferenceId)){
       conferenceBrandingDraft=getConferenceBrandingSettings(current);
-      if(currentTab===6&&typeof renderSettings==='function')renderSettings();
-      if(currentTab===4&&typeof renderCards==='function')renderCards();
+      if(options.deferRender!==true&&currentTab===6&&typeof renderSettings==='function')renderSettings();
+      if(options.deferRender!==true&&currentTab===4&&typeof renderCards==='function')renderCards();
     }
     return result;
   }).catch(function(error){
@@ -297,9 +297,9 @@ function hydrateCanonicalConferenceActivity(localConferenceId,options){
   var link=getCanonicalConferenceCoreLink(localConferenceId),integration=window.PlatformIntegration;
   if(!link||!link.remoteConferenceId)return Promise.resolve({status:'local_only'});
   if(!integration||typeof integration.hydrateConferenceActivity!=='function')return Promise.reject({code:'CANONICAL_CONFERENCE_ACTIVITY_UNAVAILABLE'});
-  return integration.hydrateConferenceActivity(String(localConferenceId),String(link.remoteConferenceId)).then(function(result){var current=getCurrentConference();if(current&&String(current.id)===String(localConferenceId)&&currentTab===6)renderActivityLog();if(typeof integration.startConferenceChangeWatch==='function')integration.startConferenceChangeWatch(String(localConferenceId),String(link.remoteConferenceId));return result}).catch(function(error){if(options.silent!==true&&typeof showToast==='function')showToast('تعذر تحميل سجل العمليات.','#E74C3C');throw error});
+  return integration.hydrateConferenceActivity(String(localConferenceId),String(link.remoteConferenceId)).then(function(result){var current=getCurrentConference();if(options.deferRender!==true&&current&&String(current.id)===String(localConferenceId)&&currentTab===6)renderActivityLog();if(typeof integration.startConferenceChangeWatch==='function')integration.startConferenceChangeWatch(String(localConferenceId),String(link.remoteConferenceId));return result}).catch(function(error){if(options.silent!==true&&typeof showToast==='function')showToast('تعذر تحميل سجل العمليات.','#E74C3C');throw error});
 }
-if(window.addEventListener)window.addEventListener('platform-conference-source-change',function(event){var detail=event&&event.detail||{},current=getCurrentConference();if(!current||String(current.id)!==String(detail.localConferenceId||''))return;if(typeof renderTab==='function')renderTab(currentTab,{skipHydration:true});});
+if(window.addEventListener)window.addEventListener('platform-conference-source-change',function(event){var detail=event&&event.detail||{},current=getCurrentConference();if(!current||String(current.id)!==String(detail.localConferenceId||''))return;if(typeof renderTab==='function')renderTab(currentTab);});
 function hydrateCanonicalConferenceAccommodation(localConferenceId,options){
   options=options||{};
   var link=getCanonicalConferenceCoreLink(localConferenceId);
@@ -313,7 +313,7 @@ function hydrateCanonicalConferenceAccommodation(localConferenceId,options){
     }).then(function(){return result});
   }).then(function(result){
     var current=getCurrentConference();
-    if(current&&String(current.id)===String(localConferenceId)){
+    if(options.deferRender!==true&&current&&String(current.id)===String(localConferenceId)){
       if(currentTab===0&&typeof renderAccommodation==='function')renderAccommodation();
       if(currentTab===2&&typeof renderAccounts==='function')renderAccounts();
       if(currentTab===6&&typeof renderSettings==='function')renderSettings();
@@ -327,12 +327,12 @@ function hydrateCanonicalConferenceAccommodation(localConferenceId,options){
 function hydrateCanonicalConferenceTransport(localConferenceId,options){
   options=options||{};
   if(!window.CanonicalConferenceTransport||!window.CanonicalConferenceTransport.isLinked(localConferenceId))return Promise.resolve({status:'local_only'});
-  return window.CanonicalConferenceTransport.hydrate(String(localConferenceId)).then(function(result){var current=getCurrentConference();if(current&&String(current.id)===String(localConferenceId)&&currentTab===1&&typeof renderTransports==='function')renderTransports();return result;}).catch(function(error){if(options.silent!==true&&typeof showToast==='function')showToast('تعذر تحميل بيانات المواصلات المعتمدة.','#E74C3C');throw error;});
+  return window.CanonicalConferenceTransport.hydrate(String(localConferenceId)).then(function(result){var current=getCurrentConference();if(options.deferRender!==true&&current&&String(current.id)===String(localConferenceId)&&currentTab===1&&typeof renderTransports==='function')renderTransports();return result;}).catch(function(error){if(options.silent!==true&&typeof showToast==='function')showToast('تعذر تحميل بيانات المواصلات المعتمدة.','#E74C3C');throw error;});
 }
 function hydrateCanonicalConferenceRestaurant(localConferenceId,options){
   options=options||{};
   if(!window.CanonicalConferenceRestaurant||!window.CanonicalConferenceRestaurant.isLinked(localConferenceId))return Promise.resolve({status:'local_only'});
-  return window.CanonicalConferenceRestaurant.hydrate(String(localConferenceId)).then(function(result){var current=getCurrentConference();if(current&&String(current.id)===String(localConferenceId)&&currentTab===2&&typeof renderAccounts==='function')renderAccounts();return result;}).catch(function(error){if(options.silent!==true&&typeof showToast==='function')showToast('تعذر تحميل بيانات المطعم المعتمدة.','#E74C3C');throw error;});
+  return window.CanonicalConferenceRestaurant.hydrate(String(localConferenceId)).then(function(result){var current=getCurrentConference();if(options.deferRender!==true&&current&&String(current.id)===String(localConferenceId)&&currentTab===2&&typeof renderAccounts==='function')renderAccounts();return result;}).catch(function(error){if(options.silent!==true&&typeof showToast==='function')showToast('تعذر تحميل بيانات المطعم المعتمدة.','#E74C3C');throw error;});
 }
 function completeCurrentConference(){
   var conference = getCurrentConference();
@@ -1417,19 +1417,40 @@ function openConferenceWorkspace(options){
   workspace.focus();
   return true;
 }
-var conferenceTabHydrationFlights=Object.create(null);
+var conferenceTabHydrationFlights=Object.create(null),conferenceTabHydrationStates=Object.create(null),conferenceTabHydrationGeneration=0;
 if(typeof window.addEventListener==='function'){
   window.addEventListener('platform-session-reset',function(){
     conferenceTabHydrationFlights=Object.create(null);
+    conferenceTabHydrationStates=Object.create(null);
+    conferenceTabHydrationGeneration++;
   });
+}
+function conferenceTabHydrationKey(conferenceId,tabId){return String(conferenceId||'')+':'+String(tabId);}
+function getConferenceTabHydrationState(conferenceId,tabId){return conferenceTabHydrationStates[conferenceTabHydrationKey(conferenceId,tabId)]||null;}
+function isConferenceHydrationDenied(error){var code=String(error&&error.code||error&&error.message||'');return code==='42501'||/FORBIDDEN|PERMISSION|NOT_ALLOWED|ACCESS_DENIED/.test(code);}
+function renderConferenceTabHydrationState(tabId,state){
+  var target=ge('tab'+tabId);
+  if(!target)return false;
+  if(state.status==='loading')target.innerHTML='<div class="settings-empty-state" role="status" aria-busy="true">جارٍ تحميل البيانات المحدثة...</div>';
+  else if(state.status==='denied')target.innerHTML='<div class="settings-empty-state" role="alert">ليس لديك صلاحية تحميل بيانات هذا القسم.</div>';
+  else target.innerHTML='<div class="settings-empty-state" role="alert">تعذر تحميل البيانات المحدثة. <button type="button" class="btn btn-blue btn-sm" onclick="retryConferenceTabHydration('+Number(tabId)+')">إعادة المحاولة</button></div>';
+  return true;
+}
+function retryConferenceTabHydration(tabId){
+  var current=getCurrentConference();
+  if(!current)return false;
+  delete conferenceTabHydrationStates[conferenceTabHydrationKey(current.id,tabId)];
+  renderTab(tabId);
+  return true;
 }
 function hydrateConferenceTabDataOnDemand(tabId){
   var current=getCurrentConference();
   if(!current)return Promise.resolve([]);
-  var conferenceId=String(current.id||''),key=conferenceId+':'+tabId;
+  var conferenceId=String(current.id||''),key=conferenceTabHydrationKey(conferenceId,tabId),generation=conferenceTabHydrationGeneration;
   if(conferenceTabHydrationFlights[key])return conferenceTabHydrationFlights[key];
   var tasks=[];
-  function add(hydrator){if(typeof hydrator==='function')tasks.push(Promise.resolve().then(function(){return hydrator(conferenceId,{silent:true});}));}
+  conferenceTabHydrationStates[key]={status:'loading',conferenceId:conferenceId,tabId:tabId,error:null};
+  function add(hydrator){if(typeof hydrator==='function')tasks.push(Promise.resolve().then(function(){return hydrator(conferenceId,{silent:true,deferRender:true});}));}
   add(hydrateCanonicalConferenceCore);
   if(tabId===0){add(hydrateCanonicalConferenceParticipations);add(hydrateCanonicalConferenceAccommodation);}
   else if(tabId===1){add(hydrateCanonicalConferenceParticipations);add(hydrateCanonicalConferenceAccommodation);add(hydrateCanonicalConferenceTransport);}
@@ -1438,16 +1459,34 @@ function hydrateConferenceTabDataOnDemand(tabId){
   else if(tabId===4){add(hydrateCanonicalConferenceParticipations);add(hydrateCanonicalConferenceAccommodation);add(hydrateCanonicalConferenceTransport);add(hydrateCanonicalConferenceBranding);}
   else if(tabId===5)add(hydrateCanonicalConferenceParticipations);
   else if(tabId===6){add(hydrateCanonicalConferenceParticipations);add(hydrateCanonicalConferenceBranding);add(hydrateCanonicalConferenceActivity);}
-  conferenceTabHydrationFlights[key]=Promise.allSettled(tasks).then(function(results){
-    delete conferenceTabHydrationFlights[key];
+  var holder={promise:null};
+  holder.promise=Promise.all(tasks).then(function(results){
+    if(generation!==conferenceTabHydrationGeneration)throw {code:'CANONICAL_CONFERENCE_SESSION_CHANGED'};
     var current=getCurrentConference();
-    if(current&&String(current.id)===String(conferenceId)&&currentTab===tabId)renderTab(tabId,{skipHydration:true});
+    if(!current||String(current.id)!==conferenceId){delete conferenceTabHydrationStates[key];throw {code:'CANONICAL_CONFERENCE_SCOPE_CHANGED'};}
+    conferenceTabHydrationStates[key]={status:'ready',conferenceId:conferenceId,tabId:tabId,error:null};
+    if(currentTab===tabId)renderTab(tabId,{skipHydration:true});
     return results;
-  });
-  return conferenceTabHydrationFlights[key];
+  },function(error){
+    if(generation===conferenceTabHydrationGeneration){
+      conferenceTabHydrationStates[key]={status:isConferenceHydrationDenied(error)?'denied':'error',conferenceId:conferenceId,tabId:tabId,error:String(error&&error.code||error&&error.message||'CANONICAL_CONFERENCE_HYDRATION_FAILED')};
+      var current=getCurrentConference();
+      if(current&&String(current.id)===conferenceId&&currentTab===tabId)renderConferenceTabHydrationState(tabId,conferenceTabHydrationStates[key]);
+    }
+    throw error;
+  }).then(function(value){if(conferenceTabHydrationFlights[key]===holder.promise)delete conferenceTabHydrationFlights[key];return value;},function(error){if(conferenceTabHydrationFlights[key]===holder.promise)delete conferenceTabHydrationFlights[key];throw error;});
+  conferenceTabHydrationFlights[key]=holder.promise;
+  return holder.promise;
 }
 function renderTab(n,options){
-  if(!(options&&options.skipHydration)&&typeof hydrateConferenceTabDataOnDemand==='function')hydrateConferenceTabDataOnDemand(n);
+  if(!(options&&options.skipHydration)&&typeof hydrateConferenceTabDataOnDemand==='function'){
+    var current=getCurrentConference();
+    if(current&&getCanonicalConferenceCoreLink(current.id)){
+      renderConferenceTabHydrationState(n,{status:'loading'});
+      hydrateConferenceTabDataOnDemand(n).catch(function(){});
+      return true;
+    }
+  }
   try{
     if (n === 0) {
       var conferenceHeader=ge('globalConferenceHeader');
@@ -2526,11 +2565,28 @@ function renderAccommodationSearchControls(matchCount,isFiltering){
 }
 
 function canonicalAccommodationMutation(promise,successMessage){
+  var conference=getCurrentConference(),conferenceId=conference&&String(conference.id||''),generation=conferenceTabHydrationGeneration;
   return promise.then(function(result){
-    renderTab(currentTab,{skipHydration:true});
+    return refreshCanonicalConferenceOperationalDependencies(conferenceId,generation).then(function(){return result;});
+  }).then(function(result){
     if(successMessage)showToast(successMessage);
     return result;
   }).catch(function(){showToast('تعذر حفظ بيانات التسكين.','#E74C3C');return false;});
+}
+
+function refreshCanonicalConferenceOperationalDependencies(conferenceId,generation){
+  var options={silent:true,deferRender:true};
+  return Promise.all([
+    hydrateCanonicalConferenceAccommodation(conferenceId,options),
+    hydrateCanonicalConferenceTransport(conferenceId,options),
+    hydrateCanonicalConferenceRestaurant(conferenceId,options)
+  ]).then(function(results){
+    var current=getCurrentConference();
+    if(generation!==conferenceTabHydrationGeneration)throw {code:'CANONICAL_CONFERENCE_SESSION_CHANGED'};
+    if(!current||String(current.id)!==String(conferenceId))throw {code:'CANONICAL_CONFERENCE_SCOPE_CHANGED'};
+    renderTab(currentTab,{skipHydration:true});
+    return results;
+  });
 }
 
 function canonicalAccommodationState(){
@@ -8527,14 +8583,10 @@ function setCanonicalParticipantStatus(participationId,status){
   var current=getCurrentConference();
   if(!currentConferenceSectionCapability('peopleManage')){showToast('ليس لديك صلاحية إدارة الأشخاص.','#E74C3C');return false;}
   if(!current||!getCanonicalConferenceCoreLink(current.id))return false;
+  var conferenceId=String(current.id||''),generation=conferenceTabHydrationGeneration;
   return window.PlatformIntegration.setConferenceParticipationStatus(current.id,participationId,status).then(function(){
-    return Promise.all([
-      hydrateCanonicalConferenceAccommodation(current.id,{silent:true}),
-      hydrateCanonicalConferenceTransport(current.id,{silent:true}),
-      hydrateCanonicalConferenceRestaurant(current.id,{silent:true})
-    ]);
+    return refreshCanonicalConferenceOperationalDependencies(conferenceId,generation);
   }).then(function(){
-    renderTab(currentTab,{skipHydration:true});
     showToast(status==='apologized'?'تم تسجيل الاعتذار وإزالة التسكين إن وُجد':'تم تفعيل المشاركة');
     return true;
   }).catch(function(){showToast('تعذر تحديث حالة المشارك.','#E74C3C');return false;});

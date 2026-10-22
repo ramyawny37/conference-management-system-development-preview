@@ -56,8 +56,8 @@ test('tabs hydrate their real canonical dependencies and lifecycle refreshes bef
   assert.match(hydration,/tabId===3[\s\S]*hydrateCanonicalConferenceAccommodation[\s\S]*hydrateCanonicalConferenceRestaurant/);
   assert.match(hydration,/tabId===4[\s\S]*hydrateCanonicalConferenceAccommodation[\s\S]*hydrateCanonicalConferenceTransport[\s\S]*hydrateCanonicalConferenceBranding/);
   const status=source('setCanonicalParticipantStatus','openQuickAddPersonForGuest');
-  assert.match(status,/setConferenceParticipationStatus[\s\S]*Promise\.all\([\s\S]*hydrateCanonicalConferenceAccommodation[\s\S]*hydrateCanonicalConferenceTransport[\s\S]*hydrateCanonicalConferenceRestaurant[\s\S]*showToast/);
-  assert.match(source('canonicalAccommodationMutation','canonicalAccommodationState'),/renderTab\(currentTab,\{skipHydration:true\}\)/);
+  assert.match(status,/setConferenceParticipationStatus[\s\S]*refreshCanonicalConferenceOperationalDependencies[\s\S]*showToast/);
+  assert.match(source('canonicalAccommodationMutation','canonicalAccommodationState'),/refreshCanonicalConferenceOperationalDependencies[\s\S]*renderTab\(currentTab,\{skipHydration:true\}\)/);
 });
 
 test('cards, accounts and reports remain occupancy-derived without local mirrors',()=>{
