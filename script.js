@@ -2961,6 +2961,10 @@ function removeCanonicalAccommodation(occupancyId){
   return canonicalAccommodationMutation(integration.removeConferenceAccommodation(current.id,occupancy.occupancyId,occupancy.revision),'🗑️ تم حذف النزيل من الغرفة');
 }
 
+function usableAccommodationOccupancyPercent(occupied,totalBeds){
+  return totalBeds>0?Math.round(occupied/totalBeds*100):0;
+}
+
 function renderCanonicalAccommodation(state){
   var h='<main class="accommodation-dashboard">';
   if(!state){
@@ -2980,7 +2984,7 @@ function renderCanonicalAccommodation(state){
   var totalBaseBeds=rooms.reduce(function(total,room){return total+Number(room.baseCapacity||0);},0);
   var totalExtraBeds=rooms.reduce(function(total,room){return total+Number(room.extraBedCapacity||0);},0);
   var totalBeds=totalBaseBeds+totalExtraBeds;
-  var occupancyPercent=totalBeds?Math.round(occupied/totalBeds*100):0;
+  var occupancyPercent=usableAccommodationOccupancyPercent(occupied,totalBeds);
   var childrenCount=rooms.reduce(function(total,room){return total+getCanonicalAccommodationOccupanciesOnDay(room,operationalDay).filter(function(item){return item.extraBedPersonType==='child';}).length;},0);
   var accompaniedGuests=rooms.reduce(function(total,room){return total+getCanonicalAccommodationOccupanciesOnDay(room,operationalDay).filter(function(item){return !!item.guardianParticipationId;}).length;},0);
   var openRooms=rooms.filter(function(room){return room.isClosed!==true;});
