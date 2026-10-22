@@ -61,3 +61,14 @@ test('removal preserves historical stay segments',()=>{
  assert.match(source,/ACCOMMODATION_REVISION_CONFLICT/);
  assert.match(source,/platform.audit_events/);
 });
+
+
+test('effective-day transfers correct future bookings and preserve consumed nights',()=>{
+ const source=fs.readFileSync('supabase/migrations/20261022192000_canonical_accommodation_transfer_effective_day.sql','utf8');
+ assert.match(source,/ACCOMMODATION_HISTORICAL_TRANSFER_DAY_IMMUTABLE/);
+ assert.match(source,/current.arrival_day<effective_day/);
+ assert.match(source,/historical:=p_arrival>current.arrival_day and current.arrival_day<effective_day/);
+ assert.match(source,/p_arrival:=current.arrival_day/);
+ assert.match(source,/set leave_day=p_arrival/);
+ assert.match(source,/ACCOMMODATION_STAY_OVERLAP/);
+});
