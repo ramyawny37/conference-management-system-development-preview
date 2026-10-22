@@ -154,6 +154,36 @@ function getConferenceOperationalResidents(conference,day){
   return result;
 }
 
+function getConferenceNightlyOccupancy(conference,day){
+  conference=conference||getCurrentConference();
+  day=Math.floor(Number(day));
+  var result={day:day,rooms:[],totals:{rooms:0,baseCapacity:0,extraBedCapacity:0,baseOccupied:0,extraOccupied:0,adults:0,children:0,availableBaseBeds:0,availableExtraBeds:0}};
+  if(!conference||!isFinite(day)||day<1)return result;
+  getConferenceHouseRooms(conference).forEach(function(room){
+    if(typeof isRoomActiveOnDay==='function'&&!isRoomActiveOnDay(room,day))return;
+    var occupants=getConferenceRoomPeopleOnDay(room,day,conference);
+    var seen={};
+    var members=[];
+    occupants.forEach(function(person){
+      var key=String(person.participationId||person.personId||person.occupancyId||person.id||'');
+      if(!key||seen[key])return;
+      seen[key]=true;
+      members.push(person);
+    });
+    var baseCapacity=Math.max(0,Number(room.baseCapacity||room.capacity||0)||0);
+    var extraBedCapacity=Math.max(0,Number(room.extraBedCapacity||0)||0);
+    var baseOccupied=members.filter(function(person){return person.bedType!=='extra';}).length;
+    var extraOccupied=members.length-baseOccupied;
+    var adults=members.filter(function(person){return !person.isChild;}).length;
+    var children=members.length-adults;
+    var item={roomId:room.id||'',roomNumber:room.number||'',houseId:room.house&&room.house.id||'',houseName:room.house&&room.house.name||'',floorId:room.floor&&room.floor.id||'',floorName:room.floor&&room.floor.name||'',baseCapacity:baseCapacity,extraBedCapacity:extraBedCapacity,baseOccupied:baseOccupied,extraOccupied:extraOccupied,adults:adults,children:children,availableBaseBeds:Math.max(0,baseCapacity-baseOccupied),availableExtraBeds:Math.max(0,extraBedCapacity-extraOccupied),members:members};
+    result.rooms.push(item);
+    result.totals.rooms++;
+    ['baseCapacity','extraBedCapacity','baseOccupied','extraOccupied','adults','children','availableBaseBeds','availableExtraBeds'].forEach(function(key){result.totals[key]+=item[key];});
+  });
+  return result;
+}
+
 function getSelectedAccommodationRoomIds(conference){
   conference = conference || getCurrentConference();
   if(!conference || !Array.isArray(conference.accommodationDisplayedRoomIds)) return [];
