@@ -24,6 +24,8 @@
           branding:!!(item.capabilities&&item.capabilities.branding===true),finance:!!(item.capabilities&&item.capabilities.finance===true),
           transport:!!(item.capabilities&&item.capabilities.transport===true),restaurant:!!(item.capabilities&&item.capabilities.restaurant===true),
           edit:!!(item.capabilities&&item.capabilities.edit===true),sync:!!(item.capabilities&&item.capabilities.sync===true),
+          peopleManage:!!(item.capabilities&&item.capabilities.peopleManage===true),
+          accommodationManage:!!(item.capabilities&&item.capabilities.accommodationManage===true),
           transportManage:!!(item.capabilities&&item.capabilities.transportManage===true)
         }
       };});
