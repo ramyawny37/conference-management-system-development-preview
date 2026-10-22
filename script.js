@@ -2889,7 +2889,8 @@ function assignCanonicalAccommodation(roomId){
   var room=findCanonicalAccommodationEntity('room',roomId);
   if(!room||room.isClosed){alert('لا يمكن إضافة نزيل إلى غرفة مغلقة أو غير موجودة.');return false;}
   var current=getCurrentConference(),integration=window.PlatformIntegration,state=integration&&integration.getConferenceParticipationState(current.id);
-  var occupied={};(canonicalAccommodationState().houses||[]).forEach(function(h){(h.floors||[]).forEach(function(f){(f.rooms||[]).forEach(function(r){(r.occupancies||[]).forEach(function(o){occupied[o.participationId]=true;});});});});
+  var occupied={},operationalDay=typeof getConferenceOperationalDay==='function'?getConferenceOperationalDay(current):1;
+  (canonicalAccommodationState().houses||[]).forEach(function(h){(h.floors||[]).forEach(function(f){(f.rooms||[]).forEach(function(r){getCanonicalAccommodationOccupanciesOnDay(r,operationalDay).forEach(function(o){occupied[o.participationId]=true;});});});});
   var active=(state&&state.items||[]).filter(function(item){return item.status==='active'&&!occupied[item.participationId];});
   if(!active.length){alert('لا توجد بيانات أشخاص بعد.');return false;}
   openSearchableSelectDialog('اختر النزيل',active.map(function(item){return {label:item.person.fullName+(item.person.church?' - '+item.person.church:''),searchText:item.person.fullName+' '+(item.person.phone||'')+' '+(item.person.church||''),data:item};}),function(participation){
