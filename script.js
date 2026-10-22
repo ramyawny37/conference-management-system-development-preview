@@ -2895,8 +2895,20 @@ function assignCanonicalAccommodation(roomId){
   if(!active.length){alert('لا توجد بيانات أشخاص بعد.');return false;}
   openSearchableSelectDialog('اختر النزيل',active.map(function(item){return {label:item.person.fullName+(item.person.church?' - '+item.person.church:''),searchText:item.person.fullName+' '+(item.person.phone||'')+' '+(item.person.church||''),data:item};}),function(participation){
     if(!participation)return;
-    var arrival=Number(prompt('يوم الوصول:','1')),leaveText=prompt('غادر يوم:',''),leave=leaveText?Number(leaveText):null,bedType=confirm('استخدام سرير إضافي؟')?'extra':'base';
-    canonicalAccommodationMutation(integration.assignConferenceAccommodation(current.id,{roomId:roomId,participationId:participation.participationId,arrivalDay:arrival,leaveDay:leave,bedType:bedType,extraBedPersonType:bedType==='extra'?'adult':null}),'✅ تم حفظ بيانات الغرفة');
+    var arrivalText=prompt('يوم الوصول:',String(operationalDay));
+    if(arrivalText===null)return;
+    arrivalText=arrivalText.trim();
+    if(!/^\\d+$/.test(arrivalText)||Number(arrivalText)<1){showToast('أدخل يوم وصول صحيحًا.','#E74C3C');return;}
+    var leaveText=prompt('يوم المغادرة (اتركه فارغًا إذا لم تُحدد المغادرة):','');
+    if(leaveText===null)return;
+    leaveText=leaveText.trim();
+    if(leaveText!==''&&(!/^\\d+$/.test(leaveText)||Number(leaveText)<=Number(arrivalText))){showToast('يوم المغادرة يجب أن يكون بعد يوم الوصول.','#E74C3C');return;}
+    var bedText=prompt('نوع السرير: أساسي أو إضافي','أساسي');
+    if(bedText===null)return;
+    bedText=bedText.trim();
+    if(bedText!=='أساسي'&&bedText!=='إضافي'){showToast('اختر نوع سرير صحيحًا: أساسي أو إضافي.','#E74C3C');return;}
+    var bedType=bedText==='إضافي'?'extra':'base';
+    canonicalAccommodationMutation(integration.assignConferenceAccommodation(current.id,{roomId:roomId,participationId:participation.participationId,arrivalDay:Number(arrivalText),leaveDay:leaveText===''?null:Number(leaveText),bedType:bedType,extraBedPersonType:bedType==='extra'?'adult':null}),'✅ تم حفظ بيانات الغرفة');
   });
 }
 
