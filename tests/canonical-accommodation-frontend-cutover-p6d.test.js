@@ -223,3 +223,13 @@ test('canonical accommodation filters extra beds children and accompanied guests
     assert.ok(render.includes(filter),'missing canonical filter '+filter);
   }
 });
+
+test('canonical room capacity draft stops on cancel and rejects empty values',()=>{
+  const start=scriptSource.indexOf('function canonicalRoomDraft(room){');
+  const end=scriptSource.indexOf('function createCanonicalAccommodationRoom(',start);
+  const draft=scriptSource.slice(start,end);
+  assert.ok(draft.includes('if(baseText===null)return null;'));
+  assert.ok(draft.includes('if(extraText===null)return null;'));
+  assert.ok(draft.includes('Number.isSafeInteger(baseCapacity)'));
+  assert.ok(draft.includes('Number.isSafeInteger(extraBedCapacity)'));
+});
