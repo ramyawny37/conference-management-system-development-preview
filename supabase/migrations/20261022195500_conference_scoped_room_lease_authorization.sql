@@ -40,7 +40,7 @@ begin
  where n.nspname='platform_private' and p.proname='route_canonical_conference_operation';
  if d is null then raise exception 'CANONICAL_DISPATCH_NOT_FOUND'; end if;
  original:=d;
- foreach operation in array array['acquire_resource_lease','renew_resource_lease','release_resource_lease','get_resource_lease'] loop
+ foreach operation in array array['acquire_resource_lease','release_resource_lease','get_resource_lease'] loop
    if operation in ('acquire_resource_lease','renew_resource_lease') then
      old_keys:='array[''p_resource_type'',''p_resource_id'',''p_scope'',''p_lease_token'',''p_ttl_seconds'']';
    elsif operation='release_resource_lease' then
