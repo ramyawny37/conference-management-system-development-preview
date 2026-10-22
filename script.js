@@ -2624,7 +2624,7 @@ function clearAccommodationSearch(){
 function renderAccommodationSearchControls(matchCount,isFiltering){
   var value=String(accommodationSearchQuery||'');
   var h='<div class="accommodation-search" role="search">';
-  h+='<div class="accommodation-search-controls"><span class="accommodation-search-icon" aria-hidden="true">'+accommodationIcon('search')+'</span><input id="accommodationSearchInput" type="search" value="'+esc(value)+'" placeholder="ابحث برقم الغرفة أو اسم النزيل..." aria-label="ابحث باسم شخص أو رقم غرفة" oninput="updateAccommodationSearch(this.value)">';
+  h+='<div class="accommodation-search-controls"><span class="accommodation-search-icon" aria-hidden="true">'+accommodationIcon('search')+'</span><input id="accommodationSearchInput" type="search" value="'+esc(value)+'" placeholder="ابحث برقم الغرفة أو اسم النزيل أو الهاتف أو الكنيسة..." aria-label="ابحث باسم شخص أو رقم غرفة" oninput="updateAccommodationSearch(this.value)">';
   h+='<button type="button" class="btn accommodation-search-clear" onclick="clearAccommodationSearch()" '+(value?'':'disabled')+'>مسح '+accommodationIcon('close')+'</button></div>';
   h+='</div>';
   if(isFiltering)h+='<div class="accommodation-search-count" aria-live="polite">'+(matchCount===1?'غرفة واحدة مطابقة':matchCount+' غرف مطابقة')+'</div>';
@@ -2975,7 +2975,7 @@ function renderCanonicalAccommodation(state){
   var filter=accommodationQuickFilter||'all';
   var matchingRooms=rooms.filter(function(room){
     var guests=getCanonicalAccommodationOccupanciesOnDay(room,operationalDay);
-    var searchable=[room.roomNumber].concat(guests.map(function(item){return item.person&&item.person.fullName||'';})).join(' ');
+    var searchable=[room.roomNumber].concat(guests.map(function(item){var person=item.person||{};return [person.fullName||'',person.phone||'',person.church||''].join(' ');})).join(' ');
     if(query&&normalizeAccommodationSearchText(searchable).indexOf(query)<0)return false;
     if(filter==='occupied'&&!guests.length)return false;
     if(filter==='empty'&&(guests.length||room.isClosed))return false;
