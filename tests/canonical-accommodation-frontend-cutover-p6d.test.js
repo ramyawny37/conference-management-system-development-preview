@@ -243,3 +243,12 @@ test('canonical extra bed occupancy explicitly distinguishes child and adult',()
   assert.ok(assign.includes('extraBedPersonType:extraBedPersonType'));
   assert.ok(!assign.includes("extraBedPersonType:bedType==='extra'?'adult':null"));
 });
+
+test('canonical stay dates reject unsafe integers before persistence',()=>{
+  const start=scriptSource.indexOf('function assignCanonicalAccommodation(roomId){');
+  const end=scriptSource.indexOf('function getCanonicalAccommodationOccupanciesOnDay(',start);
+  const assign=scriptSource.slice(start,end);
+  assert.ok(assign.includes('Number.isSafeInteger(Number(arrivalText))'));
+  assert.ok(assign.includes('Number.isSafeInteger(Number(leaveText))'));
+  assert.ok(assign.indexOf('Number.isSafeInteger(Number(arrivalText))')<assign.indexOf('integration.assignConferenceAccommodation('));
+});
