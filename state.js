@@ -17,6 +17,7 @@ var currentTab=0,editRoomId=null,editTransId=null,editSeatTransId=null,editSeatN
 var accommodationSearchQuery='';
 var accommodationQuickFilter='all';
 var accommodationCollapsedFloors={};
+var conferenceHouseSelectorState={status:'idle',conferenceId:null,generation:null,directory:null,selectedHouseId:null,selectedRooms:{}};
 var settingsTab='general';
 var selectedHouseTemplateId=null;
 var templateFloorDialog = { houseId: null, floorId: null };

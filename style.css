@@ -132,6 +132,26 @@
 @media(max-width:700px){#roomModal .child-box>.row:first-child{grid-template-columns:repeat(6,minmax(0,1fr));align-items:end}#roomModal .child-box>.row:first-child>div:first-child{grid-column:1/4}#roomModal .child-box>.row:first-child>div:nth-child(2){grid-column:4/7}#roomModal .child-box>.row:first-child>.btn:nth-child(3){grid-column:4;grid-row:2}#roomModal .child-box>.row:first-child>.btn:nth-child(4){grid-column:5;grid-row:2}#roomModal .child-box>.row:first-child>.btn:nth-child(5){grid-column:6;grid-row:2}}
 @media(max-width:600px){#roomModal .child-box>.row:first-child{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}#roomModal .child-box>.row:first-child>div:first-child,#roomModal .child-box>.row:first-child>div:nth-child(2){grid-column:1/-1}#roomModal .child-box>.row:first-child>.btn:nth-child(3){grid-column:1;grid-row:auto}#roomModal .child-box>.row:first-child>.btn:nth-child(4){grid-column:2;grid-row:auto}#roomModal .child-box>.row:first-child>.btn:nth-child(5){grid-column:3;grid-row:auto}#roomModal .child-box>div:nth-child(2){width:100%;max-width:none;padding:7px}#roomModal .child-box>div:nth-child(2)>span{flex:1 1 calc(50% - 4px);justify-content:space-between}#roomModal .child-box>div:nth-child(2) select{width:min(86px,52%)}}
 #searchableSelectModal #searchableSelectList,#addRoomFromTemplateModal #active_rooms_container,#importHouseModal #ih_list_container{max-height:52vh;overflow-y:auto;padding:3px}
+#conferenceHouseSelectorModal .conference-house-selector-modal{width:min(780px,calc(100vw - 28px));max-width:780px}
+#conferenceHouseSelectorModal .conference-house-selector-houses{display:flex;gap:7px;margin-bottom:12px;overflow-x:auto;padding:2px}
+#conferenceHouseSelectorModal .conference-house-selector-house{min-width:150px;border:1px solid var(--app-border);background:var(--app-surface);color:var(--app-text-secondary)}
+#conferenceHouseSelectorModal .conference-house-selector-house.active{border-color:var(--app-primary);background:#eaf4ff;color:var(--app-primary-dark)}
+#conferenceHouseSelectorModal .conference-house-selector-summary{margin-bottom:10px;padding:9px 11px;border:1px solid var(--app-border);border-radius:var(--app-radius-control);background:var(--app-surface);color:var(--app-text-secondary);font-size:11px}
+#conferenceHouseSelectorModal .conference-house-selector-floors{max-height:48vh;overflow-y:auto}
+#conferenceHouseSelectorModal .conference-house-selector-floor{margin-bottom:9px;padding:10px;border:1px solid var(--app-border);border-radius:var(--app-radius-control);background:var(--app-surface)}
+#conferenceHouseSelectorModal .conference-house-selector-floor h3{margin:0 0 8px;color:var(--app-primary-dark);font-size:12px}
+#conferenceHouseSelectorModal .conference-house-selector-rooms{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
+#conferenceHouseSelectorModal .conference-house-selector-room{display:flex;min-height:52px;align-items:center;gap:8px;padding:8px;border:1px solid var(--app-border);border-radius:9px;background:#fbfdff;color:var(--app-text);cursor:pointer}
+#conferenceHouseSelectorModal .conference-house-selector-room input{width:18px;height:18px;flex:0 0 18px;accent-color:var(--app-primary)}
+#conferenceHouseSelectorModal .conference-house-selector-room span{display:flex;min-width:0;flex-direction:column;gap:2px;font-size:11px;font-weight:700}
+#conferenceHouseSelectorModal .conference-house-selector-room small{color:var(--app-text-muted);font-size:9px;font-weight:600}
+#conferenceHouseSelectorModal .conference-house-selector-room.selected{border-color:var(--app-primary);background:#edf7ff}
+#conferenceHouseSelectorModal .conference-house-selector-room.assigned{border-color:#9bd7b4;background:#eefaf3;color:#176b3b;cursor:default}
+#conferenceHouseSelectorModal .conference-house-selector-room.unavailable{border-color:#efc0bc;background:#fff4f2;color:#9b3931;cursor:not-allowed}
+#conferenceHouseSelectorModal .conference-house-selector-actions{margin-top:11px;justify-content:center}
+#conferenceHouseSelectorModal .conference-house-selector-actions .btn{min-width:150px}
+@media(max-width:700px){#conferenceHouseSelectorModal .conference-house-selector-rooms{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:480px){#conferenceHouseSelectorModal .conference-house-selector-rooms{grid-template-columns:1fr}}
 .guest-person-picker-target .person-name{border-color:#18a765!important;box-shadow:0 0 0 3px rgba(24,167,101,.16);background:rgba(255,255,255,.94)}
 .guest-person-picker-popover{--guest-person-picker-max-height:470px;position:fixed;z-index:12050;display:none;flex-direction:column;max-height:var(--guest-person-picker-max-height);padding:11px;border:1px solid rgba(255,255,255,.72);border-radius:22px;background:linear-gradient(145deg,rgba(255,255,255,.82),rgba(235,247,255,.7));box-shadow:0 18px 45px rgba(20,54,82,.24),inset 0 1px 0 rgba(255,255,255,.85);backdrop-filter:blur(16px) saturate(145%);-webkit-backdrop-filter:blur(16px) saturate(145%);direction:rtl;overflow:hidden;transform-origin:top center}
 .guest-person-picker-popover.place-above{transform-origin:bottom center}

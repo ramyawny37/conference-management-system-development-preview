@@ -31,7 +31,7 @@ test('room assignment mutation is protected, revisioned, idempotent and audited'
 test('UI selects explicit available rooms and route retains the houses settings view',()=>{
   assert.match(integration,/listConferenceHouseRoomOptions/);
   assert.match(integration,/assignConferenceRoom/);
-  assert.match(script,/غير متاحة: متداخلة مع مؤتمر آخر/);
+  assert.match(script,/غير متاحة — متداخلة/);
   assert.match(script,/unassignCanonicalConferenceRoom/);
   assert.match(routing,/resolveConferenceSettingsRoute/);
   assert.match(routing,/settingsView/);

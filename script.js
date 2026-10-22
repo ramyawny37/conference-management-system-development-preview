@@ -2685,19 +2685,83 @@ function chooseCanonicalConferenceHouse(){
   return service.listRoomOptions(current.id).then(function(directory){
     var selectedConference=getCurrentConference();
     if(generation!==conferenceTabHydrationGeneration||!selectedConference||String(selectedConference.id)!==conferenceId)throw {code:'CANONICAL_CONFERENCE_SCOPE_CHANGED'};
-    var options=[];(directory.houses||[]).forEach(function(house){(house.floors||[]).forEach(function(floor){(floor.rooms||[]).forEach(function(room){options.push({house:house,floor:floor,room:room});});});});
-    if(!options.length){showToast('لا توجد غرف في دليل بيوت المؤتمرات.','#5A7A9A');return false;}
-    var lines=options.map(function(item,index){var status=item.room.assigned?'مخصصة لهذا المؤتمر':item.room.available?'متاحة':'غير متاحة: متداخلة مع مؤتمر آخر';return (index+1)+' - '+item.house.name+' / '+item.floor.name+' / غرفة '+item.room.roomNumber+' — '+status;});
-    var answer=prompt('اختر الغرفة المطلوبة:\n'+lines.join('\n'));
-    var selected=options[parseInt(answer,10)-1];if(!selected||selected.room.assigned)return false;
-    if(!selected.room.available){showToast('الغرفة غير متاحة بسبب تداخل فترة مؤتمر آخر.','#E74C3C');return false;}
-    var ensureHouse=selected.house.houseAssigned?Promise.resolve():service.assign(current.id,selected.house.houseId,true,null);
-    return canonicalAccommodationMutation(ensureHouse.then(function(){
-      var active=getCurrentConference();
-      if(generation!==conferenceTabHydrationGeneration||!active||String(active.id)!==conferenceId)throw {code:'CANONICAL_CONFERENCE_SCOPE_CHANGED'};
-      return service.assignRoom(current.id,selected.room.roomId,true,null);
-    }),'✅ تم تخصيص الغرفة للمؤتمر',function(error){return String(error&&error.code||'')==='ROOM_CONFERENCE_PERIOD_OVERLAP'?'الغرفة مخصصة لمؤتمر آخر خلال فترة متداخلة.':'تعذر تخصيص غرفة المؤتمر.';});
+    var houses=(directory&&directory.houses||[]).filter(function(house){return (house.floors||[]).some(function(floor){return (floor.rooms||[]).length;});});
+    if(!houses.length){showToast('لا توجد غرف في دليل بيوت المؤتمرات.','#5A7A9A');return false;}
+    conferenceHouseSelectorState={status:'ready',conferenceId:conferenceId,generation:generation,directory:{houses:houses},selectedHouseId:String(houses[0].houseId),selectedRooms:{}};
+    renderCanonicalConferenceHouseSelector();
+    var modal=ge('conferenceHouseSelectorModal');if(modal)modal.style.display='flex';
+    return true;
   }).catch(function(error){showToast(String(error&&error.code||'')==='ROOM_CONFERENCE_PERIOD_OVERLAP'?'الغرفة مخصصة لمؤتمر آخر خلال فترة متداخلة.':'تعذر تخصيص غرفة المؤتمر.','#E74C3C');return false;});
+}
+
+function closeCanonicalConferenceHouseSelector(){
+  var modal=ge('conferenceHouseSelectorModal');if(modal)modal.style.display='none';
+  conferenceHouseSelectorState={status:'idle',conferenceId:null,generation:null,directory:null,selectedHouseId:null,selectedRooms:{}};
+}
+
+function selectCanonicalConferenceHouse(houseId){
+  if(conferenceHouseSelectorState.status!=='ready')return false;
+  conferenceHouseSelectorState.selectedHouseId=String(houseId||'');conferenceHouseSelectorState.selectedRooms={};renderCanonicalConferenceHouseSelector();return true;
+}
+
+function toggleCanonicalConferenceRoomSelection(roomId,checked){
+  if(conferenceHouseSelectorState.status!=='ready')return false;
+  if(checked)conferenceHouseSelectorState.selectedRooms[String(roomId)]=true;else delete conferenceHouseSelectorState.selectedRooms[String(roomId)];
+  renderCanonicalConferenceHouseSelector();return true;
+}
+
+function selectedCanonicalConferenceHouse(){
+  var state=conferenceHouseSelectorState;
+  return (state.directory&&state.directory.houses||[]).find(function(house){return String(house.houseId)===String(state.selectedHouseId);})||null;
+}
+
+function renderCanonicalConferenceHouseSelector(){
+  var content=ge('conferenceHouseSelectorContent'),confirmButton=ge('conferenceHouseSelectorConfirm'),state=conferenceHouseSelectorState,house=selectedCanonicalConferenceHouse();
+  if(!content||!house)return false;
+  var selectedCount=Object.keys(state.selectedRooms||{}).length;
+  var h='<div class="conference-house-selector-houses">';
+  (state.directory.houses||[]).forEach(function(item){h+='<button type="button" class="btn conference-house-selector-house '+(String(item.houseId)===String(house.houseId)?'active':'')+'" '+(state.status==='saving'?'disabled ':'')+'onclick="selectCanonicalConferenceHouse(\''+esc(item.houseId)+'\')">'+esc(item.name)+'</button>';});
+  h+='</div><div class="conference-house-selector-summary">المحدد: <strong>'+selectedCount+'</strong> — اختر عدة غرف متاحة من البيت نفسه، ثم أكد الاختيار.</div><div class="conference-house-selector-floors">';
+  (house.floors||[]).forEach(function(floor){h+='<section class="conference-house-selector-floor"><h3>'+esc(floor.name)+'</h3><div class="conference-house-selector-rooms">';(floor.rooms||[]).forEach(function(room){
+    var assigned=room.assigned===true,available=room.available===true,selected=state.selectedRooms[String(room.roomId)]===true,status=assigned?'مخصصة بالفعل':available?'متاحة':'غير متاحة — متداخلة';
+    h+='<label class="conference-house-selector-room '+(assigned?'assigned':available?(selected?'selected':''):'unavailable')+'"><input type="checkbox" '+(assigned?'checked disabled':available&&state.status!=='saving'?'onchange="toggleCanonicalConferenceRoomSelection(\''+esc(room.roomId)+'\',this.checked)" '+(selected?'checked':''):'disabled '+(selected?'checked':''))+'><span>غرفة '+esc(room.roomNumber)+'<small>'+status+'</small></span></label>';
+  });h+='</div></section>';});
+  content.innerHTML=h+'</div>';
+  if(confirmButton){confirmButton.disabled=state.status!=='ready'||selectedCount===0;confirmButton.textContent=state.status==='saving'?'جارٍ تخصيص الغرف...':'تأكيد الغرف المحددة ('+selectedCount+')';}
+  return true;
+}
+
+function formatCanonicalRoomAssignmentFailure(error){
+  var code=String(error&&error.code||'');
+  if(code==='ROOM_CONFERENCE_PERIOD_OVERLAP')return 'تداخل مع مؤتمر آخر';
+  if(code==='MODULE_PERMISSION_REQUIRED'||code==='INSUFFICIENT_PRIVILEGE')return 'لا توجد صلاحية إدارة';
+  if(code==='CANONICAL_CONFERENCE_SCOPE_CHANGED'||code==='CANONICAL_CONFERENCE_SESSION_CHANGED')return 'تغير المؤتمر أو الجلسة';
+  return 'تعذر التخصيص';
+}
+
+function confirmCanonicalConferenceHouseRooms(){
+  var state=conferenceHouseSelectorState,house=selectedCanonicalConferenceHouse(),service=window.CanonicalConferenceHouses,current=getCurrentConference();
+  if(state.status!=='ready'||!house||!service||!currentConferenceSectionCapability('accommodationManage'))return false;
+  if(!current||String(current.id)!==String(state.conferenceId)||state.generation!==conferenceTabHydrationGeneration)return false;
+  var rooms=[];(house.floors||[]).forEach(function(floor){(floor.rooms||[]).forEach(function(room){if(state.selectedRooms[String(room.roomId)]&&room.available===true&&room.assigned!==true)rooms.push(room);});});
+  if(!rooms.length)return false;
+  state.status='saving';renderCanonicalConferenceHouseSelector();
+  function validateHouseSelectorScope(){var active=getCurrentConference();if(state.generation!==conferenceTabHydrationGeneration)throw {code:'CANONICAL_CONFERENCE_SESSION_CHANGED'};if(!active||String(active.id)!==String(state.conferenceId))throw {code:'CANONICAL_CONFERENCE_SCOPE_CHANGED'};}
+  var batchResults=[];
+  var batch=(house.houseAssigned?Promise.resolve():service.assign(state.conferenceId,house.houseId,true,null)).then(function(){
+    return rooms.reduce(function(chain,room){return chain.then(function(){validateHouseSelectorScope();return service.assignRoom(state.conferenceId,room.roomId,true,null).then(function(){batchResults.push({room:room,ok:true});},function(error){batchResults.push({room:room,ok:false,error:error});});});},Promise.resolve()).then(function(){return {requested:rooms.length,results:batchResults};});
+  }).catch(function(error){rooms.forEach(function(room){if(!batchResults.some(function(item){return String(item.room.roomId)===String(room.roomId);}))batchResults.push({room:room,ok:false,error:error});});return {requested:rooms.length,results:batchResults};});
+  return canonicalAccommodationMutation(batch,null).then(function(summary){
+    if(!summary)return false;
+    var refreshed=typeof canonicalAccommodationState==='function'?canonicalAccommodationState():null,assignedRooms={};
+    (refreshed&&refreshed.houses||[]).forEach(function(refreshedHouse){(refreshedHouse.floors||[]).forEach(function(floor){(floor.rooms||[]).forEach(function(room){assignedRooms[String(room.roomId)]=true;});});});
+    if(refreshed)summary.results.forEach(function(item){item.ok=assignedRooms[String(item.room.roomId)]===true;if(item.ok)delete item.error;});
+    var successful=summary.results.filter(function(item){return item.ok;}).length,failed=summary.results.filter(function(item){return !item.ok;});
+    closeCanonicalConferenceHouseSelector();
+    if(!failed.length){showToast('✅ تم تخصيص '+successful+' غرفة للمؤتمر');return summary;}
+    var details=failed.map(function(item){return 'غرفة '+item.room.roomNumber+': '+formatCanonicalRoomAssignmentFailure(item.error);}).join('، ');
+    showToast('تم تخصيص '+successful+' من '+summary.requested+' غرفة. '+details,'#E67E22');return summary;
+  });
 }
 
 function unassignCanonicalConferenceRoom(roomId,revision){
