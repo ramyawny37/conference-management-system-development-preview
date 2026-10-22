@@ -2913,7 +2913,15 @@ function assignCanonicalAccommodation(roomId){
     bedText=bedText.trim();
     if(bedText!=='أساسي'&&bedText!=='إضافي'){showToast('اختر نوع سرير صحيحًا: أساسي أو إضافي.','#E74C3C');return;}
     var bedType=bedText==='إضافي'?'extra':'base';
-    canonicalAccommodationMutation(integration.assignConferenceAccommodation(current.id,{roomId:roomId,participationId:participation.participationId,arrivalDay:Number(arrivalText),leaveDay:leaveText===''?null:Number(leaveText),bedType:bedType,extraBedPersonType:bedType==='extra'?'adult':null}),'✅ تم حفظ بيانات الغرفة');
+    var extraBedPersonType=null;
+    if(bedType==='extra'){
+      var extraTypeText=prompt('السرير الإضافي لشخص بالغ أم طفل؟ اكتب بالغ أو طفل','بالغ');
+      if(extraTypeText===null)return;
+      extraTypeText=extraTypeText.trim();
+      if(extraTypeText!=='بالغ'&&extraTypeText!=='طفل'){showToast('اختر بالغ أو طفل للسرير الإضافي.','#E74C3C');return;}
+      extraBedPersonType=extraTypeText==='طفل'?'child':'adult';
+    }
+    canonicalAccommodationMutation(integration.assignConferenceAccommodation(current.id,{roomId:roomId,participationId:participation.participationId,arrivalDay:Number(arrivalText),leaveDay:leaveText===''?null:Number(leaveText),bedType:bedType,extraBedPersonType:extraBedPersonType}),'✅ تم حفظ بيانات الغرفة');
   });
 }
 
