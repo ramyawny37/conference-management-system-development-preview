@@ -182,7 +182,7 @@ test('canonical accommodation summary calculates occupancy and bed totals from c
   for(const token of ['totalBaseBeds','totalExtraBeds','extraBedsUsed','childrenCount','occupancyPercent','accommodation-secondary-summary']){
     assert.ok(render.includes(token),'missing canonical summary '+token);
   }
-  assert.match(render,/totalBeds\?Math\.round\(occupied\/totalBeds\*100\):0/);
+  assert.ok(render.includes('usableAccommodationOccupancyPercent(occupied,totalBeds)'));
 });
 
 test('canonical accommodation search includes person name phone and church',()=>{
