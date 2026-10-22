@@ -173,3 +173,14 @@ test('canonical room cards retain capacity, notes, contact and stay-day details'
   }
   assert.ok(render.includes('accommodation-room-details'));
 });
+
+test('canonical accommodation summary calculates occupancy and bed totals from canonical rooms',()=>{
+  const start=scriptSource.indexOf('function renderCanonicalAccommodation(state){');
+  const end=scriptSource.indexOf('function ',start+10);
+  assert.ok(start>=0&&end>start);
+  const render=scriptSource.slice(start,end);
+  for(const token of ['totalBaseBeds','totalExtraBeds','extraBedsUsed','childrenCount','occupancyPercent','accommodation-secondary-summary']){
+    assert.ok(render.includes(token),'missing canonical summary '+token);
+  }
+  assert.match(render,/totalBeds\?Math\.round\(occupied\/totalBeds\*100\):0/);
+});
