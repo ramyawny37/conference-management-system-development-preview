@@ -2852,9 +2852,14 @@ function deleteCanonicalAccommodationFloor(floorId){
 function canonicalRoomDraft(room){
   var roomNumber=prompt('رقم الغرفة:',room?room.roomNumber:'');
   if(roomNumber===null||!String(roomNumber).trim())return null;
-  var baseCapacity=Number(prompt('عدد الأسرة:',room?room.baseCapacity:1));
-  var extraBedCapacity=Number(prompt('عدد الأسرة الإضافية:',room?room.extraBedCapacity:0));
-  if(!Number.isInteger(baseCapacity)||baseCapacity<0||!Number.isInteger(extraBedCapacity)||extraBedCapacity<0)return null;
+  var baseText=prompt('عدد الأسرة:',room?room.baseCapacity:1);
+  if(baseText===null)return null;
+  var extraText=prompt('عدد الأسرة الإضافية:',room?room.extraBedCapacity:0);
+  if(extraText===null)return null;
+  baseText=String(baseText).trim();extraText=String(extraText).trim();
+  if(!/^\\d+$/.test(baseText)||!/^\\d+$/.test(extraText))return null;
+  var baseCapacity=Number(baseText),extraBedCapacity=Number(extraText);
+  if(!Number.isSafeInteger(baseCapacity)||!Number.isSafeInteger(extraBedCapacity))return null;
   return {p_room_number:String(roomNumber).trim(),p_base_capacity:baseCapacity,p_extra_bed_capacity:extraBedCapacity,p_notes:room&&room.notes||null,p_is_closed:room?room.isClosed:false,p_closed_day:room?room.closedDay:null,p_position:room?room.position:0};
 }
 
