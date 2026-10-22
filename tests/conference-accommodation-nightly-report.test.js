@@ -82,3 +82,14 @@ test('canonical accommodation dashboard projects only the operational-day segmen
   assert.deepEqual(Array.from(sandbox.getCanonicalAccommodationOccupanciesOnDay(room,2),item=>item.occupancyId),['old']);
   assert.deepEqual(Array.from(sandbox.getCanonicalAccommodationOccupanciesOnDay(room,3),item=>item.occupancyId),['new']);
 });
+
+
+test('canonical guest picker excludes only guests occupying the selected operational day',()=>{
+  const start=scriptSource.indexOf('function assignCanonicalAccommodation(');
+  const end=scriptSource.indexOf('function getCanonicalAccommodationOccupanciesOnDay(',start);
+  assert.ok(start>=0&&end>start);
+  const source=scriptSource.slice(start,end);
+  assert.match(source,/getConferenceOperationalDay\(current\)/);
+  assert.match(source,/getCanonicalAccommodationOccupanciesOnDay\(r,operationalDay\)/);
+  assert.doesNotMatch(source,/\(r\.occupancies\|\|\[\]\)\.forEach\(function\(o\)\{occupied\[o\.participationId\]=true/);
+});
