@@ -162,3 +162,14 @@ test('cancelled canonical guest assignment stops before any following prompt or 
   assert.doesNotMatch(handler,/Number\(prompt\(/);
   assert.doesNotMatch(handler,/confirm\('استخدام سرير إضافي/);
 });
+
+test('canonical room cards retain capacity, notes, contact and stay-day details',()=>{
+  const start=scriptSource.indexOf('function renderCanonicalAccommodation(state){');
+  const end=scriptSource.indexOf('function ',start+10);
+  assert.ok(start>=0&&end>start);
+  const render=scriptSource.slice(start,end);
+  for(const field of ['room.baseCapacity','room.extraBedCapacity','room.notes','occupancy.person.phone','occupancy.person.church','occupancy.arrivalDay','occupancy.leaveDay']){
+    assert.ok(render.includes(field),'canonical accommodation display must include '+field);
+  }
+  assert.ok(render.includes('accommodation-room-details'));
+});
