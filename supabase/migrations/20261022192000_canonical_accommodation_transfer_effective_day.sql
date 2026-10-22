@@ -23,7 +23,7 @@ begin
  if destination.is_closed and (destination.closed_day is null or p_arrival>=destination.closed_day or coalesce(p_leave,days+1)>destination.closed_day) then raise exception 'ACCOMMODATION_ROOM_UNAVAILABLE' using errcode='55000';end if;
  select start_date into conference_start from public.conferences where id=p_conference;
  effective_day:=greatest(1,least(days+1,(current_date-conference_start+1)::integer));
- if p_arrival<effective_day and current.arrival_day<effective_day and p_arrival<>current.arrival_day then
+ if p_arrival<effective_day and current.arrival_day<effective_day then
    raise exception 'ACCOMMODATION_HISTORICAL_TRANSFER_DAY_IMMUTABLE' using errcode='55000';
  end if;
  historical:=p_arrival>current.arrival_day and current.arrival_day<effective_day;
