@@ -194,3 +194,12 @@ test('canonical accommodation search includes person name phone and church',()=>
   assert.ok(render.includes("person.church||''"));
   assert.ok(scriptSource.includes('ابحث برقم الغرفة أو اسم النزيل أو الهاتف أو الكنيسة'));
 });
+
+test('canonical accommodation shows guardian relationship without local person fallback',()=>{
+  const start=scriptSource.indexOf('function renderCanonicalAccommodation(state){');
+  const end=scriptSource.indexOf('function ',start+10);
+  const render=scriptSource.slice(start,end);
+  assert.ok(render.includes('accompaniedGuests'));
+  assert.ok(render.includes('occupancy.guardianParticipationId'));
+  assert.ok(render.includes('occupancy.guardianFullName'));
+});
