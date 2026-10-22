@@ -11,19 +11,20 @@ function environment(){
 }
 test('resource lease uses protected device-session path',async()=>{
  const env=environment(),id='40000000-0000-4000-8000-000000000001';
- const acquired=await env.api.acquireResourceLease('conference','accommodation_room',id);
+ const acquired=await env.api.acquireResourceLease('conference','accommodation_room',id,{conferenceId:'50000000-0000-4000-8000-000000000099'});
  assert.equal(acquired.owned,true);
- assert.deepEqual(env.calls[0],{module:'conference',operation:'acquire_resource_lease',args:{p_resource_type:'accommodation_room',p_resource_id:id,p_scope:'edit',p_lease_token:env.token,p_ttl_seconds:120}});
+ assert.deepEqual(env.calls[0],{module:'conference',operation:'acquire_resource_lease',args:{p_conference_id:'50000000-0000-4000-8000-000000000099',p_resource_type:'accommodation_room',p_resource_id:id,p_scope:'edit',p_lease_token:env.token,p_ttl_seconds:120}});
  assert.equal(env.api.getOwnedResourceLease('conference','accommodation_room',id).leaseToken,env.token);
- await env.api.renewResourceLease('conference','accommodation_room',id);
+ await env.api.renewResourceLease('conference','accommodation_room',id,{conferenceId:'50000000-0000-4000-8000-000000000099'});
  assert.equal(env.calls[1].operation,'renew_resource_lease');
- await env.api.releaseResourceLease('conference','accommodation_room',id);
+ await env.api.releaseResourceLease('conference','accommodation_room',id,{conferenceId:'50000000-0000-4000-8000-000000000099'});
  assert.equal(env.calls[2].operation,'release_resource_lease');
  assert.equal(env.api.getOwnedResourceLease('conference','accommodation_room',id),null);
 });
+test('missing conference scope is rejected before dispatch',async()=>{const env=environment();await assert.rejects(env.api.getResourceLease('conference','accommodation_room','40000000-0000-4000-8000-000000000001'),error=>error.code==='PLATFORM_RESOURCE_LEASE_CONFERENCE_REQUIRED');assert.equal(env.calls.length,0);});
 test('invalid resource identity is rejected before dispatch',async()=>{
  const env=environment();
- await assert.rejects(env.api.acquireResourceLease('conference','bad type','room'),error=>error.code==='PLATFORM_RESOURCE_LEASE_ARGUMENT_INVALID');
+ await assert.rejects(env.api.acquireResourceLease('conference','bad type','room',{conferenceId:'50000000-0000-4000-8000-000000000099'}),error=>error.code==='PLATFORM_RESOURCE_LEASE_ARGUMENT_INVALID');
  assert.equal(env.calls.length,0);
 });
 
@@ -44,8 +45,8 @@ test('stale accommodation response cannot overwrite a newer accepted response',(
 
 test('owned room lease renewal preserves token and uses protected dispatch',async()=>{
  const env=environment(),id='40000000-0000-4000-8000-000000000002';
- await env.api.acquireResourceLease('conference','accommodation_room',id);
- const renewed=await env.api.renewResourceLease('conference','accommodation_room',id);
+ await env.api.acquireResourceLease('conference','accommodation_room',id,{conferenceId:'50000000-0000-4000-8000-000000000099'});
+ const renewed=await env.api.renewResourceLease('conference','accommodation_room',id,{conferenceId:'50000000-0000-4000-8000-000000000099'});
  assert.equal(renewed.owned,true);
  assert.equal(env.calls[1].operation,'renew_resource_lease');
  assert.equal(env.calls[1].args.p_lease_token,env.token);
@@ -77,6 +78,6 @@ test('canonical room edit dispatches only after obtaining its resource lease',as
  assert.ok(operations.indexOf('acquire_resource_lease')>=0);
  assert.ok(operations.indexOf('update_accommodation_room')>operations.indexOf('acquire_resource_lease'));
  const write=env.calls.find(call=>call.operation==='update_accommodation_room');
- assert.equal(write.args.p_room_lease_tokens[0].roomId,room);
+ assert.equal(write.args.p_room_lease_tokens[0].roomId,room);assert.equal(env.calls.find(call=>call.operation==='acquire_resource_lease').args.p_conference_id,remote);
  assert.equal(write.args.p_room_lease_tokens[0].token,env.token);
 });
