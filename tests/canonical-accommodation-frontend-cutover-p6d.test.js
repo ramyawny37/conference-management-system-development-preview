@@ -147,3 +147,18 @@ test('local-only accommodation remains isolated and no parallel backend was intr
   assert.doesNotMatch(integration,/supabase|\.rpc\(|conference_snapshots|localStorage|indexedDB|peopleDb/i);
   assert.match(integration,/invokeProtected\('conference','get_conference_accommodation'/);
 });
+
+test('cancelled canonical guest assignment stops before any following prompt or mutation',()=>{
+  const begin=scriptSource.indexOf('function assignCanonicalAccommodation(roomId){');
+  const end=scriptSource.indexOf('function getCanonicalAccommodationOccupanciesOnDay(',begin);
+  assert.ok(begin>=0&&end>begin,'canonical assignment handler must exist');
+  const handler=scriptSource.slice(begin,end);
+  assert.match(handler,/if\(arrivalText===null\)return;/);
+  assert.match(handler,/if\(leaveText===null\)return;/);
+  assert.match(handler,/if\(bedText===null\)return;/);
+  assert.ok(handler.indexOf('if(arrivalText===null)return;')<handler.indexOf("prompt('يوم المغادرة"));
+  assert.ok(handler.indexOf('if(leaveText===null)return;')<handler.indexOf("prompt('نوع السرير"));
+  assert.ok(handler.indexOf('if(bedText===null)return;')<handler.indexOf('integration.assignConferenceAccommodation('));
+  assert.doesNotMatch(handler,/Number\(prompt\(/);
+  assert.doesNotMatch(handler,/confirm\('استخدام سرير إضافي/);
+});
