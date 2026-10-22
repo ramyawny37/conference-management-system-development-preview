@@ -214,3 +214,12 @@ test('canonical transfer rejects blank and fractional effective days before muta
   assert.ok(transfer.includes('Number.isSafeInteger(effectiveDay)'));
   assert.ok(transfer.indexOf('Number.isSafeInteger(effectiveDay)')<transfer.indexOf('integration.moveConferenceAccommodation('));
 });
+
+test('canonical accommodation filters extra beds children and accompanied guests',()=>{
+  const start=scriptSource.indexOf('function renderCanonicalAccommodation(state){');
+  const end=scriptSource.indexOf('function ',start+10);
+  const render=scriptSource.slice(start,end);
+  for(const filter of ["filter==='extra-beds'","filter==='children'","filter==='accompanied'","['extra-beds','بها أسرة إضافية مستخدمة']","['children','بها أطفال']","['accompanied','بها مرافقون']"]){
+    assert.ok(render.includes(filter),'missing canonical filter '+filter);
+  }
+});
