@@ -2903,11 +2903,11 @@ function assignCanonicalAccommodation(roomId){
     var arrivalText=prompt('يوم الوصول:',String(operationalDay));
     if(arrivalText===null)return;
     arrivalText=arrivalText.trim();
-    if(!/^\\d+$/.test(arrivalText)||Number(arrivalText)<1){showToast('أدخل يوم وصول صحيحًا.','#E74C3C');return;}
+    if(!/^\\d+$/.test(arrivalText)||!Number.isSafeInteger(Number(arrivalText))||Number(arrivalText)<1){showToast('أدخل يوم وصول صحيحًا.','#E74C3C');return;}
     var leaveText=prompt('يوم المغادرة (اتركه فارغًا إذا لم تُحدد المغادرة):','');
     if(leaveText===null)return;
     leaveText=leaveText.trim();
-    if(leaveText!==''&&(!/^\\d+$/.test(leaveText)||Number(leaveText)<=Number(arrivalText))){showToast('يوم المغادرة يجب أن يكون بعد يوم الوصول.','#E74C3C');return;}
+    if(leaveText!==''&&(!/^\\d+$/.test(leaveText)||!Number.isSafeInteger(Number(leaveText))||Number(leaveText)<=Number(arrivalText))){showToast('يوم المغادرة يجب أن يكون بعد يوم الوصول.','#E74C3C');return;}
     var bedText=prompt('نوع السرير: أساسي أو إضافي','أساسي');
     if(bedText===null)return;
     bedText=bedText.trim();
