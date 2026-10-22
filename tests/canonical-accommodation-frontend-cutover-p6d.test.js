@@ -233,3 +233,13 @@ test('canonical room capacity draft stops on cancel and rejects empty values',()
   assert.ok(draft.includes('Number.isSafeInteger(baseCapacity)'));
   assert.ok(draft.includes('Number.isSafeInteger(extraBedCapacity)'));
 });
+
+test('canonical extra bed occupancy explicitly distinguishes child and adult',()=>{
+  const start=scriptSource.indexOf('function assignCanonicalAccommodation(roomId){');
+  const end=scriptSource.indexOf('function getCanonicalAccommodationOccupanciesOnDay(',start);
+  const assign=scriptSource.slice(start,end);
+  assert.ok(assign.includes("extraTypeText==='طفل'?'child':'adult'"));
+  assert.ok(assign.includes('if(extraTypeText===null)return;'));
+  assert.ok(assign.includes('extraBedPersonType:extraBedPersonType'));
+  assert.ok(!assign.includes("extraBedPersonType:bedType==='extra'?'adult':null"));
+});
