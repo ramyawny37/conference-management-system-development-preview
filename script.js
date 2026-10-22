@@ -2963,6 +2963,11 @@ function renderCanonicalAccommodation(state){
   var closedRooms=rooms.filter(function(room){return room.isClosed===true;}).length;
   var emptyOpenRooms=rooms.filter(function(room){return !room.isClosed&&!getCanonicalAccommodationOccupanciesOnDay(room,operationalDay).length;}).length;
   var extraBedsUsed=rooms.reduce(function(total,room){return total+getCanonicalAccommodationOccupanciesOnDay(room,operationalDay).filter(function(item){return item.bedType==='extra';}).length;},0);
+  var totalBaseBeds=rooms.reduce(function(total,room){return total+Number(room.baseCapacity||0);},0);
+  var totalExtraBeds=rooms.reduce(function(total,room){return total+Number(room.extraBedCapacity||0);},0);
+  var totalBeds=totalBaseBeds+totalExtraBeds;
+  var occupancyPercent=totalBeds?Math.round(occupied/totalBeds*100):0;
+  var childrenCount=rooms.reduce(function(total,room){return total+getCanonicalAccommodationOccupanciesOnDay(room,operationalDay).filter(function(item){return item.extraBedPersonType==='child';}).length;},0);
   var openRooms=rooms.filter(function(room){return room.isClosed!==true;});
   var usableCapacity=openRooms.reduce(function(total,room){return total+Number(room.baseCapacity||0)+Number(room.extraBedCapacity||0);},0);
   var openOccupancies=openRooms.reduce(function(total,room){return total+getCanonicalAccommodationOccupanciesOnDay(room,operationalDay).length;},0);
@@ -2989,6 +2994,7 @@ function renderCanonicalAccommodation(state){
   if(canManage)h+='<div class="accommodation-edit-toolbar"><button class="btn btn-blue" onclick="chooseCanonicalConferenceHouse()">اختيار بيت وغرف من بيوت المؤتمرات</button></div>';
   h+='</section>';
   h+='<div class="accommodation-canonical-summary" role="group" aria-label="ملخص التسكين"><div class="card">إجمالي الغرف <strong>'+rooms.length+'</strong></div><div class="card">الغرف المشغولة <strong>'+occupiedRooms+'</strong></div><div class="card">الغرف الفارغة <strong>'+emptyOpenRooms+'</strong></div><div class="card">الغرف المغلقة <strong>'+closedRooms+'</strong></div><div class="card">النزلاء <strong>'+occupied+'</strong></div><div class="card">الأسرة الإضافية المستخدمة <strong>'+extraBedsUsed+'</strong></div><div class="card">الأسرة المتاحة <strong>'+Math.max(0,usableCapacity-openOccupancies)+'</strong></div></div>';
+  h+='<div class="accommodation-secondary-summary" aria-label="مؤشرات الإشغال والأسرة"><span>الأسرة الأساسية: <strong>'+totalBaseBeds+'</strong></span><span>الأسرة الإضافية: <strong>'+totalExtraBeds+'</strong></span><span>المستخدم من الأسرة الإضافية: <strong>'+extraBedsUsed+'</strong></span><span>الأطفال على أسرة إضافية: <strong>'+childrenCount+'</strong></span><span>نسبة الإشغال اليوم: <strong>'+occupancyPercent+'%</strong></span></div>';
   if((query||filter!=='all')&&!matchingRooms.length&&rooms.length)h+='<div class="ui-state" role="status">لا توجد غرف مطابقة للبحث أو الفلتر.</div>';
   if(!houses.length)h+='<div class="ui-state" role="status">لا توجد بيوت متاحة لهذا المؤتمر. استخدم زر اختيار بيت من بيوت المؤتمرات.</div>';
   state.houses.forEach(function(house){
