@@ -42,7 +42,8 @@ function ht_addRoomToTemplate(houseId, floorId) {
 }
 
 function ht_deleteRoomFromTemplate(houseId, floorId, roomId) {
-  var house = getHouseTemplateById(houseId);
+  var sourceHouse = getHouseTemplateById(houseId);
+  var house = sourceHouse ? deepClone(sourceHouse) : null;
   if (!house || !house.floors) return;
   var floor = null;
   for (var i = 0; i < house.floors.length; i++) {
@@ -62,26 +63,22 @@ function ht_deleteRoomFromTemplate(houseId, floorId, roomId) {
     ? 'حذف الغرفة "' + (targetRoom.number || 'بدون رقم') + '"؟ تحتوي على ' + occupantCount + ' نزيل، وسيتم حذفها من خريطة البيت.'
     : 'حذف الغرفة "' + (targetRoom.number || 'بدون رقم') + '" من خريطة البيت؟';
   if (!confirm(message)) return;
-  var previousAppData = deepClone(appData);
-  var previousSelectedHouseTemplateId = selectedHouseTemplateId;
   var rooms = [];
   (floor.rooms || []).forEach(function(room) {
     if (room.id !== roomId) rooms.push(room);
   });
   floor.rooms = rooms;
-  selectedHouseTemplateId = house.id;
-  return saveTemplateOnly({houseTemplateId:house.id}).then(function(){
+  return saveTemplateOnly({houseTemplateId:house.id,action:'upsert',payload:house}).then(function(){
+    selectedHouseTemplateId = house.id;
+    var hydratedHouse=getHouseTemplateById(house.id);
     if (editHouseTemplateId === house.id && ge('houseTemplateModal').style.display !== 'none') {
-      ht_renderTemplate(house);
+      ht_renderTemplate(hydratedHouse);
     }
     renderSettings();
     return true;
   },function(){
-    appData = previousAppData;
-    selectedHouseTemplateId = previousSelectedHouseTemplateId;
-    var restoredHouse = getHouseTemplateById(houseId);
     if (editHouseTemplateId === houseId && ge('houseTemplateModal').style.display !== 'none') {
-      ht_renderTemplate(restoredHouse);
+      ht_renderTemplate(getHouseTemplateById(houseId));
     }
     renderSettings();
     return false;
@@ -129,7 +126,8 @@ function ht_editFloorName(houseId, floorId) {
 }
 
 function ht_deleteFloorFromTemplate(houseId, floorId) {
-  var house = getHouseTemplateById(houseId);
+  var sourceHouse = getHouseTemplateById(houseId);
+  var house = sourceHouse ? deepClone(sourceHouse) : null;
   if (!house || !house.floors) return;
   var targetFloor = null;
   house.floors.forEach(function(floor) {
@@ -141,26 +139,22 @@ function ht_deleteFloorFromTemplate(houseId, floorId) {
     ? 'حذف الدور "' + (targetFloor.name || 'دور غير مسمى') + '"؟ يحتوي على ' + roomCount + ' غرفة، وسيتم حذف هذه الغرف من خريطة البيت.'
     : 'حذف الدور "' + (targetFloor.name || 'دور غير مسمى') + '" من خريطة البيت؟';
   if (!confirm(message)) return;
-  var previousAppData = deepClone(appData);
-  var previousSelectedHouseTemplateId = selectedHouseTemplateId;
   var floors = [];
   house.floors.forEach(function(floor) {
     if (floor.id !== floorId) floors.push(floor);
   });
   house.floors = floors;
-  selectedHouseTemplateId = house.id;
-  return saveTemplateOnly({houseTemplateId:house.id}).then(function(){
+  return saveTemplateOnly({houseTemplateId:house.id,action:'upsert',payload:house}).then(function(){
+    selectedHouseTemplateId = house.id;
+    var hydratedHouse=getHouseTemplateById(house.id);
     if (editHouseTemplateId === house.id && ge('houseTemplateModal').style.display !== 'none') {
-      ht_renderTemplate(house);
+      ht_renderTemplate(hydratedHouse);
     }
     renderSettings();
     return true;
   },function(){
-    appData = previousAppData;
-    selectedHouseTemplateId = previousSelectedHouseTemplateId;
-    var restoredHouse = getHouseTemplateById(houseId);
     if (editHouseTemplateId === houseId && ge('houseTemplateModal').style.display !== 'none') {
-      ht_renderTemplate(restoredHouse);
+      ht_renderTemplate(getHouseTemplateById(houseId));
     }
     renderSettings();
     return false;

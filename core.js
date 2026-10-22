@@ -1540,69 +1540,8 @@ function applyTemplate(id){
 }
 
 function archiveCurrentConference(){
-  updateCurrentConferenceData();
-  var current = getCurrentConference();
-  if(!current) return;
-  var previousArchives=deepClone(appData.archives||[]);
-  var archives=appData.archives||[];
-  var existingArchive=null;
-  var unidentifiedNameMatches=[];
-  var sameNameConferenceCount=(appData.conferences||[]).filter(function(conference){
-    return conference&&conference.name===current.name;
-  }).length;
-
-  archives.forEach(function(archive){
-    if(!archive||existingArchive)return;
-    var archiveConferenceIds=[];
-    if(archive.conferenceId)archiveConferenceIds.push(archive.conferenceId);
-    if(archive.data&&archive.data.id)archiveConferenceIds.push(archive.data.id);
-    if(archive.conference&&archive.conference.id)archiveConferenceIds.push(archive.conference.id);
-    if(!archiveConferenceIds.length&&!archive.data&&!archive.conference&&archive.id)archiveConferenceIds.push(archive.id);
-    var matchesCurrent=archiveConferenceIds.some(function(conferenceId){
-      return String(conferenceId)===String(current.id);
-    });
-    if(matchesCurrent){
-      existingArchive=archive;
-      return;
-    }
-    if(!archiveConferenceIds.length&&archive.name===current.name)unidentifiedNameMatches.push(archive);
-  });
-
-  if(!existingArchive&&sameNameConferenceCount===1&&unidentifiedNameMatches.length===1){
-    existingArchive=unidentifiedNameMatches[0];
-  }
-
-  var archivedAt=new Date().toISOString();
-  if(existingArchive){
-    existingArchive.conferenceId=current.id;
-    existingArchive.name=current.name;
-    existingArchive.archivedAt=archivedAt;
-    existingArchive.updatedAt=archivedAt;
-    existingArchive.data=deepClone(current);
-  }else{
-    archives.push({
-      id:uid(),
-      conferenceId:current.id,
-      name:current.name,
-      archivedAt:archivedAt,
-      updatedAt:archivedAt,
-      data:deepClone(current)
-    });
-  }
-  appData.archives=archives;
-
-  var previousCurrentConferenceId=appData.currentConferenceId;
-  appData.currentConferenceId=null;
-
-  if(!save()){
-    appData.archives=previousArchives;
-    appData.currentConferenceId=previousCurrentConferenceId;
-    return false;
-  }
-
-  openStartupScreen();
-  showToast('✅ أُرشف المؤتمر');
-  return true;
+  showToast('❌ الأرشفة المحلية القديمة متوقفة. استخدم حزمة المؤتمر المركزية.','#E74C3C');
+  return false;
 }
 
 function createEmptyTrashStructure(sourceTrash){
@@ -1622,13 +1561,6 @@ function createEmptyTrashStructure(sourceTrash){
 }
 
 function backupAppData(){
-  updateCurrentConferenceData();
-  var backupData=deepClone(appData);
-  backupData.backups=[];
-  backupData.trash=createEmptyTrashStructure(backupData.trash);
-  appData.backups.push({id:uid(),name:'نسخة احتياطية '+new Date().toISOString().slice(0,10)+' '+new Date().toISOString().slice(11,19),createdAt:new Date().toISOString(),data:backupData});
-  if(!save()) return false;
-  renderSettings();
-  showToast('✅ تم إنشاء نسخة احتياطية');
-  return true;
+  showToast('❌ النسخ الداخلي القديم متوقف. استخدم حزمة المؤتمر أو النسخة الكاملة.','#E74C3C');
+  return false;
 }

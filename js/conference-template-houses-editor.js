@@ -62,18 +62,18 @@
     if(typeof global.saveTemplateOnly!=='function'){
       return Promise.reject(new Error('CANONICAL_TEMPLATE_CONTRACT_REQUIRED'));
     }
-    return global.saveTemplateOnly({conferenceTemplateId:template.id});
+    return global.saveTemplateOnly({conferenceTemplateId:template.id,
+      action:'upsert',payload:template});
   }
   function mutate(operation){
-    var template=currentTemplate();
-    if(!template||!ensureHouses(template))return false;
-    var before=clone(template.data.houses);
-    if(operation(template)===false)return false;
+    var source=currentTemplate();
+    if(!source)return false;
+    var template=clone(source);
+    if(!ensureHouses(template)||operation(template)===false)return false;
     return persist(template).then(function(){
       render();
       return true;
     },function(){
-      template.data.houses=before;
       render();
       return false;
     });

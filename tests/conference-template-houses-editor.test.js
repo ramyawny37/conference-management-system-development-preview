@@ -38,7 +38,15 @@ function environment(){
     Math:Math,Number:Number,parseInt:parseInt,
     structuredClone:function(value){return plain(value);},
     uid:function(){ids++;return 'generated-'+ids;},
-    saveTemplateOnly:function(options){saves.push(plain(options));return Promise.resolve(true);},
+    saveTemplateOnly:function(options){
+      saves.push(plain(options));
+      var current=appData.templates.filter(function(item){
+        return item.id===options.conferenceTemplateId;
+      })[0];
+      Object.keys(current).forEach(function(key){delete current[key];});
+      Object.assign(current,plain(options.payload));
+      return Promise.resolve(true);
+    },
     confirm:function(){return true;},prompt:function(){return null;},
     getCurrentConference:function(){forbiddenCalls++;throw new Error('FORBIDDEN');},
     getHouseById:function(){forbiddenCalls++;throw new Error('FORBIDDEN');},
@@ -75,19 +83,23 @@ assert.strictEqual(house.name,'House A');
 assert.ok(env.body.innerHTML.indexOf('لا توجد أدوار داخل البيت')>=0);
 
 assert.strictEqual(await api.updateHouse(house.id,{name:'House B',description:'Updated'}),true);
+house=template.data.houses[0];
 assert.strictEqual(house.name,'House B');
 assert.strictEqual(house.description,'Updated');
 
 assert.strictEqual(await api.addFloor(house.id,{name:'First'}),true);
+house=template.data.houses[0];
 var floor=house.floors[0];
 assert.ok(env.body.innerHTML.indexOf('لا توجد غرف داخل الدور')>=0);
 assert.strictEqual(await api.updateFloor(house.id,floor.id,{name:'Ground'}),true);
+house=template.data.houses[0];floor=house.floors[0];
 assert.strictEqual(floor.name,'Ground');
 
 assert.strictEqual(await api.addRoom(house.id,floor.id,{
   number:'101',beds:2,extraBeds:1,notes:'Near lift',
   closed:true,closedDay:3
 }),true);
+house=template.data.houses[0];floor=house.floors[0];
 var room=floor.rooms[0];
 assert.deepStrictEqual(plain({
   number:room.number,beds:room.beds,extraBeds:room.extraBeds,
@@ -100,6 +112,7 @@ assert.strictEqual(await api.updateRoom(house.id,floor.id,room.id,{
   number:'102',beds:4,extraBeds:2,notes:'Updated',
   closed:false,closedDay:9
 }),true);
+house=template.data.houses[0];floor=house.floors[0];room=floor.rooms[0];
 assert.deepStrictEqual(plain({
   number:room.number,beds:room.beds,extraBeds:room.extraBeds,
   notes:room.notes,closed:room.closed,closedDay:room.closedDay
@@ -109,8 +122,10 @@ assert.deepStrictEqual(plain({
 });
 
 assert.strictEqual(await api.removeRoom(house.id,floor.id,room.id,true),true);
+house=template.data.houses[0];floor=house.floors[0];
 assert.strictEqual(floor.rooms.length,0);
 assert.strictEqual(await api.removeFloor(house.id,floor.id,true),true);
+house=template.data.houses[0];
 assert.strictEqual(house.floors.length,0);
 assert.strictEqual(await api.removeHouse(house.id,true),true);
 assert.strictEqual(template.data.houses.length,0);
@@ -121,7 +136,9 @@ assert.strictEqual(env.appData.currentConferenceId,currentIdBefore);
 assert.strictEqual(env.forbiddenCalls(),0);
 assert.ok(env.saves.length>=9);
 env.saves.forEach(function(options){
-  assert.deepStrictEqual(options,{conferenceTemplateId:'template-1'});
+  assert.strictEqual(options.conferenceTemplateId,'template-1');
+  assert.strictEqual(options.action,'upsert');
+  assert.strictEqual(options.payload.id,'template-1');
 });
 
 api.close();
@@ -151,7 +168,7 @@ assert.ok(scriptSource.indexOf(
 )>=0);
 var indexSource=fs.readFileSync(path.join(root,'index.html'),'utf8');
 assert.ok(indexSource.indexOf(
-  '<script src="js/conference-template-houses-editor.js?rev=canonical-template-write-v1"></script>'
+  '<script src="js/conference-template-houses-editor.js?rev=conference-settings-canonical-retirement-v1"></script>'
 )>=0);
 
 console.log('conference template houses editor tests: passed');

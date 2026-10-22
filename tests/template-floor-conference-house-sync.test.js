@@ -73,7 +73,7 @@ const helperBody=extract(
 );
 const saveBody=extract(scriptSource,'saveTemplateFloor','renderTemplateRoomModal');
 assert.match(helperBody,/syncConferenceFloorFromTemplate/);
-assert.match(saveBody,/refreshConferenceHouseAfterTemplateMutation\(house/);
+assert.match(saveBody,/refreshConferenceHouseAfterTemplateMutation\(hydratedHouse/);
 assert.match(saveBody,/templateFloorId:floor\.id/);
 
 console.log('template floor conference house sync tests: passed');

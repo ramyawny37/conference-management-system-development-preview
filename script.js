@@ -160,13 +160,38 @@ function saveTemplate(){
   if(!name) return;
   updateCurrentConferenceData();
   var conferenceTemplate={id:uid(),name:name,createdAt:new Date().toISOString(),data:deepClone(getCurrentConference())};
-  var previousTemplates=deepClone(appData.templates||[]);
-  appData.templates.push(conferenceTemplate);
-  return saveTemplateOnly({conferenceTemplateId:conferenceTemplate.id}).then(function(){
+  return saveTemplateOnly({conferenceTemplateId:conferenceTemplate.id,
+    action:'upsert',payload:conferenceTemplate}).then(function(){
     renderSettings();
     showToast('✅ تم حفظ القالب');
     return true;
-  },function(){appData.templates=previousTemplates;return false;});
+  },function(){return false;});
+}
+function restoreStoredCanonicalConference(record){
+  var service=window.ConferenceCanonicalBundle;
+  var document=record&&record.data;
+  if(!service||!document||document.type!=='conference-canonical-bundle'){
+    showToast('❌ هذا السجل القديم ليس حزمة مؤتمر مركزية قابلة للاستعادة.','#E74C3C');
+    return Promise.resolve(false);
+  }
+  var bundle;
+  try{bundle=service.parse(JSON.stringify(document));}
+  catch(error){
+    showToast('❌ صيغة حزمة المؤتمر غير متوافقة.','#E74C3C');
+    return Promise.resolve(false);
+  }
+  return service.validate(bundle,{mode:'new'}).then(function(result){
+    if(!result||result.valid!==true)throw new Error('CONFERENCE_BUNDLE_VALIDATION_FAILED');
+    return service.restore(bundle,{mode:'new'});
+  }).then(function(){
+    showToast('✅ تم استعادة حزمة المؤتمر المركزية');
+    setTimeout(function(){window.location.reload();},900);
+    return true;
+  }).catch(function(error){
+    console.error('تعذر استعادة حزمة المؤتمر المركزية المحفوظة:',error);
+    showToast('❌ تعذر استعادة حزمة المؤتمر المركزية.','#E74C3C');
+    return false;
+  });
 }
 function restoreBackup(id){
   var backup = null;
@@ -177,17 +202,8 @@ function restoreBackup(id){
       break;
     }
   }
-  if(!backup) return;
-  if(!confirm('استعادة النسخة الاحتياطية ستستبدل البيانات الحالية. متابعة؟')) return;
-  appData = deepClone(backup.data);
-  normalizeAppData();
-  appData.currentConferenceId=null;
-  window.applicationPersistedConferenceCandidate=null;
-  if(!save())return false;
-  renderSettings();
-  showSelectConferenceModal();
-  showToast('✅ تم استعادة النسخة الاحتياطية');
-  return true;
+  if(!backup) return Promise.resolve(false);
+  return restoreStoredCanonicalConference(backup);
 }
 function restoreArchive(id){
   var archive = null;
@@ -198,22 +214,8 @@ function restoreArchive(id){
       break;
     }
   }
-  if(!archive) return;
-  if(!confirm('استعادة الأرشيف ستنشئ نسخة جديدة من المؤتمر. متابعة؟')) return;
-  var restored = deepClone(archive.data);
-  restored.id = uid();
-  restored.name = restored.name + ' (مستعاد)';
-  restored.createdAt = new Date().toISOString();
-  restored.updatedAt = restored.createdAt;
-  appData.conferences.push(restored);
-  normalizeConference(restored);
-  appData.currentConferenceId = null;
-  window.applicationPersistedConferenceCandidate=null;
-  if(!save())return false;
-  renderSettings();
-  showSelectConferenceModal();
-  showToast('✅ تم استعادة مؤتمر من الأرشيف');
-  return true;
+  if(!archive) return Promise.resolve(false);
+  return restoreStoredCanonicalConference(archive);
 }
 function getCanonicalConferenceCoreLink(localConferenceId){
   var conferenceId=String(localConferenceId||'').trim();
@@ -403,16 +405,14 @@ function moveTemplateToTrash(id){
   (appData.templates || []).forEach(function(t){ if (!target && t.id === id) target = t; });
   if (!target) return;
   if (!confirm('حذف القالب؟ يمكن استعادته من سلة المحذوفات.')) return;
-  var previousTemplates=deepClone(appData.templates||[]);
-  appData.templates = removeByIdFromArray(appData.templates, id);
-  return saveTemplateOnly({conferenceTemplateId:id}).then(function(){
+  return saveTemplateOnly({conferenceTemplateId:id,action:'delete'}).then(function(){
     if(window.ConferenceTemplateHousesEditor){
       window.ConferenceTemplateHousesEditor.handleTemplateDeleted(id);
     }
     renderSettings();
     showToast('🗑️ تم نقل القالب إلى سلة المحذوفات');
     return true;
-  },function(){appData.templates=previousTemplates;return false;});
+  },function(){return false;});
 }
 
 function moveArchiveToTrash(id){
@@ -7186,7 +7186,7 @@ function showSelectConferenceModal(){
       html += '<button class="btn btn-purple final-dialog-full-action" onclick="openCompletedConferencesModal()">📂 فتح مؤتمر سابق</button>';
     }
     html += '<button class="btn btn-gray final-dialog-full-action" onclick="ge(\'selectConfImportInput\').click()">📂 استيراد مؤتمر</button>';
-    html += '<input id="selectConfImportInput" type="file" accept=".html,.json" style="display:none" onchange="loadFromFile(event);var m=ge(\'selectConfModal\');if(m)m.remove();">';
+    html += '<input id="selectConfImportInput" type="file" accept=".json,application/json" style="display:none" onchange="loadFromFile(event);var m=ge(\'selectConfModal\');if(m)m.remove();">';
     html += '</div></div>';
     document.body.insertAdjacentHTML('beforeend', html);
   } else {
@@ -7195,7 +7195,7 @@ function showSelectConferenceModal(){
     html += '<div class="final-dialog-title">📌 لا يوجد مؤتمر نشط</div>';
     html += '<div class="final-dialog-notice">اختر مؤتمراً أو أنشئ واحداً جديداً</div>';
     html += '<div class="final-dialog-action-row"><button class="btn btn-green final-dialog-full-action" data-system-conference-create onclick="openNewConferenceModal(\'create\');var m=ge(\'selectConfModal\');if(m)m.remove();">➕ إنشاء مؤتمر جديد</button></div>';
-    html += '<div class="final-dialog-action-row"><button class="btn btn-gray final-dialog-full-action" onclick="ge(\'selectConfImportInput\').click()">📂 استيراد مؤتمر</button><input id="selectConfImportInput" type="file" accept=".html,.json" style="display:none" onchange="loadFromFile(event);var m=ge(\'selectConfModal\');if(m)m.remove();"></div>';
+    html += '<div class="final-dialog-action-row"><button class="btn btn-gray final-dialog-full-action" onclick="ge(\'selectConfImportInput\').click()">📂 استيراد مؤتمر</button><input id="selectConfImportInput" type="file" accept=".json,application/json" style="display:none" onchange="loadFromFile(event);var m=ge(\'selectConfModal\');if(m)m.remove();"></div>';
     html += '<div class="final-dialog-section-title">المؤتمرات المحفوظة:</div>';
     html += '<div class="final-dialog-list">';
     confs.forEach(function(conf){
@@ -8054,8 +8054,6 @@ function renderSettings(){
   h+='<div class="settings-summary-card"><strong>'+appData.conferences.length+'</strong><span>عدد المؤتمرات</span></div>';
   h+='<div class="settings-summary-card"><strong>'+peopleCount+'</strong><span>عدد الأشخاص</span></div>';
   h+='<div class="settings-summary-card"><strong>'+appData.templates.length+'</strong><span>عدد القوالب</span></div>';
-  h+='<div class="settings-summary-card"><strong>'+appData.backups.length+'</strong><span>عدد النسخ الاحتياطية</span></div>';
-  h+='<div class="settings-summary-card"><strong>'+appData.archives.length+'</strong><span>عدد العناصر المؤرشفة</span></div>';
   h+='</div>';
   h+='<section class="settings-section"><div class="settings-section-title">المؤتمر الحالي</div>';
   h+='<div class="settings-conference-selector"><div><label class="lbl">اختر مؤتمر</label><select id="conf_select">';
@@ -8071,16 +8069,17 @@ function renderSettings(){
   h+='<div class="settings-action-group"><div class="settings-action-group-title">إدارة</div><div class="settings-actions-grid">';
   h+='<button class="btn btn-green" onclick="editCurrentConference()">✏️ تعديل بيانات المؤتمر</button>';
   h+='<button class="btn btn-blue" data-system-conference-create onclick="createNewConference()">➕ مؤتمر جديد</button>';
+  h+='<button class="btn btn-purple" onclick="saveTemplate()">✳️ إنشاء قالب</button>';
   h+='</div></div>';
   h+='<div class="settings-action-group"><div class="settings-action-group-title">حفظ واسترجاع</div><div class="settings-actions-grid">';
-  h+='<button class="btn btn-gray" onclick="backupAppData()">🔁 إنشاء نسخة احتياطية</button>';
-  h+='<button class="btn btn-blue" onclick="downloadFullApplicationBackup()">تنزيل نسخة احتياطية كاملة</button>';
-  h+='<button class="btn btn-green" onclick="saveToFile()">حفظ ملف HTML</button>';
   h+='<button class="btn btn-blue" onclick="exportJsonFile()">تصدير JSON</button>';
+  h+='<button class="btn btn-gray" onclick="ge(\'settingsConferenceBundleInput\').click()">📂 استيراد مؤتمر</button>';
+  h+='<input id="settingsConferenceBundleInput" type="file" accept=".json,application/json" style="display:none" onchange="loadFromFile(event)">';
+  h+='</div><div class="settings-summary-note">تصدير واستعادة المؤتمر عبر حزمة المؤتمر المركزية.</div></div>';
+  h+='<div class="settings-action-group"><div class="settings-action-group-title">نسخة البرنامج الكاملة</div><div class="settings-actions-grid">';
+  h+='<button class="btn btn-blue" onclick="downloadFullApplicationBackup()">تنزيل نسخة احتياطية كاملة</button>';
   h+='<button class="btn btn-purple" onclick="ge(\'fullBackupPreflightInput\').click()">فحص نسخة احتياطية كاملة</button>';
   h+='<input id="fullBackupPreflightInput" type="file" accept=".json,application/json" style="display:none" onchange="inspectFullApplicationBackup(event)">';
-  h+='<button class="btn btn-orange" onclick="archiveCurrentConference()">🗄️ أرشفة المؤتمر</button>';
-  h+='<button class="btn btn-purple" onclick="saveTemplate()">✳️ إنشاء قالب</button>';
   h+='</div><div class="settings-summary-note">يحفظ جميع المؤتمرات والقوالب والأرشيفات وبيانات البرنامج في ملف واحد.</div>';
   h+='<div class="settings-summary-note">يقرأ النسخة ويعرض محتوياتها ومخاطر الاستعادة قبل استبدال أي بيانات.</div>';
   h+='<div class="settings-summary-note">سيتم فحص الملف محليًا داخل هذا الجهاز ولن يتم رفعه إلى الإنترنت.</div>';
@@ -8106,40 +8105,6 @@ function renderSettings(){
     h+='</div>';
   } else {
     h+='<div class="settings-empty-state">لا توجد قوالب محفوظة</div>';
-  }
-  h+='</div></section>';
-  h+='<section class="settings-section settings-branding-section settings-ui-accordion"><button type="button" class="settings-branding-toggle" aria-expanded="false" onclick="var content=this.nextElementSibling;var isOpen=content.classList.toggle(\'settings-branding-content-open\');content.setAttribute(\'aria-hidden\',isOpen?\'false\':\'true\');this.setAttribute(\'aria-expanded\',isOpen?\'true\':\'false\');this.querySelector(\'.settings-branding-toggle-arrow\').textContent=isOpen?\'▲\':\'▼\'"><span>الأرشيف</span><span class="settings-branding-toggle-arrow" aria-hidden="true">▼</span></button><div class="settings-branding-content settings-ui-accordion-content" aria-hidden="true">';
-  if(appData.archives.length){
-    h+='<div class="settings-list">';
-    appData.archives.slice().reverse().forEach(function(a){
-      h+='<div class="settings-list-item settings-history-item">';
-      h+='<div><div style="font-weight:700">'+esc(a.name)+'</div><div style="font-size:10px;color:#5a7a9a">'+esc(a.archivedAt)+'</div></div>';
-      h+='<div class="row" style="gap:6px">';
-      h+='<button class="btn btn-blue btn-sm" onclick="restoreArchive(\''+a.id+'\')">استعادة</button>';
-      h+='<button class="btn btn-red btn-sm" onclick="moveArchiveToTrash(\''+a.id+'\')">حذف</button>';
-      h+='</div>';
-      h+='</div>';
-    });
-    h+='</div>';
-  } else {
-    h+='<div class="settings-empty-state">لا توجد محتويات في الأرشيف</div>';
-  }
-  h+='</div></section>';
-  h+='<section class="settings-section settings-branding-section settings-ui-accordion"><button type="button" class="settings-branding-toggle" aria-expanded="false" onclick="var content=this.nextElementSibling;var isOpen=content.classList.toggle(\'settings-branding-content-open\');content.setAttribute(\'aria-hidden\',isOpen?\'false\':\'true\');this.setAttribute(\'aria-expanded\',isOpen?\'true\':\'false\');this.querySelector(\'.settings-branding-toggle-arrow\').textContent=isOpen?\'▲\':\'▼\'"><span>النسخ الاحتياطية</span><span class="settings-branding-toggle-arrow" aria-hidden="true">▼</span></button><div class="settings-branding-content settings-ui-accordion-content" aria-hidden="true">';
-  if(appData.backups.length){
-    h+='<div class="settings-list">';
-    appData.backups.slice().reverse().forEach(function(b){
-      h+='<div class="settings-list-item settings-history-item">';
-      h+='<div><div style="font-weight:700">'+esc(b.name)+'</div><div style="font-size:10px;color:#5a7a9a">'+esc(b.createdAt)+'</div></div>';
-      h+='<div class="row" style="gap:6px">';
-      h+='<button class="btn btn-blue btn-sm" onclick="restoreBackup(\''+b.id+'\')">استعادة</button>';
-      h+='<button class="btn btn-red btn-sm" onclick="moveBackupToTrash(\''+b.id+'\')">حذف</button>';
-      h+='</div>';
-      h+='</div>';
-    });
-    h+='</div>';
-  } else {
-    h+='<div class="settings-empty-state">لا توجد نسخ احتياطية بعد</div>';
   }
   h+='</div></section>';
   h += renderTrashSection();
@@ -8572,8 +8537,6 @@ function renderTrashSection(){
   var trash = appData.trash || {};
   var types = [
     { key: 'templates', title: 'القوالب' },
-    { key: 'archives', title: 'الأرشيف' },
-    { key: 'backups', title: 'النسخ الاحتياطية' },
     { key: 'houseTemplates', title: 'بيوت المؤتمرات' },
     { key: 'rooms', title: 'الغرف' }
   ];
@@ -8741,7 +8704,8 @@ function refreshConferenceHouseAfterTemplateMutation(template,options){
 }
 
 function saveTemplateFloor() {
-  var house = getHouseTemplateById(templateFloorDialog.houseId);
+  var sourceHouse = getHouseTemplateById(templateFloorDialog.houseId);
+  var house = sourceHouse ? deepClone(sourceHouse) : null;
   if (!house) return;
   var floorName = ge('tf_floor_name').value.trim();
   if (!floorName) {
@@ -8763,8 +8727,6 @@ function saveTemplateFloor() {
     alert('يوجد دور آخر بنفس الاسم في هذا البيت');
     return;
   }
-  var previousAppData = deepClone(appData);
-  var previousSelectedHouseTemplateId = selectedHouseTemplateId;
   if (floor) {
     floor.name = floorName;
   } else {
@@ -8772,23 +8734,22 @@ function saveTemplateFloor() {
     floor=createDefaultFloor(floorName);
     house.floors.push(floor);
   }
-  var conferenceRefresh=refreshConferenceHouseAfterTemplateMutation(house,{
-    templateFloorId:floor.id
-  });
-  selectedHouseTemplateId = house.id;
-  return saveTemplateOnly({houseTemplateId:house.id}).then(function(){
+  return saveTemplateOnly({houseTemplateId:house.id,action:'upsert',payload:house}).then(function(){
+    var hydratedHouse=getHouseTemplateById(house.id);
+    var conferenceRefresh=refreshConferenceHouseAfterTemplateMutation(hydratedHouse,{
+      templateFloorId:floor.id
+    });
+    selectedHouseTemplateId = house.id;
     var conferenceHeader=ge('globalConferenceHeader');
     if(conferenceHeader)conferenceHeader.style.display='';
     if (editHouseTemplateId === house.id && ge('houseTemplateModal').style.display !== 'none') {
-      ht_renderTemplate(house);
+      ht_renderTemplate(hydratedHouse);
     }
     closeTemplateFloorModal();
     conferenceRefresh.render();
     renderSettings();
     return true;
   },function(){
-    appData = previousAppData;
-    selectedHouseTemplateId = previousSelectedHouseTemplateId;
     return false;
   });
 }
@@ -8830,7 +8791,8 @@ function openTemplateRoomModal(houseId, floorId, roomId) {
   templateRoomDialog.houseId = houseId || null;
   templateRoomDialog.floorId = floorId || null;
   templateRoomDialog.roomId = roomId || null;
-  var house = getHouseTemplateById(houseId);
+  var sourceHouse = getHouseTemplateById(houseId);
+  var house = sourceHouse ? deepClone(sourceHouse) : null;
   var floor = null;
   var room = null;
   if (house) {
@@ -8915,8 +8877,6 @@ function saveTemplateRoom() {
     alert('يوجد غرفة أخرى بنفس الرقم في هذا البيت');
     return;
   }
-  var previousAppData = deepClone(appData);
-  var previousSelectedHouseTemplateId = selectedHouseTemplateId;
   if (room) {
     room.number = number;
     room.beds = beds;
@@ -8933,17 +8893,16 @@ function saveTemplateRoom() {
     floor.rooms = floor.rooms || [];
     floor.rooms.push({ id: uid(), number: number, beds: beds, extraBeds: extraBeds, notes: notes, guests: [], children: [], closed: closed, closedDay: closedDay });
   }
-  selectedHouseTemplateId = house.id;
-  return saveTemplateOnly({houseTemplateId:house.id}).then(function(){
+  return saveTemplateOnly({houseTemplateId:house.id,action:'upsert',payload:house}).then(function(){
+    selectedHouseTemplateId = house.id;
+    var hydratedHouse=getHouseTemplateById(house.id);
     if (editHouseTemplateId === house.id && ge('houseTemplateModal').style.display !== 'none') {
-      ht_renderTemplate(house);
+      ht_renderTemplate(hydratedHouse);
     }
     closeTemplateRoomModal();
     renderSettings();
     return true;
   },function(){
-    appData = previousAppData;
-    selectedHouseTemplateId = previousSelectedHouseTemplateId;
     return false;
   });
 }
@@ -9040,10 +8999,10 @@ function saveHouseTemplate() {
   var name = ge('ht_name').value.trim();
   if (!name) { alert('الرجاء إدخال اسم للبيت.'); return; }
 
-  var previousAppData = deepClone(appData);
   var previousSelectedHouseTemplateId = selectedHouseTemplateId;
   var previousEditHouseTemplateId = editHouseTemplateId;
-  var template = editHouseTemplateId ? getHouseTemplateById(editHouseTemplateId) : null;
+  var sourceTemplate = editHouseTemplateId ? getHouseTemplateById(editHouseTemplateId) : null;
+  var template = sourceTemplate ? deepClone(sourceTemplate) : null;
   if (!template) {
     template = { id: editHouseTemplateId || uid(), name: '', description: '', floors: [] };
   }
@@ -9093,27 +9052,13 @@ function saveHouseTemplate() {
   });
   template.floors = savedFloors;
 
-  if (editHouseTemplateId) {
-    var index = -1;
-    var templates = appData.houseTemplates || [];
-    for (var i = 0; i < templates.length; i++) {
-      if (templates[i].id === editHouseTemplateId) {
-        index = i;
-        break;
-      }
-    }
-    if (index !== -1) appData.houseTemplates[index] = template;
-  } else {
-    appData.houseTemplates.push(template);
-  }
+  return saveTemplateOnly({houseTemplateId:template.id,action:'upsert',payload:template}).then(function(){
     selectedHouseTemplateId = template.id;
-  return saveTemplateOnly({houseTemplateId:template.id}).then(function(){
     closeHouseTemplateEditor();
     renderSettings();
     showToast('✅ تم حفظ خريطة البيت بنجاح');
     return true;
   },function(){
-    appData = previousAppData;
     selectedHouseTemplateId = previousSelectedHouseTemplateId;
     editHouseTemplateId = previousEditHouseTemplateId;
     return false;
@@ -9125,19 +9070,16 @@ function deleteHouseTemplate(id) {
   (appData.houseTemplates || []).forEach(function(ht){ if (!target && ht.id === id) target = ht; });
   if (!target) return;
   if (!confirm('حذف خريطة البيت "' + (target.name || 'بيت غير مسمى') + '"؟ يمكن استعادتها من سلة المحذوفات.')) return;
-  var previousAppData = deepClone(appData);
   var previousSelectedHouseTemplateId = selectedHouseTemplateId;
   var previousEditHouseTemplateId = editHouseTemplateId;
-  appData.houseTemplates = removeByIdFromArray(appData.houseTemplates, id);
-  if (selectedHouseTemplateId === id) {
-    selectedHouseTemplateId = appData.houseTemplates.length ? appData.houseTemplates[0].id : null;
-  }
-  return saveTemplateOnly({houseTemplateId:id}).then(function(){
+  return saveTemplateOnly({houseTemplateId:id,action:'delete'}).then(function(){
+    if (selectedHouseTemplateId === id) {
+      selectedHouseTemplateId = appData.houseTemplates.length ? appData.houseTemplates[0].id : null;
+    }
     renderSettings();
     showToast('🗑️ تم نقل خريطة البيت إلى سلة المحذوفات', '#E74C3C');
     return true;
   },function(){
-    appData = previousAppData;
     selectedHouseTemplateId = previousSelectedHouseTemplateId;
     editHouseTemplateId = previousEditHouseTemplateId;
     return false;
@@ -9176,14 +9118,12 @@ function duplicateHouseTemplate(id) {
     });
     newTemplate.floors.push(newFloor);
   });
-  var previousTemplates=deepClone(appData.houseTemplates||[]);
-  appData.houseTemplates.push(newTemplate);
-  selectedHouseTemplateId = newTemplate.id;
-  return saveTemplateOnly({houseTemplateId:newTemplate.id}).then(function(){
+  return saveTemplateOnly({houseTemplateId:newTemplate.id,action:'upsert',payload:newTemplate}).then(function(){
+    selectedHouseTemplateId = newTemplate.id;
     renderSettings();
     showToast('✅ تم نسخ الخريطة');
     return true;
-  },function(){appData.houseTemplates=previousTemplates;return false;});
+  },function(){return false;});
 }
 
 var editHouseTemplateId = null;

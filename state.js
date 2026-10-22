@@ -175,17 +175,28 @@ function saveTemplateOnly(options){
   var type=options.conferenceTemplateId?'conference':
     (options.houseTemplateId?'house':'');
   var id=String(options.conferenceTemplateId||options.houseTemplateId||'');
-  var values=type==='conference'?appData.templates:appData.houseTemplates;
-  var payload=null;
-  (values||[]).some(function(item){
-    if(String(item&&item.id||'')!==id)return false;
-    payload=cloneApplicationStorageData(item);return true;
-  });
+  var payload=options.payload===undefined?null:cloneApplicationStorageData(options.payload);
+  var action=String(options.action||'');
+  if(!action&&payload)action='upsert';
+  if(!action){
+    var values=type==='conference'?appData.templates:appData.houseTemplates;
+    (values||[]).some(function(item){
+      if(String(item&&item.id||'')!==id)return false;
+      payload=cloneApplicationStorageData(item);return true;
+    });
+    action=payload?'upsert':'delete';
+  }
   var library=window.CanonicalTemplateLibrary;
   if(!type||!id||!library||typeof library.mutate!=='function'){
     return Promise.reject(new Error('CANONICAL_TEMPLATE_CONTRACT_REQUIRED'));
   }
-  return library.mutate(type,id,payload?'upsert':'delete',payload);
+  if(action!=='upsert'&&action!=='delete'){
+    return Promise.reject(new Error('CANONICAL_TEMPLATE_ACTION_INVALID'));
+  }
+  if(action==='upsert'&&!payload){
+    return Promise.reject(new Error('CANONICAL_TEMPLATE_PAYLOAD_REQUIRED'));
+  }
+  return library.mutate(type,id,action,payload);
 }
 
 function initializeApplicationStorage(){
