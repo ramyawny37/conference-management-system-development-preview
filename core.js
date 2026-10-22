@@ -811,6 +811,36 @@ function getOccupiedRooms(night,conference){
   });
 }
 
+function getAccommodationNightRoomRows(conference,night){
+  conference=conference||getCurrentConference();
+  var nightDay=Math.floor(Number(night&&typeof night==='object'?night.day:night));
+  if(!conference||!isFinite(nightDay)||nightDay<1)return [];
+  return getConferenceHouseRooms(conference).map(function(room){
+    var active=typeof isRoomActiveOnDay!=='function'||isRoomActiveOnDay(room,nightDay);
+    var members=active?getConferenceRoomPeopleOnDay(room,nightDay,conference):[];
+    var seen={};
+    members=members.filter(function(person){
+      var key=String(person&&(person.participationId||person.personId||person.occupancyId||person.id)||'');
+      if(!key||seen[key])return false;
+      seen[key]=true;
+      return isPersonStayingNight(person,nightDay);
+    });
+    var baseCapacity=Math.max(0,Number(room.baseCapacity!==undefined?room.baseCapacity:room.beds)||0);
+    var extraBedCapacity=Math.max(0,Number(room.extraBedCapacity!==undefined?room.extraBedCapacity:room.extraBeds)||0);
+    var baseOccupied=members.filter(function(person){return person.bedType!=='extra';}).length;
+    var extraOccupied=members.length-baseOccupied;
+    return {
+      roomId:room.id||room.roomId||'',roomNumber:room.number||room.roomNumber||'',
+      houseId:room.house&&room.house.id||'',houseName:room.house&&room.house.name||'',
+      floorId:room.floor&&room.floor.id||'',floorName:room.floor&&room.floor.name||'',
+      closed:!active,baseCapacity:baseCapacity,extraBedCapacity:extraBedCapacity,
+      baseOccupied:baseOccupied,extraOccupied:extraOccupied,persons:members.length,
+      availableBaseBeds:Math.max(0,baseCapacity-baseOccupied),
+      availableExtraBeds:Math.max(0,extraBedCapacity-extraOccupied),members:members
+    };
+  });
+}
+
 function getAccommodationV3RoomTypeKey(room){
   var capacity=Array.isArray(room&&room.beds)
     ?room.beds.length
@@ -848,15 +878,15 @@ function calculateAccommodationSummary(conference){
     var persons=0;
     var occupiedRoomCount=0;
     var dailyCost=0;
-    rooms.forEach(function(room,roomIndex){
-      var occupancy=getRoomNightOccupancy(room,night);
-      if(!occupancy.occupied)return;
+    var roomRows=getAccommodationNightRoomRows(conference,night);
+    roomRows.forEach(function(roomRow,roomIndex){
+      if(!roomRow.persons)return;
       occupiedRoomCount++;
       roomNights++;
-      persons+=occupancy.persons;
-      uniqueOccupiedRooms[String(room.id||'room-'+roomIndex)]=true;
+      persons+=roomRow.persons;
+      uniqueOccupiedRooms[String(roomRow.roomId||'room-'+roomIndex)]=true;
       if(plan.pricingMode==='room_type'){
-        dailyCost+=Number(plan.roomTypePrices[getAccommodationV3RoomTypeKey(room)])||0;
+        dailyCost+=Number(plan.roomTypePrices[getAccommodationV3RoomTypeKey(rooms[roomIndex])])||0;
       }
     });
     if(plan.pricingMode==='per_person_night')dailyCost=persons*plan.prices.personNight;
@@ -870,6 +900,7 @@ function calculateAccommodationSummary(conference){
       nextDate:night.nextDate,
       persons:persons,
       occupiedRooms:occupiedRoomCount,
+      roomRows:roomRows,
       occupancyRate:rooms.length?occupiedRoomCount/rooms.length*100:0,
       cost:dailyCost
     };

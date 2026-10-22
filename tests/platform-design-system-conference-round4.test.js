@@ -55,7 +55,9 @@ test('canonical accommodation composes shared states with scoped responsive patt
   const renderer=script.slice(start,end);
   for(const marker of ['accommodation-toolbar','accommodation-canonical-summary','accommodation-room-toolbar','accommodation-guest-meta','ui-state--loading','ui-state--error','ui-state--denied'])assert.match(renderer,new RegExp(marker));
   assert.doesNotMatch(renderer,/style="/);
-  assert.match(renderer,/room\.isClosed\|\|\(room\.occupancies\|\|\[\]\)\.length>=/);
+  assert.match(renderer,/getConferenceOperationalDay\(getCurrentConference\(\)\)/);
+  assert.match(renderer,/getCanonicalAccommodationOccupanciesOnDay\(room,operationalDay\)/);
+  assert.match(renderer,/room\.isClosed\?'disabled title="الغرفة مغلقة"'/);
   assert.match(style,/#tab0 \.accommodation-toolbar\{/);
   assert.match(style,/#tab0 \.room-card\.room-closed\{/);
   for(const breakpoint of ['900','600','420'])assert.match(style,new RegExp('@media\\(max-width:'+breakpoint+'px\\)'));
