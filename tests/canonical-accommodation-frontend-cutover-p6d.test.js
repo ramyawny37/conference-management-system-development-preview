@@ -203,3 +203,14 @@ test('canonical accommodation shows guardian relationship without local person f
   assert.ok(render.includes('occupancy.guardianParticipationId'));
   assert.ok(render.includes('occupancy.guardianFullName'));
 });
+
+test('canonical transfer rejects blank and fractional effective days before mutation',()=>{
+  const start=scriptSource.indexOf('function moveCanonicalAccommodation(occupancyId){');
+  const end=scriptSource.indexOf('function removeCanonicalAccommodation(',start);
+  assert.ok(start>=0&&end>start);
+  const transfer=scriptSource.slice(start,end);
+  assert.ok(transfer.includes('if(effectiveText===null)return;'));
+  assert.ok(transfer.includes('effectiveText=effectiveText.trim();'));
+  assert.ok(transfer.includes('Number.isSafeInteger(effectiveDay)'));
+  assert.ok(transfer.indexOf('Number.isSafeInteger(effectiveDay)')<transfer.indexOf('integration.moveConferenceAccommodation('));
+});
