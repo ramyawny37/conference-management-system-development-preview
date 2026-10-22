@@ -2930,8 +2930,9 @@ function moveCanonicalAccommodation(occupancyId){
     var defaultDay=typeof getConferenceOperationalDay==='function'?getConferenceOperationalDay(current):occupancy.arrivalDay;
     var effectiveText=prompt('يوم سريان النقل:',String(defaultDay));
     if(effectiveText===null)return;
-    var effectiveDay=Math.floor(Number(effectiveText));
-    if(!isFinite(effectiveDay)||effectiveDay<Number(occupancy.arrivalDay)||
+    effectiveText=effectiveText.trim();
+    var effectiveDay=Number(effectiveText);
+    if(!/^\\d+$/.test(effectiveText)||!Number.isSafeInteger(effectiveDay)||effectiveDay<Number(occupancy.arrivalDay)||
       (occupancy.leaveDay!==null&&occupancy.leaveDay!==undefined&&occupancy.leaveDay!==''&&effectiveDay>=Number(occupancy.leaveDay))){
       alert('يوم سريان النقل خارج فترة الإقامة.');
       return;
