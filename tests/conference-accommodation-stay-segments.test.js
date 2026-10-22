@@ -52,3 +52,12 @@ test('card rendering and PNG capture dimensions remain unchanged',()=>{
   assert.match(runtime,/html2canvas/);
   assert.match(runtime,/scale:\s*2/);
 });
+
+
+test('removal preserves historical stay segments',()=>{
+ const source=fs.readFileSync('supabase/migrations/20261022190000_preserve_canonical_accommodation_history_on_removal.sql','utf8');
+ assert.match(source,/ACCOMMODATION_HISTORICAL_STAY_IMMUTABLE/);
+ assert.match(source,/set leave_day=effective_day/);
+ assert.match(source,/ACCOMMODATION_REVISION_CONFLICT/);
+ assert.match(source,/platform.audit_events/);
+});
