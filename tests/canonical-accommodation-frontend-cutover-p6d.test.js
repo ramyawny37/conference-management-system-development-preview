@@ -184,3 +184,13 @@ test('canonical accommodation summary calculates occupancy and bed totals from c
   }
   assert.match(render,/totalBeds\?Math\.round\(occupied\/totalBeds\*100\):0/);
 });
+
+test('canonical accommodation search includes person name phone and church',()=>{
+  const start=scriptSource.indexOf('function renderCanonicalAccommodation(state){');
+  const end=scriptSource.indexOf('function ',start+10);
+  const render=scriptSource.slice(start,end);
+  assert.ok(render.includes("person.fullName||''"));
+  assert.ok(render.includes("person.phone||''"));
+  assert.ok(render.includes("person.church||''"));
+  assert.ok(scriptSource.includes('ابحث برقم الغرفة أو اسم النزيل أو الهاتف أو الكنيسة'));
+});
