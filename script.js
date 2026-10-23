@@ -3148,7 +3148,7 @@ function renderCanonicalAccommodation(state){
   }
   var canManage=currentConferenceSectionCapability('accommodationManage');
   var operationalDay=getConferenceOperationalDay(getCurrentConference());
-  var houses=state.houses||[],rooms=[];houses.forEach(function(house){(house.floors||[]).forEach(function(floor){(floor.rooms||[]).forEach(function(room){rooms.push(room);});});});
+  var houses=state.houses||[],rooms=[],roomSearchLocations={};houses.forEach(function(house){(house.floors||[]).forEach(function(floor){(floor.rooms||[]).forEach(function(room){rooms.push(room);roomSearchLocations[String(room.roomId)]={house:house.name||'',floor:floor.name||''};});});});
   var occupied=rooms.reduce(function(n,room){return n+getCanonicalAccommodationOccupanciesOnDay(room,operationalDay).length;},0);
   var occupiedRooms=rooms.filter(function(room){return getCanonicalAccommodationOccupanciesOnDay(room,operationalDay).length>0;}).length;
   var closedRooms=rooms.filter(function(room){return room.isClosed===true;}).length;
@@ -3169,7 +3169,8 @@ function renderCanonicalAccommodation(state){
   var filter=accommodationQuickFilter||'all';
   var matchingRooms=rooms.filter(function(room){
     var guests=getCanonicalAccommodationOccupanciesOnDay(room,operationalDay);
-    var searchable=[room.roomNumber].concat(guests.map(function(item){var person=item.person||{};return [person.fullName||'',person.phone||'',person.church||''].join(' ');})).join(' ');
+    var location=roomSearchLocations[String(room.roomId)]||{};
+    var searchable=[room.roomNumber,location.house||'',location.floor||'',room.notes||''].concat(guests.map(function(item){var person=item.person||{};return [person.fullName||'',person.phone||'',person.church||''].join(' ');})).join(' ');
     if(query&&normalizeAccommodationSearchText(searchable).indexOf(query)<0)return false;
     if(filter==='occupied'&&!guests.length)return false;
     if(filter==='extra-beds'&&!guests.some(function(item){return item.bedType==='extra';}))return false;
@@ -3199,6 +3200,8 @@ function renderCanonicalAccommodation(state){
   if((query||filter!=='all')&&!matchingRooms.length&&rooms.length)h+='<div class="ui-state" role="status">لا توجد غرف مطابقة للبحث أو الفلتر.</div>';
   if(!houses.length)h+='<div class="ui-state" role="status">لا توجد بيوت متاحة لهذا المؤتمر. استخدم زر اختيار بيت من بيوت المؤتمرات.</div>';
   state.houses.forEach(function(house){
+    var visibleHouseRooms=(house.floors||[]).some(function(floor){return (floor.rooms||[]).some(function(room){return matchingRooms.indexOf(room)>=0;});});
+    if(!visibleHouseRooms)return;
     h+='<section class="card accommodation-house section-card"><div class="accommodation-house-title"><span>'+accommodationIcon('building')+'</span><strong>'+esc(house.name)+'</strong>'+(canManage?'<div class="row"><button class="btn btn-red btn-sm" onclick="unassignCanonicalConferenceHouse(\''+house.houseId+'\','+Number(house.assignmentRevision||1)+')">إلغاء الإتاحة</button></div>':'')+'</div>';
     var houseRooms=rooms.filter(function(room){return (house.floors||[]).some(function(floor){return (floor.rooms||[]).indexOf(room)>=0;});});
     var houseOccupied=houseRooms.filter(function(room){return getCanonicalAccommodationOccupanciesOnDay(room,operationalDay).length>0;}).length;
