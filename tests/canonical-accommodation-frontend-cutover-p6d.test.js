@@ -252,3 +252,11 @@ test('canonical stay dates reject unsafe integers before persistence',()=>{
   assert.ok(assign.includes('Number.isSafeInteger(Number(leaveText))'));
   assert.ok(assign.indexOf('Number.isSafeInteger(Number(arrivalText))')<assign.indexOf('integration.assignConferenceAccommodation('));
 });
+
+test('canonical accommodation floor names reject whitespace-only input',()=>{
+  const start=scriptSource.indexOf('function createCanonicalAccommodationFloor(houseId){');
+  const end=scriptSource.indexOf('function deleteCanonicalAccommodationFloor(',start);
+  const section=scriptSource.slice(start,end);
+  assert.ok(section.includes('if(!house||!name||!name.trim())return false;'));
+  assert.ok(section.includes('if(!floor||!name||!name.trim())return false;'));
+});
