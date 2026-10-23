@@ -2605,12 +2605,21 @@ function renderAccommodationQuickFilters(extraClass){
 }
 
 function updateAccommodationSearch(value){
+  var previousInput=ge('accommodationSearchInput'),selectionStart=null,selectionEnd=null,selectionDirection='none';
+  if(previousInput&&typeof previousInput.selectionStart==='number'){
+    selectionStart=previousInput.selectionStart;
+    selectionEnd=previousInput.selectionEnd;
+    selectionDirection=previousInput.selectionDirection||'none';
+  }
   accommodationSearchQuery=String(value===undefined||value===null?'':value);
   renderAccommodation();
   var input=ge('accommodationSearchInput');
   if(input){
     input.focus();
-    if(typeof input.setSelectionRange==='function')input.setSelectionRange(input.value.length,input.value.length);
+    if(selectionStart!==null&&typeof input.setSelectionRange==='function'){
+      var length=input.value.length;
+      input.setSelectionRange(Math.min(selectionStart,length),Math.min(selectionEnd,length),selectionDirection);
+    }
   }
 }
 
@@ -2624,7 +2633,7 @@ function clearAccommodationSearch(){
 function renderAccommodationSearchControls(matchCount,isFiltering){
   var value=String(accommodationSearchQuery||'');
   var h='<div class="accommodation-search" role="search">';
-  h+='<div class="accommodation-search-controls"><span class="accommodation-search-icon" aria-hidden="true">'+accommodationIcon('search')+'</span><input id="accommodationSearchInput" type="search" value="'+esc(value)+'" placeholder="ابحث بالبيت أو الدور أو الغرفة أو النزيل أو الهاتف أو الكنيسة..." aria-label="ابحث باسم شخص أو رقم غرفة" oninput="updateAccommodationSearch(this.value)">';
+  h+='<div class="accommodation-search-controls"><span class="accommodation-search-icon" aria-hidden="true">'+accommodationIcon('search')+'</span><input id="accommodationSearchInput" type="search" value="'+esc(value)+'" placeholder="ابحث بالبيت أو الدور أو الغرفة أو النزيل أو الهاتف أو الكنيسة..." aria-label="ابحث بالبيت أو الدور أو الغرفة أو النزيل أو الهاتف أو الكنيسة" oninput="updateAccommodationSearch(this.value)">';
   h+='<button type="button" class="btn accommodation-search-clear" onclick="clearAccommodationSearch()" '+(value?'':'disabled')+'>مسح '+accommodationIcon('close')+'</button></div>';
   h+='</div>';
   if(isFiltering)h+='<div class="accommodation-search-count" aria-live="polite">'+(matchCount===1?'غرفة واحدة مطابقة':matchCount+' غرف مطابقة')+'</div>';
