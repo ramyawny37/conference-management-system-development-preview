@@ -68,7 +68,7 @@ begin
  else
   perform platform_private.require_exact_jsonb_keys(p_args,array['roomId','expectedRevision','holderOccupancyId']);
   room_id:=(p_args->>'roomId')::uuid;expected:=(p_args->>'expectedRevision')::bigint;holder_id:=nullif(p_args->>'holderOccupancyId','')::uuid;
-  select * into assignment from public.conference_room_assignments where conference_id=p_conference and room_id=room_id for update;
+  select * into assignment from public.conference_room_assignments where conference_id=p_conference and room_id=(p_args->>'roomId')::uuid for update;
   if not found then raise exception 'ROOM_ASSIGNMENT_NOT_FOUND' using errcode='P0002';end if;
   if assignment.revision<>expected then raise exception 'ROOM_ASSIGNMENT_REVISION_CONFLICT' using errcode='40001';end if;
   if holder_id is not null then
