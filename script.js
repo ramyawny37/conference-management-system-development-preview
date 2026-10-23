@@ -2936,7 +2936,7 @@ function moveCanonicalAccommodation(occupancyId){
   if(!currentConferenceSectionCapability('accommodationManage')){showToast('ليس لديك صلاحية إدارة التسكين.','#E74C3C');return false;}
   var current=getCurrentConference(),integration=window.PlatformIntegration,occupancy=findCanonicalAccommodationEntity('occupancy',occupancyId),rooms=[];
   if(!occupancy)return false;
-  (canonicalAccommodationState().houses||[]).forEach(function(h){(h.floors||[]).forEach(function(f){(f.rooms||[]).forEach(function(r){if(!r.isClosed&&r.roomId!==occupancy.roomId)rooms.push({house:h,floor:f,room:r});});});});
+  (canonicalAccommodationState().houses||[]).forEach(function(h){(h.floors||[]).forEach(function(f){(f.rooms||[]).forEach(function(r){if(!r.isClosed&&r.roomId!==occupancy.roomId&&getCanonicalAccommodationOccupanciesOnDay(r,getConferenceOperationalDay(current)).length<Number(r.baseCapacity||0)+Number(r.extraBedCapacity||0))rooms.push({house:h,floor:f,room:r});});});});
   if(!rooms.length){alert('لا توجد غرف أخرى مفتوحة وبها أماكن متاحة للنقل.');return false;}
   openSearchableSelectDialog('اختر الغرفة الهدف',rooms.map(function(entry){return {label:entry.house.name+' / '+entry.floor.name+' / غرفة '+entry.room.roomNumber,searchText:entry.house.name+' '+entry.floor.name+' '+entry.room.roomNumber,data:entry.room};}),function(room){
     if(!room)return;
