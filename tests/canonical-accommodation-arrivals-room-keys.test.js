@@ -43,7 +43,8 @@ test('canonical projection and UI expose per-person arrival and named room key r
   assert.match(integration,/keyHolderName:value\.keyHolderName/);
   assert.match(ui,/setCanonicalAccommodationArrival/);
   assert.match(ui,/setCanonicalAccommodationRoomKey/);
-  assert.match(ui,/room\.keyHolderName/);
+  assert.match(ui,/canonicalAccommodationActiveKeyHolder/);
+  assert.match(ui,/activeKeyHolder\.person&&activeKeyHolder\.person\.fullName/);
 });
 
 test('a temporal transfer inherits arrival while stale key recipients are suppressed from reads',()=>{

@@ -2718,13 +2718,6 @@ function findCanonicalAccommodationEntity(kind,id){
   return found;
 }
 
-function canonicalAccommodationStructure(operation,args,message){
-  var current=getCurrentConference(),integration=window.PlatformIntegration;
-  if(!currentConferenceSectionCapability('accommodationManage')){showToast('ليس لديك صلاحية إدارة التسكين.','#E74C3C');return false;}
-  if(!current||!getCanonicalConferenceCoreLink(current.id)||!integration)return false;
-  return canonicalAccommodationMutation(integration.mutateConferenceAccommodationStructure(current.id,operation,args),message);
-}
-
 function chooseCanonicalConferenceHouse(){
   var current=getCurrentConference(),conferenceId=current&&String(current.id||''),generation=conferenceTabHydrationGeneration,service=window.CanonicalConferenceHouses;
   if(!currentConferenceSectionCapability('accommodationManage')){showToast('ليس لديك صلاحية إدارة التسكين.','#E74C3C');return false;}
@@ -2825,97 +2818,6 @@ function unassignCanonicalConferenceHouse(houseId,revision){
   return canonicalAccommodationMutation(window.CanonicalConferenceHouses.assign(current.id,houseId,false,revision),'✅ تم إلغاء إتاحة البيت',function(error){return String(error&&error.code||'')==='HOUSE_ASSIGNMENT_HAS_ROOMS'?'لا يمكن إلغاء البيت مع وجود غرف مخصصة.':'لا يمكن إلغاء البيت مع وجود إشغالات.';});
 }
 
-function createCanonicalAccommodationHouse(){
-  var state=canonicalAccommodationState(),name=prompt('اسم البيت:');
-  if(name===null)return false;
-  name=String(name).trim();
-  if(!name){showToast('أدخل اسم البيت.','#E74C3C');return false;}
-  return canonicalAccommodationStructure('create_accommodation_house',{p_name:name.trim(),p_description:null,p_position:(state&&state.houses||[]).length},'✅ تم إسناد بيت المؤتمر');
-}
-
-function editCanonicalAccommodationHouse(houseId){
-  var house=findCanonicalAccommodationEntity('house',houseId),name=house&&prompt('اسم البيت:',house.name);
-  if(!house||name===null)return false;
-  name=String(name).trim();
-  if(!name){showToast('أدخل اسم البيت.','#E74C3C');return false;}
-  return canonicalAccommodationStructure('update_accommodation_house',{p_house_id:house.houseId,p_expected_revision:house.revision,p_name:name.trim(),p_description:house.description,p_position:house.position},'✅ تم حفظ بيانات البيت');
-}
-
-function deleteCanonicalAccommodationHouse(houseId){
-  var house=findCanonicalAccommodationEntity('house',houseId);
-  if(!house||!confirm('إزالة البيت "'+house.name+'"؟'))return false;
-  return canonicalAccommodationStructure('delete_accommodation_house',{p_house_id:house.houseId,p_expected_revision:house.revision},'🗑️ تم إزالة بيت المؤتمر');
-}
-
-function createCanonicalAccommodationFloor(houseId){
-  var house=findCanonicalAccommodationEntity('house',houseId),name=house&&prompt('اسم الدور:');
-  if(!house||name===null)return false;
-  name=String(name).trim();
-  if(!name){showToast('أدخل اسم الدور.','#E74C3C');return false;}
-  return canonicalAccommodationStructure('create_accommodation_floor',{p_house_id:house.houseId,p_name:name.trim(),p_position:(house.floors||[]).length},'✅ تم حفظ بيانات الدور');
-}
-
-function editCanonicalAccommodationFloor(floorId){
-  var floor=findCanonicalAccommodationEntity('floor',floorId),name=floor&&prompt('اسم الدور:',floor.name);
-  if(!floor||name===null)return false;
-  name=String(name).trim();
-  if(!name){showToast('أدخل اسم الدور.','#E74C3C');return false;}
-  return canonicalAccommodationStructure('update_accommodation_floor',{p_floor_id:floor.floorId,p_expected_revision:floor.revision,p_name:name.trim(),p_position:floor.position},'✅ تم حفظ بيانات الدور');
-}
-
-function deleteCanonicalAccommodationFloor(floorId){
-  var floor=findCanonicalAccommodationEntity('floor',floorId);
-  if(!floor||!confirm('حذف الدور "'+floor.name+'"؟'))return false;
-  return canonicalAccommodationStructure('delete_accommodation_floor',{p_floor_id:floor.floorId,p_expected_revision:floor.revision},'🗑️ تم حذف الدور');
-}
-
-function canonicalRoomDraft(room){
-  var roomNumber=prompt('رقم الغرفة:',room?room.roomNumber:'');
-  if(roomNumber===null||!String(roomNumber).trim())return null;
-  var baseText=prompt('عدد الأسرة:',room?room.baseCapacity:1);
-  if(baseText===null)return null;
-  var extraText=prompt('عدد الأسرة الإضافية:',room?room.extraBedCapacity:0);
-  if(extraText===null)return null;
-  baseText=String(baseText).trim();extraText=String(extraText).trim();
-  if(!/^\d+$/.test(baseText)||!/^\d+$/.test(extraText)){
-    showToast('أدخل عددًا صحيحًا غير سالب للأسرة والأسرة الإضافية.','#E74C3C');return null;
-  }
-  var baseCapacity=Number(baseText),extraBedCapacity=Number(extraText);
-  if(!Number.isSafeInteger(baseCapacity)||!Number.isSafeInteger(extraBedCapacity)){
-    showToast('عدد الأسرة خارج النطاق المسموح.','#E74C3C');return null;
-  }
-  if(baseCapacity+extraBedCapacity<1||!Number.isSafeInteger(baseCapacity+extraBedCapacity)){
-    showToast('يجب أن تحتوي الغرفة على سرير واحد على الأقل وبسعة صحيحة.','#E74C3C');return null;
-  }
-  return {p_room_number:String(roomNumber).trim(),p_base_capacity:baseCapacity,p_extra_bed_capacity:extraBedCapacity,p_notes:room&&room.notes||null,p_is_closed:room?room.isClosed:false,p_closed_day:room?room.closedDay:null,p_position:room?room.position:0};
-}
-
-function createCanonicalAccommodationRoom(floorId){
-  var floor=findCanonicalAccommodationEntity('floor',floorId),draft=floor&&canonicalRoomDraft(null);
-  if(!floor||!draft)return false;
-  draft.p_floor_id=floor.floorId;draft.p_position=(floor.rooms||[]).length;
-  return canonicalAccommodationStructure('create_accommodation_room',draft,'✅ تم إنشاء الغرفة '+draft.p_room_number);
-}
-
-function editCanonicalAccommodationRoom(roomId){
-  var room=findCanonicalAccommodationEntity('room',roomId),draft=room&&canonicalRoomDraft(room);
-  if(!room||!draft)return false;
-  draft.p_room_id=room.roomId;draft.p_expected_revision=room.revision;
-  return canonicalAccommodationStructure('update_accommodation_room',draft,'✅ تم حفظ بيانات الغرفة');
-}
-
-function toggleCanonicalAccommodationRoom(roomId){
-  var room=findCanonicalAccommodationEntity('room',roomId);
-  if(!room)return false;
-  return canonicalAccommodationStructure('update_accommodation_room',{p_room_id:room.roomId,p_expected_revision:room.revision,p_room_number:room.roomNumber,p_base_capacity:room.baseCapacity,p_extra_bed_capacity:room.extraBedCapacity,p_notes:room.notes,p_is_closed:!room.isClosed,p_closed_day:null,p_position:room.position},room.isClosed?'🔓 تم فتح الغرفة':'🔒 تم إغلاق الغرفة مؤقتًا');
-}
-
-function deleteCanonicalAccommodationRoom(roomId){
-  var room=findCanonicalAccommodationEntity('room',roomId);
-  if(!room||!confirm('حذف الغرفة '+room.roomNumber+'؟'))return false;
-  return canonicalAccommodationStructure('delete_accommodation_room',{p_room_id:room.roomId,p_expected_revision:room.revision},'🗑️ تم إزالة الغرفة من التسكين');
-}
-
 function assignCanonicalAccommodation(roomId){
   if(!currentConferenceSectionCapability('accommodationManage')){showToast('ليس لديك صلاحية إدارة التسكين.','#E74C3C');return false;}
   var room=findCanonicalAccommodationEntity('room',roomId);
@@ -3000,10 +2902,12 @@ function formatCanonicalAccommodationAssignmentFailure(error){
 }
 function confirmCanonicalAccommodationAssignment(){
   var draft=canonicalAccommodationAssignmentDraft,error=ge('canonicalAccommodationAssignmentError'),button=ge('canonicalAccommodationAssignmentConfirm');
-  if(!draft||!error||!draft.selectedParticipationId)return false;
+  if(!draft||!error||!draft.selectedParticipationId||button&&button.disabled)return false;
   var interval=getCanonicalAccommodationIntervalDraft(),current=getCurrentConference();
   if(interval.error){error.textContent=interval.error;return false;}
-  var available=getCanonicalAccommodationAvailableParticipations(draft.participations,canonicalAccommodationState(),interval.arrivalDay,interval.leaveDay);
+  var participationState=window.PlatformIntegration&&window.PlatformIntegration.getConferenceParticipationState(current.id);
+  var activeParticipations=(participationState&&participationState.items||[]).filter(function(item){return item.status==='active';});
+  var available=getCanonicalAccommodationAvailableParticipations(activeParticipations,canonicalAccommodationState(),interval.arrivalDay,interval.leaveDay);
   if(!available.some(function(item){return String(item.participationId)===String(draft.selectedParticipationId);})){
     error.textContent='تغيرت بيانات التسكين على جهاز آخر أو توجد إقامة متداخلة. أعد اختيار الفترة والشخص.';renderCanonicalAccommodationAssignmentCandidates();return false;
   }
@@ -6490,7 +6394,7 @@ function liveSearch(q){
     ac.forEach(function(c){h+='<div style="background:#FFF9EC;border:1px solid #F9D57A;border-radius:5px;padding:4px 7px;margin-bottom:2px;display:flex;justify-content:space-between;font-size:11px"><span>🧒 '+esc(c.name)+'</span><span style="color:#7D4E00;font-size:9px">'+esc(c.guardianFullName||c.guardian||'')+'</span></div>'});
     if(lg.length)h+='<div style="font-size:9px;color:#E74C3C;margin-top:3px">غادر: '+lg.map(function(g){return esc(gn(g))}).join('، ')+'</div>';
     if(tSeats.length){h+='<div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:3px">';tSeats.forEach(function(x){h+='<span style="background:#D5F5E3;border:1.5px solid #27AE60;border-radius:5px;padding:2px 7px;font-size:9px;font-weight:700">'+esc(x.t.icon)+' كرسي '+x.s.seat+': '+esc(x.s.name)+'</span>'});h+='</div>';}
-    var roomEditAction=getCanonicalConferenceCoreLink(current.id)?"editCanonicalAccommodationRoom('"+r.id+"')":"openRoomEditor('"+house.id+"', '"+floor.id+"', '"+r.id+"')";
+    var roomEditAction=getCanonicalConferenceCoreLink(current.id)?"editCanonicalHouseRoom('"+r.id+"')":"openRoomEditor('"+house.id+"', '"+floor.id+"', '"+r.id+"')";
     h+='<div class="row" style="margin-top:7px;gap:4px"><button class="btn btn-blue btn-sm" onclick="'+roomEditAction+'">✏️</button></div>';
     h+='</div></div>';
   });
@@ -9139,15 +9043,26 @@ function renderHouseTemplatesSettings() {
 function refreshCanonicalHouseDirectory(message){return window.CanonicalConferenceHouses.hydrate().then(function(){renderSettings();if(message)showToast(message);return true;},function(){showToast('تعذر حفظ بيت المؤتمر.','#E74C3C');return false;});}
 if(window.addEventListener)window.addEventListener('conference-house-directory-change',function(){if(settingsTab==='houses')renderSettings();});
 function selectCanonicalHouse(id){selectedHouseTemplateId=id;renderSettings();}
-function createHouseTemplate(){var name=prompt('اسم البيت:');if(!name||!name.trim())return false;return window.CanonicalConferenceHouses.mutate('create_house',{name:name.trim(),description:'',position:0}).then(function(){return refreshCanonicalHouseDirectory('✅ تم إنشاء البيت');},function(){showToast('تعذر إنشاء البيت.','#E74C3C');return false;});}
-function editCanonicalHouseDirectory(id){var state=window.CanonicalConferenceHouses.getState(),house=(state.houses||[]).filter(function(item){return item.houseId===id;})[0],name=house&&prompt('اسم البيت:',house.name);if(!name||!name.trim())return false;return window.CanonicalConferenceHouses.mutate('update_house',{houseId:id,expectedRevision:house.revision,name:name.trim(),description:house.description||'',position:house.position,isActive:house.isActive}).then(function(){return refreshCanonicalHouseDirectory('✅ تم حفظ البيت');});}
+function createHouseTemplate(){var name=prompt('اسم البيت:');if(name===null)return false;name=String(name).trim();if(!name){showToast('أدخل اسم البيت.','#E74C3C');return false;}return window.CanonicalConferenceHouses.mutate('create_house',{name:name,description:'',position:0}).then(function(){return refreshCanonicalHouseDirectory('✅ تم إنشاء البيت');},function(){showToast('تعذر إنشاء البيت.','#E74C3C');return false;});}
+function editCanonicalHouseDirectory(id){var state=window.CanonicalConferenceHouses.getState(),house=(state.houses||[]).filter(function(item){return item.houseId===id;})[0],name=house&&prompt('اسم البيت:',house.name);if(!house||name===null)return false;name=String(name).trim();if(!name){showToast('أدخل اسم البيت.','#E74C3C');return false;}return window.CanonicalConferenceHouses.mutate('update_house',{houseId:id,expectedRevision:house.revision,name:name,description:house.description||'',position:house.position,isActive:house.isActive}).then(function(){return refreshCanonicalHouseDirectory('✅ تم حفظ البيت');});}
 function deactivateCanonicalHouse(id){var state=window.CanonicalConferenceHouses.getState(),house=(state.houses||[]).filter(function(item){return item.houseId===id;})[0];if(!house||!confirm('إيقاف البيت عن الاستخدام الجديد؟'))return false;return window.CanonicalConferenceHouses.mutate('deactivate_house',{houseId:id,expectedRevision:house.revision}).then(function(){return refreshCanonicalHouseDirectory('✅ تم إيقاف البيت');});}
-function addCanonicalHouseFloor(id){var name=prompt('اسم الدور:');if(!name||!name.trim())return false;return window.CanonicalConferenceHouses.mutate('create_floor',{houseId:id,name:name.trim(),position:0}).then(function(){return refreshCanonicalHouseDirectory('✅ تم حفظ الدور');});}
-function addCanonicalHouseRoom(id){var number=prompt('رقم الغرفة:');if(!number||!number.trim())return false;var capacity=parseInt(prompt('عدد الأسرة الأساسية:','1'),10);if(!isFinite(capacity)||capacity<0)return false;return window.CanonicalConferenceHouses.mutate('create_room',{floorId:id,roomNumber:number.trim(),baseCapacity:capacity,extraBedCapacity:0,notes:'',position:0}).then(function(){return refreshCanonicalHouseDirectory('✅ تم حفظ الغرفة');});}
+function addCanonicalHouseFloor(id){var name=prompt('اسم الدور:');if(name===null)return false;name=String(name).trim();if(!name){showToast('أدخل اسم الدور.','#E74C3C');return false;}return window.CanonicalConferenceHouses.mutate('create_floor',{houseId:id,name:name,position:0}).then(function(){return refreshCanonicalHouseDirectory('✅ تم حفظ الدور');});}
+function canonicalHouseRoomDraft(room){
+  var number=prompt('رقم الغرفة:',room?room.roomNumber:'');if(number===null||!String(number).trim())return null;
+  var baseText=prompt('عدد الأسرة الأساسية:',String(room?room.baseCapacity:1));if(baseText===null)return null;
+  var extraText=prompt('عدد الأسرة الإضافية:',String(room?room.extraBedCapacity:0));if(extraText===null)return null;
+  baseText=String(baseText).trim();extraText=String(extraText).trim();
+  if(!/^\d+$/.test(baseText)||!/^\d+$/.test(extraText)){showToast('أدخل عددًا صحيحًا غير سالب للأسرة والأسرة الإضافية.','#E74C3C');return null;}
+  var base=Number(baseText),extra=Number(extraText);
+  if(!Number.isSafeInteger(base)||!Number.isSafeInteger(extra)){showToast('عدد الأسرة خارج النطاق المسموح.','#E74C3C');return null;}
+  if(base+extra<1||!Number.isSafeInteger(base+extra)){showToast('يجب أن تحتوي الغرفة على سرير واحد على الأقل وبسعة صحيحة.','#E74C3C');return null;}
+  return {roomNumber:String(number).trim(),baseCapacity:base,extraBedCapacity:extra,notes:room&&room.notes||'',position:room?room.position:0};
+}
+function addCanonicalHouseRoom(id){var draft=canonicalHouseRoomDraft(null);if(!draft)return false;draft.floorId=id;return window.CanonicalConferenceHouses.mutate('create_room',draft).then(function(){return refreshCanonicalHouseDirectory('✅ تم حفظ الغرفة');});}
 function findCanonicalHouseDirectoryEntity(kind,id){var state=window.CanonicalConferenceHouses.getState(),found=null;(state&&state.houses||[]).some(function(house){if(kind==='house'&&house.houseId===id){found=house;return true;}return (house.floors||[]).some(function(floor){if(kind==='floor'&&floor.floorId===id){found=floor;return true;}return (floor.rooms||[]).some(function(room){if(kind==='room'&&room.roomId===id){found=room;return true;}return false;});});});return found;}
-function editCanonicalHouseFloor(id){var floor=findCanonicalHouseDirectoryEntity('floor',id),name=floor&&prompt('اسم الدور:',floor.name);if(!name||!name.trim())return false;return window.CanonicalConferenceHouses.mutate('update_floor',{floorId:id,expectedRevision:floor.revision,name:name.trim(),position:floor.position}).then(function(){return refreshCanonicalHouseDirectory('✅ تم حفظ الدور');});}
+function editCanonicalHouseFloor(id){var floor=findCanonicalHouseDirectoryEntity('floor',id),name=floor&&prompt('اسم الدور:',floor.name);if(!floor||name===null)return false;name=String(name).trim();if(!name){showToast('أدخل اسم الدور.','#E74C3C');return false;}return window.CanonicalConferenceHouses.mutate('update_floor',{floorId:id,expectedRevision:floor.revision,name:name,position:floor.position}).then(function(){return refreshCanonicalHouseDirectory('✅ تم حفظ الدور');});}
 function deleteCanonicalHouseFloor(id){var floor=findCanonicalHouseDirectoryEntity('floor',id);if(!floor||!confirm('حذف الدور؟'))return false;return window.CanonicalConferenceHouses.mutate('delete_floor',{floorId:id,expectedRevision:floor.revision}).then(function(){return refreshCanonicalHouseDirectory('✅ تم حذف الدور');});}
-function editCanonicalHouseRoom(id){var room=findCanonicalHouseDirectoryEntity('room',id),number=room&&prompt('رقم الغرفة:',room.roomNumber);if(!number||!number.trim())return false;var base=parseInt(prompt('عدد الأسرة الأساسية:',String(room.baseCapacity)),10),extra=parseInt(prompt('عدد الأسرة الإضافية:',String(room.extraBedCapacity)),10);if(!isFinite(base)||base<0||!isFinite(extra)||extra<0)return false;return window.CanonicalConferenceHouses.mutate('update_room',{roomId:id,expectedRevision:room.revision,roomNumber:number.trim(),baseCapacity:base,extraBedCapacity:extra,notes:room.notes||'',position:room.position}).then(function(){return refreshCanonicalHouseDirectory('✅ تم حفظ الغرفة');});}
+function editCanonicalHouseRoom(id){var room=findCanonicalHouseDirectoryEntity('room',id),draft=room&&canonicalHouseRoomDraft(room);if(!room||!draft)return false;draft.roomId=id;draft.expectedRevision=room.revision;return window.CanonicalConferenceHouses.mutate('update_room',draft).then(function(){return refreshCanonicalHouseDirectory('✅ تم حفظ الغرفة');});}
 function deleteCanonicalHouseRoom(id){var room=findCanonicalHouseDirectoryEntity('room',id);if(!room||!confirm('حذف الغرفة؟'))return false;return window.CanonicalConferenceHouses.mutate('delete_room',{roomId:id,expectedRevision:room.revision}).then(function(){return refreshCanonicalHouseDirectory('✅ تم حذف الغرفة');});}
 
 function createLegacyHouseTemplate() {

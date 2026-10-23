@@ -37,7 +37,7 @@ test('accommodation renderer has denied, loading, empty, error and retry states 
   assert.match(render,/retryCanonicalConferenceAccommodation/);
   assert.match(render,/if\(!houses\.length\)/);
   assert.match(render,/if\(canManage\)/);
-  assert.match(body('canonicalAccommodationStructure','createCanonicalAccommodationHouse'),/accommodationManage/);
+  assert.match(body('chooseCanonicalConferenceHouse','closeCanonicalConferenceHouseSelector'),/accommodationManage/);
 });
 test('person dialog has an isolated visible stacking context and accessible close control',()=>{
   assert.match(html,/id="personModal"[\s\S]*role="dialog"[\s\S]*aria-modal="true"/);

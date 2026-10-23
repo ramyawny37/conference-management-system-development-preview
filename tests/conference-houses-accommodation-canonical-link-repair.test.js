@@ -8,7 +8,7 @@ const script=fs.readFileSync('script.js','utf8');
 const discovery=fs.readFileSync('js/supabase/canonical-conference-discovery.js','utf8');
 const integration=fs.readFileSync('js/platform-integration.js','utf8');
 const roomSql=fs.readFileSync('supabase/migrations/20261020131411_conference_room_assignment_foundation.sql','utf8');
-const functions=script.slice(script.indexOf('function chooseCanonicalConferenceHouse('),script.indexOf('function createCanonicalAccommodationHouse('));
+const functions=script.slice(script.indexOf('function chooseCanonicalConferenceHouse('),script.indexOf('function assignCanonicalAccommodation('));
 
 function runtime(options){
   options=options||{};

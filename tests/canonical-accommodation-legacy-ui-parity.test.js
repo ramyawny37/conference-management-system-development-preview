@@ -28,7 +28,7 @@ test('room states and guest badges derive from canonical operational occupancies
   assert.match(renderer,/getCanonicalAccommodationOccupanciesOnDay/);
   for(const state of ['room-status-closed','room-status-over','room-status-full','room-status-partial','room-status-empty'])assert.ok(renderer.includes(state),state);
   assert.match(renderer,/accommodation-arrival-badge/);
-  assert.match(renderer,/room\.keyHolderOccupancyId===occupancy\.occupancyId/);
+  assert.match(renderer,/activeKeyHolder&&String\(activeKeyHolder\.occupancyId\)===String\(occupancy\.occupancyId\)/);
   assert.match(renderer,/extraBedPersonType==='child'/);
   assert.match(renderer,/bedType==='extra'/);
 });
@@ -162,9 +162,9 @@ test('move confirmation refuses a second submit while first mutation is pending'
   assert.match(body,/if\(button\)button\.disabled=true/);
 });
 
-test('canonical room editor accepts numeric base and extra bed capacities',()=>{
-  const start=ui.indexOf('function canonicalRoomDraft(');
-  const end=ui.indexOf('\nfunction createCanonicalAccommodationRoom(',start);
+test('central house directory room editor accepts numeric base and extra bed capacities',()=>{
+  const start=ui.indexOf('function canonicalHouseRoomDraft(');
+  const end=ui.indexOf('\nfunction addCanonicalHouseRoom(',start);
   const body=ui.slice(start,end);
   assert.ok(start>=0&&end>start);
   const expressions=[...body.matchAll(/!\/(\^.*?\$)\/\.test\((?:baseText|extraText)\)/g)];
@@ -178,22 +178,37 @@ test('canonical room editor accepts numeric base and extra bed capacities',()=>{
   }
 });
 
-test('canonical room editor rejects zero or unsafe total bed capacity',()=>{
-  const start=ui.indexOf('function canonicalRoomDraft(');
-  const end=ui.indexOf('\nfunction createCanonicalAccommodationRoom(',start);
+test('central house directory room editor rejects zero or unsafe total bed capacity',()=>{
+  const start=ui.indexOf('function canonicalHouseRoomDraft(');
+  const end=ui.indexOf('\nfunction addCanonicalHouseRoom(',start);
   const body=ui.slice(start,end);
   assert.ok(start>=0&&end>start);
-  assert.match(body,/baseCapacity\+extraBedCapacity<1/);
-  assert.match(body,/!Number\.isSafeInteger\(baseCapacity\+extraBedCapacity\)/);
+  assert.match(body,/base\+extra<1/);
+  assert.match(body,/!Number\.isSafeInteger\(base\+extra\)/);
   assert.match(body,/يجب أن تحتوي الغرفة على سرير واحد على الأقل/);
 });
 
-test('canonical house and floor editors reject blank names without sending mutations',()=>{
+test('central house room draft behavior accepts valid beds and rejects zero capacity before mutation',()=>{
+  const start=ui.indexOf('function canonicalHouseRoomDraft(');
+  const end=ui.indexOf('\nfunction addCanonicalHouseRoom(',start);
+  const source=ui.slice(start,end)+';this.draft=canonicalHouseRoomDraft;';
+  function execute(values){
+    const queue=values.slice(),toasts=[],sandbox={prompt:()=>queue.shift(),showToast:message=>toasts.push(message),String,Number};
+    vm.runInNewContext(source,sandbox);
+    return {value:sandbox.draft(null),toasts};
+  }
+  assert.deepEqual(JSON.parse(JSON.stringify(execute(['101','2','1']).value)),{roomNumber:'101',baseCapacity:2,extraBedCapacity:1,notes:'',position:0});
+  const rejected=execute(['101','0','0']);
+  assert.equal(rejected.value,null);
+  assert.equal(rejected.toasts.length,1);
+});
+
+test('central house directory editors reject blank names without sending mutations',()=>{
   for(const [name,next] of [
-    ['createCanonicalAccommodationHouse','editCanonicalAccommodationHouse'],
-    ['editCanonicalAccommodationHouse','deleteCanonicalAccommodationHouse'],
-    ['createCanonicalAccommodationFloor','editCanonicalAccommodationFloor'],
-    ['editCanonicalAccommodationFloor','deleteCanonicalAccommodationFloor']
+    ['createHouseTemplate','editCanonicalHouseDirectory'],
+    ['editCanonicalHouseDirectory','deactivateCanonicalHouse'],
+    ['addCanonicalHouseFloor','canonicalHouseRoomDraft'],
+    ['editCanonicalHouseFloor','deleteCanonicalHouseFloor']
   ]){
     const start=ui.indexOf('function '+name+'(');
     const end=ui.indexOf('\nfunction '+next+'(',start);
@@ -202,8 +217,15 @@ test('canonical house and floor editors reject blank names without sending mutat
     assert.match(body,/name===null/,name);
     assert.match(body,/name=String\(name\)\.trim\(\)/,name);
     assert.match(body,/if\(!name\)\{showToast\(/,name);
-    assert.ok(body.indexOf('if(!name){showToast(')<body.indexOf('canonicalAccommodationStructure('),name);
+    assert.ok(body.indexOf('if(!name){showToast(')<body.indexOf('CanonicalConferenceHouses.mutate('),name);
   }
+});
+
+test('retired conference-scoped structure writers are absent from the active frontend',()=>{
+  for(const name of ['canonicalAccommodationStructure','createCanonicalAccommodationHouse','editCanonicalAccommodationHouse','deleteCanonicalAccommodationHouse','createCanonicalAccommodationFloor','editCanonicalAccommodationFloor','deleteCanonicalAccommodationFloor','createCanonicalAccommodationRoom','editCanonicalAccommodationRoom','toggleCanonicalAccommodationRoom','deleteCanonicalAccommodationRoom']){
+    assert.doesNotMatch(ui,new RegExp('function\\s+'+name+'\\s*\\('),name);
+  }
+  assert.match(ui,/function editCanonicalHouseRoom\(/);
 });
 
 test('canonical accommodation key summary counts only holders present on operational day',()=>{

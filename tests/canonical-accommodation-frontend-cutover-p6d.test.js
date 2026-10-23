@@ -98,8 +98,9 @@ test('linked renderer reads only canonical hierarchy and Person occupancy projec
   assert.match(source,/house\.floors/);
   assert.match(source,/floor\.rooms/);
   assert.match(source,/room\.occupancies/);
-  assert.match(source,/occupancy\.person\.fullName/);
-  assert.match(source,/occupancy\.person\.church/);
+  assert.match(source,/var person=occupancy\.person\|\|\{\}/);
+  assert.match(source,/person\.fullName/);
+  assert.match(source,/person\.church/);
   assert.doesNotMatch(source,/current\.houses|room\.guests|room\.children|getPeopleList|peopleDb|\bsave\s*\(/);
   assert.doesNotMatch(source,/occupancy\.occupancyId\s*\+\s*'<\/|participationId\s*\+\s*'<\//);
   const branch=scriptSource.slice(scriptSource.indexOf('function renderAccommodation()'),scriptSource.indexOf('var normalizedSearchQuery',scriptSource.indexOf('function renderAccommodation()')));
@@ -129,7 +130,7 @@ test('linked mutation functions never save or mutate snapshot houses/guest array
   assert.match(source,/assignConferenceAccommodation/);
   assert.match(source,/moveConferenceAccommodation/);
   assert.match(source,/removeConferenceAccommodation/);
-  assert.match(source,/mutateConferenceAccommodationStructure/);
+  assert.doesNotMatch(source,/mutateConferenceAccommodationStructure/);
   assert.doesNotMatch(source,/current\.houses\s*=|room\.guests|room\.children|peopleDb|\bsave\s*\(/);
 });
 
@@ -168,7 +169,7 @@ test('canonical room cards retain capacity, notes, contact and stay-day details'
   const end=scriptSource.indexOf('function ',start+10);
   assert.ok(start>=0&&end>start);
   const render=scriptSource.slice(start,end);
-  for(const field of ['room.baseCapacity','room.extraBedCapacity','room.notes','occupancy.person.phone','occupancy.person.church','occupancy.arrivalDay','occupancy.leaveDay']){
+  for(const field of ['room.baseCapacity','room.extraBedCapacity','room.notes','person.phone','person.church','occupancy.arrivalDay','occupancy.leaveDay']){
     assert.ok(render.includes(field),'canonical accommodation display must include '+field);
   }
   assert.ok(render.includes('accommodation-room-details'));
@@ -192,7 +193,7 @@ test('canonical accommodation search includes person name phone and church',()=>
   assert.ok(render.includes("person.fullName||''"));
   assert.ok(render.includes("person.phone||''"));
   assert.ok(render.includes("person.church||''"));
-  assert.ok(scriptSource.includes('ابحث برقم الغرفة أو اسم النزيل أو الهاتف أو الكنيسة'));
+  assert.ok(scriptSource.includes('ابحث بالبيت أو الدور أو الغرفة أو النزيل أو الهاتف أو الكنيسة'));
 });
 
 test('canonical accommodation shows guardian relationship without local person fallback',()=>{
@@ -224,14 +225,14 @@ test('canonical accommodation filters extra beds children and accompanied guests
   }
 });
 
-test('canonical room capacity draft stops on cancel and rejects empty values',()=>{
-  const start=scriptSource.indexOf('function canonicalRoomDraft(room){');
-  const end=scriptSource.indexOf('function createCanonicalAccommodationRoom(',start);
+test('central house directory room capacity draft stops on cancel and rejects empty values',()=>{
+  const start=scriptSource.indexOf('function canonicalHouseRoomDraft(room){');
+  const end=scriptSource.indexOf('function addCanonicalHouseRoom(',start);
   const draft=scriptSource.slice(start,end);
   assert.ok(draft.includes('if(baseText===null)return null;'));
   assert.ok(draft.includes('if(extraText===null)return null;'));
-  assert.ok(draft.includes('Number.isSafeInteger(baseCapacity)'));
-  assert.ok(draft.includes('Number.isSafeInteger(extraBedCapacity)'));
+  assert.ok(draft.includes('Number.isSafeInteger(base)'));
+  assert.ok(draft.includes('Number.isSafeInteger(extra)'));
 });
 
 test('canonical extra bed occupancy explicitly distinguishes child and adult',()=>{
@@ -274,10 +275,10 @@ test('period availability behavior covers overlap, ended stays, cancellation and
   assert.deepEqual(Array.from(sandbox.available(participations,state,6,8),item=>item.participationId),['housed','free','ended','cancelled']);
 });
 
-test('canonical accommodation floor names reject whitespace-only input',()=>{
-  const start=scriptSource.indexOf('function createCanonicalAccommodationFloor(houseId){');
-  const end=scriptSource.indexOf('function deleteCanonicalAccommodationFloor(',start);
+test('central house directory floor names reject whitespace-only input',()=>{
+  const start=scriptSource.indexOf('function addCanonicalHouseFloor(id){');
+  const end=scriptSource.indexOf('function deleteCanonicalHouseFloor(',start);
   const section=scriptSource.slice(start,end);
-  assert.ok(section.includes('if(!house||!name||!name.trim())return false;'));
-  assert.ok(section.includes('if(!floor||!name||!name.trim())return false;'));
+  assert.ok(section.includes("name=String(name).trim()"));
+  assert.ok(section.includes("if(!name){showToast('أدخل اسم الدور."));
 });
