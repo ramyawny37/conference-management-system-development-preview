@@ -2634,10 +2634,13 @@ function renderAccommodationSearchControls(matchCount,isFiltering){
 function canonicalAccommodationMutation(promise,successMessage,failureMessage){
   var conference=getCurrentConference(),conferenceId=conference&&String(conference.id||''),generation=conferenceTabHydrationGeneration;
   return promise.then(function(result){
-    return refreshCanonicalConferenceOperationalDependencies(conferenceId,generation).then(function(){return result;});
-  }).then(function(result){
-    if(successMessage)showToast(successMessage);
-    return result;
+    return refreshCanonicalConferenceOperationalDependencies(conferenceId,generation).then(function(){
+      if(successMessage)showToast(successMessage);
+      return result;
+    },function(){
+      showToast('تم تنفيذ العملية، لكن تعذر تحديث البيانات المعروضة. أعد تحميل التسكين للتحقق من النتيجة.','#E74C3C');
+      return result;
+    });
   }).catch(function(error){
     var message=typeof failureMessage==='function'?failureMessage(error):failureMessage;
     showToast(message||'تعذر حفظ بيانات التسكين.','#E74C3C');return false;
