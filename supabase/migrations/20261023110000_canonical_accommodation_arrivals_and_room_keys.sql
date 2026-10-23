@@ -32,6 +32,24 @@ create trigger clear_conference_room_key_on_stay_delete
 before delete on public.conference_accommodation_occupancies
 for each row execute function platform_private.clear_conference_room_key_on_stay_delete();
 
+-- When a key recipient moves, invalidate the old room's key delivery.
+-- The historical-stay branch retains its original room and does not fire this.
+create or replace function platform_private.clear_conference_room_key_on_stay_move()
+returns trigger language plpgsql security definer set search_path='' as $
+begin
+ if old.room_id is distinct from new.room_id then
+  update public.conference_room_assignments ra
+  set key_holder_occupancy_id=null,key_delivered_at=null,key_delivered_by=null,
+      revision=ra.revision+1,updated_at=statement_timestamp()
+  where ra.key_holder_occupancy_id=old.id and ra.room_id=old.room_id;
+ end if;
+ return new;
+end $;
+drop trigger if exists clear_conference_room_key_on_stay_move on public.conference_accommodation_occupancies;
+create trigger clear_conference_room_key_on_stay_move
+before update of room_id on public.conference_accommodation_occupancies
+for each row execute function platform_private.clear_conference_room_key_on_stay_move();
+
 alter table public.conference_accommodation_occupancies
  drop constraint if exists conference_accommodation_arrival_complete_check;
 alter table public.conference_accommodation_occupancies
@@ -157,7 +175,7 @@ begin
  end if;
 end $dispatch$;
 
-revoke all on function platform_private.clear_conference_room_key_on_stay_delete(),platform_private.inherit_conference_accommodation_arrival(),public.mutate_conference_accommodation_operations(uuid,uuid,uuid,text,jsonb) from public,anon,authenticated,service_role;
+revoke all on function platform_private.clear_conference_room_key_on_stay_delete(),platform_private.clear_conference_room_key_on_stay_move(),platform_private.inherit_conference_accommodation_arrival(),public.mutate_conference_accommodation_operations(uuid,uuid,uuid,text,jsonb) from public,anon,authenticated,service_role;
 grant execute on function public.mutate_conference_accommodation_operations(uuid,uuid,uuid,text,jsonb) to service_role;
 comment on column public.conference_accommodation_occupancies.arrived_at is 'Actual Conference arrival confirmation for this canonical stay; null means not yet arrived.';
 comment on column public.conference_room_assignments.key_holder_occupancy_id is 'Current room-key recipient stay. Read projection suppresses stale recipients after move/removal.';
