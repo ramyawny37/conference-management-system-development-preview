@@ -103,3 +103,15 @@ test('move effective day accepts ordinary numeric days and rejects malformed inp
   assert.equal(numericDay.test(''),false);
   assert.equal(numericDay.test('-1'),false);
 });
+
+test('canonical move checks destination capacity at every occupancy start in requested interval',()=>{
+  const start=ui.indexOf('function confirmCanonicalAccommodationMoveDay(');
+  const end=ui.indexOf('\nfunction removeCanonicalAccommodation(',start);
+  const body=ui.slice(start,end);
+  assert.ok(start>=0&&end>start);
+  assert.match(body,/findCanonicalAccommodationEntity\('room',draft\.roomId\)/);
+  assert.match(body,/canonicalAccommodationIntervalsOverlap\(day,draft\.leaveDay,item\.arrivalDay,item\.leaveDay\)/);
+  assert.match(body,/boundaries\.push\(Number\(item\.arrivalDay\)\)/);
+  assert.match(body,/getCanonicalAccommodationOccupanciesOnDay\(targetRoom,checkDay\)\.length>=capacity/);
+  assert.ok(body.indexOf('if(isFull)')<body.indexOf('moveConferenceAccommodation('));
+});
