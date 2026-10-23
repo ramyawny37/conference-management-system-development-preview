@@ -2860,7 +2860,9 @@ function canonicalRoomDraft(room){
   var extraText=prompt('عدد الأسرة الإضافية:',room?room.extraBedCapacity:0);
   if(extraText===null)return null;
   baseText=String(baseText).trim();extraText=String(extraText).trim();
-  if(!/^\d+$/.test(baseText)||!/^\d+$/.test(extraText))return null;
+  if(!/^\d+$/.test(baseText)||!/^\d+$/.test(extraText)){
+    showToast('أدخل عددًا صحيحًا غير سالب للأسرة والأسرة الإضافية.','#E74C3C');return null;
+  }
   var baseCapacity=Number(baseText),extraBedCapacity=Number(extraText);
   if(!Number.isSafeInteger(baseCapacity)||!Number.isSafeInteger(extraBedCapacity))return null;
   if(baseCapacity+extraBedCapacity<1||!Number.isSafeInteger(baseCapacity+extraBedCapacity)){
