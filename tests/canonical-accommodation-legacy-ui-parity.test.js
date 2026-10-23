@@ -49,3 +49,13 @@ test('responsive room and guest layouts and collapsed floors exist',()=>{
   assert.match(css,/accommodation-room-card\.room-status-over/);
   assert.match(css,/@media\(max-width:680px\)/);
 });
+
+test('canonical move picker excludes closed, current and full rooms',()=>{
+  const start=ui.indexOf('function moveCanonicalAccommodation(');
+  const end=ui.indexOf('\nfunction removeCanonicalAccommodation(',start);
+  const body=ui.slice(start,end);
+  assert.match(body,/!r\.isClosed&&r\.roomId!==occupancy\.roomId/);
+  assert.match(body,/getCanonicalAccommodationOccupanciesOnDay\(r,getConferenceOperationalDay\(current\)\)\.length/);
+  assert.match(body,/Number\(r\.baseCapacity\|\|0\)\+Number\(r\.extraBedCapacity\|\|0\)/);
+  assert.match(body,/integration\.moveConferenceAccommodation/);
+});
