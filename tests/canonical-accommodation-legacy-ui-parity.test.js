@@ -303,3 +303,19 @@ test('canonical search preserves text caret and selection after filtering rerend
   assert.match(body,/renderAccommodation\(\)/);
   assert.match(body,/input\.setSelectionRange\(Math\.min\(selectionStart,length\),Math\.min\(selectionEnd,length\),selectionDirection\)/);
 });
+
+test('canonical guest cards tolerate missing person details',()=>{
+  const start=ui.indexOf('function renderCanonicalAccommodation(');
+  const end=ui.indexOf('\nfunction ',start+1);
+  const body=ui.slice(start,end);
+  assert.match(body,/roomOccupancies\.forEach\(function\(occupancy\)\{var person=occupancy\.person\|\|\{\}/);
+  assert.match(body,/esc\(person\.fullName\|\|'نزيل بدون اسم'\)/);
+  assert.match(body,/esc\(person\.church\|\|''\)/);
+  assert.match(body,/person\.phone\?' • '\+esc\(person\.phone\)/);
+});
+test('available-room filter excludes zero-capacity rooms',()=>{
+  const start=ui.indexOf('function renderCanonicalAccommodation(');
+  const end=ui.indexOf('\nfunction ',start+1);
+  const body=ui.slice(start,end);
+  assert.match(body,/filter==='available'&&\(room\.isClosed\|\|Number\(room\.baseCapacity\|\|0\)\+Number\(room\.extraBedCapacity\|\|0\)<=0/);
+});
