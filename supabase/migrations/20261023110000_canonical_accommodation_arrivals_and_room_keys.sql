@@ -92,7 +92,7 @@ begin
  ctx:=platform_private.require_conference_accommodation_context(p_device,p_conference,'conference.accommodation.manage',true);
  actor:=(ctx->>'actorUserId')::uuid;authz:=platform_private.validated_phase1c_device_authorization(actor,p_device);
  select new_values into result from platform.audit_events where actor_user_id=actor and operation_id=p_operation_id
-   and scope_id=p_conference::text and action=case when p_operation='set_arrival' then 'conference.accommodation.arrival_updated' else 'conference.accommodation.room_key_updated' end limit 1;
+   and scope_id=p_conference and action=case when p_operation='set_arrival' then 'conference.accommodation.arrival_updated' else 'conference.accommodation.room_key_updated' end limit 1;
  if result is not null then return result||jsonb_build_object('status','duplicate');end if;
  if p_operation='set_arrival' then
   perform platform_private.require_exact_jsonb_keys(p_args,array['occupancyId','expectedRevision','arrived']);
@@ -129,7 +129,7 @@ begin
  insert into platform.audit_events(actor_user_id,actor_device_authorization_id,domain,module,action,entity_type,entity_id,scope_type,scope_id,old_values,new_values,metadata,operation_id,source)
  values(actor,authz,'platform','conference',case when p_operation='set_arrival' then 'conference.accommodation.arrival_updated' else 'conference.accommodation.room_key_updated' end,
   case when p_operation='set_arrival' then 'accommodation_occupancy' else 'conference_room_assignment' end,
-  case when p_operation='set_arrival' then occupancy.id else assignment.id end,'resource',p_conference::text,old_values,new_values,
+  case when p_operation='set_arrival' then occupancy.id else assignment.id end,'resource',p_conference,old_values,new_values,
   jsonb_build_object('conferenceId',p_conference,'roomId',room_id,'permissionKey','conference.accommodation.manage','authoritySource',ctx->>'authoritySource','grantId',ctx->'grantId'),p_operation_id,'rpc');
  return result;
 end $$;
