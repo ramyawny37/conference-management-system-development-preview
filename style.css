@@ -1300,3 +1300,10 @@ tr:nth-child(even) td{background:#F7FBFF}
 #tab0 .accommodation-dashboard .accommodation-room-card.rcard .accommodation-room-notes{width:100%}
 #tab0 .accommodation-dashboard .accommodation-room-card.rcard .room-more-actions summary{display:flex;align-items:center;justify-content:center;min-height:33px;list-style:none;cursor:pointer}
 #tab0 .accommodation-dashboard .accommodation-room-card.rcard .room-more-actions summary::-webkit-details-marker{display:none}
+
+/* Canonical room details: one dismiss action, with scrollable content in constrained viewports. */
+#roomModal.canonical-room-readonly .room-editor-modal{max-height:calc(100dvh - 24px);min-height:0}
+#roomModal.canonical-room-readonly .mbody{min-height:0;overflow-y:auto;overscroll-behavior:contain}
+#roomModal.canonical-room-readonly .room-modal-footer{grid-template-columns:minmax(120px,160px);justify-content:center}
+#roomModal.canonical-room-readonly .room-modal-header-icon{display:none}
+@media(max-height:540px){#roomModal.canonical-room-readonly .room-editor-modal{max-height:calc(100dvh - 12px)}#roomModal.canonical-room-readonly .room-modal-header{min-height:48px}#roomModal.canonical-room-readonly .mbody{padding:8px}}
