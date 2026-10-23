@@ -130,3 +130,14 @@ test('move confirmation stays open on failed central mutation and disables dupli
   assert.match(body,/if\(button\)button\.disabled=false/);
   assert.ok(body.indexOf('closeCanonicalAccommodationMoveDayDialog();')>body.indexOf('Promise.resolve(result).then'));
 });
+
+test('successful central accommodation mutation is not misreported as failed when hydration fails',()=>{
+  const start=ui.indexOf('function canonicalAccommodationMutation(');
+  const end=ui.indexOf('\nfunction refreshCanonicalConferenceOperationalDependencies(',start);
+  const body=ui.slice(start,end);
+  assert.ok(start>=0&&end>start);
+  assert.match(body,/refreshCanonicalConferenceOperationalDependencies\(conferenceId,generation\)\.then/);
+  assert.match(body,/تم تنفيذ العملية، لكن تعذر تحديث البيانات المعروضة/);
+  assert.match(body,/return result;/);
+  assert.match(body,/\.catch\(function\(error\)/);
+});
