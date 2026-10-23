@@ -72,7 +72,7 @@ begin
   if not found then raise exception 'ROOM_ASSIGNMENT_NOT_FOUND' using errcode='P0002';end if;
   if assignment.revision<>expected then raise exception 'ROOM_ASSIGNMENT_REVISION_CONFLICT' using errcode='40001';end if;
   if holder_id is not null then
-   select * into holder from public.conference_accommodation_occupancies where id=holder_id and conference_id=p_conference and room_id=room_id
+   select * into holder from public.conference_accommodation_occupancies where id=holder_id and conference_id=p_conference and room_id=(p_args->>'roomId')::uuid
     and arrival_day<=platform_private.conference_operational_day(p_conference)
     and coalesce(leave_day,platform_private.conference_accommodation_duration(p_conference)+1)>platform_private.conference_operational_day(p_conference) for key share;
    if not found then raise exception 'ROOM_KEY_HOLDER_NOT_CURRENT_OCCUPANT' using errcode='22023';end if;
