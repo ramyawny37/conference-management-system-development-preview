@@ -112,6 +112,9 @@ test('canonical move checks destination capacity at every occupancy start in req
   assert.match(body,/findCanonicalAccommodationEntity\('room',draft\.roomId\)/);
   assert.match(body,/canonicalAccommodationIntervalsOverlap\(day,draft\.leaveDay,item\.arrivalDay,item\.leaveDay\)/);
   assert.match(body,/boundaries\.push\(Number\(item\.arrivalDay\)\)/);
-  assert.match(body,/getCanonicalAccommodationOccupanciesOnDay\(targetRoom,checkDay\)\.length>=capacity/);
+  assert.match(body,/getCanonicalAccommodationOccupanciesOnDay\(targetRoom,checkDay\)/);
+  assert.match(body,/occupants\.length>=capacity/);
+  assert.match(body,/item\.bedType==='extra'/);
+  assert.match(body,/length>=bedCapacity/);
   assert.ok(body.indexOf('if(isFull)')<body.indexOf('moveConferenceAccommodation('));
 });
