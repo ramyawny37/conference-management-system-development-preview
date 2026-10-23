@@ -259,3 +259,13 @@ test('key handover rejects stale conference hydration generation',()=>{
   assert.match(body,/generation!==conferenceTabHydrationGeneration/);
   assert.ok(body.indexOf('generation!==conferenceTabHydrationGeneration')<body.indexOf('setConferenceAccommodationRoomKey('));
 });
+
+test('key handover rejects a change to the conference operational day',()=>{
+  const start=ui.indexOf('function setCanonicalAccommodationRoomKey(');
+  const end=ui.indexOf('\nfunction ',start+1);
+  const body=ui.slice(start,end);
+  assert.ok(start>=0&&end>start);
+  assert.match(body,/day=getConferenceOperationalDay\(current\)/);
+  assert.match(body,/String\(getConferenceOperationalDay\(selectedConference\)\)!==String\(day\)/);
+  assert.ok(body.indexOf('String(getConferenceOperationalDay(selectedConference))!==String(day)')<body.indexOf('setConferenceAccommodationRoomKey('));
+});
