@@ -3036,6 +3036,24 @@ function confirmCanonicalAccommodationMoveDay(){
   if(!conference||conference.id!==draft.conferenceId||!occupancy||occupancy.revision!==draft.revision||!currentConferenceSectionCapability('accommodationManage')){
     error.textContent='تغيرت بيانات التسكين أو الصلاحيات. أعد فتح عملية النقل.';return false;
   }
+  var targetRoom=findCanonicalAccommodationEntity('room',draft.roomId);
+  if(!targetRoom||targetRoom.isClosed||Number(targetRoom.baseCapacity||0)+Number(targetRoom.extraBedCapacity||0)<=0){
+    error.textContent='الغرفة المستهدفة لم تعد متاحة للنقل. أعد اختيار الغرفة.';return false;
+  }
+  var capacity=Number(targetRoom.baseCapacity||0)+Number(targetRoom.extraBedCapacity||0);
+  var boundaries=[day];
+  if(draft.leaveDay!=null&&draft.leaveDay!=='')boundaries.push(Number(draft.leaveDay));
+  (targetRoom.occupancies||[]).forEach(function(item){
+    if(item.participationStatus&&item.participationStatus!=='active')return;
+    if(canonicalAccommodationIntervalsOverlap(day,draft.leaveDay,item.arrivalDay,item.leaveDay)){
+      if(Number(item.arrivalDay)>day)boundaries.push(Number(item.arrivalDay));
+    }
+  });
+  var isFull=boundaries.some(function(checkDay){
+    if(draft.leaveDay!=null&&draft.leaveDay!==''&&checkDay>=Number(draft.leaveDay))return false;
+    return getCanonicalAccommodationOccupanciesOnDay(targetRoom,checkDay).length>=capacity;
+  });
+  if(isFull){error.textContent='الغرفة ممتلئة خلال فترة النقل المطلوبة. اختر غرفة أخرى أو غيّر يوم النقل.';return false;}
   if(button)button.disabled=true;
   closeCanonicalAccommodationMoveDayDialog();
   var result=canonicalAccommodationMutation(window.PlatformIntegration.moveConferenceAccommodation(conference.id,{occupancyId:draft.occupancyId,expectedRevision:draft.revision,roomId:draft.roomId,arrivalDay:day,leaveDay:draft.leaveDay,bedType:draft.bedType,extraBedPersonType:draft.extraBedPersonType}),'↔️ تم نقل النزيل');
