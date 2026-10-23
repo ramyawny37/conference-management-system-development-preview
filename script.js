@@ -3045,8 +3045,16 @@ function renderCanonicalAccommodation(state){
   if(!houses.length)h+='<div class="ui-state" role="status">لا توجد بيوت متاحة لهذا المؤتمر. استخدم زر اختيار بيت من بيوت المؤتمرات.</div>';
   state.houses.forEach(function(house){
     h+='<section class="card accommodation-house section-card"><div class="accommodation-house-title"><span>'+accommodationIcon('building')+'</span><strong>'+esc(house.name)+'</strong>'+(canManage?'<div class="row"><button class="btn btn-red btn-sm" onclick="unassignCanonicalConferenceHouse(\''+house.houseId+'\','+Number(house.assignmentRevision||1)+')">إلغاء الإتاحة</button></div>':'')+'</div>';
+    var houseRooms=rooms.filter(function(room){return (house.floors||[]).some(function(floor){return (floor.rooms||[]).indexOf(room)>=0;});});
+    var houseOccupied=houseRooms.filter(function(room){return getCanonicalAccommodationOccupanciesOnDay(room,operationalDay).length>0;}).length;
+    var houseClosed=houseRooms.filter(function(room){return room.isClosed===true;}).length;
+    h+='<div class="accommodation-house-summary" aria-label="ملخص غرف البيت"><strong>ملخص غرف التسكين</strong><div class="accommodation-house-metrics"><span>الغرف المختارة <b>'+houseRooms.length+'</b></span><span>المفتوحة <b>'+(houseRooms.length-houseClosed)+'</b></span><span>المغلقة <b>'+houseClosed+'</b></span><span>المشغولة <b>'+houseOccupied+'</b></span></div></div>';
     (house.floors||[]).forEach(function(floor){
-      h+='<div class="floor-section"><div class="floor-title"><strong>'+esc(floor.name)+'</strong></div><div class="rooms-grid">';
+      var visibleFloorRooms=(floor.rooms||[]).filter(function(room){return matchingRooms.indexOf(room)>=0;});
+      if(!visibleFloorRooms.length)return;
+      var floorKey=String(house.houseId)+'|'+String(floor.floorId||floor.id||floor.name);
+      var collapsed=!query&&accommodationCollapsedFloors[floorKey]===true;
+      h+='<div class="floor-section'+(collapsed?' is-collapsed':'')+'"><button type="button" class="accommodation-floor-header" aria-expanded="'+(!collapsed)+'" onclick="toggleAccommodationFloor(\''+esc(house.houseId)+'\',\''+esc(floor.floorId||floor.id||floor.name)+'\')"><strong>'+esc(floor.name)+'</strong><span>'+visibleFloorRooms.length+' غرفة '+(collapsed?'⌄':'⌃')+'</span></button><div class="rooms-grid">';
       (floor.rooms||[]).filter(function(room){return matchingRooms.indexOf(room)>=0;}).forEach(function(room){
         var roomOccupancies=room.occupancies?getCanonicalAccommodationOccupanciesOnDay(room,operationalDay):[];
         h+='<article class="room-card'+(room.isClosed?' room-closed':'')+'"><div class="room-card-header"><strong>غرفة '+esc(room.roomNumber)+'</strong><span>'+(room.isClosed?'مغلقة · ':'')+roomOccupancies.length+'/'+(Number(room.baseCapacity||0)+Number(room.extraBedCapacity||0))+'</span></div>'+(canManage?'<div class="row accommodation-room-toolbar"><button class="btn btn-green btn-sm" '+(room.isClosed?'disabled title="الغرفة مغلقة"':'onclick="assignCanonicalAccommodation(\''+room.roomId+'\')"')+'>➕ إضافة نزيل</button><button class="btn btn-red btn-sm" onclick="unassignCanonicalConferenceRoom(\''+room.roomId+'\','+Number(room.roomAssignmentRevision||1)+')">فك التخصيص</button></div>':'');
