@@ -118,3 +118,15 @@ test('canonical move checks destination capacity at every occupancy start in req
   assert.match(body,/length>=bedCapacity/);
   assert.ok(body.indexOf('if(isFull)')<body.indexOf('moveConferenceAccommodation('));
 });
+
+test('move confirmation stays open on failed central mutation and disables duplicate submission',()=>{
+  const start=ui.indexOf('function confirmCanonicalAccommodationMoveDay(');
+  const end=ui.indexOf('\nfunction removeCanonicalAccommodation(',start);
+  const body=ui.slice(start,end);
+  assert.ok(start>=0&&end>start);
+  assert.match(body,/if\(button\)button\.disabled=true/);
+  assert.match(body,/Promise\.resolve\(result\)\.then/);
+  assert.match(body,/if\(saved\)\{closeCanonicalAccommodationMoveDayDialog\(\);return saved;\}/);
+  assert.match(body,/if\(button\)button\.disabled=false/);
+  assert.ok(body.indexOf('closeCanonicalAccommodationMoveDayDialog();')>body.indexOf('Promise.resolve(result).then'));
+});
