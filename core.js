@@ -562,7 +562,7 @@ function getMealBaseCount(day,mealKey,conference){
   if(!scheduleDay||!scheduleDay.meals[mealKey])return 0;
   var count=0;
   if(typeof window!=='undefined'&&window.CanonicalConferenceRestaurant&&window.CanonicalConferenceRestaurant.isLinked(conference.id)){
-    getConferenceAccommodationPeople(conference).forEach(function(person){if(isRestaurantV3PersonIncluded(person,day,mealKey,conference))count++;});
+    getConferenceOperationalResidents(conference,day).all.forEach(function(person){if(isRestaurantV3PersonIncluded(person,day,mealKey,conference))count++;});
     return count;
   }
   var processedPeople={};

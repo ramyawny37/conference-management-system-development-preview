@@ -8,7 +8,7 @@ const CACHE_NAMESPACE = IS_DEVELOPMENT
   : '';
 const CACHE_PREFIX = CACHE_NAMESPACE + 'conference-manager-core-';
 const CACHE_REVISION = IS_DEVELOPMENT
-  ? 'development-conference-canonical-refresh-v1'
+  ? 'development-conference-operational-consumers-v1'
   : 'production-3-6-0-release-v6';
 const CACHE_NAME = CACHE_PREFIX + 'v' + APP_VERSION + '-' + CACHE_REVISION;
 const CORE_ASSETS = [
@@ -37,8 +37,8 @@ const CORE_ASSETS = [
   './js/platform-integration.js?rev=conference-session-reset-v2',
   './js/platform-home-dashboard.js?rev=unified-platform-state-home-v2',
   './js/supabase/canonical-conference-discovery.js?rev=conference-house-link-repair-v1',
-  './js/supabase/canonical-conference-transport.js?rev=p6i-b2-v1',
-  './js/supabase/canonical-conference-restaurant.js?rev=p6i-b3-v1',
+  './js/supabase/canonical-conference-transport.js?rev=operational-consumers-v1',
+  './js/supabase/canonical-conference-restaurant.js?rev=operational-consumers-v1',
   './js/supabase/canonical-template-library.js?rev=canonical-template-read-write-v2',
   './js/supabase/conference-canonical-bundle.js?rev=canonical-bundle-v1',
   './modules/reservations/reservations-module.js?rev=reservations-person-live-0d9db39-v1',
@@ -67,10 +67,10 @@ const CORE_ASSETS = [
   './js/sync/conference-linking-attempt-store.js',
   './js/sync/discovered-conference-open-service.js?rev=conference-navigation-consolidation-v1',
   './utils.js',
-  './core.js?rev=conference-legacy-functional-cutover-v1',
+  './core.js?rev=conference-operational-consumers-v1',
   './people.js?rev=canonical-conference-schema-v1',
   './houses.js?rev=template-floor-conference-sync-v1',
-  './transport.js?rev=conference-legacy-functional-cutover-v1',
+  './transport.js?rev=conference-operational-consumers-v1',
   './houseTemplates.js?rev=conference-settings-canonical-retirement-v1',
   './state.js?rev=conference-house-multi-room-selector-v1',
   './js/conference/accounts.js?rev=development-3-4-0-platform-foundation-v1',
@@ -83,7 +83,7 @@ const CORE_ASSETS = [
   './js/warehouse/party-management.js?rev=warehouse-party-management-v1',
   './js/warehouse/remaining-operations.js?rev=adjustment-conversion-ux-v1',
   './js/warehouse/workspace.js?rev=item-unit-add-ui-v1',
-  './script.js?rev=conference-house-multi-room-selector-v1',
+  './script.js?rev=conference-operational-consumers-v1',
   './version.js',
   './pwa.js?rev=pwa-update-state-consistency-v1',
   './libs/html2canvas.min.js',

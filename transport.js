@@ -5,10 +5,7 @@ function isCanonicalTransportConference(conference){
 function getConferenceTransportVehicles(conference){
   if(!conference)return [];
   if(!isCanonicalTransportConference(conference))return conference.transports||[];
-  var eligible={};
-  getConferenceParticipationItems(conference).forEach(function(participation){
-    if(participation.status==='active')eligible[String(participation.participationId||'')]=participation;
-  });
+  var eligible=getConferenceOperationalResidents(conference).byParticipationId;
   return window.CanonicalConferenceTransport.getVehicles(conference.id).map(function(vehicle){
     var visible=Object.assign({},vehicle);
     visible.seats=(vehicle.seats||[]).map(function(seat){
@@ -78,11 +75,8 @@ function allGuestsForPick(){
   var l=[];
   var current=getCurrentConference();
   if(isCanonicalTransportConference(current)){
-    var currentResidents=getConferenceOperationalResidents(current).byParticipationId;
-    return getConferenceParticipationItems(current).filter(function(participation){return participation.status==='active';}).map(function(participation){
-      var person=participation.person||{};
-      var active=currentResidents[String(participation.participationId||'')]||{};
-      return {name:person.fullName||'',room:active.room||'',guardian:participation.guardianFullName||null,personId:participation.personId||person.personId||'',participationId:participation.participationId||'',guardianParticipationId:participation.guardianParticipationId||null,guardianParticipationStatus:participation.guardianParticipationStatus||null};
+    return getConferenceOperationalResidents(current).all.map(function(resident){
+      return {name:resident.name||'',room:resident.room||'',guardian:resident.guardianFullName||null,personId:resident.personId||'',participationId:resident.participationId||'',guardianParticipationId:resident.guardianParticipationId||null,guardianParticipationStatus:resident.guardianParticipationStatus||null};
     }).sort(function(a,b){return a.name.localeCompare(b.name,'ar');});
   }
   getAllRooms().forEach(function(r){if(r.closed)return;getConferenceRoomPeopleOnDay(r,undefined,current).forEach(function(person){l.push({name:person.name||gn(person),room:r.number,guardian:person.isChild?(person.guardianFullName||person.guardian||''):null,personId:person.personId||'',guardianPersonId:person.guardianPersonId||'',guardianParticipationStatus:person.guardianParticipationStatus||null})})});

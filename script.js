@@ -5700,7 +5700,8 @@ function saveSeat(){
     var guardianSeatNumber=type==='child_shared'||type==='infant'?normalizeTransportSeatNumber(ge('s_guardian_select').value||note):null;
     var guardianSeat=guardianSeatNumber!==null&&(t.seats||[]).find(function(item){return item.seat===guardianSeatNumber;});
     if((type==='child_shared'||type==='infant')&&(!guardianSeat||!guardianSeat.participationId)){alert('اختر المرافق الذي سيشارك الطفل معه.');return false;}
-    var ensureParticipation=selectedParticipationId?Promise.resolve(selectedParticipationId):window.CanonicalConferenceTransport.createParticipant(current.id,name).then(function(state){var matches=(state.items||[]).filter(function(item){return item.person&&item.person.fullName===name;});var created=matches[matches.length-1];if(!created)throw new Error('CANONICAL_TRANSPORT_PARTICIPANT_CREATE_FAILED');return created.participationId;});
+    if(!selectedParticipationId)return false;
+    var ensureParticipation=Promise.resolve(selectedParticipationId);
     ensureParticipation.then(function(participationId){
       if((type==='child_shared'||type==='infant')){
         var participationState=window.PlatformIntegration.getConferenceParticipationState(current.id),child=(participationState.items||[]).find(function(item){return item.participationId===participationId;});

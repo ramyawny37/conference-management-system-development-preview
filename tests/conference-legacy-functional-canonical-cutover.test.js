@@ -50,6 +50,21 @@ test('day boundaries remove departed residents from downstream counts',()=>{
   assert.deepEqual(Array.from(s.getConferenceOperationalResidents(conference,3).all,p=>p.participationId),['housed']);
 });
 
+test('future, move, cancellation and re-accommodation all follow the occupancy timeline',()=>{
+  const {sandbox:s,conference,accommodation}=runtime();
+  const firstRoom=accommodation.houses[0].floors[0].rooms[0];
+  const housed=firstRoom.occupancies[0];
+  housed.leaveDay=2;
+  const secondRoom={roomId:'room-2',roomNumber:'202',baseCapacity:2,extraBedCapacity:0,isClosed:false,occupancies:[Object.assign({},housed,{occupancyId:'stay-2',arrivalDay:3,leaveDay:4})]};
+  accommodation.houses[0].floors[0].rooms.push(secondRoom);
+  assert.equal(s.getConferenceOperationalResidents(conference,2).byParticipationId.housed,undefined);
+  assert.equal(s.getConferenceOperationalResidents(conference,3).byParticipationId.housed.room,'202');
+  secondRoom.occupancies=[];
+  assert.equal(s.getConferenceOperationalResidents(conference,3).byParticipationId.housed,undefined);
+  firstRoom.occupancies.push(Object.assign({},housed,{occupancyId:'stay-3',arrivalDay:4,leaveDay:null}));
+  assert.equal(s.getConferenceOperationalResidents(conference,4).byParticipationId.housed.room,'101');
+});
+
 test('tabs hydrate their real canonical dependencies and lifecycle refreshes before success',()=>{
   const hydration=source('getConferenceTabHydrators','runConferenceHydrators');
   assert.match(hydration,/tabId===1[\s\S]*hydrateCanonicalConferenceAccommodation[\s\S]*hydrateCanonicalConferenceTransport/);
