@@ -1287,3 +1287,16 @@ tr:nth-child(even) td{background:#F7FBFF}
 #tab0 .accommodation-arrival-badge.is-pending{background:#fff1d9;color:#925a10}
 #tab0 .accommodation-key-holder-badge{background:#e7efff;color:#28539a}
 @media(max-width:680px){#tab0 .accommodation-guest-row>.row{width:100%;display:flex;flex-wrap:wrap;gap:6px}}
+
+/* The canonical renderer reuses the original accommodation card and workspace shell. */
+#tab0 .accommodation-dashboard .floor-container.is-collapsed>.rooms-grid{display:none}
+#tab0 .accommodation-dashboard .accommodation-room-card.rcard{display:block;padding:0;gap:0;border-inline-start:1px solid var(--app-border);overflow:visible}
+#tab0 .accommodation-dashboard .accommodation-room-card.rcard .rcard-head{display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-start;gap:5px}
+#tab0 .accommodation-dashboard .accommodation-room-card.rcard .accommodation-room-occupancy-badge,#tab0 .accommodation-dashboard .accommodation-room-card.rcard .room-extra-badge{padding:3px 7px;border-radius:999px;background:#edf3f8;color:#315d86;font-size:9px;font-weight:800}
+#tab0 .accommodation-dashboard .accommodation-room-card.rcard .accommodation-room-key{width:100%;border-radius:8px;font-family:inherit;cursor:pointer}
+#tab0 .accommodation-dashboard .accommodation-room-card.rcard .accommodation-room-key:disabled{cursor:default}
+#tab0 .accommodation-dashboard .accommodation-room-card.rcard .accommodation-room-details{display:flex;flex-wrap:wrap;gap:4px;margin-top:5px;color:var(--app-text-muted);font-size:9px}
+#tab0 .accommodation-dashboard .accommodation-room-card.rcard .accommodation-room-details>span{padding:3px 6px;border-radius:6px;background:var(--app-surface-soft)}
+#tab0 .accommodation-dashboard .accommodation-room-card.rcard .accommodation-room-notes{width:100%}
+#tab0 .accommodation-dashboard .accommodation-room-card.rcard .room-more-actions summary{display:flex;align-items:center;justify-content:center;min-height:33px;list-style:none;cursor:pointer}
+#tab0 .accommodation-dashboard .accommodation-room-card.rcard .room-more-actions summary::-webkit-details-marker{display:none}

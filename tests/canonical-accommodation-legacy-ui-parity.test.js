@@ -43,11 +43,31 @@ test('write actions remain permission gated and route to platform integration',(
   }
 });
 test('responsive room and guest layouts and collapsed floors exist',()=>{
-  assert.match(css,/floor-section\.is-collapsed>\.rooms-grid\{display:none\}/);
+  assert.match(css,/floor-container\.is-collapsed>\.rooms-grid\{display:none\}/);
   assert.match(css,/accommodation-house-metrics/);
   assert.match(css,/accommodation-guest-row/);
   assert.match(css,/accommodation-room-card\.room-status-over/);
   assert.match(css,/@media\(max-width:680px\)/);
+});
+
+test('original accommodation workspace and room card shell use canonical data and actions',()=>{
+  for(const token of ['accommodation-workspace','accommodation-primary-column','canonical-accommodation-sidebar','floor-container','accommodation-floor-rooms','rcard-head','rcard-body','accommodation-room-key','accommodation-room-actions','room-more-actions'])assert.match(renderer,new RegExp(token),token);
+  assert.match(renderer,/renderAccommodationQuickFilters\('canonical-accommodation-sidebar'\)/);
+  assert.match(renderer,/openCanonicalAccommodationRoomDetails/);
+  assert.doesNotMatch(renderer,/openRoomEditor|saveRoomData/);
+});
+
+test('canonical room details reuse roomModal in read-only mode without local save',()=>{
+  const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
+  const detailStart=ui.indexOf('function openCanonicalAccommodationRoomDetails(');
+  const detailEnd=ui.indexOf('\nfunction renderCanonicalAccommodation(',detailStart);
+  const body=ui.slice(detailStart,detailEnd);
+  assert.match(html,/id="roomModalSaveButton"/);
+  assert.match(body,/canonicalAccommodationState\(\)/);
+  assert.match(body,/getCanonicalAccommodationOccupanciesOnDay\(room,day\)/);
+  assert.match(body,/saveButton\.style\.display='none'/);
+  assert.match(body,/ge\('roomModal'\)\.style\.display='flex'/);
+  assert.doesNotMatch(body,/saveRoomData|save\(\)|PlatformIntegration/);
 });
 
 test('canonical move picker excludes closed, current and zero-capacity rooms without using current-day occupancy',()=>{

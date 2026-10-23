@@ -225,16 +225,16 @@
 
   <datalist id="people_datalist"></datalist>
   <datalist id="people_datalist_guardian"></datalist>
-  <section class="room-modal-section room-children-section">
+  <section id="roomModalChildrenSection" class="room-modal-section room-children-section">
     <div class="room-modal-section-title room-modal-section-heading">
       <strong>الأطفال المرافقون <b id="rmChildrenCount">0</b></strong>
-      <button class="btn btn-orange btn-sm" onclick="addCI()">+ طفل</button>
+      <button id="roomModalAddChildButton" class="btn btn-orange btn-sm" onclick="addCI()">+ طفل</button>
     </div>
     <div id="m_children"></div>
   </section>
   <div class="row room-modal-footer">
     <button class="btn btn-blue" id="moveRoomBtn" onclick="return false">↔️ نقل الغرفة</button>
-    <button class="btn btn-green" onclick="saveRoomData()">💾 حفظ</button>
+    <button class="btn btn-green" id="roomModalSaveButton" onclick="saveRoomData()">💾 حفظ</button>
     <button class="btn btn-gray" onclick="closeRM()">إلغاء</button>
   </div>
 </div></div></div>

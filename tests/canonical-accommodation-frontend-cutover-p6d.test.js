@@ -220,8 +220,14 @@ test('canonical accommodation filters extra beds children and accompanied guests
   const start=scriptSource.indexOf('function renderCanonicalAccommodation(state){');
   const end=scriptSource.indexOf('function ',start+10);
   const render=scriptSource.slice(start,end);
-  for(const filter of ["filter==='extra-beds'","filter==='children'","filter==='accompanied'","['extra-beds','بها أسرة إضافية مستخدمة']","['children','بها أطفال']","['accompanied','بها مرافقون']"]){
+  for(const filter of ["filter==='extra-beds'","filter==='children'","filter==='accompanied'"]){
     assert.ok(render.includes(filter),'missing canonical filter '+filter);
+  }
+  const quickStart=scriptSource.indexOf('function renderAccommodationQuickFilters(');
+  const quickEnd=scriptSource.indexOf('function ',quickStart+10);
+  const quickFilters=scriptSource.slice(quickStart,quickEnd);
+  for(const filter of ["['extra-beds','bed','بها أسرة إضافية مستخدمة']","['children','users','بها أطفال']","['accompanied','users','بها مرافقون']"]){
+    assert.ok(quickFilters.includes(filter),'missing canonical sidebar filter '+filter);
   }
 });
 
