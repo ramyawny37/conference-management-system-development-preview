@@ -2940,18 +2940,46 @@ function moveCanonicalAccommodation(occupancyId){
   if(!rooms.length){alert('لا توجد غرف أخرى مفتوحة وبها أماكن متاحة للنقل.');return false;}
   openSearchableSelectDialog('اختر الغرفة الهدف',rooms.map(function(entry){return {label:entry.house.name+' / '+entry.floor.name+' / غرفة '+entry.room.roomNumber,searchText:entry.house.name+' '+entry.floor.name+' '+entry.room.roomNumber,data:entry.room};}),function(room){
     if(!room)return;
-    var defaultDay=typeof getConferenceOperationalDay==='function'?getConferenceOperationalDay(current):occupancy.arrivalDay;
-    var effectiveText=prompt('يوم سريان النقل:',String(defaultDay));
-    if(effectiveText===null)return;
-    effectiveText=effectiveText.trim();
-    var effectiveDay=Number(effectiveText);
-    if(!/^\\d+$/.test(effectiveText)||!Number.isSafeInteger(effectiveDay)||effectiveDay<Number(occupancy.arrivalDay)||
-      (occupancy.leaveDay!==null&&occupancy.leaveDay!==undefined&&occupancy.leaveDay!==''&&effectiveDay>=Number(occupancy.leaveDay))){
-      alert('يوم سريان النقل خارج فترة الإقامة.');
-      return;
-    }
-    canonicalAccommodationMutation(integration.moveConferenceAccommodation(current.id,{occupancyId:occupancy.occupancyId,expectedRevision:occupancy.revision,roomId:room.roomId,arrivalDay:effectiveDay,leaveDay:occupancy.leaveDay,bedType:occupancy.bedType,extraBedPersonType:occupancy.extraBedPersonType}),'↔️ تم نقل النزيل');
+    openCanonicalAccommodationMoveDayDialog(current,occupancy,room,integration);
+
   });
+}
+
+var canonicalAccommodationMoveDraft=null;
+function closeCanonicalAccommodationMoveDayDialog(){
+  var modal=ge('canonicalAccommodationMoveDayModal');
+  if(modal)modal.style.display='none';
+  canonicalAccommodationMoveDraft=null;
+}
+function openCanonicalAccommodationMoveDayDialog(conference,occupancy,room,integration){
+  var modal=ge('canonicalAccommodationMoveDayModal'),input=ge('canonicalAccommodationMoveDayInput'),label=ge('canonicalAccommodationMoveDayTarget'),error=ge('canonicalAccommodationMoveDayError');
+  if(!modal||!input||!label||!error){showToast('تعذر فتح نافذة النقل.','#E74C3C');return false;}
+  canonicalAccommodationMoveDraft={conferenceId:conference.id,occupancyId:occupancy.occupancyId,revision:occupancy.revision,roomId:room.roomId,leaveDay:occupancy.leaveDay,arrivalDay:occupancy.arrivalDay,bedType:occupancy.bedType,extraBedPersonType:occupancy.extraBedPersonType};
+  label.textContent='الغرفة المستهدفة: '+String(room.roomNumber);
+  input.value=String(getConferenceOperationalDay(conference));
+  input.min=String(occupancy.arrivalDay);
+  input.max=occupancy.leaveDay==null?'':String(Number(occupancy.leaveDay)-1);
+  error.textContent='';
+  modal.style.display='flex';
+  input.focus();
+  return true;
+}
+function confirmCanonicalAccommodationMoveDay(){
+  var draft=canonicalAccommodationMoveDraft,input=ge('canonicalAccommodationMoveDayInput'),error=ge('canonicalAccommodationMoveDayError'),button=ge('canonicalAccommodationMoveDayConfirm');
+  if(!draft||!input||!error)return false;
+  var textValue=String(input.value||'').trim(),day=Number(textValue);
+  if(!/^\\d+$/.test(textValue)||!Number.isSafeInteger(day)||day<Number(draft.arrivalDay)||(draft.leaveDay!=null&&draft.leaveDay!==''&&day>=Number(draft.leaveDay))){
+    error.textContent='يوم سريان النقل خارج فترة الإقامة.';return false;
+  }
+  var conference=getCurrentConference(),occupancy=findCanonicalAccommodationEntity('occupancy',draft.occupancyId);
+  if(!conference||conference.id!==draft.conferenceId||!occupancy||occupancy.revision!==draft.revision||!currentConferenceSectionCapability('accommodationManage')){
+    error.textContent='تغيرت بيانات التسكين أو الصلاحيات. أعد فتح عملية النقل.';return false;
+  }
+  if(button)button.disabled=true;
+  closeCanonicalAccommodationMoveDayDialog();
+  var result=canonicalAccommodationMutation(window.PlatformIntegration.moveConferenceAccommodation(conference.id,{occupancyId:draft.occupancyId,expectedRevision:draft.revision,roomId:draft.roomId,arrivalDay:day,leaveDay:draft.leaveDay,bedType:draft.bedType,extraBedPersonType:draft.extraBedPersonType}),'↔️ تم نقل النزيل');
+  if(button)button.disabled=false;
+  return result;
 }
 
 function removeCanonicalAccommodation(occupancyId){
