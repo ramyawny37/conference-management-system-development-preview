@@ -3142,7 +3142,7 @@ function renderCanonicalAccommodation(state){
   var childrenCount=rooms.reduce(function(total,room){return total+getCanonicalAccommodationOccupanciesOnDay(room,operationalDay).filter(function(item){return item.extraBedPersonType==='child';}).length;},0);
   var accompaniedGuests=rooms.reduce(function(total,room){return total+getCanonicalAccommodationOccupanciesOnDay(room,operationalDay).filter(function(item){return !!item.guardianParticipationId;}).length;},0);
   var arrivedCount=rooms.reduce(function(total,room){return total+getCanonicalAccommodationOccupanciesOnDay(room,operationalDay).filter(function(item){return !!item.arrivedAt;}).length;},0);
-  var deliveredKeys=rooms.filter(function(room){return !!room.keyHolderOccupancyId;}).length;
+  var deliveredKeys=rooms.filter(function(room){return !!room.keyHolderOccupancyId&&getCanonicalAccommodationOccupanciesOnDay(room,operationalDay).some(function(item){return item.occupancyId===room.keyHolderOccupancyId;});}).length;
   var openRooms=rooms.filter(function(room){return room.isClosed!==true;});
   var usableCapacity=openRooms.reduce(function(total,room){return total+Number(room.baseCapacity||0)+Number(room.extraBedCapacity||0);},0);
   var openOccupancies=openRooms.reduce(function(total,room){return total+getCanonicalAccommodationOccupanciesOnDay(room,operationalDay).length;},0);
