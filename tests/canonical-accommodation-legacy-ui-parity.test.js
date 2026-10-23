@@ -269,3 +269,25 @@ test('key handover rejects a change to the conference operational day',()=>{
   assert.match(body,/String\(getConferenceOperationalDay\(selectedConference\)\)!==String\(day\)/);
   assert.ok(body.indexOf('String(getConferenceOperationalDay(selectedConference))!==String(day)')<body.indexOf('setConferenceAccommodationRoomKey('));
 });
+
+test('canonical accommodation searches house floor room notes and guest identity',()=>{
+  const start=ui.indexOf('function renderCanonicalAccommodation(');
+  const end=ui.indexOf('\nfunction ',start+1);
+  const body=ui.slice(start,end);
+  assert.ok(start>=0&&end>start);
+  assert.match(body,/roomSearchLocations\[String\(room\.roomId\)\]/);
+  assert.match(body,/house:house\.name\|\|''/);
+  assert.match(body,/floor:floor\.name\|\|''/);
+  assert.match(body,/location\.house\|\|''/);
+  assert.match(body,/location\.floor\|\|''/);
+  assert.match(body,/room\.notes\|\|''/);
+  assert.match(body,/person\.fullName\|\|''/);
+});
+test('canonical accommodation hides nonmatching house groups without mutating data',()=>{
+  const start=ui.indexOf('function renderCanonicalAccommodation(');
+  const end=ui.indexOf('\nfunction ',start+1);
+  const body=ui.slice(start,end);
+  assert.match(body,/var visibleHouseRooms=/);
+  assert.match(body,/matchingRooms\.indexOf\(room\)>=0/);
+  assert.match(body,/if\(!visibleHouseRooms\)return/);
+});
