@@ -2872,7 +2872,9 @@ function canonicalRoomDraft(room){
     showToast('أدخل عددًا صحيحًا غير سالب للأسرة والأسرة الإضافية.','#E74C3C');return null;
   }
   var baseCapacity=Number(baseText),extraBedCapacity=Number(extraText);
-  if(!Number.isSafeInteger(baseCapacity)||!Number.isSafeInteger(extraBedCapacity))return null;
+  if(!Number.isSafeInteger(baseCapacity)||!Number.isSafeInteger(extraBedCapacity)){
+    showToast('عدد الأسرة خارج النطاق المسموح.','#E74C3C');return null;
+  }
   if(baseCapacity+extraBedCapacity<1||!Number.isSafeInteger(baseCapacity+extraBedCapacity)){
     showToast('يجب أن تحتوي الغرفة على سرير واحد على الأقل وبسعة صحيحة.','#E74C3C');return null;
   }
