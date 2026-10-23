@@ -3119,6 +3119,9 @@ function setCanonicalAccommodationRoomKey(roomId){
     if(!currentConferenceSectionCapability('accommodationManage')){
       showToast('ليس لديك صلاحية إدارة التسكين.','#E74C3C');return false;
     }
+    if(String(getConferenceOperationalDay(selectedConference))!==String(day)){
+      showToast('تغير يوم التشغيل. أعد فتح اختيار مستلم المفتاح.','#E74C3C');return false;
+    }
     if(holder&&!getCanonicalAccommodationOccupanciesOnDay(latestRoom,getConferenceOperationalDay(selectedConference)).some(function(item){return String(item.occupancyId)===String(holder.occupancyId);})){
       showToast('النزيل لم يعد موجودًا في الغرفة في يوم التشغيل الحالي.','#E74C3C');return false;
     }
