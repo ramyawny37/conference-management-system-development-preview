@@ -471,6 +471,23 @@
 </div>
 </div>
 
+<!-- Canonical accommodation move day: cancellation never submits a mutation. -->
+<div class="overlay app-modal" id="canonicalAccommodationMoveDayModal" style="display:none" role="presentation" onclick="if(event.target===this)closeCanonicalAccommodationMoveDayDialog()">
+  <div class="modal" style="max-width:460px" role="dialog" aria-modal="true" aria-labelledby="canonicalAccommodationMoveDayTitle">
+    <div class="mhead"><strong id="canonicalAccommodationMoveDayTitle">تحديد يوم سريان النقل</strong><button type="button" class="btn btn-gray btn-sm" aria-label="إغلاق" onclick="closeCanonicalAccommodationMoveDayDialog()">✕</button></div>
+    <div class="mbody">
+      <p id="canonicalAccommodationMoveDayTarget"></p>
+      <label for="canonicalAccommodationMoveDayInput">اليوم التشغيلي لسريان النقل</label>
+      <input id="canonicalAccommodationMoveDayInput" type="number" min="1" step="1" inputmode="numeric" style="width:100%;margin:10px 0" onkeydown="if(event.key==='Enter'){event.preventDefault();confirmCanonicalAccommodationMoveDay()}else if(event.key==='Escape'){closeCanonicalAccommodationMoveDayDialog()}">
+      <div id="canonicalAccommodationMoveDayError" role="alert" aria-live="polite"></div>
+      <div class="row" style="margin-top:16px;gap:8px">
+        <button id="canonicalAccommodationMoveDayConfirm" type="button" class="btn btn-blue" onclick="confirmCanonicalAccommodationMoveDay()">تأكيد النقل</button>
+        <button type="button" class="btn btn-gray" onclick="closeCanonicalAccommodationMoveDayDialog()">إلغاء</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Reusable Searchable Selection Modal -->
 <div class="overlay app-modal" id="searchableSelectModal" style="display:none" onclick="if(event.target===this)closeSearchableSelectDialog()">
 <div class="modal" style="max-width:620px">
