@@ -3057,10 +3057,17 @@ function confirmCanonicalAccommodationMoveDay(){
   });
   if(isFull){error.textContent='الغرفة ممتلئة خلال فترة النقل المطلوبة. اختر غرفة أخرى أو غيّر يوم النقل.';return false;}
   if(button)button.disabled=true;
-  closeCanonicalAccommodationMoveDayDialog();
   var result=canonicalAccommodationMutation(window.PlatformIntegration.moveConferenceAccommodation(conference.id,{occupancyId:draft.occupancyId,expectedRevision:draft.revision,roomId:draft.roomId,arrivalDay:day,leaveDay:draft.leaveDay,bedType:draft.bedType,extraBedPersonType:draft.extraBedPersonType}),'↔️ تم نقل النزيل');
-  if(button)button.disabled=false;
-  return result;
+  return Promise.resolve(result).then(function(saved){
+    if(saved){closeCanonicalAccommodationMoveDayDialog();return saved;}
+    if(button)button.disabled=false;
+    if(canonicalAccommodationMoveDraft===draft)error.textContent='تعذر إتمام النقل. راجع حالة الغرفة أو أعد المحاولة.';
+    return false;
+  },function(){
+    if(button)button.disabled=false;
+    if(canonicalAccommodationMoveDraft===draft)error.textContent='تعذر إتمام النقل. أعد المحاولة.';
+    return false;
+  });
 }
 
 function removeCanonicalAccommodation(occupancyId){
