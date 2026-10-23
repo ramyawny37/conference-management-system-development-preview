@@ -3060,6 +3060,7 @@ var canonicalAccommodationRoomDetailsOpen=false;
 function resetCanonicalAccommodationRoomDetails(){
   if(!canonicalAccommodationRoomDetailsOpen)return;
   canonicalAccommodationRoomDetailsOpen=false;
+  ge('roomModal').classList.remove('canonical-room-readonly');
   ['m_num','m_beds','m_extra_beds','m_closed','m_closed_day','m_notes'].forEach(function(id){var input=ge(id);if(input)input.disabled=false;});
   var saveButton=ge('roomModalSaveButton'),moveButton=ge('moveRoomBtn'),addChildButton=ge('roomModalAddChildButton'),childrenSection=ge('roomModalChildrenSection');
   if(saveButton)saveButton.style.display='';
@@ -3077,7 +3078,8 @@ function openCanonicalAccommodationRoomDetails(roomId){
   var childOccupancies=occupancies.filter(function(item){return item.extraBedPersonType==='child';});
   var guestOccupancies=occupancies.filter(function(item){return item.extraBedPersonType!=='child';});
   canonicalAccommodationRoomDetailsOpen=true;
-  ge('rmTitle').textContent='تعديل الغرفة '+room.roomNumber;
+  ge('rmTitle').textContent='تفاصيل الغرفة '+room.roomNumber;
+  ge('roomModal').classList.add('canonical-room-readonly');
   ge('rmContext').textContent=(location?location.house.name+' • '+location.floor.name:'');
   ge('m_num').value=room.roomNumber||'';
   ge('m_beds').value=Number(room.baseCapacity||0);
