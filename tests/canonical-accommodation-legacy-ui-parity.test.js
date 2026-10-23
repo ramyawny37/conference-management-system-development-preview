@@ -59,3 +59,20 @@ test('canonical move picker excludes closed, current and full rooms',()=>{
   assert.match(body,/Number\(r\.baseCapacity\|\|0\)\+Number\(r\.extraBedCapacity\|\|0\)/);
   assert.match(body,/integration\.moveConferenceAccommodation/);
 });
+
+test('canonical move day is confirmed in-app and cancellation has no mutation',()=>{
+  const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
+  const start=ui.indexOf('function moveCanonicalAccommodation(');
+  const end=ui.indexOf('\nfunction removeCanonicalAccommodation(',start);
+  const body=ui.slice(start,end);
+  assert.doesNotMatch(body,/prompt\(/);
+  assert.match(body,/openCanonicalAccommodationMoveDayDialog/);
+  assert.match(ui,/function closeCanonicalAccommodationMoveDayDialog\(\)/);
+  assert.match(ui,/canonicalAccommodationMoveDraft=null/);
+  assert.match(ui,/function confirmCanonicalAccommodationMoveDay\(\)/);
+  assert.match(ui,/expectedRevision:draft\.revision/);
+  assert.match(ui,/currentConferenceSectionCapability\('accommodationManage'\)/);
+  assert.match(html,/id="canonicalAccommodationMoveDayModal"/);
+  assert.match(html,/id="canonicalAccommodationMoveDayError"/);
+  assert.match(html,/onclick="closeCanonicalAccommodationMoveDayDialog\(\)">إلغاء/);
+});
