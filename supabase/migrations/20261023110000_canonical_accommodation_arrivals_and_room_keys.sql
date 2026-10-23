@@ -9,6 +9,14 @@ alter table public.conference_room_assignments
  add column if not exists key_delivered_at timestamptz,
  add column if not exists key_delivered_by uuid references platform.profiles(user_id) on delete restrict;
 
+alter table public.conference_room_assignments
+ drop constraint if exists conference_room_key_holder_occupancy_fk;
+alter table public.conference_room_assignments
+ add constraint conference_room_key_holder_occupancy_fk
+ foreign key (key_holder_occupancy_id)
+ references public.conference_accommodation_occupancies(id)
+ on delete set null;
+
 alter table public.conference_accommodation_occupancies
  drop constraint if exists conference_accommodation_arrival_complete_check;
 alter table public.conference_accommodation_occupancies
