@@ -291,3 +291,15 @@ test('canonical accommodation hides nonmatching house groups without mutating da
   assert.match(body,/matchingRooms\.indexOf\(room\)>=0/);
   assert.match(body,/if\(!visibleHouseRooms\)return/);
 });
+
+test('canonical search preserves text caret and selection after filtering rerender',()=>{
+  const start=ui.indexOf('function updateAccommodationSearch(');
+  const end=ui.indexOf('\nfunction ',start+1);
+  const body=ui.slice(start,end);
+  assert.ok(start>=0&&end>start);
+  assert.match(body,/previousInput\.selectionStart/);
+  assert.match(body,/previousInput\.selectionEnd/);
+  assert.match(body,/previousInput\.selectionDirection/);
+  assert.match(body,/renderAccommodation\(\)/);
+  assert.match(body,/input\.setSelectionRange\(Math\.min\(selectionStart,length\),Math\.min\(selectionEnd,length\),selectionDirection\)/);
+});
