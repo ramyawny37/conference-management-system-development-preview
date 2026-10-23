@@ -3051,6 +3051,10 @@ function usableAccommodationOccupancyPercent(occupied,totalBeds){
   return totalBeds>0?Math.round(occupied/totalBeds*100):0;
 }
 
+var guestPersonPickerState = { rowId: '', items: [], onSelect: null };
+var guestPersonPickerOutsideHandler = null;
+var guestPersonPickerPositionHandler = null;
+
 var canonicalAccommodationRoomDetailsOpen=false;
 
 function resetCanonicalAccommodationRoomDetails(){
