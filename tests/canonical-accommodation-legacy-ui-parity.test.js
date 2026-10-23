@@ -87,3 +87,18 @@ test('searchable person and room picker cancellation clears its callback without
   assert.doesNotMatch(close,/onSelect\s*\(|assignConferenceAccommodation|moveConferenceAccommodation/);
   assert.match(html,/id="searchableSelectModal"[\s\S]*onclick="closeSearchableSelectDialog\(\)">إلغاء/);
 });
+
+test('move effective day accepts ordinary numeric days and rejects malformed input',()=>{
+  const start=ui.indexOf('function confirmCanonicalAccommodationMoveDay(');
+  const end=ui.indexOf('\nfunction removeCanonicalAccommodation(',start);
+  const body=ui.slice(start,end);
+  assert.ok(start>=0&&end>start);
+  const match=body.match(/if\(!\/(\^.*?\$)\/\.test\(textValue\)/);
+  assert.ok(match,'effective-day input must be validated with a regular expression');
+  const numericDay=new RegExp(match[1]);
+  assert.equal(numericDay.test('1'),true);
+  assert.equal(numericDay.test('12'),true);
+  assert.equal(numericDay.test('12a'),false);
+  assert.equal(numericDay.test(''),false);
+  assert.equal(numericDay.test('-1'),false);
+});
