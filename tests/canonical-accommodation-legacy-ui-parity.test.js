@@ -249,3 +249,13 @@ test('key handover can be cleared even when the room has no active occupants',()
   const body=ui.slice(start,end);
   assert.match(body,/canManage&&\(roomOccupancies\.length\|\|room\.keyHolderOccupancyId\)/);
 });
+
+test('key handover rejects stale conference hydration generation',()=>{
+  const start=ui.indexOf('function setCanonicalAccommodationRoomKey(');
+  const end=ui.indexOf('\nfunction ',start+1);
+  const body=ui.slice(start,end);
+  assert.ok(start>=0&&end>start);
+  assert.match(body,/generation=conferenceTabHydrationGeneration/);
+  assert.match(body,/generation!==conferenceTabHydrationGeneration/);
+  assert.ok(body.indexOf('generation!==conferenceTabHydrationGeneration')<body.indexOf('setConferenceAccommodationRoomKey('));
+});
