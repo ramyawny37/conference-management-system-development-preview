@@ -3108,12 +3108,12 @@ function setCanonicalAccommodationRoomKey(roomId){
   if(!currentConferenceSectionCapability('accommodationManage')){showToast('ليس لديك صلاحية إدارة التسكين.','#E74C3C');return false;}
   var current=getCurrentConference(),room=findCanonicalAccommodationEntity('room',roomId);
   if(!current||!room)return false;
-  var conferenceId=String(current.id),day=getConferenceOperationalDay(current);
+  var conferenceId=String(current.id),generation=conferenceTabHydrationGeneration,day=getConferenceOperationalDay(current);
   var occupants=getCanonicalAccommodationOccupanciesOnDay(room,day);
   var options=[{label:'إلغاء تسجيل تسليم المفتاح',searchText:'إلغاء',data:null}].concat(occupants.map(function(item){var person=item.person||{};return {label:person.fullName||'نزيل بدون اسم',searchText:[person.fullName||'',person.phone||'',person.church||''].join(' '),data:item};}));
   openSearchableSelectDialog('اختر مستلم مفتاح الغرفة',options,function(holder){
     var selectedConference=getCurrentConference(),latestRoom=findCanonicalAccommodationEntity('room',roomId);
-    if(!selectedConference||String(selectedConference.id)!==conferenceId||!latestRoom||String(latestRoom.roomAssignmentRevision)!==String(room.roomAssignmentRevision)){
+    if(generation!==conferenceTabHydrationGeneration||!selectedConference||String(selectedConference.id)!==conferenceId||!latestRoom||String(latestRoom.roomAssignmentRevision)!==String(room.roomAssignmentRevision)){
       showToast('تغير المؤتمر أو بيانات الغرفة. أعد فتح اختيار مستلم المفتاح.','#E74C3C');return false;
     }
     if(!currentConferenceSectionCapability('accommodationManage')){
