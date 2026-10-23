@@ -19,14 +19,14 @@ alter table public.conference_room_assignments
 
 -- Clear the room key atomically before a referenced stay is removed.
 create or replace function platform_private.clear_conference_room_key_on_stay_delete()
-returns trigger language plpgsql security definer set search_path='' as $
+returns trigger language plpgsql security definer set search_path='' as $$
 begin
  update public.conference_room_assignments ra
  set key_holder_occupancy_id=null,key_delivered_at=null,key_delivered_by=null,
      revision=ra.revision+1,updated_at=statement_timestamp()
  where ra.key_holder_occupancy_id=old.id;
  return old;
-end $;
+end $$;
 drop trigger if exists clear_conference_room_key_on_stay_delete on public.conference_accommodation_occupancies;
 create trigger clear_conference_room_key_on_stay_delete
 before delete on public.conference_accommodation_occupancies
@@ -35,7 +35,7 @@ for each row execute function platform_private.clear_conference_room_key_on_stay
 -- When a key recipient moves, invalidate the old room's key delivery.
 -- The historical-stay branch retains its original room and does not fire this.
 create or replace function platform_private.clear_conference_room_key_on_stay_move()
-returns trigger language plpgsql security definer set search_path='' as $
+returns trigger language plpgsql security definer set search_path='' as $$
 begin
  if old.room_id is distinct from new.room_id then
   update public.conference_room_assignments ra
@@ -44,7 +44,7 @@ begin
   where ra.key_holder_occupancy_id=old.id and ra.room_id=old.room_id;
  end if;
  return new;
-end $;
+end $$;
 drop trigger if exists clear_conference_room_key_on_stay_move on public.conference_accommodation_occupancies;
 create trigger clear_conference_room_key_on_stay_move
 before update of room_id on public.conference_accommodation_occupancies
