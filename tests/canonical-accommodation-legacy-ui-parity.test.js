@@ -230,3 +230,22 @@ test('key filters, room detail and guest badge use the same active-day holder',(
   assert.match(body,/activeKeyHolder\.person&&activeKeyHolder\.person\.fullName/);
   assert.match(body,/activeKeyHolder&&String\(activeKeyHolder\.occupancyId\)===String\(occupancy\.occupancyId\)/);
 });
+
+test('key handover checks conference, room revision, permission and current occupant at selection time',()=>{
+  const start=ui.indexOf('function setCanonicalAccommodationRoomKey(');
+  const end=ui.indexOf('\nfunction ',start+1);
+  const body=ui.slice(start,end);
+  assert.ok(start>=0&&end>start);
+  assert.match(body,/String\(selectedConference\.id\)!==conferenceId/);
+  assert.match(body,/String\(latestRoom\.roomAssignmentRevision\)!==String\(room\.roomAssignmentRevision\)/);
+  assert.match(body,/currentConferenceSectionCapability\('accommodationManage'\)/);
+  assert.match(body,/getCanonicalAccommodationOccupanciesOnDay\(latestRoom,getConferenceOperationalDay\(selectedConference\)\)/);
+  assert.match(body,/String\(item\.occupancyId\)===String\(holder\.occupancyId\)/);
+  assert.match(body,/setConferenceAccommodationRoomKey\(selectedConference\.id,latestRoom\.roomId,latestRoom\.roomAssignmentRevision/);
+});
+test('key handover can be cleared even when the room has no active occupants',()=>{
+  const start=ui.indexOf('function renderCanonicalAccommodation(');
+  const end=ui.indexOf('\nfunction ',start+1);
+  const body=ui.slice(start,end);
+  assert.match(body,/canManage&&\(roomOccupancies\.length\|\|room\.keyHolderOccupancyId\)/);
+});
