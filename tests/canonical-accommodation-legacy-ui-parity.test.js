@@ -177,3 +177,13 @@ test('canonical room editor accepts numeric base and extra bed capacities',()=>{
     assert.equal(valid.test('-1'),false);
   }
 });
+
+test('canonical room editor rejects zero or unsafe total bed capacity',()=>{
+  const start=ui.indexOf('function canonicalRoomDraft(');
+  const end=ui.indexOf('\nfunction createCanonicalAccommodationRoom(',start);
+  const body=ui.slice(start,end);
+  assert.ok(start>=0&&end>start);
+  assert.match(body,/baseCapacity\+extraBedCapacity<1/);
+  assert.match(body,/!Number\.isSafeInteger\(baseCapacity\+extraBedCapacity\)/);
+  assert.match(body,/يجب أن تحتوي الغرفة على سرير واحد على الأقل/);
+});
