@@ -1277,3 +1277,12 @@ tr:nth-child(even) td{background:#F7FBFF}
 #tab0 .accommodation-dashboard .accommodation-room-card .room-indicators{margin-inline-start:auto}
 #tab0 .accommodation-dashboard .accommodation-room-card .accommodation-room-toolbar{display:flex;flex-wrap:wrap;gap:8px}
 @media(max-width:680px){#tab0 .accommodation-dashboard .rooms-grid{grid-template-columns:minmax(0,1fr)}#tab0 .accommodation-dashboard .accommodation-house-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* Canonical guest detail parity; no local guest-state ownership. */
+#tab0 .accommodation-guest-row{display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px}
+#tab0 .accommodation-guest-identity{flex:1 1 200px;min-width:0;overflow-wrap:anywhere}
+#tab0 .accommodation-arrival-badge,#tab0 .accommodation-key-holder-badge{display:inline-flex;align-items:center;margin-inline-start:7px;padding:3px 8px;border-radius:999px;font-size:.78rem;font-weight:700;white-space:nowrap}
+#tab0 .accommodation-arrival-badge.is-arrived{background:#e4f4e9;color:#1e7543}
+#tab0 .accommodation-arrival-badge.is-pending{background:#fff1d9;color:#925a10}
+#tab0 .accommodation-key-holder-badge{background:#e7efff;color:#28539a}
+@media(max-width:680px){#tab0 .accommodation-guest-row>.row{width:100%;display:flex;flex-wrap:wrap;gap:6px}}
