@@ -3049,9 +3049,11 @@ function confirmCanonicalAccommodationMoveDay(){
       if(Number(item.arrivalDay)>day)boundaries.push(Number(item.arrivalDay));
     }
   });
+  var bedCapacity=draft.bedType==='extra'?Number(targetRoom.extraBedCapacity||0):Number(targetRoom.baseCapacity||0);
   var isFull=boundaries.some(function(checkDay){
     if(draft.leaveDay!=null&&draft.leaveDay!==''&&checkDay>=Number(draft.leaveDay))return false;
-    return getCanonicalAccommodationOccupanciesOnDay(targetRoom,checkDay).length>=capacity;
+    var occupants=getCanonicalAccommodationOccupanciesOnDay(targetRoom,checkDay);
+    return occupants.length>=capacity||occupants.filter(function(item){return (item.bedType==='extra'?'extra':'base')===(draft.bedType==='extra'?'extra':'base');}).length>=bedCapacity;
   });
   if(isFull){error.textContent='الغرفة ممتلئة خلال فترة النقل المطلوبة. اختر غرفة أخرى أو غيّر يوم النقل.';return false;}
   if(button)button.disabled=true;
