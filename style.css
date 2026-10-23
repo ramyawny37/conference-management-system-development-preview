@@ -1265,3 +1265,15 @@ tr:nth-child(even) td{background:#F7FBFF}
 .accommodation-dashboard .room-indicators{display:inline-flex;gap:8px;align-items:center;flex-wrap:wrap}
 .accommodation-dashboard .room-status-label{font-weight:650}
 .accommodation-dashboard .accommodation-room-card .guest-row{min-width:0}
+
+/* Canonical accommodation: readable room cards across desktop and handheld viewports. */
+#tab0 .accommodation-dashboard .rooms-grid{grid-template-columns:repeat(auto-fit,minmax(min(100%,310px),1fr));align-items:start;gap:16px}
+#tab0 .accommodation-dashboard .accommodation-room-card{border-top:4px solid #98a3af;overflow-wrap:anywhere}
+#tab0 .accommodation-dashboard .accommodation-room-card.room-status-full{border-top-color:#2b9460}
+#tab0 .accommodation-dashboard .accommodation-room-card.room-status-partial{border-top-color:#e59a32}
+#tab0 .accommodation-dashboard .accommodation-room-card.room-status-over{border-top-color:#cf4750}
+#tab0 .accommodation-dashboard .accommodation-room-card.room-status-closed{border-top-color:#89939f}
+#tab0 .accommodation-dashboard .accommodation-room-card .room-card-header{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+#tab0 .accommodation-dashboard .accommodation-room-card .room-indicators{margin-inline-start:auto}
+#tab0 .accommodation-dashboard .accommodation-room-card .accommodation-room-toolbar{display:flex;flex-wrap:wrap;gap:8px}
+@media(max-width:680px){#tab0 .accommodation-dashboard .rooms-grid{grid-template-columns:minmax(0,1fr)}#tab0 .accommodation-dashboard .accommodation-house-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
