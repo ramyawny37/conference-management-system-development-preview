@@ -30,6 +30,7 @@
     ['get_conference_restaurant','public.get_conference_restaurant(uuid,uuid)'],
     ['mutate_conference_restaurant','public.mutate_conference_restaurant(uuid,uuid,text,uuid,bigint,jsonb)'],
     ['mutate_conference_accommodation_pricing','public.mutate_conference_accommodation_pricing(uuid,uuid,uuid,bigint,jsonb)'],
+    ['mutate_conference_accommodation_operations','public.mutate_conference_accommodation_operations(uuid,uuid,uuid,text,jsonb)'],
     ['get_conference_air_conditioning','public.get_conference_air_conditioning(uuid,uuid)'],
     ['mutate_conference_air_conditioning','public.mutate_conference_air_conditioning(uuid,uuid,uuid,text,uuid,text,bigint,jsonb)'],
     ['get_conference_finance','public.get_conference_finance(uuid,uuid)'],

@@ -14,6 +14,7 @@ allowed.add('remove_conference_transport_assignment');
 allowed.add('get_conference_restaurant');
 allowed.add('mutate_conference_restaurant');
 allowed.add('mutate_conference_accommodation_pricing');
+allowed.add('mutate_conference_accommodation_operations');
 allowed.add('get_conference_air_conditioning');
 allowed.add('mutate_conference_air_conditioning');
 allowed.add('get_conference_finance');

@@ -7,6 +7,9 @@ const root=path.join(__dirname,'..');
 const migration=fs.readFileSync(path.join(root,'supabase/migrations/20261023110000_canonical_accommodation_arrivals_and_room_keys.sql'),'utf8');
 const integration=fs.readFileSync(path.join(root,'js/platform-integration.js'),'utf8');
 const ui=fs.readFileSync(path.join(root,'script.js'),'utf8');
+const platformEdge=fs.readFileSync(path.join(root,'supabase/functions/platform-device-operation/index.ts'),'utf8');
+const conferenceEdge=fs.readFileSync(path.join(root,'supabase/functions/conference-device-operation/index.ts'),'utf8');
+const bundleReference=fs.readFileSync(path.join(root,'supabase/migrations/20261023113000_conference_bundle_room_key_reference.sql'),'utf8');
 
 test('arrival is canonical occupancy state with actor, time, revision and audit evidence',()=>{
   assert.match(migration,/conference_accommodation_occupancies[\s\S]*arrived_at timestamptz[\s\S]*arrived_by uuid/);
@@ -29,6 +32,11 @@ test('arrival and key writes are protected by the existing room lease and exact 
   assert.match(integration,/mutate_conference_accommodation_operations/);
 });
 
+test('both active Conference Edge allowlists pass the operation to the protected dispatcher',()=>{
+  assert.match(platformEdge,/conference\.add\('mutate_conference_accommodation_operations'\)/);
+  assert.match(conferenceEdge,/allowed\.add\('mutate_conference_accommodation_operations'\)/);
+});
+
 test('canonical projection and UI expose per-person arrival and named room key recipient',()=>{
   for(const field of ['arrivedAt','arrivedBy','keyHolderOccupancyId','keyHolderName','keyDeliveredAt','keyDeliveredBy'])assert.ok(migration.includes(`'${field}'`));
   assert.match(integration,/arrivedAt:value\.arrivedAt/);
@@ -43,4 +51,10 @@ test('a temporal transfer inherits arrival while stale key recipients are suppre
   assert.match(migration,/o\.leave_day=new\.arrival_day/);
   assert.match(migration,/case when exists\(select 1 from public\.conference_accommodation_occupancies ko/);
   assert.match(migration,/ko\.room_id=ra\.room_id/);
+});
+
+test('canonical bundle restore remaps the room key recipient occupancy identity',()=>{
+  assert.match(bundleReference,/restore_conference_bundle_table/);
+  assert.match(bundleReference,/key_holder_occupancy_id/);
+  assert.match(bundleReference,/conference_bundle_uuid\(p_operation_id,\(v_row->>''key_holder_occupancy_id''\)::uuid\)/);
 });
