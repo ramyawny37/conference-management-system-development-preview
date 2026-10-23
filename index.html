@@ -472,6 +472,31 @@
 </div>
 
 <!-- Canonical accommodation move day: cancellation never submits a mutation. -->
+<div class="overlay app-modal" id="canonicalAccommodationAssignmentModal" style="display:none" role="presentation" onclick="if(event.target===this)closeCanonicalAccommodationAssignmentDialog()">
+  <div class="modal canonical-accommodation-assignment-modal" role="dialog" aria-modal="true" aria-labelledby="canonicalAccommodationAssignmentTitle">
+    <div class="mhead"><strong id="canonicalAccommodationAssignmentTitle">اختر النزيل</strong><button type="button" class="btn btn-gray btn-sm" aria-label="إغلاق" onclick="closeCanonicalAccommodationAssignmentDialog()">✕</button></div>
+    <div class="mbody">
+      <div class="canonical-accommodation-assignment-period">
+        <div><label for="canonicalAccommodationArrivalDay">يوم الوصول:</label><input id="canonicalAccommodationArrivalDay" type="number" min="1" step="1" inputmode="numeric"></div>
+        <div><label for="canonicalAccommodationLeaveDay">يوم المغادرة (اتركه فارغًا إذا لم تُحدد المغادرة):</label><input id="canonicalAccommodationLeaveDay" type="number" min="2" step="1" inputmode="numeric"></div>
+        <div><label for="canonicalAccommodationBedType">نوع السرير: أساسي أو إضافي</label><select id="canonicalAccommodationBedType" onchange="renderCanonicalAccommodationAssignmentCandidates()"><option value="base">أساسي</option><option value="extra">إضافي</option></select></div>
+        <div id="canonicalAccommodationExtraPersonTypeField" style="display:none"><label for="canonicalAccommodationExtraPersonType">السرير الإضافي لشخص بالغ أم طفل؟ اكتب بالغ أو طفل</label><select id="canonicalAccommodationExtraPersonType"><option value="adult">بالغ</option><option value="child">طفل</option></select></div>
+      </div>
+      <button type="button" class="btn btn-blue canonical-accommodation-load-candidates" onclick="renderCanonicalAccommodationAssignmentCandidates()">عرض الأشخاص المتاحين</button>
+      <div id="canonicalAccommodationAssignmentError" role="alert" aria-live="polite"></div>
+      <div id="canonicalAccommodationAssignmentCandidates" style="display:none">
+        <label for="canonicalAccommodationAssignmentSearch">بحث...</label>
+        <input id="canonicalAccommodationAssignmentSearch" type="search" placeholder="بحث..." oninput="renderCanonicalAccommodationAssignmentCandidateList()">
+        <div id="canonicalAccommodationAssignmentList"></div>
+      </div>
+      <div class="row canonical-accommodation-assignment-actions">
+        <button id="canonicalAccommodationAssignmentConfirm" type="button" class="btn btn-green" onclick="confirmCanonicalAccommodationAssignment()" disabled>💾 حفظ</button>
+        <button type="button" class="btn btn-gray" onclick="closeCanonicalAccommodationAssignmentDialog()">إلغاء</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="overlay app-modal" id="canonicalAccommodationMoveDayModal" style="display:none" role="presentation" onclick="if(event.target===this)closeCanonicalAccommodationMoveDayDialog()">
   <div class="modal" style="max-width:460px" role="dialog" aria-modal="true" aria-labelledby="canonicalAccommodationMoveDayTitle">
     <div class="mhead"><strong id="canonicalAccommodationMoveDayTitle">تحديد يوم سريان النقل</strong><button type="button" class="btn btn-gray btn-sm" aria-label="إغلاق" onclick="closeCanonicalAccommodationMoveDayDialog()">✕</button></div>

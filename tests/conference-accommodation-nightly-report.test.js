@@ -84,7 +84,7 @@ test('canonical accommodation dashboard projects only the operational-day segmen
 });
 
 
-test('canonical guest picker keeps active Participation identity and lets the server validate the selected interval',()=>{
+test('canonical guest picker filters the selected interval and preserves Participation identity for the atomic server guard',()=>{
   const start=scriptSource.indexOf('function assignCanonicalAccommodation(');
   const end=scriptSource.indexOf('function getCanonicalAccommodationOccupanciesOnDay(',start);
   assert.ok(start>=0&&end>start);
@@ -92,6 +92,8 @@ test('canonical guest picker keeps active Participation identity and lets the se
   assert.match(source,/getConferenceOperationalDay\(current\)/);
   assert.match(source,/getConferenceParticipationState\(current\.id\)/);
   assert.match(source,/item\.status==='active'/);
-  assert.match(source,/participationId:participation\.participationId/);
-  assert.match(source,/server validates overlap and capacity atomically/);
+  assert.match(source,/getCanonicalAccommodationAvailableParticipations/);
+  assert.match(source,/canonicalAccommodationIntervalsOverlap/);
+  assert.match(source,/participationId:draft\.selectedParticipationId/);
+  assert.match(source,/assignConferenceAccommodation/);
 });

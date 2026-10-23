@@ -109,19 +109,22 @@ test('linked renderer reads only canonical hierarchy and Person occupancy projec
   assert.match(header,/linkedAccommodation\?\(canonicalAccommodation\?canonicalAccommodation\.houses:\[\]\):\(current\.houses\|\|\[\]\)/);
 });
 
-test('linked participant selection offers only active canonical Participations',()=>{
+test('linked participant selection starts with the stay period and uses canonical Participation ids',()=>{
   const start=scriptSource.indexOf('function assignCanonicalAccommodation(');
   const end=scriptSource.indexOf('\nfunction moveCanonicalAccommodation',start);
   const source=scriptSource.slice(start,end);
   assert.match(source,/getConferenceParticipationState/);
   assert.match(source,/item\.status==='active'/);
-  assert.match(source,/participation\.participationId/);
+  assert.match(source,/selectedParticipationId/);
+  assert.match(source,/getCanonicalAccommodationAvailableParticipations/);
+  assert.match(source,/canonicalAccommodationIntervalsOverlap/);
+  assert.doesNotMatch(source,/prompt\(/);
   assert.doesNotMatch(source,/getPeopleList|peopleDb|room\.guests|room\.children|\bsave\s*\(/);
 });
 
 test('linked mutation functions never save or mutate snapshot houses/guest arrays',()=>{
   const start=scriptSource.indexOf('function canonicalAccommodationMutation(');
-  const end=scriptSource.indexOf('\nfunction renderCanonicalAccommodation',start);
+  const end=scriptSource.indexOf('\nfunction renderCanonicalAccommodation(state)',start);
   const source=scriptSource.slice(start,end);
   assert.match(source,/assignConferenceAccommodation/);
   assert.match(source,/moveConferenceAccommodation/);
@@ -139,28 +142,25 @@ test('apology cleanup and deletion remain transactional backend ownership with n
   assert.doesNotMatch(reactivation,/insert into public\.conference_accommodation_occupancies/);
 });
 
-test('local-only accommodation remains isolated and no parallel backend was introduced',()=>{
-  const legacy=scriptSource.slice(scriptSource.indexOf('function renderAccommodation()'),scriptSource.indexOf('function cloneHouseTemplateToConference',scriptSource.indexOf('function renderAccommodation()')));
-  assert.match(legacy,/current\.houses/);
-  assert.match(scriptSource,/function saveRoomData[\s\S]*current\.houses = deepClone\(editRoomData\.draftHouses\)[\s\S]*save\(\)/);
+test('active accommodation entry has no local fallback or parallel backend',()=>{
+  const entry=scriptSource.slice(scriptSource.indexOf('function renderAccommodation()'),scriptSource.indexOf('\nfunction ',scriptSource.indexOf('function renderAccommodation()')+10));
+  assert.match(entry,/getCanonicalConferenceCoreLink/);
+  assert.match(entry,/renderCanonicalAccommodation\(canonicalAccommodationState\(\)\)/);
+  assert.doesNotMatch(entry,/current\.houses|save\(\)|renderLegacy|localStorage/);
   const integration=integrationSource.slice(integrationSource.indexOf('function accommodationPerson'),integrationSource.indexOf('function moduleIdFromRoute'));
   assert.doesNotMatch(integration,/supabase|\.rpc\(|conference_snapshots|localStorage|indexedDB|peopleDb/i);
   assert.match(integration,/invokeProtected\('conference','get_conference_accommodation'/);
 });
 
-test('cancelled canonical guest assignment stops before any following prompt or mutation',()=>{
+test('cancelled canonical guest assignment clears draft without mutation',()=>{
   const begin=scriptSource.indexOf('function assignCanonicalAccommodation(roomId){');
   const end=scriptSource.indexOf('function getCanonicalAccommodationOccupanciesOnDay(',begin);
   assert.ok(begin>=0&&end>begin,'canonical assignment handler must exist');
   const handler=scriptSource.slice(begin,end);
-  assert.match(handler,/if\(arrivalText===null\)return;/);
-  assert.match(handler,/if\(leaveText===null\)return;/);
-  assert.match(handler,/if\(bedText===null\)return;/);
-  assert.ok(handler.indexOf('if(arrivalText===null)return;')<handler.indexOf("prompt('يوم المغادرة"));
-  assert.ok(handler.indexOf('if(leaveText===null)return;')<handler.indexOf("prompt('نوع السرير"));
-  assert.ok(handler.indexOf('if(bedText===null)return;')<handler.indexOf('integration.assignConferenceAccommodation('));
-  assert.doesNotMatch(handler,/Number\(prompt\(/);
-  assert.doesNotMatch(handler,/confirm\('استخدام سرير إضافي/);
+  const close=handler.slice(handler.indexOf('function closeCanonicalAccommodationAssignmentDialog'),handler.indexOf('function canonicalAccommodationIntervalsOverlap'));
+  assert.match(close,/canonicalAccommodationAssignmentDraft=null/);
+  assert.doesNotMatch(close,/assignConferenceAccommodation|canonicalAccommodationMutation/);
+  assert.doesNotMatch(handler,/prompt\(/);
 });
 
 test('canonical room cards retain capacity, notes, contact and stay-day details',()=>{
@@ -238,10 +238,9 @@ test('canonical extra bed occupancy explicitly distinguishes child and adult',()
   const start=scriptSource.indexOf('function assignCanonicalAccommodation(roomId){');
   const end=scriptSource.indexOf('function getCanonicalAccommodationOccupanciesOnDay(',start);
   const assign=scriptSource.slice(start,end);
-  assert.ok(assign.includes("extraTypeText==='طفل'?'child':'adult'"));
-  assert.ok(assign.includes('if(extraTypeText===null)return;'));
-  assert.ok(assign.includes('extraBedPersonType:extraBedPersonType'));
-  assert.ok(!assign.includes("extraBedPersonType:bedType==='extra'?'adult':null"));
+  assert.ok(assign.includes("ge('canonicalAccommodationExtraPersonType').value"));
+  assert.ok(assign.includes("ge('canonicalAccommodationBedType').value==='extra'"));
+  assert.ok(assign.includes('extraBedPersonType:'));
 });
 
 test('canonical stay dates reject unsafe integers before persistence',()=>{
@@ -250,7 +249,29 @@ test('canonical stay dates reject unsafe integers before persistence',()=>{
   const assign=scriptSource.slice(start,end);
   assert.ok(assign.includes('Number.isSafeInteger(Number(arrivalText))'));
   assert.ok(assign.includes('Number.isSafeInteger(Number(leaveText))'));
-  assert.ok(assign.indexOf('Number.isSafeInteger(Number(arrivalText))')<assign.indexOf('integration.assignConferenceAccommodation('));
+  assert.ok(assign.indexOf('Number.isSafeInteger(Number(arrivalText))')<assign.indexOf('assignConferenceAccommodation(current.id'));
+});
+
+test('period availability behavior covers overlap, ended stays, cancellation and resettlement',()=>{
+  const begin=scriptSource.indexOf('function canonicalAccommodationIntervalsOverlap(');
+  const end=scriptSource.indexOf('function renderCanonicalAccommodationAssignmentCandidates(',begin);
+  const sandbox={};
+  vm.runInNewContext(scriptSource.slice(begin,end)+';this.overlap=canonicalAccommodationIntervalsOverlap;this.available=getCanonicalAccommodationAvailableParticipations;',sandbox);
+  const participations=[
+    {participationId:'housed',status:'active'},
+    {participationId:'free',status:'active'},
+    {participationId:'ended',status:'active'},
+    {participationId:'cancelled',status:'active'},
+    {participationId:'apologized',status:'apologized'}
+  ];
+  const state={houses:[{floors:[{rooms:[
+    {occupancies:[{occupancyId:'one',participationId:'housed',arrivalDay:2,leaveDay:6}]},
+    {occupancies:[{occupancyId:'old',participationId:'ended',arrivalDay:1,leaveDay:3}]}
+  ]}]}]};
+  assert.equal(sandbox.overlap(3,5,2,6),true);
+  assert.equal(sandbox.overlap(6,8,2,6),false);
+  assert.deepEqual(Array.from(sandbox.available(participations,state,3,5),item=>item.participationId),['free','ended','cancelled']);
+  assert.deepEqual(Array.from(sandbox.available(participations,state,6,8),item=>item.participationId),['housed','free','ended','cancelled']);
 });
 
 test('canonical accommodation floor names reject whitespace-only input',()=>{
