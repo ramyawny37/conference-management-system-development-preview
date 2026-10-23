@@ -59,13 +59,13 @@ test('searchable selector state exists before the accommodation person picker op
   assert.equal(title.textContent,'People');
 });
 
-test('move UI sends an explicit effective day and leaves nightly capacity to the server',()=>{
+test('move UI opens the canonical effective-day dialog and leaves nightly validation to the server',()=>{
   const start=scriptSource.indexOf('function moveCanonicalAccommodation(');
   const end=scriptSource.indexOf('function removeCanonicalAccommodation(',start);
   const source=scriptSource.slice(start,end);
-  assert.match(source,/getConferenceOperationalDay\(current\)/);
-  assert.match(source,/arrivalDay:effectiveDay/);
-  assert.doesNotMatch(source,/r\.occupancies\|\|\[\]\)\.length<Number\(r\.baseCapacity/);
+  assert.match(source,/openCanonicalAccommodationMoveDayDialog\(current,occupancy,room,integration\)/);
+  assert.match(source,/getConferenceOperationalDay\(conference\)/);
+  assert.match(source,/arrivalDay:day/);
 });
 
 test('canonical accommodation dashboard projects only the operational-day segment',()=>{
@@ -84,12 +84,14 @@ test('canonical accommodation dashboard projects only the operational-day segmen
 });
 
 
-test('canonical guest picker excludes only guests occupying the selected operational day',()=>{
+test('canonical guest picker keeps active Participation identity and lets the server validate the selected interval',()=>{
   const start=scriptSource.indexOf('function assignCanonicalAccommodation(');
   const end=scriptSource.indexOf('function getCanonicalAccommodationOccupanciesOnDay(',start);
   assert.ok(start>=0&&end>start);
   const source=scriptSource.slice(start,end);
   assert.match(source,/getConferenceOperationalDay\(current\)/);
-  assert.match(source,/getCanonicalAccommodationOccupanciesOnDay\(r,operationalDay\)/);
-  assert.doesNotMatch(source,/\(r\.occupancies\|\|\[\]\)\.forEach\(function\(o\)\{occupied\[o\.participationId\]=true/);
+  assert.match(source,/getConferenceParticipationState\(current\.id\)/);
+  assert.match(source,/item\.status==='active'/);
+  assert.match(source,/participationId:participation\.participationId/);
+  assert.match(source,/server validates overlap and capacity atomically/);
 });

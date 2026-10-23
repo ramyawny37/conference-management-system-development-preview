@@ -209,10 +209,10 @@ test('canonical transfer rejects blank and fractional effective days before muta
   const end=scriptSource.indexOf('function removeCanonicalAccommodation(',start);
   assert.ok(start>=0&&end>start);
   const transfer=scriptSource.slice(start,end);
-  assert.ok(transfer.includes('if(effectiveText===null)return;'));
-  assert.ok(transfer.includes('effectiveText=effectiveText.trim();'));
-  assert.ok(transfer.includes('Number.isSafeInteger(effectiveDay)'));
-  assert.ok(transfer.indexOf('Number.isSafeInteger(effectiveDay)')<transfer.indexOf('integration.moveConferenceAccommodation('));
+  assert.ok(transfer.includes("textValue=String(input.value||'').trim()"));
+  assert.ok(transfer.includes('Number.isSafeInteger(day)'));
+  assert.ok(transfer.includes('canonicalAccommodationMoveDraft=null'));
+  assert.ok(transfer.indexOf('Number.isSafeInteger(day)')<transfer.indexOf('moveConferenceAccommodation(conference.id'));
 });
 
 test('canonical accommodation filters extra beds children and accompanied guests',()=>{

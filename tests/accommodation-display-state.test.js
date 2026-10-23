@@ -74,11 +74,16 @@ sandbox.currentConferenceRuntimeActivationDecision={ok:true,active:true,conferen
 assert.strictEqual(sandbox.canEditCurrentConferenceAccommodation(),true);
 
 var renderStart=script.indexOf('function renderAccommodation()');
-var renderEnd=script.indexOf('\nvar editRoomData',renderStart);
+var renderEnd=script.indexOf('\nfunction deactivateAccommodationRoom(',renderStart);
 var renderBody=script.slice(renderStart,renderEnd);
-assert.ok(renderBody.indexOf('ensureAccommodationDisplayState(current)')<
-  renderBody.indexOf('getAllRooms()'),
-  'display state must be rebuilt before room selectors run');
-assert.ok(/if\s*\(canEditAccommodation\)\s*\{\s*h\s*\+=\s*'<div class="accommodation-room-actions">'/.test(renderBody),
-  'read-only rendering must omit administrative room buttons');
+assert.ok(renderBody.includes('renderCanonicalAccommodation(canonicalAccommodationState())'),
+  'active rendering must delegate to canonical accommodation state');
+assert.ok(!renderBody.includes('ensureAccommodationDisplayState(current)')&&!renderBody.includes('getAllRooms()'),
+  'active rendering must not rebuild or read the legacy local room selection');
+var canonicalStart=script.indexOf('function renderCanonicalAccommodation(');
+var canonicalBody=script.slice(canonicalStart,renderStart);
+assert.ok(canonicalBody.includes("var canManage=currentConferenceSectionCapability('accommodationManage')"),
+  'canonical room actions must use the protected accommodation capability');
+assert.ok(canonicalBody.includes("+(canManage?'<div class=\"row\""),
+  'read-only canonical rendering must omit administrative room actions');
 console.log('accommodation display state tests: passed');

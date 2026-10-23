@@ -55,9 +55,9 @@ test('canonical move picker excludes closed, current and full rooms',()=>{
   const end=ui.indexOf('\nfunction removeCanonicalAccommodation(',start);
   const body=ui.slice(start,end);
   assert.match(body,/!r\.isClosed&&r\.roomId!==occupancy\.roomId/);
-  assert.match(body,/getCanonicalAccommodationOccupanciesOnDay\(r,getConferenceOperationalDay\(current\)\)\.length/);
+  assert.match(body,/getCanonicalAccommodationOccupanciesOnDay\(r,operationalDay\)\.length/);
   assert.match(body,/Number\(r\.baseCapacity\|\|0\)\+Number\(r\.extraBedCapacity\|\|0\)/);
-  assert.match(body,/integration\.moveConferenceAccommodation/);
+  assert.match(body,/moveConferenceAccommodation\(conference\.id/);
 });
 
 test('canonical move day is confirmed in-app and cancellation has no mutation',()=>{
@@ -75,4 +75,15 @@ test('canonical move day is confirmed in-app and cancellation has no mutation',(
   assert.match(html,/id="canonicalAccommodationMoveDayModal"/);
   assert.match(html,/id="canonicalAccommodationMoveDayError"/);
   assert.match(html,/onclick="closeCanonicalAccommodationMoveDayDialog\(\)">إلغاء/);
+});
+
+test('searchable person and room picker cancellation clears its callback without mutation',()=>{
+  const start=ui.indexOf('function closeSearchableSelectDialog(){');
+  const end=ui.indexOf('\nfunction renderSearchableSelectList()',start);
+  const close=ui.slice(start,end);
+  const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
+  assert.match(close,/modal\.style\.display = 'none'/);
+  assert.match(close,/onSelect: null/);
+  assert.doesNotMatch(close,/onSelect\s*\(|assignConferenceAccommodation|moveConferenceAccommodation/);
+  assert.match(html,/id="searchableSelectModal"[\s\S]*onclick="closeSearchableSelectDialog\(\)">إلغاء/);
 });

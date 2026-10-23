@@ -60,17 +60,17 @@ assert.strictEqual(new Set(filtered('50').map(room=>room.id)).size,filtered('50'
 assert.deepStrictEqual(filtered('210').map(room=>room.id),['room-210'],'nonmatching rooms must be hidden');
 
 const accommodationBlock=between('function normalizeAccommodationSearchText(',
-  'var editRoomData = {}');
-assert.match(accommodationBlock,/visibleRooms\.forEach\(function\(roomEntry\)/,
-  'filtering must happen before house/floor grouping');
-assert.match(accommodationBlock,/if\(!isFiltering\)[\s\S]*current\.houses/,
-  'empty houses/floors must not be pre-created while filtering');
-assert.match(accommodationBlock,/floorEntry\.rooms\.forEach\(function\(r\)/,
-  'the existing room-card rendering loop must be reused');
-assert.match(accommodationBlock,/class="(?:rcard(?:\s[^"]*)?|[^"]*\srcard(?:\s[^"]*)?)"/,
-  'full room card must remain present');
-assert.match(accommodationBlock,/openRoomEditor\(/,'room actions must remain present');
-assert.match(accommodationBlock,/canEditAccommodation/,'viewing users must still reach filtering before action gating');
+  'function renderAccommodation()');
+assert.match(accommodationBlock,/var matchingRooms=rooms\.filter/,
+  'canonical filtering must happen before house and floor rendering');
+assert.match(accommodationBlock,/state\.houses\.forEach/,
+  'canonical houses must remain the only active hierarchy');
+assert.match(accommodationBlock,/floor\.rooms\|\|\[\]\)\.filter/,
+  'canonical room-card rendering must use the filtered floor rooms');
+assert.match(accommodationBlock,/accommodation-room-card/,
+  'full canonical room card must remain present');
+assert.match(accommodationBlock,/assignCanonicalAccommodation\(/,'canonical room actions must remain present');
+assert.match(accommodationBlock,/currentConferenceSectionCapability\('accommodationManage'\)/,'viewing users must still reach filtering before action gating');
 assert.match(accommodationBlock,/accommodationSearchQuery/,'query must survive ordinary rerenders');
 assert.match(accommodationBlock,/function clearAccommodationSearch\(\)[\s\S]*accommodationSearchQuery=''/,
   'clear must restore the unfiltered room set');
@@ -85,7 +85,7 @@ assert.doesNotMatch(stateSource,/localStorage[^\n]*accommodationSearchQuery|acco
 assert.match(styleSource,/@media\(max-width:600px\)\{\.accommodation-search-controls/,
   'search controls must include a mobile layout');
 
-assert.match(indexSource,/onclick="switchTab\(5\)"[\s\S]*>بحث</,
+assert.match(indexSource,/data-conference-tab="5">البحث</,
   'the existing Search tab must remain');
 assert.match(source,/function renderSearch\(\)/,'existing Search tab renderer must remain');
 assert.match(source,/function liveSearch\(q\)/,'existing Search tab search must remain');
