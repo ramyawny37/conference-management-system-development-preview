@@ -2833,13 +2833,13 @@ function deleteCanonicalAccommodationHouse(houseId){
 
 function createCanonicalAccommodationFloor(houseId){
   var house=findCanonicalAccommodationEntity('house',houseId),name=house&&prompt('اسم الدور:');
-  if(!house||!name)return false;
+  if(!house||!name||!name.trim())return false;
   return canonicalAccommodationStructure('create_accommodation_floor',{p_house_id:house.houseId,p_name:name.trim(),p_position:(house.floors||[]).length},'✅ تم حفظ بيانات الدور');
 }
 
 function editCanonicalAccommodationFloor(floorId){
   var floor=findCanonicalAccommodationEntity('floor',floorId),name=floor&&prompt('اسم الدور:',floor.name);
-  if(!floor||!name)return false;
+  if(!floor||!name||!name.trim())return false;
   return canonicalAccommodationStructure('update_accommodation_floor',{p_floor_id:floor.floorId,p_expected_revision:floor.revision,p_name:name.trim(),p_position:floor.position},'✅ تم حفظ بيانات الدور');
 }
 
