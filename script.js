@@ -2863,6 +2863,9 @@ function canonicalRoomDraft(room){
   if(!/^\d+$/.test(baseText)||!/^\d+$/.test(extraText))return null;
   var baseCapacity=Number(baseText),extraBedCapacity=Number(extraText);
   if(!Number.isSafeInteger(baseCapacity)||!Number.isSafeInteger(extraBedCapacity))return null;
+  if(baseCapacity+extraBedCapacity<1||!Number.isSafeInteger(baseCapacity+extraBedCapacity)){
+    showToast('يجب أن تحتوي الغرفة على سرير واحد على الأقل وبسعة صحيحة.','#E74C3C');return null;
+  }
   return {p_room_number:String(roomNumber).trim(),p_base_capacity:baseCapacity,p_extra_bed_capacity:extraBedCapacity,p_notes:room&&room.notes||null,p_is_closed:room?room.isClosed:false,p_closed_day:room?room.closedDay:null,p_position:room?room.position:0};
 }
 
