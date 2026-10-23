@@ -152,3 +152,12 @@ test('move dialog defaults effective day within the occupancy stay interval',()=
   assert.match(body,/input\.min=String\(firstDay\)/);
   assert.match(body,/input\.max=Number\.isFinite\(lastDay\)\?String\(lastDay\):''/);
 });
+
+test('move confirmation refuses a second submit while first mutation is pending',()=>{
+  const start=ui.indexOf('function confirmCanonicalAccommodationMoveDay(');
+  const end=ui.indexOf('\nfunction removeCanonicalAccommodation(',start);
+  const body=ui.slice(start,end);
+  assert.ok(start>=0&&end>start);
+  assert.match(body,/if\(!draft\|\|!input\|\|!error\|\|button&&button\.disabled\)return false/);
+  assert.match(body,/if\(button\)button\.disabled=true/);
+});
