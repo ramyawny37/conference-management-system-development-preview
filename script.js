@@ -2860,7 +2860,7 @@ function canonicalRoomDraft(room){
   var extraText=prompt('عدد الأسرة الإضافية:',room?room.extraBedCapacity:0);
   if(extraText===null)return null;
   baseText=String(baseText).trim();extraText=String(extraText).trim();
-  if(!/^\\d+$/.test(baseText)||!/^\\d+$/.test(extraText))return null;
+  if(!/^\d+$/.test(baseText)||!/^\d+$/.test(extraText))return null;
   var baseCapacity=Number(baseText),extraBedCapacity=Number(extraText);
   if(!Number.isSafeInteger(baseCapacity)||!Number.isSafeInteger(extraBedCapacity))return null;
   return {p_room_number:String(roomNumber).trim(),p_base_capacity:baseCapacity,p_extra_bed_capacity:extraBedCapacity,p_notes:room&&room.notes||null,p_is_closed:room?room.isClosed:false,p_closed_day:room?room.closedDay:null,p_position:room?room.position:0};
