@@ -129,7 +129,7 @@ begin
  insert into platform.audit_events(actor_user_id,actor_device_authorization_id,domain,module,action,entity_type,entity_id,scope_type,scope_id,old_values,new_values,metadata,operation_id,source)
  values(actor,authz,'platform','conference',case when p_operation='set_arrival' then 'conference.accommodation.arrival_updated' else 'conference.accommodation.room_key_updated' end,
   case when p_operation='set_arrival' then 'accommodation_occupancy' else 'conference_room_assignment' end,
-  case when p_operation='set_arrival' then occupancy.id else assignment.id end,'resource',p_conference,old_values,new_values,
+  case when p_operation='set_arrival' then occupancy.id else assignment.id end,'conference',p_conference,old_values,new_values,
   jsonb_build_object('conferenceId',p_conference,'roomId',room_id,'permissionKey','conference.accommodation.manage','authoritySource',ctx->>'authoritySource','grantId',ctx->'grantId'),p_operation_id,'rpc');
  return result;
 end $$;
