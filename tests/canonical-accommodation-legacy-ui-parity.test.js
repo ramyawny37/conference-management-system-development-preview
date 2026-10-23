@@ -212,6 +212,21 @@ test('canonical accommodation key summary counts only holders present on operati
   const body=ui.slice(start,end);
   assert.ok(start>=0&&end>start);
   assert.match(body,/var deliveredKeys=rooms\.filter/);
-  assert.match(body,/getCanonicalAccommodationOccupanciesOnDay\(room,operationalDay\)\.some/);
-  assert.match(body,/item\.occupancyId===room\.keyHolderOccupancyId/);
+  assert.match(body,/canonicalAccommodationActiveKeyHolder\(room,operationalDay\)/);
+  const helperStart=ui.indexOf('function canonicalAccommodationActiveKeyHolder(');
+  const helperEnd=ui.indexOf('\nfunction ',helperStart+1);
+  const helper=ui.slice(helperStart,helperEnd);
+  assert.match(helper,/getCanonicalAccommodationOccupanciesOnDay\(room,day\)/);
+  assert.match(helper,/String\(item\.occupancyId\)===String\(room\.keyHolderOccupancyId\)/);
+});
+
+test('key filters, room detail and guest badge use the same active-day holder',()=>{
+  const start=ui.indexOf('function renderCanonicalAccommodation(');
+  const end=ui.indexOf('\nfunction ',start+1);
+  const body=ui.slice(start,end);
+  assert.match(body,/filter==='key-delivered'&&!canonicalAccommodationActiveKeyHolder\(room,operationalDay\)/);
+  assert.match(body,/filter==='key-not-delivered'&&canonicalAccommodationActiveKeyHolder\(room,operationalDay\)/);
+  assert.match(body,/var activeKeyHolder=canonicalAccommodationActiveKeyHolder\(room,operationalDay\)/);
+  assert.match(body,/activeKeyHolder\.person&&activeKeyHolder\.person\.fullName/);
+  assert.match(body,/activeKeyHolder&&String\(activeKeyHolder\.occupancyId\)===String\(occupancy\.occupancyId\)/);
 });
