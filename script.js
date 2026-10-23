@@ -3109,7 +3109,7 @@ function setCanonicalAccommodationRoomKey(roomId){
   var current=getCurrentConference(),room=findCanonicalAccommodationEntity('room',roomId),day=getConferenceOperationalDay(current);
   if(!current||!room)return false;
   var occupants=getCanonicalAccommodationOccupanciesOnDay(room,day);
-  var options=[{label:'إلغاء تسجيل تسليم المفتاح',searchText:'إلغاء',data:null}].concat(occupants.map(function(item){return {label:item.person.fullName,searchText:[item.person.fullName,item.person.phone,item.person.church].join(' '),data:item};}));
+  var options=[{label:'إلغاء تسجيل تسليم المفتاح',searchText:'إلغاء',data:null}].concat(occupants.map(function(item){var person=item.person||{};return {label:person.fullName||'نزيل بدون اسم',searchText:[person.fullName||'',person.phone||'',person.church||''].join(' '),data:item};}));
   openSearchableSelectDialog('اختر مستلم مفتاح الغرفة',options,function(holder){
     canonicalAccommodationMutation(window.PlatformIntegration.setConferenceAccommodationRoomKey(current.id,room.roomId,room.roomAssignmentRevision,holder&&holder.occupancyId),'🔑 تم تحديث تسليم المفتاح');
   });
