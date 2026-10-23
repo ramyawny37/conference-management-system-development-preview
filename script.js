@@ -3032,7 +3032,7 @@ function openCanonicalAccommodationMoveDayDialog(conference,occupancy,room,integ
 }
 function confirmCanonicalAccommodationMoveDay(){
   var draft=canonicalAccommodationMoveDraft,input=ge('canonicalAccommodationMoveDayInput'),error=ge('canonicalAccommodationMoveDayError'),button=ge('canonicalAccommodationMoveDayConfirm');
-  if(!draft||!input||!error)return false;
+  if(!draft||!input||!error||button&&button.disabled)return false;
   var textValue=String(input.value||'').trim(),day=Number(textValue);
   if(!/^\d+$/.test(textValue)||!Number.isSafeInteger(day)||day<Number(draft.arrivalDay)||(draft.leaveDay!=null&&draft.leaveDay!==''&&day>=Number(draft.leaveDay))){
     error.textContent='يوم سريان النقل خارج فترة الإقامة.';return false;
