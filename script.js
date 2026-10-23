@@ -3053,7 +3053,7 @@ function renderCanonicalAccommodation(state){
       var visibleFloorRooms=(floor.rooms||[]).filter(function(room){return matchingRooms.indexOf(room)>=0;});
       if(!visibleFloorRooms.length)return;
       var floorKey=String(house.houseId)+'|'+String(floor.floorId||floor.id||floor.name);
-      var collapsed=!query&&accommodationCollapsedFloors[floorKey]===true;
+      var collapsed=!query&&filter==='all'&&accommodationCollapsedFloors[floorKey]===true;
       h+='<div class="floor-section'+(collapsed?' is-collapsed':'')+'"><button type="button" class="accommodation-floor-header" aria-expanded="'+(!collapsed)+'" onclick="toggleAccommodationFloor(\''+esc(house.houseId)+'\',\''+esc(floor.floorId||floor.id||floor.name)+'\')"><strong>'+esc(floor.name)+'</strong><span>'+visibleFloorRooms.length+' غرفة '+(collapsed?'⌄':'⌃')+'</span></button><div class="rooms-grid">';
       (floor.rooms||[]).filter(function(room){return matchingRooms.indexOf(room)>=0;}).forEach(function(room){
         var roomOccupancies=room.occupancies?getCanonicalAccommodationOccupanciesOnDay(room,operationalDay):[];
