@@ -161,3 +161,19 @@ test('move confirmation refuses a second submit while first mutation is pending'
   assert.match(body,/if\(!draft\|\|!input\|\|!error\|\|button&&button\.disabled\)return false/);
   assert.match(body,/if\(button\)button\.disabled=true/);
 });
+
+test('canonical room editor accepts numeric base and extra bed capacities',()=>{
+  const start=ui.indexOf('function canonicalRoomDraft(');
+  const end=ui.indexOf('\nfunction createCanonicalAccommodationRoom(',start);
+  const body=ui.slice(start,end);
+  assert.ok(start>=0&&end>start);
+  const expressions=[...body.matchAll(/!\/(\^.*?\$)\/\.test\((?:baseText|extraText)\)/g)];
+  assert.equal(expressions.length,2);
+  for(const match of expressions){
+    const valid=new RegExp(match[1]);
+    assert.equal(valid.test('0'),true);
+    assert.equal(valid.test('12'),true);
+    assert.equal(valid.test('12a'),false);
+    assert.equal(valid.test('-1'),false);
+  }
+});
