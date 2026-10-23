@@ -3020,9 +3020,11 @@ function openCanonicalAccommodationMoveDayDialog(conference,occupancy,room,integ
   if(!modal||!input||!label||!error){showToast('تعذر فتح نافذة النقل.','#E74C3C');return false;}
   canonicalAccommodationMoveDraft={conferenceId:conference.id,occupancyId:occupancy.occupancyId,revision:occupancy.revision,roomId:room.roomId,leaveDay:occupancy.leaveDay,arrivalDay:occupancy.arrivalDay,bedType:occupancy.bedType,extraBedPersonType:occupancy.extraBedPersonType};
   label.textContent='الغرفة المستهدفة: '+String(room.roomNumber);
-  input.value=String(getConferenceOperationalDay(conference));
-  input.min=String(occupancy.arrivalDay);
-  input.max=occupancy.leaveDay==null?'':String(Number(occupancy.leaveDay)-1);
+  var firstDay=Number(occupancy.arrivalDay),lastDay=occupancy.leaveDay==null||occupancy.leaveDay===''?Infinity:Number(occupancy.leaveDay)-1;
+  var suggestedDay=Math.max(firstDay,Math.min(Number(getConferenceOperationalDay(conference)),lastDay));
+  input.value=String(suggestedDay);
+  input.min=String(firstDay);
+  input.max=Number.isFinite(lastDay)?String(lastDay):'';
   error.textContent='';
   modal.style.display='flex';
   input.focus();
