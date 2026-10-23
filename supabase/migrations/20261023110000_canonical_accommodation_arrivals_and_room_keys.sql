@@ -92,10 +92,11 @@ begin
  ctx:=platform_private.require_conference_accommodation_context(p_device,p_conference,'conference.accommodation.manage',true);
  actor:=(ctx->>'actorUserId')::uuid;authz:=platform_private.validated_phase1c_device_authorization(actor,p_device);
  select new_values into result from platform.audit_events where actor_user_id=actor and operation_id=p_operation_id
-   and action in('conference.accommodation.arrival_updated','conference.accommodation.room_key_updated') limit 1;
+   and scope_id=p_conference::text and action=case when p_operation='set_arrival' then 'conference.accommodation.arrival_updated' else 'conference.accommodation.room_key_updated' end limit 1;
  if result is not null then return result||jsonb_build_object('status','duplicate');end if;
  if p_operation='set_arrival' then
   perform platform_private.require_exact_jsonb_keys(p_args,array['occupancyId','expectedRevision','arrived']);
+  if jsonb_typeof(p_args->'arrived') is distinct from 'boolean' then raise exception 'ARRIVAL_BOOLEAN_REQUIRED' using errcode='22023';end if;
   expected:=(p_args->>'expectedRevision')::bigint;
   select * into occupancy from public.conference_accommodation_occupancies where id=(p_args->>'occupancyId')::uuid and conference_id=p_conference for update;
   if not found then raise exception 'ACCOMMODATION_OCCUPANCY_NOT_FOUND' using errcode='P0002';end if;
