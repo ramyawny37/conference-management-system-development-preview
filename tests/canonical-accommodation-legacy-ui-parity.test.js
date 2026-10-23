@@ -187,3 +187,21 @@ test('canonical room editor rejects zero or unsafe total bed capacity',()=>{
   assert.match(body,/!Number\.isSafeInteger\(baseCapacity\+extraBedCapacity\)/);
   assert.match(body,/يجب أن تحتوي الغرفة على سرير واحد على الأقل/);
 });
+
+test('canonical house and floor editors reject blank names without sending mutations',()=>{
+  for(const [name,next] of [
+    ['createCanonicalAccommodationHouse','editCanonicalAccommodationHouse'],
+    ['editCanonicalAccommodationHouse','deleteCanonicalAccommodationHouse'],
+    ['createCanonicalAccommodationFloor','editCanonicalAccommodationFloor'],
+    ['editCanonicalAccommodationFloor','deleteCanonicalAccommodationFloor']
+  ]){
+    const start=ui.indexOf('function '+name+'(');
+    const end=ui.indexOf('\nfunction '+next+'(',start);
+    const body=ui.slice(start,end);
+    assert.ok(start>=0&&end>start,name);
+    assert.match(body,/name===null/,name);
+    assert.match(body,/name=String\(name\)\.trim\(\)/,name);
+    assert.match(body,/if\(!name\)\{showToast\(/,name);
+    assert.ok(body.indexOf('if(!name){showToast(')<body.indexOf('canonicalAccommodationStructure('),name);
+  }
+});
