@@ -3,7 +3,7 @@ const test=require('node:test');
 const assert=require('node:assert/strict');
 const fs=require('node:fs');
 
-const migration=fs.readFileSync('supabase/migrations/20261022142500_canonical_accommodation_stay_segments.sql','utf8');
+const migration=fs.readFileSync('supabase/migrations/20261022125139_canonical_accommodation_stay_segments.sql','utf8');
 const core=fs.readFileSync('core.js','utf8');
 const cards=fs.readFileSync('cards.js','utf8');
 const runtime=fs.readFileSync('script.js','utf8');
@@ -17,7 +17,7 @@ test('stay segments replace single-participation storage with a half-open overla
 });
 
 test('partial live application is reconciled without replaying matching temporal consumers',()=>{
-  const projection=fs.readFileSync('supabase/migrations/20261022144500_accommodation_temporal_consumer_projection.sql','utf8');
+  const projection=fs.readFileSync('supabase/migrations/20261022125335_accommodation_temporal_consumer_projection.sql','utf8');
   assert.match(projection,/if position\(new_join in definition\)>0 then[\s\S]*continue/);
   assert.match(projection,/elsif position\(old_join in definition\)>0 then/);
   assert.match(projection,/ACCOMMODATION_TEMPORAL_CONSUMER_DRIFT/);
@@ -55,7 +55,7 @@ test('card rendering and PNG capture dimensions remain unchanged',()=>{
 
 
 test('removal preserves historical stay segments',()=>{
- const source=fs.readFileSync('supabase/migrations/20261022190000_preserve_canonical_accommodation_history_on_removal.sql','utf8');
+ const source=fs.readFileSync('supabase/migrations/20261022155901_preserve_canonical_accommodation_history_on_removal.sql','utf8');
  assert.match(source,/ACCOMMODATION_HISTORICAL_STAY_IMMUTABLE/);
  assert.match(source,/set leave_day=effective_day/);
  assert.match(source,/ACCOMMODATION_REVISION_CONFLICT/);
@@ -64,7 +64,7 @@ test('removal preserves historical stay segments',()=>{
 
 
 test('effective-day transfers correct future bookings and preserve consumed nights',()=>{
- const source=fs.readFileSync('supabase/migrations/20261022192000_canonical_accommodation_transfer_effective_day.sql','utf8');
+ const source=fs.readFileSync('supabase/migrations/20261022160140_canonical_accommodation_transfer_effective_day.sql','utf8');
  assert.match(source,/ACCOMMODATION_HISTORICAL_TRANSFER_DAY_IMMUTABLE/);
  assert.match(source,/current.arrival_day<effective_day/);
  assert.match(source,/historical:=p_arrival>current.arrival_day and current.arrival_day<effective_day/);

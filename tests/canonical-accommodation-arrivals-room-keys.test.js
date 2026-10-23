@@ -4,12 +4,12 @@ const fs=require('node:fs');
 const path=require('node:path');
 
 const root=path.join(__dirname,'..');
-const migration=fs.readFileSync(path.join(root,'supabase/migrations/20261023110000_canonical_accommodation_arrivals_and_room_keys.sql'),'utf8');
+const migration=fs.readFileSync(path.join(root,'supabase/migrations/20261023103201_canonical_accommodation_arrivals_and_room_keys.sql'),'utf8');
 const integration=fs.readFileSync(path.join(root,'js/platform-integration.js'),'utf8');
 const ui=fs.readFileSync(path.join(root,'script.js'),'utf8');
 const platformEdge=fs.readFileSync(path.join(root,'supabase/functions/platform-device-operation/index.ts'),'utf8');
 const conferenceEdge=fs.readFileSync(path.join(root,'supabase/functions/conference-device-operation/index.ts'),'utf8');
-const bundleReference=fs.readFileSync(path.join(root,'supabase/migrations/20261023113000_conference_bundle_room_key_reference.sql'),'utf8');
+const bundleReference=fs.readFileSync(path.join(root,'supabase/migrations/20261023105331_conference_bundle_room_key_reference.sql'),'utf8');
 
 test('arrival is canonical occupancy state with actor, time, revision and audit evidence',()=>{
   assert.match(migration,/conference_accommodation_occupancies[\s\S]*arrived_at timestamptz[\s\S]*arrived_by uuid/);
