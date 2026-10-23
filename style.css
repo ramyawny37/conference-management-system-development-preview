@@ -1255,3 +1255,13 @@ tr:nth-child(even) td{background:#F7FBFF}
 .accommodation-dashboard .accommodation-house-metrics>span{display:flex;justify-content:space-between;gap:8px;padding:10px;border-radius:9px;background:rgba(120,145,175,.09)}
 .accommodation-dashboard .accommodation-floor-header{width:100%;display:flex;align-items:center;justify-content:space-between;gap:12px;text-align:start;padding:12px 16px;border:1px solid var(--border-color,#dce4eb);border-radius:10px;background:var(--surface,#fff);cursor:pointer;font:inherit}
 .accommodation-dashboard .floor-section.is-collapsed>.rooms-grid{display:none}
+
+/* Canonical accommodation room parity: status and capacity are visual only. */
+.accommodation-dashboard .accommodation-room-card{min-width:0;border-inline-start:4px solid #98a3af}
+.accommodation-dashboard .accommodation-room-card.room-status-full{border-inline-start-color:#2b9460}
+.accommodation-dashboard .accommodation-room-card.room-status-partial{border-inline-start-color:#e59a32}
+.accommodation-dashboard .accommodation-room-card.room-status-over{border-inline-start-color:#cf4750}
+.accommodation-dashboard .accommodation-room-card.room-status-closed{border-inline-start-color:#89939f}
+.accommodation-dashboard .room-indicators{display:inline-flex;gap:8px;align-items:center;flex-wrap:wrap}
+.accommodation-dashboard .room-status-label{font-weight:650}
+.accommodation-dashboard .accommodation-room-card .guest-row{min-width:0}
