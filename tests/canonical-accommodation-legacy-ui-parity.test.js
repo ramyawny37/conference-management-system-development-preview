@@ -205,3 +205,13 @@ test('canonical house and floor editors reject blank names without sending mutat
     assert.ok(body.indexOf('if(!name){showToast(')<body.indexOf('canonicalAccommodationStructure('),name);
   }
 });
+
+test('canonical accommodation key summary counts only holders present on operational day',()=>{
+  const start=ui.indexOf('function renderCanonicalAccommodation(');
+  const end=ui.indexOf('\nfunction ',start+1);
+  const body=ui.slice(start,end);
+  assert.ok(start>=0&&end>start);
+  assert.match(body,/var deliveredKeys=rooms\.filter/);
+  assert.match(body,/getCanonicalAccommodationOccupanciesOnDay\(room,operationalDay\)\.some/);
+  assert.match(body,/item\.occupancyId===room\.keyHolderOccupancyId/);
+});
