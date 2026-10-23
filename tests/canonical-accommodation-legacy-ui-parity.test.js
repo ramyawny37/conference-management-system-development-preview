@@ -141,3 +141,14 @@ test('successful central accommodation mutation is not misreported as failed whe
   assert.match(body,/return result;/);
   assert.match(body,/\.catch\(function\(error\)/);
 });
+
+test('move dialog defaults effective day within the occupancy stay interval',()=>{
+  const start=ui.indexOf('function openCanonicalAccommodationMoveDayDialog(');
+  const end=ui.indexOf('\nfunction confirmCanonicalAccommodationMoveDay(',start);
+  const body=ui.slice(start,end);
+  assert.ok(start>=0&&end>start);
+  assert.match(body,/Math\.max\(firstDay,Math\.min\(Number\(getConferenceOperationalDay\(conference\)\),lastDay\)\)/);
+  assert.match(body,/input\.value=String\(suggestedDay\)/);
+  assert.match(body,/input\.min=String\(firstDay\)/);
+  assert.match(body,/input\.max=Number\.isFinite\(lastDay\)\?String\(lastDay\):''/);
+});
