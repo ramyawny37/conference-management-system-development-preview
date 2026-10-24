@@ -489,5 +489,18 @@ test('occupancy edits and replacements share the removal arrival transfer guard'
   assert.match(body,/runCanonicalAccommodationOccupancyMutation\(current\.id,draft\.occupancyId,function\(\)/);
   assert.match(body,/replaceConferenceAccommodation\(current\.id/);
   assert.match(body,/moveConferenceAccommodation\(current\.id,payload\)/);
-  assert.match(body,/:canonicalAccommodationMutation\(mutation/);
+  assert.match(body,/:Promise.resolve\(\).then\(executeAssignmentMutation\)/);
+});
+
+test('edit and replacement service calls start only after acquiring occupancy guard',()=>{
+  const start=ui.indexOf('function confirmCanonicalAccommodationAssignment(');
+  const end=ui.indexOf('\nfunction editCanonicalAccommodation(',start);
+  const body=ui.slice(start,end);
+  const factory=body.indexOf('function executeAssignmentMutation(){');
+  const service=body.indexOf('replaceConferenceAccommodation(current.id');
+  const guarded=body.indexOf('runCanonicalAccommodationOccupancyMutation(current.id,draft.occupancyId,executeAssignmentMutation)');
+  assert.ok(factory>=0&&service>factory&&guarded>service);
+  assert.match(body,/var saved=draft\.mode==='edit'/);
+  assert.match(body,/:Promise\.resolve\(\)\.then\(executeAssignmentMutation\)/);
+  assert.doesNotMatch(body,/canonicalAccommodationMutation\(mutation[^\n]*function/);
 });
