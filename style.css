@@ -1307,3 +1307,9 @@ tr:nth-child(even) td{background:#F7FBFF}
 #roomModal.canonical-room-readonly .room-modal-footer{grid-template-columns:minmax(120px,160px);justify-content:center}
 #roomModal.canonical-room-readonly .room-modal-header-icon{display:none}
 @media(max-height:540px){#roomModal.canonical-room-readonly .room-editor-modal{max-height:calc(100dvh - 12px)}#roomModal.canonical-room-readonly .room-modal-header{min-height:48px}#roomModal.canonical-room-readonly .mbody{padding:8px}}
+
+/* Canonical read-only room header keeps its title and close button on a single row. */
+#roomModal.canonical-room-readonly .room-modal-header{display:grid;grid-template-columns:38px minmax(0,1fr);direction:ltr;align-items:center;min-height:62px}
+#roomModal.canonical-room-readonly .room-modal-heading{direction:rtl;grid-column:2;grid-row:1;justify-self:stretch;text-align:right;min-width:0}
+#roomModal.canonical-room-readonly .room-modal-header .close{grid-column:1;grid-row:1;justify-self:center}
+#roomModal.canonical-room-readonly .room-modal-heading strong{white-space:normal;overflow-wrap:normal}
