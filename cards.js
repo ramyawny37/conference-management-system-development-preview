@@ -179,10 +179,11 @@ var CardEngine = (function () {
     var personId = asText(source.personId);
     var record = getPersonRecord(people, personId);
     var fallbackName = typeof entry === 'string' ? entry : asText(source.name);
-    var name = '';
-    if (personType === 'adult' && typeof gn === 'function') name = asText(gn(entry));
-    if (!name && record) name = asText(record.fullName || record.name);
+    // Canonical occupancy already carries the person's name. Never resolve it through
+    // legacy local people helpers: linked conferences explicitly forbid that path.
+    var name = record ? asText(record.fullName || record.name) : '';
     if (!name) name = fallbackName;
+    if (!name && typeof entry === 'string') name = asText(entry);
     var leftDay = source.leftDay === undefined ? null : source.leftDay;
     var hasLeft = typeof gl === 'function' ? !!gl(entry) : !!leftDay;
     return {
