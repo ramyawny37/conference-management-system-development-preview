@@ -1348,3 +1348,20 @@ tr:nth-child(even) td{background:#F7FBFF}
  #conferenceCardPrintRoot.conference-card-print-single>.guest-card{width:90mm!important;max-width:90mm!important;flex:0 0 90mm!important}
  #conferenceCardPrintRoot>.guest-card .no-print,#conferenceCardPrintRoot>.guest-card .welcome-card-actions{display:none!important}
 }
+
+
+/* Canonical Conference cards workspace; print geometry remains separately owned. */
+#tab4 .cards-dashboard{grid-template-columns:minmax(0,1fr);align-items:start;gap:16px;padding:20px}
+#tab4 .cards-dashboard-title{font-size:20px;line-height:1.5}
+#tab4 .cards-dashboard-stats{grid-template-columns:repeat(3,minmax(0,1fr))}
+#tab4 .cards-dashboard-controls{flex-direction:row;align-items:center;justify-content:space-between;flex-wrap:wrap;padding-top:14px;border-top:1px solid var(--app-border)}
+#tab4 .cards-mode-controls{flex-wrap:wrap}
+#tab4 .cards-mode-controls .btn{min-width:150px}
+#tab4 #cardsGrid{grid-template-columns:repeat(auto-fill,minmax(min(100%,340px),340px));justify-content:start;gap:20px}
+#tab4 #cardsGrid>.guest-card{width:100%;min-width:0;max-width:340px;overflow:hidden;border-radius:14px;box-shadow:0 8px 24px rgba(24,45,76,.12)}
+#tab4 #cardsGrid>.guest-card .gc-head{padding:13px 16px;font-size:15px}
+#tab4 #cardsGrid>.guest-card .gc-body{padding:12px 16px}
+#tab4 #cardsGrid>.guest-card .gc-row{gap:10px;align-items:start;padding:8px 0;font-size:12px;line-height:1.5}
+#tab4 #cardsGrid>.guest-card .gc-foot{padding:9px;font-size:11px}
+@media(max-width:760px){#tab4 .cards-dashboard{padding:14px}#tab4 .cards-dashboard-stats{grid-template-columns:1fr}#tab4 .cards-dashboard-controls{align-items:stretch;flex-direction:column}#tab4 .cards-mode-controls,#tab4 .cards-selection-controls{width:100%}#tab4 .cards-mode-controls .btn{flex:1 1 0;min-width:0}#tab4 #cardsGrid{grid-template-columns:minmax(0,1fr)}}
+@media print{#tab4 #cardsGrid>.guest-card{box-shadow:none}}
