@@ -185,7 +185,9 @@ var CardEngine = (function () {
     if (!name) name = fallbackName;
     if (!name && typeof entry === 'string') name = asText(entry);
     var leftDay = source.leftDay === undefined ? null : source.leftDay;
-    var hasLeft = typeof gl === 'function' ? !!gl(entry) : !!leftDay;
+    // The operational-day occupancy projection owns presence and departure state.
+    // Legacy gl() is not permitted to inspect linked-conference people records.
+    var hasLeft = leftDay !== null && leftDay !== undefined && leftDay !== '';
     return {
       personId: personId,
       name: name,
