@@ -11,6 +11,16 @@ const start=ui.indexOf('function renderCanonicalAccommodation(');
 const end=ui.indexOf('\nfunction renderAccommodation()',start);
 const renderer=ui.slice(start,end);
 test('canonical accommodation source parses',()=>assert.doesNotThrow(()=>new vm.Script(ui,{filename:'script.js'})));
+test('canonical resident projection preserves directory fields without local fallback',()=>{
+  const core=fs.readFileSync(path.join(root,'core.js'),'utf8');
+  const begin=core.indexOf('function getConferenceRoomPeople(room,conference){');
+  const finish=core.indexOf('\nfunction getConferenceOperationalDay(',begin);
+  assert.ok(begin>=0&&finish>begin);
+  const projection=core.slice(begin,finish);
+  for(const field of ['church','gender','dateOfBirth'])assert.match(projection,new RegExp(field+':person\\.'+field));
+  assert.match(projection,/if\(linked\)return/);
+});
+
 test('one active accommodation renderer, without restoring legacy local UI',()=>{
   assert.ok(start>=0&&end>start);
   const entry=ui.slice(end,ui.indexOf('\nfunction ',end+10));
