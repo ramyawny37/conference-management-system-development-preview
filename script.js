@@ -6933,7 +6933,13 @@ function renderCards(){
   h+='</div>';
   tab.innerHTML=h;
 }
-function setCardMode(m){cardMode=m==='room'?'room':'person';try{localStorage.setItem(CARDS_VIEW_MODE_KEY,cardMode)}catch(e){}renderCards()}
+function setCardMode(m){
+  var nextMode=m==='room'?'room':'person';
+  if(cardMode!==nextMode){selectedCards={};cardsSelectionMode=false;}
+  cardMode=nextMode;
+  try{localStorage.setItem(CARDS_VIEW_MODE_KEY,cardMode)}catch(e){}
+  renderCards();
+}
 function toggleCard(k){selectedCards[k]=!selectedCards[k];renderCards()}
 function getSelectedCardKeys(){
   return Object.keys(selectedCards).filter(function(key){
