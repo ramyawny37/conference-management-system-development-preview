@@ -12,5 +12,6 @@ test('card print preview remains intact until afterprint',()=>{
  assert.doesNotMatch(section,/setTimeout\(/);
  assert.match(section,/getSelectedCardKeys\(\)/);
  assert.match(section,/document\.querySelectorAll\('#cardsGrid \.guest-card'\)/);
- assert.match(section,/item\.el\.style\.display=item\.display/);
+ assert.match(section,/printRoot\.parentNode\.removeChild\(printRoot\)/);
+ assert.doesNotMatch(section,/el\.style\.display=selected/);
 });
