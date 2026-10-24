@@ -410,3 +410,11 @@ test('canonical room save rejects duplicate clicks and new editor starts enabled
   const open=ui.slice(ui.indexOf('function openCanonicalAccommodationRoomDetails('),ui.indexOf('\nfunction saveCanonicalAccommodationRoomData('));
   assert.match(open,/saveButton\.disabled=false/);
 });
+
+test('closing either room editor does not strand its save button disabled',()=>{
+  const reset=ui.slice(ui.indexOf('function resetCanonicalAccommodationRoomDetails('),ui.indexOf('\nfunction openCanonicalAccommodationRoomDetails('));
+  assert.match(reset,/saveButton\.onclick=null;saveButton\.disabled=false/);
+  const legacy=ui.slice(ui.indexOf('function openRoomEditor('),ui.indexOf('\nfunction closeRM('));
+  assert.match(legacy,/ge\('roomModalSaveButton'\)\.disabled=false/);
+  assert.match(legacy,/ge\('roomModalSaveButton'\)\.onclick=saveRoomData/);
+});
