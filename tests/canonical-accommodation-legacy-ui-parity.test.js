@@ -418,3 +418,13 @@ test('closing either room editor does not strand its save button disabled',()=>{
   assert.match(legacy,/ge\('roomModalSaveButton'\)\.disabled=false/);
   assert.match(legacy,/ge\('roomModalSaveButton'\)\.onclick=saveRoomData/);
 });
+
+test('central guest removal tolerates an incomplete person projection without local fallback',()=>{
+  const start=ui.indexOf('function removeCanonicalAccommodation(');
+  const end=ui.indexOf('\nfunction setCanonicalAccommodationArrival(',start);
+  const remove=ui.slice(start,end);
+  assert.match(remove,/if\(!current\|\|!occupancy\)return false/);
+  assert.match(remove,/occupancy\.person&&occupancy\.person\.fullName/);
+  assert.match(remove,/integration\.removeConferenceAccommodation\(current\.id,occupancy\.occupancyId,occupancy\.revision\)/);
+  assert.doesNotMatch(remove,/saveRoomData|current\.houses\s*=|requireLocalOnlyAccommodationMutation/);
+});
