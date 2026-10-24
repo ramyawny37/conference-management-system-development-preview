@@ -53,3 +53,24 @@ test('replacement arrival is pending and its effective day is independent from s
   assert.match(script,/canonicalAccommodationReplacementDay/);
   assert.match(script,/interval\.arrivalDay!==draft\.originalArrivalDay\|\|interval\.leaveDay!==draft\.originalLeaveDay/);
 });
+
+
+test('room details use canonical actions for guests and children, and keep history out of live counts',()=>{
+  const start=script.indexOf('function openCanonicalAccommodationRoomDetails(');
+  const end=script.indexOf('\nfunction saveCanonicalAccommodationRoomData(',start);
+  assert.ok(start>=0&&end>start);
+  const room=script.slice(start,end);
+  assert.match(room,/otherRoomStays=\(room\.occupancies\|\|\[\]\)\.filter/);
+  assert.match(room,/getCanonicalAccommodationStayPhase\(occupancy,day\)/);
+  assert.match(room,/ge\('rmGuestsCount'\)\.textContent=guestOccupancies\.length/);
+  assert.match(room,/ge\('rmChildrenCount'\)\.textContent=childOccupancies\.length/);
+  assert.match(room,/ge\('m_children'\)\.innerHTML=childOccupancies\.map/);
+  const children=room.slice(room.indexOf("ge('m_children').innerHTML"),room.indexOf("ge('rmGuestsCount').textContent"));
+  for(const operation of ['editCanonicalAccommodation','moveCanonicalAccommodation','removeCanonicalAccommodation']){
+    assert.ok(children.includes(operation),operation+' missing for children');
+  }
+  assert.match(room,/assignCanonicalAccommodation/);
+  assert.match(room,/if\(canManage&&!room\.isClosed\)/);
+  assert.match(room,/saveButton\.onclick=saveCanonicalAccommodationRoomData/);
+  assert.match(script,/function closeRM\(\)\{[\s\S]*?resetCanonicalAccommodationRoomDetails\(\)/);
+});
