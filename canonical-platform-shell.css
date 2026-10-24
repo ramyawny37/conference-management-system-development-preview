@@ -21,6 +21,8 @@
 #applicationTopbar{position:relative;top:auto;width:auto;min-height:64px;display:flex;align-items:center;gap:12px;padding:10px 14px;margin-top:calc(var(--canonical-header-height) + 24px);border:1px solid var(--platform-v2-border);border-radius:var(--platform-radius-md);background:var(--platform-surface);box-shadow:var(--platform-shadow-sm)}
 #applicationTopbar #globalConferenceHeader{min-width:0;flex:1 1 auto}#applicationTopbar .global-conference-header{min-height:0;margin:0}#applicationTopbar .application-utility-actions{flex:0 0 auto;flex-wrap:wrap}
 #applicationBody{width:auto;padding:16px 0 24px}
+/* The fixed platform header must not cover Conference content when its optional context toolbar is hidden. */
+#applicationTopbar[style*="display: none"] + #applicationBody,#applicationTopbar[style*="display:none"] + #applicationBody{margin-top:calc(var(--canonical-header-height) + 24px)}
 .canonical-platform-shell.platform-navigation-open:after{content:"";position:fixed;z-index:75;inset:0;background:rgba(11,39,71,.42)}
 
 [data-reservations-module-root]{min-width:0}
