@@ -480,3 +480,14 @@ test('room transfers share the occupancy guard with removal and arrival',()=>{
   assert.match(transfer,/moveConferenceAccommodation\(conference\.id/);
   assert.match(transfer,/توجد عملية أخرى قيد التنفيذ لهذا النزيل/);
 });
+
+test('occupancy edits and replacements share the removal arrival transfer guard',()=>{
+  const start=ui.indexOf('function confirmCanonicalAccommodationAssignment(');
+  const end=ui.indexOf('\nfunction editCanonicalAccommodation(',start);
+  const body=ui.slice(start,end);
+  assert.match(body,/draft\.mode==='edit'&&canonicalAccommodationOccupancyFlights\[String\(current\.id\)\+':'\+String\(draft\.occupancyId\)\]/);
+  assert.match(body,/runCanonicalAccommodationOccupancyMutation\(current\.id,draft\.occupancyId,function\(\)/);
+  assert.match(body,/replaceConferenceAccommodation\(current\.id/);
+  assert.match(body,/moveConferenceAccommodation\(current\.id,payload\)/);
+  assert.match(body,/:canonicalAccommodationMutation\(mutation/);
+});
