@@ -7139,10 +7139,9 @@ function getCardPngFile(key){
   if(typeof html2canvas!=='function')return Promise.reject(new Error('html2canvas unavailable'));
   var card=typeof CardEngine!=='undefined'&&CardEngine&&typeof CardEngine.getCardByKey==='function'?CardEngine.getCardByKey(key):null;
   if(!card||(!card.personType&&card.type!=='room'))return Promise.reject(new Error('card unavailable'));
-  var isModernBanner=normalizeConferenceCardTheme((card.branding||{}).cardTheme)==='modern-banner';
-  var element=isModernBanner?null:findVisibleCardElementByKey(key);
-  if(!isModernBanner&&!element)return Promise.reject(new Error('card unavailable'));
-  var capturePromise=isModernBanner?captureModernBannerCardAsPng(card):captureCardElementAsPng(element);
+  var element=findVisibleCardElementByKey(key);
+  if(!element)return Promise.reject(new Error('card unavailable'));
+  var capturePromise=captureCardElementAsPng(element);
   var promise=capturePromise.then(function(canvas){
     return new Promise(function(resolve,reject){
       canvas.toBlob(function(blob){
