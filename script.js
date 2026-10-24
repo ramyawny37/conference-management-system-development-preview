@@ -3195,6 +3195,11 @@ function saveCanonicalAccommodationRoomData(){
   ge('roomModalSaveButton').disabled=true;
   return canonicalAccommodationMutation(window.PlatformIntegration.mutateConferenceAccommodationStructure(current.id,'update_accommodation_room',payload),'✅ تم حفظ بيانات الغرفة',formatCanonicalAccommodationAssignmentFailure).then(function(result){
     ge('roomModalSaveButton').disabled=false;if(result)closeRM();return result;
+  },function(error){
+    ge('roomModalSaveButton').disabled=false;
+    showToast('تعذر حفظ بيانات الغرفة. أعد المحاولة.','#E74C3C');
+    console.error('Canonical accommodation room save failed',error);
+    return false;
   });
 }
 
