@@ -8,7 +8,7 @@ const CACHE_NAMESPACE = IS_DEVELOPMENT
   : '';
 const CACHE_PREFIX = CACHE_NAMESPACE + 'conference-manager-core-';
 const CACHE_REVISION = IS_DEVELOPMENT
-  ? 'development-canonical-accommodation-room-details-v4'
+  ? 'development-canonical-cards-no-legacy-people-v1'
   : 'production-3-6-0-release-v6';
 // Reinstall the Development worker so the canonical accommodation parity assets refresh atomically.
 const CACHE_NAME = CACHE_PREFIX + 'v' + APP_VERSION + '-' + CACHE_REVISION;
@@ -76,7 +76,7 @@ const CORE_ASSETS = [
   './state.js?rev=conference-house-multi-room-selector-v1',
   './js/conference/accounts.js?rev=development-3-4-0-platform-foundation-v1',
   './js/conference-template-houses-editor.js?rev=conference-settings-canonical-retirement-v1',
-  './cards.js',
+  './cards.js?rev=canonical-cards-no-legacy-people-v1',
   './libs/xlsx.full.min.js',
   './js/ui-icons.js?rev=warehouse-original-shell-round1-v1',
   './js/warehouse/current-store-context.js?rev=warehouse-current-store-context-v1',
