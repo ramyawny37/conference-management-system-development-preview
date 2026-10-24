@@ -89,8 +89,8 @@ test('route restores use PlatformIntegration and deterministic assets remain ali
   assert.doesNotMatch(script,/platformRoute\.indexOf\('\/warehouse'\)[\s\S]{0,180}openWarehouseWorkspace/);
   assert.match(index,/js\/platform-integration\.js\?rev=canonical-accommodation-room-details-v4/);
   assert.match(worker,/\.\/js\/platform-integration\.js\?rev=canonical-accommodation-room-details-v4/);
-  assert.match(index,/script\.js\?rev=canonical-accommodation-room-details-v4/);
-  assert.match(worker,/\.\/script\.js\?rev=canonical-accommodation-room-details-v4/);
+  assert.match(index,/script\.js\?rev=canonical-cards-renderer-restore-v1/);
+  assert.match(worker,/\.\/script\.js\?rev=canonical-cards-renderer-restore-v1/);
   for(const asset of ['reservations-module.js','reservations-module.css']){
     const reference=`modules/reservations/${asset}?rev=${reservationsRevision}`;
     assert.ok(index.includes(reference),`index missing ${reference}`);
