@@ -11,7 +11,7 @@ test('canonical accommodation cards never invoke forbidden local people resolver
  const sandbox={window:{PlatformIntegration:{getConferenceCoreState:()=>({core:{name:'Conference'}}),getConferenceBrandingState:()=>({branding:{}})}},getCurrentConference:()=>conference,getCanonicalConferenceCoreLink:()=>true,getConferenceParticipationItems:()=>[{personId:'person-1',person:{fullName:'Canonical Guest'}}],getAllRooms:()=>[room],getConferenceTransportVehicles:()=>[],getConferenceOperationalDay:()=>1,getConferenceRoomPeopleOnDay:()=>[occupant],gn:()=>{throw Error('LINKED_CONFERENCE_LEGACY_PEOPLE_FORBIDDEN')},gl:()=>{throw Error('legacy leave helper forbidden')},console};
  vm.createContext(sandbox);vm.runInContext(source,sandbox);
  const people=sandbox.CardEngine.getPersonCards();
- assert.equal(people.length,1);assert.equal(people[0].name,'Canonical Guest');
+ assert.equal(people.length,1);assert.equal(people[0].name,'Canonical Guest');assert.equal(people[0].hasLeft,false);
  const rooms=sandbox.CardEngine.getRoomCards();
  assert.equal(rooms.length,1);assert.equal(rooms[0].members[0].name,'Canonical Guest');
 });
