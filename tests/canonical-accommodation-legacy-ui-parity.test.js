@@ -504,3 +504,12 @@ test('edit and replacement service calls start only after acquiring occupancy gu
   assert.match(body,/:Promise\.resolve\(\)\.then\(executeAssignmentMutation\)/);
   assert.doesNotMatch(body,/canonicalAccommodationMutation\(mutation[^\n]*function/);
 });
+
+test('stale assignment and room save completions do not mutate a newer editor',()=>{
+  const assignment=ui.slice(ui.indexOf('function confirmCanonicalAccommodationAssignment('),ui.indexOf('\nfunction editCanonicalAccommodation('));
+  assert.equal((assignment.match(/if\(canonicalAccommodationAssignmentDraft===draft\)\{button\.disabled=false;error\.textContent=/g)||[]).length,2);
+  const room=ui.slice(ui.indexOf('function saveCanonicalAccommodationRoomData('),ui.indexOf('\nfunction ',ui.indexOf('function saveCanonicalAccommodationRoomData(')+10));
+  assert.match(room,/Promise\.resolve\(\)\.then\(function\(\)\{/);
+  assert.equal((room.match(/if\(canonicalAccommodationRoomEditorDraft===draft\)/g)||[]).length,2);
+  assert.match(room,/if\(result\)closeRM\(\)/);
+});
