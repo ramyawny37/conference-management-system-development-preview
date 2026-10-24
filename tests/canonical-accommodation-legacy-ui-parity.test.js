@@ -11,14 +11,22 @@ const start=ui.indexOf('function renderCanonicalAccommodation(');
 const end=ui.indexOf('\nfunction renderAccommodation()',start);
 const renderer=ui.slice(start,end);
 test('canonical accommodation source parses',()=>assert.doesNotThrow(()=>new vm.Script(ui,{filename:'script.js'})));
-test('canonical resident projection preserves directory fields without local fallback',()=>{
+test('canonical resident projection preserves directory fields and ignores legacy guests when linked',()=>{
   const core=fs.readFileSync(path.join(root,'core.js'),'utf8');
   const begin=core.indexOf('function getConferenceRoomPeople(room,conference){');
-  const finish=core.indexOf('\nfunction getConferenceOperationalDay(',begin);
+  const finish=core.indexOf('\\nfunction getConferenceOperationalDay(',begin);
   assert.ok(begin>=0&&finish>begin);
   const projection=core.slice(begin,finish);
-  for(const field of ['church','gender','dateOfBirth'])assert.match(projection,new RegExp(field+':person\\.'+field));
-  assert.match(projection,/if\(linked\)return/);
+  const context={getCanonicalConferenceCoreLink:()=>true};
+  vm.runInNewContext(projection,context);
+  const room={occupancies:[{occupancyId:'o1',participationId:'p1',arrivalDay:1,leaveDay:3,person:{personId:'person1',fullName:'Test Resident',phone:'123',church:'Test Church',gender:'female',dateOfBirth:'2000-01-01'}}],guests:[{name:'Legacy Resident'}]};
+  const residents=context.getConferenceRoomPeople(room,{id:'conference1'});
+  assert.equal(residents.length,1);
+  assert.equal(residents[0].name,'Test Resident');
+  assert.equal(residents[0].church,'Test Church');
+  assert.equal(residents[0].gender,'female');
+  assert.equal(residents[0].dateOfBirth,'2000-01-01');
+  assert.equal(residents[0].participationId,'p1');
 });
 
 test('one active accommodation renderer, without restoring legacy local UI',()=>{
