@@ -6716,6 +6716,80 @@ function renderModernBannerCard(card){
   h+='</div>';
   return h;
 }
+function captureCardElementAsPng(element,options){
+  if(typeof html2canvas!=='function')return Promise.reject(new Error('html2canvas unavailable'));
+  if(!element)return Promise.reject(new Error('card element unavailable'));
+  var exportWidth=350;
+  var stage=document.createElement('div');
+  var exportCard=element.cloneNode(true);
+  stage.setAttribute('aria-hidden','true');
+  stage.style.cssText='position:fixed;left:-10000px;top:0;width:'+exportWidth+'px;max-width:none;margin:0;background:#fff;z-index:-1;';
+  exportCard.classList.remove('welcome-card-selected');
+  exportCard.style.width=exportWidth+'px';
+  exportCard.style.maxWidth='none';
+  exportCard.style.margin='0';
+  var exportMedia=exportCard.querySelector('.modern-banner-media');
+  var exportImage=exportCard.querySelector('.modern-banner-image');
+  if(exportMedia){
+    exportMedia.style.width='100%';
+    exportMedia.style.height='180px';
+    exportMedia.style.flex='0 0 180px';
+    exportMedia.style.overflow='hidden';
+  }
+  if(exportImage){
+    exportImage.style.display='block';
+    exportImage.style.width='100%';
+    exportImage.style.height='100%';
+    exportImage.style.maxWidth='none';
+    exportImage.style.objectFit='cover';
+  }
+  exportCard.querySelectorAll('.no-print').forEach(function(control){control.remove()});
+  stage.appendChild(exportCard);
+  document.body.appendChild(stage);
+  function removeExportStage(){if(stage.parentNode)stage.parentNode.removeChild(stage)}
+  return waitForCardCaptureAssets(exportCard).then(function(){
+    var bounds=exportCard.getBoundingClientRect();
+    var footer=exportCard.querySelector('.welcome-card-footer');
+    var footerBounds=footer?footer.getBoundingClientRect():bounds;
+    var visualHeight=Math.ceil(footerBounds.bottom-bounds.top);
+    var captureOptions={
+      scale:2,
+      backgroundColor:'#ffffff',
+      useCORS:true,
+      logging:false,
+      scrollX:0,
+      scrollY:0
+    };
+    Object.keys(options||{}).forEach(function(name){captureOptions[name]=options[name]});
+    var capturePromise;
+    try{
+      capturePromise=html2canvas(exportCard,captureOptions);
+    }catch(error){
+      removeExportStage();
+      throw error;
+    }
+    return capturePromise.then(function(canvas){
+      var renderedWidth=Math.max(1,bounds.width);
+      var ratio=canvas.width/renderedWidth;
+      var cropHeight=Math.min(canvas.height,Math.ceil(visualHeight*ratio));
+      if(cropHeight>=canvas.height){removeExportStage();return canvas}
+      var croppedCanvas=document.createElement('canvas');
+      croppedCanvas.width=canvas.width;
+      croppedCanvas.height=cropHeight;
+      var croppedContext=croppedCanvas.getContext('2d');
+      if(!croppedContext){removeExportStage();return canvas}
+      croppedContext.drawImage(canvas,0,0,canvas.width,cropHeight,0,0,canvas.width,cropHeight);
+      removeExportStage();
+      return croppedCanvas;
+    },function(error){
+      removeExportStage();
+      throw error;
+    });
+  },function(error){
+    removeExportStage();
+    throw error;
+  });
+}
 function findVisibleCardElementByKey(key){
   var cards=document.querySelectorAll('#cardsGrid .welcome-card[data-key]');
   for(var i=0;i<cards.length;i++)if(cards[i].dataset.key===key)return cards[i];
