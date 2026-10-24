@@ -8958,14 +8958,14 @@ function saveCanonicalConferenceParticipant(linkedCurrent,personId){
     if(!snapshot||ge('person_church').value.trim()!==snapshot.church||ge('person_phone').value.trim()!==snapshot.phone||ge('person_gender').value.trim()!==snapshot.gender||ge('person_date_of_birth').value!==snapshot.dateOfBirth){alert('لا يتم تحديث الدليل المركزي تلقائيًا. أعد اختيار الشخص دون تعديل بياناته.');return false;}
     canonicalPersonSavePending=true;
     var selectedPersonId=canonicalPersonSelectedId;
-    return window.PlatformIntegration.createConferenceParticipationForExistingPerson(linkedCurrent.id,selectedPersonId).then(function(){renderSettings();closePersonDialog();showToast('✅ تمت إضافة الشخص للمؤتمر');return true;}).catch(function(error){if(isCanonicalParticipationDuplicate(error))return refreshCanonicalPeopleAfterDuplicate(linkedCurrent.id,selectedPersonId);showToast('تعذر إضافة الشخص للمؤتمر.','#E74C3C');return false;}).finally(function(){canonicalPersonSavePending=false;});
+    return window.PlatformIntegration.createConferenceParticipationForExistingPerson(linkedCurrent.id,selectedPersonId).then(function(){canonicalPersonSavePending=false;closePersonDialog();renderSettings();showToast('✅ تمت إضافة الشخص للمؤتمر');return true;}).catch(function(error){if(isCanonicalParticipationDuplicate(error))return refreshCanonicalPeopleAfterDuplicate(linkedCurrent.id,selectedPersonId);showToast('تعذر إضافة الشخص للمؤتمر.','#E74C3C');return false;}).finally(function(){canonicalPersonSavePending=false;});
   }
   var genderValue=ge('person_gender').value.trim();
   if(genderValue==='ذكر')genderValue='male';
   else if(genderValue==='أنثى')genderValue='female';
   else if(genderValue!=='male'&&genderValue!=='female')genderValue=null;
   canonicalPersonSavePending=true;
-  return window.PlatformIntegration.createConferenceParticipationWithPerson(linkedCurrent.id,{fullName:linkedFullName,church:ge('person_church').value.trim(),phone:ge('person_phone').value.trim(),gender:genderValue,dateOfBirth:ge('person_date_of_birth').value||null}).then(function(){renderSettings();closePersonDialog();showToast('✅ تم حفظ بيانات الشخص');return true;}).catch(function(){showToast('تعذر حفظ الشخص.','#E74C3C');return false;}).finally(function(){canonicalPersonSavePending=false;});
+  return window.PlatformIntegration.createConferenceParticipationWithPerson(linkedCurrent.id,{fullName:linkedFullName,church:ge('person_church').value.trim(),phone:ge('person_phone').value.trim(),gender:genderValue,dateOfBirth:ge('person_date_of_birth').value||null}).then(function(){canonicalPersonSavePending=false;closePersonDialog();renderSettings();showToast('✅ تم حفظ بيانات الشخص');return true;}).catch(function(){showToast('تعذر حفظ الشخص.','#E74C3C');return false;}).finally(function(){canonicalPersonSavePending=false;});
 }
 
 function saveLocalOnlyPersonDialog(personId){
