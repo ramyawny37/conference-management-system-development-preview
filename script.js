@@ -3885,6 +3885,8 @@ function openRoomEditor(houseId, floorId, roomId) {
   };
 
   renderRoomEditorFromDraft();
+  // The room editor owns its save action only while this editor is active.
+  ge('roomModalSaveButton').onclick=saveRoomData;
 
   ge('roomModal').style.display='flex';
 }
