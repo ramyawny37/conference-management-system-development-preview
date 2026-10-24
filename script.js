@@ -7497,25 +7497,10 @@ function prepareConferenceCardPrint(keys,multiple){
   });
   if(!printRoot.children.length)return false;
   document.body.appendChild(printRoot);
-  var originals=cards.map(function(el){return {el:el,display:el.style.display,breakClass:el.classList.contains('print-page-break')}});
-  var previousSingle=document.body.classList.contains('print-single-card');
-  var previousMultiple=document.body.classList.contains('print-multiple-cards');
-  document.body.classList.toggle('print-single-card',!multiple);
-  document.body.classList.toggle('print-multiple-cards',multiple);
-  var count=0;
-  cards.forEach(function(el){
-    var selected=keySet.has(el.dataset.key);
-    el.style.display=selected?'':'none';
-    el.classList.remove('print-page-break');
-    if(selected&&multiple&&++count%8===0)el.classList.add('print-page-break');
-  });
   conferenceCardPrintCleanup=function(){
     if(printRoot.parentNode)printRoot.parentNode.removeChild(printRoot);
-    originals.forEach(function(item){item.el.style.display=item.display;item.el.classList.toggle('print-page-break',item.breakClass)});
-    document.body.classList.toggle('print-single-card',previousSingle);
-    document.body.classList.toggle('print-multiple-cards',previousMultiple);
   };
-  return count||(!multiple&&cards.some(function(el){return keySet.has(el.dataset.key)}));
+  return printRoot.children.length;
 }
 function printOne(k){
   if(!prepareConferenceCardPrint([k],false)){showToast('تعذر العثور على الكارت للطباعة.','#E74C3C');return}
