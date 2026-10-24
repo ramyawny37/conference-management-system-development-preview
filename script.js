@@ -3135,7 +3135,7 @@ function resetCanonicalAccommodationRoomDetails(){
   ['m_num','m_beds','m_extra_beds','m_closed','m_closed_day','m_notes'].forEach(function(id){var input=ge(id);if(input)input.disabled=false;});
   var saveButton=ge('roomModalSaveButton'),moveButton=ge('moveRoomBtn'),addChildButton=ge('roomModalAddChildButton'),childrenSection=ge('roomModalChildrenSection');
   if(saveButton)saveButton.style.display='';
-  if(saveButton)saveButton.onclick=null;
+  if(saveButton){saveButton.onclick=null;saveButton.disabled=false;}
   if(moveButton)moveButton.style.display='';
   if(addChildButton)addChildButton.style.display='';
   if(childrenSection)childrenSection.style.display='';
