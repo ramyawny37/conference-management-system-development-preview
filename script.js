@@ -2881,7 +2881,12 @@ function renderCanonicalAccommodationAssignmentCandidates(){
   if(!current||String(current.id)!==draft.conferenceId||!state||!findCanonicalAccommodationEntity('room',draft.roomId,state)){error.textContent='تغيرت بيانات التسكين أو الصلاحيات. أعد فتح عملية التسكين.';return false;}
   draft.arrivalDay=interval.arrivalDay;draft.leaveDay=interval.leaveDay;
   draft.available=getCanonicalAccommodationAvailableParticipations(draft.participations,state,interval.arrivalDay,interval.leaveDay,draft.occupancyId);
-  draft.selectedParticipationId=draft.mode==='edit'?String(draft.participationId):null;error.textContent='';container.style.display='block';ge('canonicalAccommodationAssignmentConfirm').disabled=!draft.selectedParticipationId;
+  var priorSelection=String(draft.selectedParticipationId||'');
+  var originalSelection=draft.mode==='edit'?String(draft.participationId):'';
+  var nextSelection=priorSelection||originalSelection;
+  if(!draft.available.some(function(item){return String(item.participationId)===nextSelection;}))nextSelection='';
+  draft.selectedParticipationId=nextSelection||null;
+  error.textContent='';container.style.display='block';ge('canonicalAccommodationAssignmentConfirm').disabled=!draft.selectedParticipationId;
   renderCanonicalAccommodationAssignmentCandidateList();return true;
 }
 function renderCanonicalAccommodationAssignmentCandidateList(){
