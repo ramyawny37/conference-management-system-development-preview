@@ -56,12 +56,12 @@ test('Development reference uses real components without app routing, data, or s
 
 test('runtime CSS load order and cache revisions remain atomic',()=>{
   const shared='shared-design-tokens.css?rev=platform-design-system-consolidation-v2';
-  const pages='style.css?rev=conference-room-heading-v4';
+  const pages='style.css?rev=canonical-accommodation-room-parity-v1';
   const canonical='canonical-platform-shell.css?rev=platform-administration-canonical-sidebar-navigation-v2';
   assert.ok(index.indexOf(shared)<index.indexOf(pages));
   assert.ok(index.indexOf(pages)<index.indexOf(canonical));
   for(const asset of [shared,pages,canonical])assert.equal(worker.split('./'+asset).length-1,1);
-  assert.match(worker,/development-conference-people-save-v2/);
+  assert.match(worker,/development-canonical-accommodation-assignment-state-v1/);
 });
 
 test('proven duplicate global definitions were actually removed',()=>{

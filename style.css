@@ -1300,6 +1300,9 @@ tr:nth-child(even) td{background:#F7FBFF}
 #tab0 .accommodation-dashboard .accommodation-room-card.rcard .accommodation-room-notes{width:100%}
 #tab0 .accommodation-dashboard .accommodation-room-card.rcard .room-more-actions summary{display:flex;align-items:center;justify-content:center;min-height:33px;list-style:none;cursor:pointer}
 #tab0 .accommodation-dashboard .accommodation-room-card.rcard .room-more-actions summary::-webkit-details-marker{display:none}
+#tab0 .accommodation-house-description{margin:0;padding:0 13px 10px;color:var(--app-text-muted);font-size:11px;line-height:1.6}
+#tab0 .accommodation-floor-summary{display:flex;align-items:center;gap:6px}#tab0 .accommodation-floor-summary b{padding:3px 7px;border-radius:var(--app-radius-pill);background:var(--app-surface-soft);color:var(--app-text-muted);font-size:9px}
+#tab0 .accommodation-room-stay-history{display:grid;gap:4px;margin-top:6px;padding-top:6px;border-top:1px dashed var(--app-border)}#tab0 .accommodation-room-stay-history span{padding:4px 6px;border-radius:6px;background:var(--app-surface-soft);color:var(--app-text-muted);font-size:9px;line-height:1.5}#tab0 .accommodation-room-stay-history .upcoming{background:var(--app-primary-soft);color:var(--app-primary-dark)}#tab0 .accommodation-room-stay-history .departed{background:var(--app-neutral-soft);color:var(--app-neutral)}
 
 /* Canonical room details: one dismiss action, with scrollable content in constrained viewports. */
 #roomModal.canonical-room-readonly .room-editor-modal{max-height:calc(100dvh - 24px);min-height:0}

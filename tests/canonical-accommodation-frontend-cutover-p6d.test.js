@@ -175,6 +175,21 @@ test('canonical room cards retain capacity, notes, contact and stay-day details'
   assert.ok(render.includes('accommodation-room-details'));
 });
 
+test('canonical room hierarchy restores house, floor, extra-bed and stay-history detail from canonical data',()=>{
+  const start=scriptSource.indexOf('function renderCanonicalAccommodation(state){');
+  const end=scriptSource.indexOf('function ',start+10);
+  const render=scriptSource.slice(start,end);
+  for(const token of ['house.description','accommodation-house-description','floorOccupants','floorCapacity','accommodation-floor-summary','extraUsed+\'/\'+extraBeds','room.occupancies||[]','getCanonicalAccommodationStayPhase','accommodation-room-stay-history']){
+    assert.ok(render.includes(token),'missing restored canonical room detail '+token);
+  }
+  const helperStart=scriptSource.indexOf('function getCanonicalAccommodationStayPhase(');
+  const helperEnd=scriptSource.indexOf('\nfunction ',helperStart+1);
+  const helper=scriptSource.slice(helperStart,helperEnd);
+  assert.match(helper,/return 'upcoming'/);
+  assert.match(helper,/return 'departed'/);
+  assert.match(helper,/return 'current'/);
+});
+
 test('canonical accommodation summary calculates occupancy and bed totals from canonical rooms',()=>{
   const start=scriptSource.indexOf('function renderCanonicalAccommodation(state){');
   const end=scriptSource.indexOf('function ',start+10);
@@ -279,6 +294,46 @@ test('period availability behavior covers overlap, ended stays, cancellation and
   assert.equal(sandbox.overlap(6,8,2,6),false);
   assert.deepEqual(Array.from(sandbox.available(participations,state,3,5),item=>item.participationId),['free','ended','cancelled']);
   assert.deepEqual(Array.from(sandbox.available(participations,state,6,8),item=>item.participationId),['housed','free','ended','cancelled']);
+});
+
+test('candidate selection succeeds with stable canonical participation identity',()=>{
+  const selectStart=scriptSource.indexOf('function selectCanonicalAccommodationParticipation(');
+  const selectEnd=scriptSource.indexOf('\nfunction formatCanonicalAccommodationAssignmentFailure(',selectStart);
+  const controls={canonicalAccommodationAssignmentConfirm:{disabled:true}};
+  const sandbox={
+    String,
+    canonicalAccommodationAssignmentDraft:{mode:'assign',available:[{participationId:'participation-1'}],selectedParticipationId:null},
+    ge:id=>controls[id],
+    renderCanonicalAccommodationAssignmentCandidateList(){sandbox.rendered=true;}
+  };
+  vm.runInNewContext(scriptSource.slice(selectStart,selectEnd)+';this.select=selectCanonicalAccommodationParticipation;',sandbox);
+  assert.equal(sandbox.select('participation-1'),true);
+  assert.equal(sandbox.canonicalAccommodationAssignmentDraft.selectedParticipationId,'participation-1');
+  assert.equal(controls.canonicalAccommodationAssignmentConfirm.disabled,false);
+  assert.equal(sandbox.rendered,true);
+  assert.equal(sandbox.select('different-participation'),false);
+});
+
+test('assignment scope validation reuses one state snapshot and normalizes entity ids defensively',()=>{
+  const findStart=scriptSource.indexOf('function findCanonicalAccommodationEntity(');
+  const findEnd=scriptSource.indexOf('\nfunction chooseCanonicalConferenceHouse(',findStart);
+  const findBody=scriptSource.slice(findStart,findEnd);
+  assert.match(findBody,/function findCanonicalAccommodationEntity\(kind,id,state\)/);
+  assert.match(findBody,/state=state\|\|canonicalAccommodationState\(\)/);
+  assert.match(findBody,/normalizedId=String\(id==null\?'':id\)/);
+  assert.doesNotMatch(findBody,/\.roomId===id|\.occupancyId===id|\.houseId===id|\.floorId===id/);
+
+  const renderStart=scriptSource.indexOf('function renderCanonicalAccommodationAssignmentCandidates(');
+  const renderEnd=scriptSource.indexOf('\nfunction renderCanonicalAccommodationAssignmentCandidateList(',renderStart);
+  const renderBody=scriptSource.slice(renderStart,renderEnd);
+  assert.match(renderBody,/state=canonicalAccommodationState\(\)/);
+  assert.match(renderBody,/!state\|\|!findCanonicalAccommodationEntity\('room',draft\.roomId,state\)/);
+  assert.equal((renderBody.match(/canonicalAccommodationState\(\)/g)||[]).length,1);
+
+  const confirmStart=scriptSource.indexOf('function confirmCanonicalAccommodationAssignment(');
+  const confirmEnd=scriptSource.indexOf('\nfunction editCanonicalAccommodation(',confirmStart);
+  const confirmBody=scriptSource.slice(confirmStart,confirmEnd);
+  assert.match(confirmBody,/String\(current\.id\)!==draft\.conferenceId\|\|!currentConferenceSectionCapability\('accommodationManage'\)/);
 });
 
 test('central house directory floor names reject whitespace-only input',()=>{
