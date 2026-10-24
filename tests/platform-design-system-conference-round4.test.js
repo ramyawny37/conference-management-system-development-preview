@@ -16,7 +16,7 @@ test('design layers have one documented runtime owner and deterministic cache gr
   const assets=[
     'shared-design-tokens.css?rev=platform-design-system-consolidation-v2',
     'style.css?rev=canonical-accommodation-room-details-v4',
-    'canonical-platform-shell.css?rev=platform-administration-canonical-sidebar-navigation-v2'
+    'canonical-platform-shell.css?rev=conference-header-content-offset-v1'
   ];
   for(const asset of assets){
     assert.equal(index.split(asset).length-1,1,asset+' must load once');
