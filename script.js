@@ -6716,6 +6716,178 @@ function renderModernBannerCard(card){
   h+='</div>';
   return h;
 }
+function renderPersonConferenceCard(card){
+  var checked=!!selectedCards[card.key];
+  var handlerKey=cardHandlerKey(card.key);
+  var branding=card.branding||{};
+  if(normalizeConferenceCardTheme(branding.cardTheme)==='modern-banner')return renderModernBannerCard(card);
+  var banner=branding.bannerPrepared||branding.banner||branding.logo||'assets/logo.jpg';
+  var serviceLogo=branding.serviceLogo||branding.watermark||branding.logo||'assets/logo.jpg';
+  var displayColors=getConferenceBrandingDisplayColors(branding);
+  var primaryColor=displayColors[0];
+  var secondaryColor=displayColors[1];
+  var textColor=branding.textColor||'#1A2A3A';
+  var fontFamily=branding.fontFamily||"'Segoe UI',Arial,sans-serif";
+  var h='<div class="guest-card welcome-card'+(checked?' welcome-card-selected':'')+'" data-key="'+esc(card.key)+'" style="--welcome-primary:'+esc(primaryColor)+';--welcome-secondary:'+esc(secondaryColor)+';--welcome-text:'+esc(textColor)+';--welcome-font:'+esc(fontFamily)+'">';
+  h+='<img class="welcome-card-watermark" src="'+esc(serviceLogo)+'" alt="" onerror="this.style.display=\'none\'">';
+  if(cardsSelectionMode)h+='<label class="no-print welcome-card-selector"><input type="checkbox" '+(checked?'checked':'')+' onchange="toggleCard(\''+handlerKey+'\')"> تحديد</label>';
+  h+='<div class="welcome-card-header"><img class="welcome-card-banner" src="'+esc(banner)+'" alt="الصورة الدعائية للمؤتمر" onerror="this.style.display=\'none\'"><div class="welcome-card-heading"><div class="welcome-card-greeting">أهلاً بك في</div><div class="welcome-card-conference">'+esc(card.conferenceName||'المؤتمر')+'</div></div></div>';
+  h+='<div class="welcome-card-body">';
+  h+='<div class="welcome-card-person"><span class="welcome-card-person-label">ضيف المؤتمر</span><strong>'+esc(card.name)+'</strong></div>';
+  var bedLabel=conferenceCardBedLabel(card);
+  if(bedLabel)h+='<div class="welcome-card-person-label" style="text-align:center">'+esc(bedLabel)+'</div>';
+  h+='<div class="welcome-card-location">';
+  if(card.houseName)h+='<div class="welcome-card-location-item"><span class="welcome-card-location-label">البيت</span><strong>'+esc(card.houseName)+'</strong></div>';
+  if(card.room)h+='<div class="welcome-card-location-item"><span class="welcome-card-location-label">الغرفة</span><strong>'+esc(card.room)+'</strong></div>';
+  if(card.floor)h+='<div class="welcome-card-location-item"><span class="welcome-card-location-label">الدور</span><strong>'+esc(card.floor)+'</strong></div>';
+  h+='</div></div>';
+  h+='<div class="welcome-card-footer"></div>';
+  h+='<div class="no-print welcome-card-actions"><button class="btn btn-blue btn-sm" onclick="shareCard(\''+handlerKey+'\')">🔗</button><button class="btn btn-green btn-sm" onclick="downloadCardPng(\''+handlerKey+'\',this)">🖼️ PNG</button><button class="btn btn-purple btn-sm" onclick="printOne(\''+handlerKey+'\')">🖨️</button></div>';
+  h+='</div>';
+  return h;
+}
+function renderCards(){
+  var tab = ge('tab4');
+  if(typeof CardEngine === 'undefined' || !CardEngine || typeof CardEngine.getPersonCards !== 'function' || typeof CardEngine.getRoomCards !== 'function'){
+    tab.innerHTML = '<div class="card" style="text-align:center;padding:20px;color:#95a5a6;">تعذر تحميل نظام الكروت.</div>';
+    return;
+  }
+  var context = typeof CardEngine.getConferenceContext === 'function' ? CardEngine.getConferenceContext() : null;
+  if (!context || !context.conference) { tab.innerHTML = ''; return; }
+
+  var selC=getSelectedCardKeys().length;
+  var totalCards=0;
+  var items=[];
+  function transportText(summary){
+    var parts=[];
+    (summary||[]).forEach(function(item){
+      var label=item.transportName||'';
+      if(item.seatNumber!==undefined&&item.seatNumber!==null&&item.seatNumber!=='')label+=(label?' ':'')+'كرسي '+item.seatNumber;
+      if(label)parts.push(label);
+    });
+    return parts.join(' | ');
+  }
+  if(cardMode==='person'){
+    var personCards=CardEngine.getPersonCards();
+    totalCards=personCards.length;
+    personCards.forEach(function(card){
+      if(card.hasLeft)return;
+      items.push({
+        key:card.key,
+        name:card.name,
+        room:card.roomNumber,
+        floor:card.floorName,
+        conferenceName:card.conferenceName,
+        houseName:card.houseName,
+        branding:card.branding||{},
+        personType:card.personType,
+        bedType:card.bedType||'',
+        extraBedPersonType:card.extraBedPersonType||'',
+        type:card.personType==='child'?'🧒 طفل':'بالغ',
+        note:card.personType==='child'?'ولي الأمر: '+(card.guardianName||''):'',
+        members:null,
+        transportText:transportText((card.transportSummary||[]).slice(0,1))
+      });
+    });
+  } else {
+    var roomCards=CardEngine.getRoomCards();
+    totalCards=roomCards.length;
+    roomCards.forEach(function(card){
+      var members=(card.members||[]).filter(function(member){return !member.hasLeft;});
+      if(!members.length)return;
+      items.push({
+        key:card.key,
+        name:'غرفة '+card.roomNumber,
+        room:card.roomNumber,
+        floor:card.floorName,
+        conferenceName:card.conferenceName,
+        houseName:card.houseName,
+        branding:card.branding||{},
+        type:'غرفة',
+        note:'',
+        members:members,
+        guests:members.map(function(member){return conferenceRoomMemberText(member)}),
+        transportText:transportText(card.transportSummary)
+      });
+    });
+  }
+  var h='<div class="card no-print cards-dashboard">';
+  h+='<div class="cards-dashboard-title">🪪 كروت الضيوف</div>';
+  h+='<div class="cards-dashboard-stats"><div class="cards-dashboard-stat"><span>🪪</span><div><small>إجمالي الكروت</small><strong>'+totalCards+'</strong></div></div><div class="cards-dashboard-stat"><span>👁️</span><div><small>الكروت المعروضة حاليًا</small><strong>'+items.length+'</strong></div></div><div class="cards-dashboard-stat"><span>☑️</span><div><small>الكروت المحددة</small><strong>'+selC+'</strong></div></div></div>';
+  h+='<div class="cards-dashboard-controls"><div class="cards-mode-controls"><button class="btn '+(cardMode==='person'?'btn-purple':'btn-gray')+'" onclick="setCardMode(\'person\')">👤 لكل فرد</button><button class="btn '+(cardMode==='room'?'btn-purple':'btn-gray')+'" onclick="setCardMode(\'room\')">🚪 لكل غرفة</button></div>';
+  h+='<div class="cards-selection-controls"><button class="btn '+(cardsSelectionMode?'btn-purple':'btn-blue')+' btn-sm" onclick="toggleCardsSelectionMode()">☑️ تحديد متعدد</button>';
+  if(cardsSelectionMode)h+='<button class="btn btn-blue btn-sm" onclick="selAll(true)">✔️ كل المعروض</button><button class="btn btn-gray btn-sm" onclick="clearSelectedCards()">✖️ إلغاء التحديد</button>';
+  h+='</div></div></div>';
+  if(selC)h+='<div class="card no-print cards-selection-actions"><strong>تم تحديد '+selC+' كارت</strong><div class="cards-selection-actions-buttons"><button class="btn btn-green" onclick="shareSelectedCards()">📤 مشاركة</button><button class="btn btn-blue" onclick="downloadSelectedCards()">💾 تحميل PNG</button><button class="btn btn-purple" onclick="printSel()">🖨️ طباعة</button><button class="btn btn-gray" onclick="clearSelectedCards()">✖️ إلغاء التحديد</button></div></div>';
+  h+='<div class="grid3'+(cardMode==='person'?' welcome-cards-grid':'')+'" id="cardsGrid">';
+  items.forEach(function(it){
+    var checked=!!selectedCards[it.key];
+    var handlerKey=cardHandlerKey(it.key);
+    if(!it.members){
+      h+=renderPersonConferenceCard(it);
+      return;
+    }
+    if(normalizeConferenceCardTheme((it.branding||{}).cardTheme)==='modern-banner'){
+      h+=renderModernBannerRoomCard(it);
+      return;
+    }
+    h+='<div class="guest-card" data-key="'+esc(it.key)+'" style="'+(checked?'box-shadow:0 0 0 3px #27AE60':'')+';position:relative">';
+    if(cardsSelectionMode)h+='<label class="no-print" style="position:absolute;top:5px;left:5px;background:#fff;border-radius:4px;padding:1px 5px;font-size:9px;display:flex;align-items:center;gap:2px;z-index:2;cursor:pointer"><input type="checkbox" '+(checked?'checked':'')+' onchange="toggleCard(\''+handlerKey+'\')" style="width:auto"> تحديد</label>';
+    h+='<div class="gc-head">🪪 '+(it.members?'بطاقة غرفة':'بطاقة ضيف')+'</div>';
+    h+='<div class="gc-body">';
+    h+='<div class="gc-row"><span style="color:#6C3483;font-weight:700;font-size:10px">'+(it.members?'الغرفة':'الاسم')+'</span><span style="font-weight:700">'+esc(it.name)+'</span></div>';
+    h+='<div class="gc-row"><span style="color:#6C3483;font-weight:700;font-size:10px">الغرفة/الدور</span><span>غرفة '+esc(it.room)+' — دور '+esc(it.floor)+'</span></div>';
+    if(!it.members)h+='<div class="gc-row"><span style="color:#6C3483;font-weight:700;font-size:10px">النوع</span><span>'+esc(it.type)+'</span></div>';
+    else{h+='<div style="margin-top:4px">';it.members.forEach(function(m){h+='<div class="gc-row" style="font-size:10px"><span>'+esc(conferenceRoomMemberText(m))+'</span></div>'});h+='</div>';}
+    if(it.note)h+='<div class="gc-row"><span style="color:#6C3483;font-weight:700;font-size:10px">ملاحظة</span><span style="font-size:10px;color:#7D4E00">'+esc(it.note)+'</span></div>';
+    if(it.transportText)h+='<div class="gc-row"><span style="color:#6C3483;font-weight:700;font-size:10px">المواصلة</span><span style="font-size:10px">'+esc(it.transportText)+'</span></div>';
+    h+='</div><div class="gc-foot">أهلاً وسهلاً 🌟</div>';
+    h+='<div class="no-print" style="display:flex;gap:4px;padding:6px;background:#FAF5FF"><button class="btn btn-blue btn-sm" style="flex:1" onclick="shareCard(\''+handlerKey+'\')">🔗</button><button class="btn btn-purple btn-sm" style="flex:1" onclick="printOne(\''+handlerKey+'\')">🖨️</button></div>';
+    h+='</div>';
+  });
+  h+='</div>';
+  tab.innerHTML=h;
+}
+function setCardMode(m){
+  var nextMode=m==='room'?'room':'person';
+  if(cardMode!==nextMode){selectedCards={};cardsSelectionMode=false;}
+  cardMode=nextMode;
+  try{localStorage.setItem(CARDS_VIEW_MODE_KEY,cardMode)}catch(e){}
+  renderCards();
+}
+function toggleCard(k){selectedCards[k]=!selectedCards[k];renderCards()}
+function getSelectedCardKeys(){
+  return Object.keys(selectedCards).filter(function(key){
+    return selectedCards[key]&&typeof CardEngine!=='undefined'&&CardEngine&&typeof CardEngine.getCardByKey==='function'&&!!CardEngine.getCardByKey(key);
+  });
+}
+function toggleCardsSelectionMode(){
+  cardsSelectionMode=!cardsSelectionMode;
+  if(!cardsSelectionMode)selectedCards={};
+  renderCards();
+}
+function clearSelectedCards(){selectedCards={};renderCards()}
+var cardPngDownloads={};
+var cardPngFiles={};
+var cardPngFilePromises={};
+function waitForCardCaptureAssets(element){
+  var waits=[];
+  if(document.fonts&&document.fonts.ready)waits.push(document.fonts.ready.catch(function(){}));
+  element.querySelectorAll('img').forEach(function(image){
+    if(image.complete){
+      if(typeof image.decode==='function')waits.push(image.decode().catch(function(){}));
+      return;
+    }
+    waits.push(new Promise(function(resolve){
+      function done(){image.removeEventListener('load',done);image.removeEventListener('error',done);resolve()}
+      image.addEventListener('load',done);
+      image.addEventListener('error',done);
+    }));
+  });
+  return Promise.all(waits).then(function(){
+    return new Promise(function(resolve){requestAnimationFrame(function(){requestAnimationFrame(resolve)})});
+  });
+}
 function captureCardElementAsPng(element,options){
   if(typeof html2canvas!=='function')return Promise.reject(new Error('html2canvas unavailable'));
   if(!element)return Promise.reject(new Error('card element unavailable'));
