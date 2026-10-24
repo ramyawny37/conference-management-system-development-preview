@@ -3075,7 +3075,9 @@ function confirmCanonicalAccommodationMoveDay(){
 function removeCanonicalAccommodation(occupancyId){
   if(!currentConferenceSectionCapability('accommodationManage')){showToast('ليس لديك صلاحية إدارة التسكين.','#E74C3C');return false;}
   var current=getCurrentConference(),integration=window.PlatformIntegration,occupancy=findCanonicalAccommodationEntity('occupancy',occupancyId);
-  if(!occupancy||!confirm('إزالة '+occupancy.person.fullName+' من الغرفة؟'))return false;
+  if(!current||!occupancy)return false;
+  var occupantName=occupancy.person&&occupancy.person.fullName||'النزيل';
+  if(!confirm('إزالة '+occupantName+' من الغرفة؟'))return false;
   return canonicalAccommodationMutation(integration.removeConferenceAccommodation(current.id,occupancy.occupancyId,occupancy.revision),'🗑️ تم حذف النزيل من الغرفة');
 }
 
