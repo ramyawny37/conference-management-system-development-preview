@@ -2942,6 +2942,9 @@ function confirmCanonicalAccommodationAssignment(){
     }
     payload.occupancyId=draft.occupancyId;payload.expectedRevision=draft.revision;
   }
+  if(draft.mode==='edit'&&canonicalAccommodationOccupancyFlights[String(current.id)+':'+String(draft.occupancyId)]){
+    error.textContent='توجد عملية أخرى قيد التنفيذ لهذا النزيل. انتظر اكتمالها ثم أعد المحاولة.';return false;
+  }
   button.disabled=true;
   var isReplacement=draft.mode==='edit'&&String(draft.selectedParticipationId)!==String(draft.participationId);
   var replacementDayText=isReplacement?String(ge('canonicalAccommodationReplacementDay').value||'').trim():'';
@@ -2952,7 +2955,10 @@ function confirmCanonicalAccommodationAssignment(){
       ?window.PlatformIntegration.replaceConferenceAccommodation(current.id,{occupancyId:draft.occupancyId,expectedRevision:draft.revision,replacementParticipationId:draft.selectedParticipationId,effectiveDay:Number(replacementDayText),bedType:payload.bedType,extraBedPersonType:payload.extraBedPersonType})
       :window.PlatformIntegration.moveConferenceAccommodation(current.id,payload))
     :window.PlatformIntegration.assignConferenceAccommodation(current.id,payload);
-  return canonicalAccommodationMutation(mutation,'✅ تم حفظ بيانات الغرفة',formatCanonicalAccommodationAssignmentFailure).then(function(result){
+  var saved=draft.mode==='edit'
+    ?runCanonicalAccommodationOccupancyMutation(current.id,draft.occupancyId,function(){return canonicalAccommodationMutation(mutation,'✅ تم حفظ بيانات الغرفة',formatCanonicalAccommodationAssignmentFailure);})
+    :canonicalAccommodationMutation(mutation,'✅ تم حفظ بيانات الغرفة',formatCanonicalAccommodationAssignmentFailure);
+  return Promise.resolve(saved).then(function(result){
     if(result){if(canonicalAccommodationAssignmentDraft===draft)closeCanonicalAccommodationAssignmentDialog();return result;}
     button.disabled=false;
     if(canonicalAccommodationAssignmentDraft===draft)error.textContent='تعذر حفظ بيانات التسكين.';
