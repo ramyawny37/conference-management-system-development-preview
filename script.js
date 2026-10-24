@@ -3243,11 +3243,19 @@ function saveCanonicalAccommodationRoomData(){
   var payload={p_room_id:draft.roomId,p_expected_revision:draft.revision,p_room_number:String(ge('m_num').value||'').trim(),p_base_capacity:baseCapacity,p_extra_bed_capacity:extraCapacity,p_notes:String(ge('m_notes').value||'').trim()||null,p_is_closed:ge('m_closed').checked===true,p_closed_day:closedDay?Number(closedDay):null,p_position:draft.position};
   if(!payload.p_room_number){showToast('رقم الغرفة مطلوب.','#E74C3C');return false;}
   ge('roomModalSaveButton').disabled=true;
-  return canonicalAccommodationMutation(window.PlatformIntegration.mutateConferenceAccommodationStructure(current.id,'update_accommodation_room',payload),'✅ تم حفظ بيانات الغرفة',formatCanonicalAccommodationAssignmentFailure).then(function(result){
-    ge('roomModalSaveButton').disabled=false;if(result)closeRM();return result;
+  return Promise.resolve().then(function(){
+    return canonicalAccommodationMutation(window.PlatformIntegration.mutateConferenceAccommodationStructure(current.id,'update_accommodation_room',payload),'✅ تم حفظ بيانات الغرفة',formatCanonicalAccommodationAssignmentFailure);
+  }).then(function(result){
+    if(canonicalAccommodationRoomEditorDraft===draft){
+      ge('roomModalSaveButton').disabled=false;
+      if(result)closeRM();
+    }
+    return result;
   },function(error){
-    ge('roomModalSaveButton').disabled=false;
-    showToast('تعذر حفظ بيانات الغرفة. أعد المحاولة.','#E74C3C');
+    if(canonicalAccommodationRoomEditorDraft===draft){
+      ge('roomModalSaveButton').disabled=false;
+      showToast('تعذر حفظ بيانات الغرفة. أعد المحاولة.','#E74C3C');
+    }
     console.error('Canonical accommodation room save failed',error);
     return false;
   });
