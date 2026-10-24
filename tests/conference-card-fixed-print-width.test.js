@@ -3,7 +3,7 @@ test('print cards retain the same fixed physical width for individual and bulk o
  const css=fs.readFileSync(path.join(__dirname,'..','style.css'),'utf8');
  const js=fs.readFileSync(path.join(__dirname,'..','script.js'),'utf8');
  const block=css.slice(css.indexOf('/* Print-only projection of the same canonical card DOM'));
- assert.match(block,/grid-template-columns:repeat\(3,90mm\)!important/);
+ assert.match(block,/grid-template-columns:repeat\(2,90mm\)!important/);
  assert.match(block,/#conferenceCardPrintRoot>\.guest-card\{[^}]*width:90mm!important/);
  assert.match(block,/box-shadow:none!important/);
  assert.match(js,/copy\.classList\.remove\('print-page-break','welcome-card-selected'\)/);
