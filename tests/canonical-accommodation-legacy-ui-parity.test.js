@@ -377,3 +377,16 @@ test('available-room filter excludes zero-capacity rooms',()=>{
   const body=ui.slice(start,end);
   assert.match(body,/filter==='available'&&\(room\.isClosed\|\|Number\(room\.baseCapacity\|\|0\)\+Number\(room\.extraBedCapacity\|\|0\)<=0/);
 });
+
+test('room save action has one owner per editor, never an inline legacy fallback',()=>{
+  const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
+  assert.match(html,/id="roomModalSaveButton"/);
+  assert.doesNotMatch(html,/id="roomModalSaveButton"[^>]*onclick=/);
+  const canonical=ui.slice(ui.indexOf('function openCanonicalAccommodationRoomDetails('),ui.indexOf('\nfunction saveCanonicalAccommodationRoomData('));
+  assert.match(canonical,/saveButton\.onclick=saveCanonicalAccommodationRoomData/);
+  const legacy=ui.slice(ui.indexOf('function openRoomEditor('),ui.indexOf('\nfunction closeRM('));
+  assert.match(legacy,/ge\('roomModalSaveButton'\)\.onclick=saveRoomData/);
+  const teardown=ui.slice(ui.indexOf('function resetCanonicalAccommodationRoomDetails('),ui.indexOf('\nfunction openCanonicalAccommodationRoomDetails('));
+  assert.match(teardown,/saveButton\.onclick=null/);
+  assert.doesNotMatch(teardown,/saveButton\.onclick=saveRoomData/);
+});
