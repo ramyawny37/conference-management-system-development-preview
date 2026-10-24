@@ -3167,6 +3167,9 @@ function openCanonicalAccommodationRoomDetails(roomId){
   if(otherRoomStays.length){
     ge('m_guests').innerHTML+='<div class="canonical-room-stay-history"><strong>سجل الإقامات الأخرى</strong>'+otherRoomStays.map(function(occupancy){var person=occupancy.person||{},phase=getCanonicalAccommodationStayPhase(occupancy,day),phaseLabel=phase==='upcoming'?'قادمة':phase==='departed'?'منتهية':'غير نشطة';return '<div class="guest-person-row canonical-room-guest"><div class="guest-slot-person"><strong>'+esc(person.fullName||'نزيل بدون اسم')+'</strong><div class="person-meta">'+phaseLabel+' • وصول يوم '+Number(occupancy.arrivalDay)+(occupancy.leaveDay==null?'':' • مغادرة يوم '+Number(occupancy.leaveDay))+'</div></div></div>';}).join('')+'</div>';
   }
+  if(canManage&&!room.isClosed){
+    ge('m_guests').innerHTML+='<div class="canonical-room-guest-actions"><button type="button" class="btn btn-blue btn-sm" onclick="closeRM();assignCanonicalAccommodation(\''+room.roomId+'\')">إضافة نزيل</button></div>';
+  }
   ge('rmGuestsCount').textContent=guestOccupancies.length;
   ge('rmChildrenCount').textContent=childOccupancies.length;
   var saveButton=ge('roomModalSaveButton'),moveButton=ge('moveRoomBtn'),addChildButton=ge('roomModalAddChildButton'),childrenSection=ge('roomModalChildrenSection');
