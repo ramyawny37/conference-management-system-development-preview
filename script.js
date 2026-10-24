@@ -2950,14 +2950,17 @@ function confirmCanonicalAccommodationAssignment(){
   var replacementDayText=isReplacement?String(ge('canonicalAccommodationReplacementDay').value||'').trim():'';
   if(isReplacement&&(!/^\d+$/.test(replacementDayText)||Number(replacementDayText)<draft.originalArrivalDay||(draft.originalLeaveDay!==null&&Number(replacementDayText)>=draft.originalLeaveDay))){error.textContent='يوم سريان الاستبدال خارج فترة الإقامة.';button.disabled=false;return false;}
   if(isReplacement&&(interval.arrivalDay!==draft.originalArrivalDay||interval.leaveDay!==draft.originalLeaveDay)){error.textContent='احفظ تعديل فترة الإقامة أولًا، ثم افتح الاستبدال وحدد يوم سريانه.';button.disabled=false;return false;}
-  var mutation=draft.mode==='edit'
-    ?(isReplacement
-      ?window.PlatformIntegration.replaceConferenceAccommodation(current.id,{occupancyId:draft.occupancyId,expectedRevision:draft.revision,replacementParticipationId:draft.selectedParticipationId,effectiveDay:Number(replacementDayText),bedType:payload.bedType,extraBedPersonType:payload.extraBedPersonType})
-      :window.PlatformIntegration.moveConferenceAccommodation(current.id,payload))
-    :window.PlatformIntegration.assignConferenceAccommodation(current.id,payload);
+  function executeAssignmentMutation(){
+    var mutation=draft.mode==='edit'
+      ?(isReplacement
+        ?window.PlatformIntegration.replaceConferenceAccommodation(current.id,{occupancyId:draft.occupancyId,expectedRevision:draft.revision,replacementParticipationId:draft.selectedParticipationId,effectiveDay:Number(replacementDayText),bedType:payload.bedType,extraBedPersonType:payload.extraBedPersonType})
+        :window.PlatformIntegration.moveConferenceAccommodation(current.id,payload))
+      :window.PlatformIntegration.assignConferenceAccommodation(current.id,payload);
+    return canonicalAccommodationMutation(mutation,'✅ تم حفظ بيانات الغرفة',formatCanonicalAccommodationAssignmentFailure);
+  }
   var saved=draft.mode==='edit'
-    ?runCanonicalAccommodationOccupancyMutation(current.id,draft.occupancyId,function(){return canonicalAccommodationMutation(mutation,'✅ تم حفظ بيانات الغرفة',formatCanonicalAccommodationAssignmentFailure);})
-    :canonicalAccommodationMutation(mutation,'✅ تم حفظ بيانات الغرفة',formatCanonicalAccommodationAssignmentFailure);
+    ?runCanonicalAccommodationOccupancyMutation(current.id,draft.occupancyId,executeAssignmentMutation)
+    :Promise.resolve().then(executeAssignmentMutation);
   return Promise.resolve(saved).then(function(result){
     if(result){if(canonicalAccommodationAssignmentDraft===draft)closeCanonicalAccommodationAssignmentDialog();return result;}
     button.disabled=false;
