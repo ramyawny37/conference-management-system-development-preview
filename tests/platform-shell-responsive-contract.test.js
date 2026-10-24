@@ -32,7 +32,7 @@ test('the document exposes exactly one canonical shell, sidebar, header, and wor
 });
 
 test('the canonical shell is the only active global shell stylesheet',()=>{
-  const canonicalAsset='canonical-platform-shell.css?rev=platform-administration-canonical-sidebar-navigation-v2';
+  const canonicalAsset='canonical-platform-shell.css?rev=conference-header-content-offset-v1';
   assert.match(html,new RegExp(canonicalAsset.replace(/[.?]/g,'\\$&')));
   assert.match(worker,new RegExp(canonicalAsset.replace(/[.?]/g,'\\$&')));
   assert.match(html,/js\/platform-integration\.js\?rev=canonical-accommodation-room-details-v4/);
