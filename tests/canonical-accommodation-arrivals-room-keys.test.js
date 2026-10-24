@@ -59,3 +59,11 @@ test('canonical bundle restore remaps the room key recipient occupancy identity'
   assert.match(bundleReference,/key_holder_occupancy_id/);
   assert.match(bundleReference,/conference_bundle_uuid\(p_operation_id,\(v_row->>''key_holder_occupancy_id''\)::uuid\)/);
 });
+
+const roomIdRepair=fs.readFileSync(path.join(root,'supabase/migrations/20261024164000_fix_accommodation_operations_room_id_ambiguity.sql'),'utf8');
+test('arrival and room-key RPC resolves room_id to the canonical tables without weakening guards',()=>{
+  assert.match(roomIdRepair,/public\.conference_room_assignments\.room_id=/);
+  assert.match(roomIdRepair,/public\.conference_accommodation_occupancies\.room_id=/);
+  assert.match(roomIdRepair,/ACCOMMODATION_RPC_EXPECTED_SOURCE_NOT_FOUND/);
+  assert.doesNotMatch(roomIdRepair,/drop function|disable trigger|grant all/i);
+});
