@@ -457,3 +457,16 @@ test('stale room move completion cannot close or re-enable a newer move dialog',
   assert.match(body,/if\(saved\)\{if\(canonicalAccommodationMoveDraft===draft\)closeCanonicalAccommodationMoveDayDialog\(\)/);
   assert.match(body,/if\(canonicalAccommodationMoveDraft===draft\)\{if\(button\)button\.disabled=false/);
 });
+
+test('guest removal and arrival share a per-occupancy in-flight guard',()=>{
+  const start=ui.indexOf('var canonicalAccommodationOccupancyFlights=');
+  const end=ui.indexOf('\nfunction setCanonicalAccommodationRoomKey(',start);
+  const body=ui.slice(start,end);
+  assert.ok(start>=0&&end>start);
+  assert.match(body,/if\(canonicalAccommodationOccupancyFlights\[key\]\)return false/);
+  assert.match(body,/canonicalAccommodationOccupancyFlights\[key\]=flight/);
+  assert.match(body,/delete canonicalAccommodationOccupancyFlights\[key\]/);
+  assert.match(body,/integration\.removeConferenceAccommodation\(current\.id,occupancy\.occupancyId,occupancy\.revision\)/);
+  assert.match(body,/setConferenceAccommodationArrival\(current\.id,occupancy\.occupancyId,occupancy\.revision,arrived===true\)/);
+  assert.equal((body.match(/runCanonicalAccommodationOccupancyMutation\(current\.id,occupancy\.occupancyId,function\(\)/g)||[]).length,2);
+});
