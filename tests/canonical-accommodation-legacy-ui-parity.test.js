@@ -448,3 +448,12 @@ test('assignment failure restores confirm control and cannot close a newer assig
   assert.equal((body.match(/button\.disabled=false/g)||[]).length>=3,true);
   assert.match(body,/if\(canonicalAccommodationAssignmentDraft===draft\)error\.textContent=/);
 });
+
+test('stale room move completion cannot close or re-enable a newer move dialog',()=>{
+  const start=ui.indexOf('function openCanonicalAccommodationMoveDayDialog(');
+  const end=ui.indexOf('\nfunction removeCanonicalAccommodation(',start);
+  const body=ui.slice(start,end);
+  assert.match(body,/if\(confirmButton\)confirmButton\.disabled=false/);
+  assert.match(body,/if\(saved\)\{if\(canonicalAccommodationMoveDraft===draft\)closeCanonicalAccommodationMoveDayDialog\(\)/);
+  assert.match(body,/if\(canonicalAccommodationMoveDraft===draft\)\{if\(button\)button\.disabled=false/);
+});
