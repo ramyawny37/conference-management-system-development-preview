@@ -1349,3 +1349,7 @@ tr:nth-child(even) td{background:#F7FBFF}
  #conferenceCardPrintRoot>.guest-card .no-print,#conferenceCardPrintRoot>.guest-card .welcome-card-actions{display:none!important}
 }
 
+
+/* Room occupants share the personal card layout, colors and fixed print geometry. */
+.welcome-card-room-guests{display:grid;gap:4px;min-width:0;max-height:100px;overflow:hidden;margin:8px 0;text-align:center;font-size:11px;line-height:1.35;color:var(--welcome-text)}
+.welcome-card-room-guests>div{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
