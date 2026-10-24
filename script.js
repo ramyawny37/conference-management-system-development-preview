@@ -7491,7 +7491,8 @@ function prepareConferenceCardPrint(keys,multiple){
     var copy=el.cloneNode(true);
     copy.removeAttribute('id');
     copy.style.display='';
-    copy.classList.remove('print-page-break');
+    copy.classList.remove('print-page-break','welcome-card-selected');
+    copy.style.boxShadow='none';
     copy.querySelectorAll('.no-print,.welcome-card-actions,.welcome-card-selector').forEach(function(node){node.remove()});
     printRoot.appendChild(copy);
   });
