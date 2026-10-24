@@ -123,14 +123,14 @@ test('linked participant selection starts with the stay period and uses canonica
   assert.doesNotMatch(source,/getPeopleList|peopleDb|room\.guests|room\.children|\bsave\s*\(/);
 });
 
-test('linked mutation functions never save or mutate snapshot houses/guest arrays',()=>{
+test('linked mutation functions use canonical occupancy and structure services without snapshot writes',()=>{
   const start=scriptSource.indexOf('function canonicalAccommodationMutation(');
   const end=scriptSource.indexOf('\nfunction renderCanonicalAccommodation(state)',start);
   const source=scriptSource.slice(start,end);
   assert.match(source,/assignConferenceAccommodation/);
   assert.match(source,/moveConferenceAccommodation/);
   assert.match(source,/removeConferenceAccommodation/);
-  assert.doesNotMatch(source,/mutateConferenceAccommodationStructure/);
+  assert.match(source,/mutateConferenceAccommodationStructure\(current\.id,'update_accommodation_room'/);
   assert.doesNotMatch(source,/current\.houses\s*=|room\.guests|room\.children|peopleDb|\bsave\s*\(/);
 });
 

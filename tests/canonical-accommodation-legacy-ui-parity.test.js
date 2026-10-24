@@ -72,7 +72,7 @@ test('original accommodation workspace and room card shell use canonical data an
   assert.doesNotMatch(renderer,/openRoomEditor|saveRoomData/);
 });
 
-test('canonical room details reuse roomModal in read-only mode without local save',()=>{
+test('canonical room editor reuses roomModal and saves only through the central structure contract',()=>{
   const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
   const detailStart=ui.indexOf('function openCanonicalAccommodationRoomDetails(');
   const detailEnd=ui.indexOf('\nfunction renderCanonicalAccommodation(',detailStart);
@@ -80,9 +80,10 @@ test('canonical room details reuse roomModal in read-only mode without local sav
   assert.match(html,/id="roomModalSaveButton"/);
   assert.match(body,/canonicalAccommodationState\(\)/);
   assert.match(body,/getCanonicalAccommodationOccupanciesOnDay\(room,day\)/);
-  assert.match(body,/saveButton\.style\.display='none'/);
+  assert.match(body,/saveButton\.onclick=saveCanonicalAccommodationRoomData/);
   assert.match(body,/ge\('roomModal'\)\.style\.display='flex'/);
-  assert.doesNotMatch(body,/saveRoomData|save\(\)|PlatformIntegration/);
+  assert.match(body,/PlatformIntegration\.mutateConferenceAccommodationStructure/);
+  assert.doesNotMatch(body,/\bsave\(\)|current\.houses\s*=|room\.guests|room\.children/);
 });
 
 test('canonical move picker excludes closed, current and zero-capacity rooms without using current-day occupancy',()=>{

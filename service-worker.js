@@ -8,7 +8,7 @@ const CACHE_NAMESPACE = IS_DEVELOPMENT
   : '';
 const CACHE_PREFIX = CACHE_NAMESPACE + 'conference-manager-core-';
 const CACHE_REVISION = IS_DEVELOPMENT
-  ? 'development-canonical-accommodation-assignment-state-v1'
+  ? 'development-canonical-accommodation-functional-parity-v2'
   : 'production-3-6-0-release-v6';
 // Reinstall the Development worker so the canonical accommodation parity assets refresh atomically.
 const CACHE_NAME = CACHE_PREFIX + 'v' + APP_VERSION + '-' + CACHE_REVISION;
@@ -17,7 +17,7 @@ const CORE_ASSETS = [
   './index.html',
   './design-system-reference.html',
   './shared-design-tokens.css?rev=platform-design-system-consolidation-v2',
-  './style.css?rev=canonical-accommodation-room-parity-v1',
+  './style.css?rev=canonical-accommodation-functional-parity-v2',
   './canonical-platform-shell.css?rev=platform-administration-canonical-sidebar-navigation-v2',
   './modules/reservations/reservations-module.css?rev=reservations-person-live-0d9db39-v1',
   './js/application-routing.js?rev=conference-room-assignments-v1',
@@ -35,7 +35,7 @@ const CORE_ASSETS = [
   './js/supabase/warehouse-transport.js?rev=phase-w1-v1',
   './js/supabase/client.js?rev=target-device-argument-preservation-v1',
   './js/supabase/auth.js?rev=account-session-identity-v1',
-  './js/platform-integration.js?rev=conference-session-reset-v2',
+  './js/platform-integration.js?rev=canonical-accommodation-functional-parity-v2',
   './js/platform-home-dashboard.js?rev=unified-platform-state-home-v2',
   './js/supabase/canonical-conference-discovery.js?rev=conference-house-link-repair-v1',
   './js/supabase/canonical-conference-transport.js?rev=p6i-b2-v1',
@@ -84,7 +84,7 @@ const CORE_ASSETS = [
   './js/warehouse/party-management.js?rev=warehouse-party-management-v1',
   './js/warehouse/remaining-operations.js?rev=adjustment-conversion-ux-v1',
   './js/warehouse/workspace.js?rev=item-unit-add-ui-v1',
-  './script.js?rev=canonical-accommodation-assignment-state-v1',
+  './script.js?rev=canonical-accommodation-functional-parity-v2',
   './version.js',
   './pwa.js?rev=pwa-update-state-consistency-v1',
   './libs/html2canvas.min.js',

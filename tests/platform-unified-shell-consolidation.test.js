@@ -34,5 +34,5 @@ test('reservations prototype is absent from runtime, cache and module ownership'
 test('responsive shell retains one right sidebar and mobile drawer',()=>{
   assert.match(shell,/\.canonical-platform-sidebar\{[^}]*inset:12px 12px 12px auto/);
   assert.match(shell,/@media\(max-width:900px\)[\s\S]*platform-navigation-open \.canonical-platform-sidebar\{transform:translateX\(0\)\}/);
-  assert.match(worker,/development-canonical-accommodation-assignment-state-v1/);
+  assert.match(worker,/development-canonical-accommodation-functional-parity-v2/);
 });
