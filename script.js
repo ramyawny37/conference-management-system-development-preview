@@ -7472,17 +7472,49 @@ function openShareCenterWhatsApp(button){
     );
   }).then(function(){setShareCenterButtonBusy(button,false,'')});
 }
-function printOne(k){
-  var current=getCurrentConference();
-  if(!current||!getCanonicalConferenceCoreLink(current.id))addActivityLog('card_printed','تمت طباعة كارت واحد',{section:'cards',entityType:'card',entityId:k});
-  document.body.classList.add('print-single-card');
-  document.body.classList.remove('print-multiple-cards');
-  document.querySelectorAll('.guest-card').forEach(function(el){
+var conferenceCardPrintCleanup=null;
+function restoreConferenceCardPrint(){
+  if(!conferenceCardPrintCleanup)return;
+  var cleanup=conferenceCardPrintCleanup;
+  conferenceCardPrintCleanup=null;
+  cleanup();
+}
+window.addEventListener('afterprint',restoreConferenceCardPrint);
+function prepareConferenceCardPrint(keys,multiple){
+  restoreConferenceCardPrint();
+  var keySet=new Set(keys);
+  var cards=Array.from(document.querySelectorAll('#cardsGrid .guest-card'));
+  var originals=cards.map(function(el){return {el:el,display:el.style.display,breakClass:el.classList.contains('print-page-break')}});
+  var previousSingle=document.body.classList.contains('print-single-card');
+  var previousMultiple=document.body.classList.contains('print-multiple-cards');
+  document.body.classList.toggle('print-single-card',!multiple);
+  document.body.classList.toggle('print-multiple-cards',multiple);
+  var count=0;
+  cards.forEach(function(el){
+    var selected=keySet.has(el.dataset.key);
+    el.style.display=selected?'':'none';
     el.classList.remove('print-page-break');
-    el.style.display = el.dataset.key === k ? '' : 'none';
+    if(selected&&multiple&&++count%8===0)el.classList.add('print-page-break');
   });
-  window.print();recordLinkedConferenceOutputEvent('card_printed');setTimeout(function(){document.querySelectorAll('.guest-card').forEach(function(el){el.style.display=''});document.body.classList.remove('print-single-card')},500)}
-function printSel(){var ks=Object.keys(selectedCards).filter(function(k){return selectedCards[k]});if(!ks.length){alert('اختر كارت واحد على الأقل');return}var current=getCurrentConference();if(!current||!getCanonicalConferenceCoreLink(current.id))addActivityLog('cards_printed','تمت طباعة مجموعة كروت',{details:'عدد الكروت: '+ks.length,section:'cards',entityType:'card_selection',entityId:''});document.body.classList.remove('print-single-card');document.body.classList.add('print-multiple-cards');var printedCount=0;document.querySelectorAll('.guest-card').forEach(function(el){var isPrinted=!!selectedCards[el.dataset.key];el.style.display=isPrinted?'':'none';el.classList.remove('print-page-break');if(isPrinted){printedCount++;if(printedCount%8===0)el.classList.add('print-page-break')}});window.print();recordLinkedConferenceOutputEvent('cards_printed');setTimeout(function(){document.querySelectorAll('.guest-card').forEach(function(el){el.style.display='';el.classList.remove('print-page-break')});document.body.classList.remove('print-multiple-cards')},500)}
+  conferenceCardPrintCleanup=function(){
+    originals.forEach(function(item){item.el.style.display=item.display;item.el.classList.toggle('print-page-break',item.breakClass)});
+    document.body.classList.toggle('print-single-card',previousSingle);
+    document.body.classList.toggle('print-multiple-cards',previousMultiple);
+  };
+  return count||(!multiple&&cards.some(function(el){return keySet.has(el.dataset.key)}));
+}
+function printOne(k){
+  if(!prepareConferenceCardPrint([k],false)){showToast('تعذر العثور على الكارت للطباعة.','#E74C3C');return}
+  window.print();
+  recordLinkedConferenceOutputEvent('card_printed');
+}
+function printSel(){
+  var keys=getSelectedCardKeys();
+  if(!keys.length){showToast('اختر كارت واحد على الأقل.','#E67E22');return}
+  if(!prepareConferenceCardPrint(keys,true)){showToast('الكروت المحددة غير ظاهرة للطباعة.','#E74C3C');return}
+  window.print();
+  recordLinkedConferenceOutputEvent('cards_printed');
+}
 
 // ═══════════════════════════════════════════════════════
 // TAB 5: SETTINGS
