@@ -61,7 +61,7 @@ test('runtime CSS load order and cache revisions remain atomic',()=>{
   assert.ok(index.indexOf(shared)<index.indexOf(pages));
   assert.ok(index.indexOf(pages)<index.indexOf(canonical));
   for(const asset of [shared,pages,canonical])assert.equal(worker.split('./'+asset).length-1,1);
-  assert.match(worker,/development-canonical-accommodation-room-details-v4/);
+  assert.match(worker,/development-canonical-cards-no-legacy-people-v1/);
 });
 
 test('proven duplicate global definitions were actually removed',()=>{
