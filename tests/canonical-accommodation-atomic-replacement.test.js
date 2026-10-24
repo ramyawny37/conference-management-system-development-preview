@@ -3,6 +3,7 @@ const assert=require('node:assert/strict');
 const fs=require('node:fs');
 
 const migration=fs.readFileSync('supabase/migrations/20261024133000_canonical_accommodation_atomic_guest_replacement.sql','utf8');
+const arrivalPolicy=fs.readFileSync('supabase/migrations/20261024161500_replacement_arrival_state_policy.sql','utf8');
 const integration=fs.readFileSync('js/platform-integration.js','utf8');
 const script=fs.readFileSync('script.js','utf8');
 const edge=fs.readFileSync('supabase/functions/conference-device-operation/index.ts','utf8');
@@ -42,7 +43,13 @@ test('edit UI offers other active candidates and routes a changed person to repl
   assert.doesNotMatch(script,/draft\.mode==='edit'.*filter\(function\(item\).*draft\.participationId/);
   assert.match(script,/isReplacement=draft\.mode==='edit'/);
   assert.match(script,/replaceConferenceAccommodation\(current\.id/);
-  assert.match(script,/effectiveDay:interval\.arrivalDay/);
+  assert.match(script,/effectiveDay:Number\(replacementDayText\)/);
   assert.match(script,/saveCanonicalAccommodationRoomData/);
   assert.match(script,/mutateConferenceAccommodationStructure\(current\.id,'update_accommodation_room'/);
+});
+
+test('replacement arrival is pending and its effective day is independent from stay edits',()=>{
+  assert.match(arrivalPolicy,/p_extra_type,null,null,actor,actor/);
+  assert.match(script,/canonicalAccommodationReplacementDay/);
+  assert.match(script,/interval\.arrivalDay!==draft\.originalArrivalDay\|\|interval\.leaveDay!==draft\.originalLeaveDay/);
 });

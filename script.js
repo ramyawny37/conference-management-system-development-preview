@@ -2836,6 +2836,8 @@ function assignCanonicalAccommodation(roomId){
   ge('canonicalAccommodationLeaveDay').value='';
   ge('canonicalAccommodationBedType').value='base';
   ge('canonicalAccommodationExtraPersonType').value='adult';
+  ge('canonicalAccommodationReplacementDay').value='';
+  ge('canonicalAccommodationReplacementDayField').style.display='none';
   ge('canonicalAccommodationAssignmentSearch').value='';
   ge('canonicalAccommodationAssignmentError').textContent='';
   ge('canonicalAccommodationAssignmentCandidates').style.display='none';
@@ -2886,6 +2888,7 @@ function renderCanonicalAccommodationAssignmentCandidates(){
   var nextSelection=priorSelection||originalSelection;
   if(!draft.available.some(function(item){return String(item.participationId)===nextSelection;}))nextSelection='';
   draft.selectedParticipationId=nextSelection||null;
+  syncCanonicalAccommodationReplacementFields();
   error.textContent='';container.style.display='block';ge('canonicalAccommodationAssignmentConfirm').disabled=!draft.selectedParticipationId;
   renderCanonicalAccommodationAssignmentCandidateList();return true;
 }
@@ -2903,7 +2906,15 @@ function renderCanonicalAccommodationAssignmentCandidateList(){
 function selectCanonicalAccommodationParticipation(participationId){
   var draft=canonicalAccommodationAssignmentDraft;
   if(!draft||!(draft.available||[]).some(function(item){return String(item.participationId)===String(participationId);}))return false;
-  draft.selectedParticipationId=String(participationId);ge('canonicalAccommodationAssignmentConfirm').disabled=false;renderCanonicalAccommodationAssignmentCandidateList();return true;
+  draft.selectedParticipationId=String(participationId);syncCanonicalAccommodationReplacementFields();ge('canonicalAccommodationAssignmentConfirm').disabled=false;renderCanonicalAccommodationAssignmentCandidateList();return true;
+}
+function syncCanonicalAccommodationReplacementFields(){
+  var draft=canonicalAccommodationAssignmentDraft,field=ge('canonicalAccommodationReplacementDayField'),input=ge('canonicalAccommodationReplacementDay');
+  if(!draft||!field||!input)return false;
+  var replacing=draft.mode==='edit'&&String(draft.selectedParticipationId||'')!==String(draft.participationId||'');
+  field.style.display=replacing?'block':'none';
+  if(replacing&&!input.value)input.value=String(draft.originalArrivalDay);
+  return replacing;
 }
 function formatCanonicalAccommodationAssignmentFailure(error){
   var code=String(error&&error.code||'');
@@ -2933,9 +2944,12 @@ function confirmCanonicalAccommodationAssignment(){
   }
   button.disabled=true;
   var isReplacement=draft.mode==='edit'&&String(draft.selectedParticipationId)!==String(draft.participationId);
+  var replacementDayText=isReplacement?String(ge('canonicalAccommodationReplacementDay').value||'').trim():'';
+  if(isReplacement&&(!/^\d+$/.test(replacementDayText)||Number(replacementDayText)<draft.originalArrivalDay||(draft.originalLeaveDay!==null&&Number(replacementDayText)>=draft.originalLeaveDay))){error.textContent='يوم سريان الاستبدال خارج فترة الإقامة.';button.disabled=false;return false;}
+  if(isReplacement&&(interval.arrivalDay!==draft.originalArrivalDay||interval.leaveDay!==draft.originalLeaveDay)){error.textContent='احفظ تعديل فترة الإقامة أولًا، ثم افتح الاستبدال وحدد يوم سريانه.';button.disabled=false;return false;}
   var mutation=draft.mode==='edit'
     ?(isReplacement
-      ?window.PlatformIntegration.replaceConferenceAccommodation(current.id,{occupancyId:draft.occupancyId,expectedRevision:draft.revision,replacementParticipationId:draft.selectedParticipationId,effectiveDay:interval.arrivalDay,bedType:payload.bedType,extraBedPersonType:payload.extraBedPersonType})
+      ?window.PlatformIntegration.replaceConferenceAccommodation(current.id,{occupancyId:draft.occupancyId,expectedRevision:draft.revision,replacementParticipationId:draft.selectedParticipationId,effectiveDay:Number(replacementDayText),bedType:payload.bedType,extraBedPersonType:payload.extraBedPersonType})
       :window.PlatformIntegration.moveConferenceAccommodation(current.id,payload))
     :window.PlatformIntegration.assignConferenceAccommodation(current.id,payload);
   return canonicalAccommodationMutation(mutation,'✅ تم حفظ بيانات الغرفة',formatCanonicalAccommodationAssignmentFailure).then(function(result){if(result){closeCanonicalAccommodationAssignmentDialog();return result;}button.disabled=false;error.textContent='تعذر حفظ بيانات التسكين.';return false;});
@@ -2947,12 +2961,14 @@ function editCanonicalAccommodation(occupancyId){
   if(!current||!integration||!occupancy||!modal)return false;
   var participationState=integration.getConferenceParticipationState(current.id),participations=(participationState&&participationState.items||[]).filter(function(item){return item.status==='active';});
   if(!participations.some(function(item){return String(item.participationId)===String(occupancy.participationId);})){showToast('لم تعد مشاركة النزيل نشطة.','#E74C3C');return false;}
-  canonicalAccommodationAssignmentDraft={mode:'edit',conferenceId:String(current.id),roomId:String(occupancy.roomId),occupancyId:String(occupancy.occupancyId),revision:Number(occupancy.revision),participationId:String(occupancy.participationId),participations:participations,available:[],selectedParticipationId:String(occupancy.participationId)};
+  canonicalAccommodationAssignmentDraft={mode:'edit',conferenceId:String(current.id),roomId:String(occupancy.roomId),occupancyId:String(occupancy.occupancyId),revision:Number(occupancy.revision),participationId:String(occupancy.participationId),participations:participations,available:[],selectedParticipationId:String(occupancy.participationId),originalArrivalDay:Number(occupancy.arrivalDay),originalLeaveDay:occupancy.leaveDay==null?null:Number(occupancy.leaveDay)};
   ge('canonicalAccommodationAssignmentTitle').textContent='تعديل أو استبدال النزيل';
   ge('canonicalAccommodationArrivalDay').value=String(occupancy.arrivalDay);
   ge('canonicalAccommodationLeaveDay').value=occupancy.leaveDay==null?'':String(occupancy.leaveDay);
   ge('canonicalAccommodationBedType').value=occupancy.bedType;
   ge('canonicalAccommodationExtraPersonType').value=occupancy.extraBedPersonType||'adult';
+  ge('canonicalAccommodationReplacementDay').value=String(occupancy.arrivalDay);
+  ge('canonicalAccommodationReplacementDayField').style.display='none';
   ge('canonicalAccommodationAssignmentSearch').value='';
   ge('canonicalAccommodationAssignmentError').textContent='';
   ge('canonicalAccommodationAssignmentCandidates').style.display='block';
