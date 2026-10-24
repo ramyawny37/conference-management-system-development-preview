@@ -390,3 +390,15 @@ test('room save action has one owner per editor, never an inline legacy fallback
   assert.match(teardown,/saveButton\.onclick=null/);
   assert.doesNotMatch(teardown,/saveButton\.onclick=saveRoomData/);
 });
+
+test('failed central room save restores action without closing the editor',()=>{
+  const start=ui.indexOf('function saveCanonicalAccommodationRoomData(');
+  const end=ui.indexOf('\nfunction renderCanonicalAccommodation(',start);
+  const save=ui.slice(start,end);
+  assert.match(save,/ge\('roomModalSaveButton'\)\.disabled=true/);
+  assert.match(save,/\},function\(error\)\{/);
+  assert.match(save,/ge\('roomModalSaveButton'\)\.disabled=false/);
+  assert.match(save,/showToast\('تعذر حفظ بيانات الغرفة/);
+  const rejection=save.slice(save.indexOf('},function(error){'));
+  assert.doesNotMatch(rejection,/closeRM\(/);
+});
