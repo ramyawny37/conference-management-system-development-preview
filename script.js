@@ -3070,13 +3070,11 @@ function confirmCanonicalAccommodationMoveDay(){
   if(button)button.disabled=true;
   var result=canonicalAccommodationMutation(window.PlatformIntegration.moveConferenceAccommodation(conference.id,{occupancyId:draft.occupancyId,expectedRevision:draft.revision,roomId:draft.roomId,arrivalDay:day,leaveDay:draft.leaveDay,bedType:draft.bedType,extraBedPersonType:draft.extraBedPersonType}),'↔️ تم نقل النزيل');
   return Promise.resolve(result).then(function(saved){
-    if(saved){closeCanonicalAccommodationMoveDayDialog();return saved;}
-    if(button)button.disabled=false;
-    if(canonicalAccommodationMoveDraft===draft)error.textContent='تعذر إتمام النقل. راجع حالة الغرفة أو أعد المحاولة.';
+    if(saved){if(canonicalAccommodationMoveDraft===draft)closeCanonicalAccommodationMoveDayDialog();return saved;}
+    if(canonicalAccommodationMoveDraft===draft){if(button)button.disabled=false;error.textContent='تعذر إتمام النقل. راجع حالة الغرفة أو أعد المحاولة.';}
     return false;
   },function(){
-    if(button)button.disabled=false;
-    if(canonicalAccommodationMoveDraft===draft)error.textContent='تعذر إتمام النقل. أعد المحاولة.';
+    if(canonicalAccommodationMoveDraft===draft){if(button)button.disabled=false;error.textContent='تعذر إتمام النقل. أعد المحاولة.';}
     return false;
   });
 }
