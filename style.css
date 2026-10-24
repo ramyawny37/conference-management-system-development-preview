@@ -1317,3 +1317,23 @@ tr:nth-child(even) td{background:#F7FBFF}
 #roomModal.canonical-room-readonly .room-modal-heading{direction:rtl;grid-column:2;grid-row:1;justify-self:stretch;text-align:right;min-width:0}
 #roomModal.canonical-room-readonly .room-modal-header .room-modal-close{grid-column:1;grid-row:1;justify-self:center}
 #roomModal.canonical-room-readonly .room-modal-heading strong{white-space:normal;overflow-wrap:normal}
+
+/* Canonical room occupancy cards are display records, not legacy editable grid rows. */
+#roomModal.canonical-room-readonly .canonical-room-guest{grid-template-areas:none;min-width:0}
+#roomModal.canonical-room-readonly .canonical-room-guest .guest-slot-person{min-width:0;overflow-wrap:anywhere}
+#roomModal.canonical-room-readonly .canonical-room-guest-actions{display:flex;flex-wrap:wrap;grid-column:1/-1;min-width:0;gap:8px}
+#roomModal.canonical-room-readonly .canonical-room-guest-actions .btn{max-width:100%;white-space:normal}
+#roomModal.canonical-room-readonly .canonical-room-stay-history{grid-column:1/-1;min-width:0;margin-top:12px;padding-top:12px;border-top:1px solid var(--app-border)}
+#roomModal.canonical-room-readonly .canonical-room-stay-history .canonical-room-guest{margin-top:8px}
+#roomModal.canonical-room-readonly .child-box .canonical-room-guest-actions{margin-top:8px}
+@media(max-width:820px){
+  #roomModal.canonical-room-readonly .canonical-room-guest{grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-areas:none}
+  #roomModal.canonical-room-readonly .canonical-room-guest>*{grid-area:auto;min-width:0}
+  #roomModal.canonical-room-readonly .canonical-room-guest .guest-slot-person{grid-column:1/-1}
+  #roomModal.canonical-room-readonly .canonical-room-guest-actions{grid-column:1/-1}
+}
+@media(max-width:600px){
+  #roomModal.canonical-room-readonly .canonical-room-guest{grid-template-columns:minmax(0,1fr);grid-template-areas:none}
+  #roomModal.canonical-room-readonly .canonical-room-guest>*{grid-column:1;grid-area:auto}
+  #roomModal.canonical-room-readonly .canonical-room-guest-actions{grid-column:1}
+}
