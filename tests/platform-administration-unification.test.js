@@ -111,7 +111,7 @@ test('cache references are atomically consistent for every changed runtime asset
   const styleRevision='canonical-accommodation-room-details-v4';
   const deviceListRevision='platform-admin-security-retirement-v1';
   for(const asset of ['style.css','canonical-platform-shell.css','js/platform-integration.js','js/sync/user-management-ui.js','js/sync/module-permission-administration-ui.js','js/sync/platform-administration-ui.js','script.js']){
-    const assetRevision=asset==='style.css'?styleRevision:asset==='script.js'?'canonical-accommodation-room-details-v4':asset==='js/platform-integration.js'?'canonical-accommodation-room-details-v4':asset==='js/sync/discovered-conference-open-service.js'?'conference-navigation-consolidation-v1':(asset==='js/sync/user-management-ui.js'||asset==='js/sync/platform-administration-ui.js')?deviceListRevision:revision;
+    const assetRevision=asset==='style.css'?styleRevision:asset==='script.js'?'canonical-cards-renderer-restore-v1':asset==='js/platform-integration.js'?'canonical-accommodation-room-details-v4':asset==='js/sync/discovered-conference-open-service.js'?'conference-navigation-consolidation-v1':(asset==='js/sync/user-management-ui.js'||asset==='js/sync/platform-administration-ui.js')?deviceListRevision:revision;
     assert.ok(index.includes(asset+'?rev='+assetRevision),asset+' missing from index');
     assert.ok(worker.includes('./'+asset+'?rev='+assetRevision),asset+' missing from worker');
   }
