@@ -7484,6 +7484,19 @@ function prepareConferenceCardPrint(keys,multiple){
   restoreConferenceCardPrint();
   var keySet=new Set(keys);
   var cards=Array.from(document.querySelectorAll('#cardsGrid .guest-card'));
+  var printRoot=document.createElement('div');
+  printRoot.id='conferenceCardPrintRoot';
+  printRoot.className=multiple?'conference-card-print-multiple':'conference-card-print-single';
+  cards.filter(function(el){return keySet.has(el.dataset.key)}).forEach(function(el){
+    var copy=el.cloneNode(true);
+    copy.removeAttribute('id');
+    copy.style.display='';
+    copy.classList.remove('print-page-break');
+    copy.querySelectorAll('.no-print,.welcome-card-actions,.welcome-card-selector').forEach(function(node){node.remove()});
+    printRoot.appendChild(copy);
+  });
+  if(!printRoot.children.length)return false;
+  document.body.appendChild(printRoot);
   var originals=cards.map(function(el){return {el:el,display:el.style.display,breakClass:el.classList.contains('print-page-break')}});
   var previousSingle=document.body.classList.contains('print-single-card');
   var previousMultiple=document.body.classList.contains('print-multiple-cards');
@@ -7497,6 +7510,7 @@ function prepareConferenceCardPrint(keys,multiple){
     if(selected&&multiple&&++count%8===0)el.classList.add('print-page-break');
   });
   conferenceCardPrintCleanup=function(){
+    if(printRoot.parentNode)printRoot.parentNode.removeChild(printRoot);
     originals.forEach(function(item){item.el.style.display=item.display;item.el.classList.toggle('print-page-break',item.breakClass)});
     document.body.classList.toggle('print-single-card',previousSingle);
     document.body.classList.toggle('print-multiple-cards',previousMultiple);
