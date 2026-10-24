@@ -33,7 +33,7 @@ test('room states and guest badges derive from canonical operational occupancies
   assert.match(renderer,/bedType==='extra'/);
 });
 test('write actions remain permission gated and route to platform integration',()=>{
-  for(const name of ['moveCanonicalAccommodation','removeCanonicalAccommodation','setCanonicalAccommodationArrival','setCanonicalAccommodationRoomKey']){
+  for(const name of ['editCanonicalAccommodation','moveCanonicalAccommodation','removeCanonicalAccommodation','setCanonicalAccommodationArrival','setCanonicalAccommodationRoomKey']){
     const i=ui.indexOf('function '+name+'(');
     const j=ui.indexOf('\nfunction ',i+10);
     const body=ui.slice(i,j);
@@ -41,6 +41,21 @@ test('write actions remain permission gated and route to platform integration',(
     assert.match(body,/currentConferenceSectionCapability\('accommodationManage'\)/);
     assert.match(body,/PlatformIntegration|integration\./);
   }
+});
+
+test('canonical occupancy edit reuses the protected move contract in the same room',()=>{
+  const start=ui.indexOf('function confirmCanonicalAccommodationAssignment(');
+  const end=ui.indexOf('\nfunction getCanonicalAccommodationOccupanciesOnDay',start);
+  const body=ui.slice(start,end);
+  assert.match(body,/draft\.mode==='edit'/);
+  assert.match(body,/findCanonicalAccommodationEntity\('occupancy',draft\.occupancyId\)/);
+  assert.match(body,/payload\.occupancyId=draft\.occupancyId/);
+  assert.match(body,/payload\.expectedRevision=draft\.revision/);
+  assert.match(body,/moveConferenceAccommodation\(current\.id,payload\)/);
+  assert.doesNotMatch(body,/saveRoomData|requireLocalOnlyAccommodationMutation/);
+  const rendererStart=ui.indexOf('function renderCanonicalAccommodation(');
+  const rendererEnd=ui.indexOf('\nfunction renderAccommodation()',rendererStart);
+  assert.match(ui.slice(rendererStart,rendererEnd),/editCanonicalAccommodation/);
 });
 test('responsive room and guest layouts and collapsed floors exist',()=>{
   assert.match(css,/floor-container\.is-collapsed>\.rooms-grid\{display:none\}/);

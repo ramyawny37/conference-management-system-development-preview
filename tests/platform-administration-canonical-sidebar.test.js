@@ -87,7 +87,7 @@ test('Development PWA serves the same revisioned canonical administration visibi
   const asset='style.css?rev=conference-room-heading-v4';
   assert.ok(index.includes(asset),'HTML must request revised workspace stylesheet');
   assert.ok(worker.includes("'./"+asset+"'"),'service worker must precache the revised stylesheet');
-  assert.match(worker,/development-room-heading-v4/);
+  assert.match(worker,/development-accommodation-lifecycle-v1/);
 });
 
 
