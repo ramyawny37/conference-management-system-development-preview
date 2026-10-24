@@ -197,7 +197,7 @@ test('move confirmation stays open on failed central mutation and disables dupli
   assert.ok(start>=0&&end>start);
   assert.match(body,/if\(button\)button\.disabled=true/);
   assert.match(body,/Promise\.resolve\(result\)\.then/);
-  assert.match(body,/if\(saved\)\{closeCanonicalAccommodationMoveDayDialog\(\);return saved;\}/);
+  assert.match(body,/if\(saved\)\{if\(canonicalAccommodationMoveDraft===draft\)closeCanonicalAccommodationMoveDayDialog\(\);return saved;\}/);
   assert.match(body,/if\(button\)button\.disabled=false/);
   assert.ok(body.indexOf('closeCanonicalAccommodationMoveDayDialog();')>body.indexOf('Promise.resolve(result).then'));
 });
@@ -458,7 +458,7 @@ test('central guest removal tolerates an incomplete person projection without lo
   const start=ui.indexOf('function removeCanonicalAccommodation(');
   const end=ui.indexOf('\nfunction setCanonicalAccommodationArrival(',start);
   const remove=ui.slice(start,end);
-  assert.match(remove,/if\(!current\|\|!occupancy\)return false/);
+  assert.match(remove,/if\(!current\|\|!integration\|\|!occupancy\)return false/);
   assert.match(remove,/occupancy\.person&&occupancy\.person\.fullName/);
   assert.match(remove,/integration\.removeConferenceAccommodation\(current\.id,occupancy\.occupancyId,occupancy\.revision\)/);
   assert.doesNotMatch(remove,/saveRoomData|current\.houses\s*=|requireLocalOnlyAccommodationMutation/);
@@ -481,7 +481,7 @@ test('assignment failure restores confirm control and cannot close a newer assig
   assert.match(body,/canonicalAccommodationAssignmentDraft===draft\)closeCanonicalAccommodationAssignmentDialog\(\)/);
   assert.match(body,/\},function\(\)\{/);
   assert.equal((body.match(/button\.disabled=false/g)||[]).length>=3,true);
-  assert.match(body,/if\(canonicalAccommodationAssignmentDraft===draft\)error\.textContent=/);
+  assert.match(body,/if\(canonicalAccommodationAssignmentDraft===draft\)\{button\.disabled=false;error\.textContent=/);
 });
 
 test('stale room move completion cannot close or re-enable a newer move dialog',()=>{
@@ -521,7 +521,7 @@ test('occupancy edits and replacements share the removal arrival transfer guard'
   const end=ui.indexOf('\nfunction editCanonicalAccommodation(',start);
   const body=ui.slice(start,end);
   assert.match(body,/draft\.mode==='edit'&&canonicalAccommodationOccupancyFlights\[String\(current\.id\)\+':'\+String\(draft\.occupancyId\)\]/);
-  assert.match(body,/runCanonicalAccommodationOccupancyMutation\(current\.id,draft\.occupancyId,function\(\)/);
+  assert.match(body,/runCanonicalAccommodationOccupancyMutation\(current\.id,draft\.occupancyId,executeAssignmentMutation\)/);
   assert.match(body,/replaceConferenceAccommodation\(current\.id/);
   assert.match(body,/moveConferenceAccommodation\(current\.id,payload\)/);
   assert.match(body,/:Promise.resolve\(\).then\(executeAssignmentMutation\)/);
