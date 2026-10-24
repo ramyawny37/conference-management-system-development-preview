@@ -438,3 +438,13 @@ test('assignment validates conference scope before reading central participation
   assert.ok(guard>=0&&read>guard,'conference must be validated before participation lookup');
   assert.equal(body.split("if(!current||String(current.id)!==draft.conferenceId").length-1,1);
 });
+
+test('assignment failure restores confirm control and cannot close a newer assignment dialog',()=>{
+  const start=ui.indexOf('function confirmCanonicalAccommodationAssignment(');
+  const end=ui.indexOf('\nfunction editCanonicalAccommodation(',start);
+  const body=ui.slice(start,end);
+  assert.match(body,/canonicalAccommodationAssignmentDraft===draft\)closeCanonicalAccommodationAssignmentDialog\(\)/);
+  assert.match(body,/\},function\(\)\{/);
+  assert.equal((body.match(/button\.disabled=false/g)||[]).length>=3,true);
+  assert.match(body,/if\(canonicalAccommodationAssignmentDraft===draft\)error\.textContent=/);
+});
