@@ -3069,6 +3069,9 @@ function confirmCanonicalAccommodationMoveDay(){
     return occupants.length>=capacity||occupants.filter(function(item){return (item.bedType==='extra'?'extra':'base')===(draft.bedType==='extra'?'extra':'base');}).length>=bedCapacity;
   });
   if(isFull){error.textContent='الغرفة ممتلئة خلال فترة النقل المطلوبة. اختر غرفة أخرى أو غيّر يوم النقل.';return false;}
+  if(canonicalAccommodationOccupancyFlights[String(conference.id)+':'+String(draft.occupancyId)]){
+    error.textContent='توجد عملية أخرى قيد التنفيذ لهذا النزيل. انتظر اكتمالها ثم أعد المحاولة.';return false;
+  }
   if(button)button.disabled=true;
   var result=runCanonicalAccommodationOccupancyMutation(conference.id,draft.occupancyId,function(){
     return canonicalAccommodationMutation(window.PlatformIntegration.moveConferenceAccommodation(conference.id,{occupancyId:draft.occupancyId,expectedRevision:draft.revision,roomId:draft.roomId,arrivalDay:day,leaveDay:draft.leaveDay,bedType:draft.bedType,extraBedPersonType:draft.extraBedPersonType}),'↔️ تم نقل النزيل');
