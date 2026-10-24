@@ -428,3 +428,13 @@ test('central guest removal tolerates an incomplete person projection without lo
   assert.match(remove,/integration\.removeConferenceAccommodation\(current\.id,occupancy\.occupancyId,occupancy\.revision\)/);
   assert.doesNotMatch(remove,/saveRoomData|current\.houses\s*=|requireLocalOnlyAccommodationMutation/);
 });
+
+test('assignment validates conference scope before reading central participations',()=>{
+  const start=ui.indexOf('function confirmCanonicalAccommodationAssignment(');
+  const end=ui.indexOf('\nfunction editCanonicalAccommodation(',start);
+  const body=ui.slice(start,end);
+  const guard=body.indexOf("if(!current||String(current.id)!==draft.conferenceId");
+  const read=body.indexOf('getConferenceParticipationState(current.id)');
+  assert.ok(guard>=0&&read>guard,'conference must be validated before participation lookup');
+  assert.equal(body.split("if(!current||String(current.id)!==draft.conferenceId").length-1,1);
+});
