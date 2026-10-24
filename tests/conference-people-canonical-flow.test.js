@@ -19,7 +19,9 @@ test('existing person is added as participation without creating another central
  assert.match(integration,/createConferenceParticipationForExistingPerson\(localId,personId\)/);
  assert.match(integration,/CANONICAL_CONFERENCE_PERSON_ALREADY_PARTICIPATING/);
  assert.match(integration,/mutateParticipation\(localId,'create_conference_participation'/);
- assert.match(ui,/createConferenceParticipationForExistingPerson\(linkedCurrent\.id,canonicalPersonSelectedId\)/);
+ assert.match(ui,/var selectedPersonId=canonicalPersonSelectedId;/);
+ assert.match(ui,/createConferenceParticipationForExistingPerson\(linkedCurrent\.id,selectedPersonId\)/);
+ assert.match(ui,/canonicalPersonSavePending=true;/);
  assert.match(ui,/createConferenceParticipationWithPerson\(linkedCurrent\.id/);
 });
 test('person suggestion selection invalidates pending search and cannot silently overwrite central data',()=>{
