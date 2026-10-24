@@ -3081,20 +3081,45 @@ function confirmCanonicalAccommodationMoveDay(){
   });
 }
 
+// One in-flight occupancy operation per conference/person on this client.
+// The server revision check remains the authority for other devices.
+var canonicalAccommodationOccupancyFlights=Object.create(null);
+function runCanonicalAccommodationOccupancyMutation(conferenceId,occupancyId,operation){
+  var key=String(conferenceId)+':'+String(occupancyId);
+  if(canonicalAccommodationOccupancyFlights[key])return false;
+  var flight=Promise.resolve().then(operation);
+  canonicalAccommodationOccupancyFlights[key]=flight;
+  return flight.then(function(result){
+    if(canonicalAccommodationOccupancyFlights[key]===flight)delete canonicalAccommodationOccupancyFlights[key];
+    return result;
+  },function(error){
+    if(canonicalAccommodationOccupancyFlights[key]===flight)delete canonicalAccommodationOccupancyFlights[key];
+    showToast('تعذر تنفيذ عملية النزيل. أعد المحاولة.','#E74C3C');
+    console.error('Canonical accommodation occupancy mutation failed',error);
+    return false;
+  });
+}
+
 function removeCanonicalAccommodation(occupancyId){
   if(!currentConferenceSectionCapability('accommodationManage')){showToast('ليس لديك صلاحية إدارة التسكين.','#E74C3C');return false;}
   var current=getCurrentConference(),integration=window.PlatformIntegration,occupancy=findCanonicalAccommodationEntity('occupancy',occupancyId);
-  if(!current||!occupancy)return false;
+  if(!current||!integration||!occupancy)return false;
+  var key=String(current.id)+':'+String(occupancy.occupancyId);
+  if(canonicalAccommodationOccupancyFlights[key])return false;
   var occupantName=occupancy.person&&occupancy.person.fullName||'النزيل';
   if(!confirm('إزالة '+occupantName+' من الغرفة؟'))return false;
-  return canonicalAccommodationMutation(integration.removeConferenceAccommodation(current.id,occupancy.occupancyId,occupancy.revision),'🗑️ تم حذف النزيل من الغرفة');
+  return runCanonicalAccommodationOccupancyMutation(current.id,occupancy.occupancyId,function(){
+    return canonicalAccommodationMutation(integration.removeConferenceAccommodation(current.id,occupancy.occupancyId,occupancy.revision),'🗑️ تم حذف النزيل من الغرفة');
+  });
 }
 
 function setCanonicalAccommodationArrival(occupancyId,arrived){
   if(!currentConferenceSectionCapability('accommodationManage')){showToast('ليس لديك صلاحية إدارة التسكين.','#E74C3C');return false;}
   var current=getCurrentConference(),occupancy=findCanonicalAccommodationEntity('occupancy',occupancyId);
   if(!current||!occupancy)return false;
-  return canonicalAccommodationMutation(window.PlatformIntegration.setConferenceAccommodationArrival(current.id,occupancy.occupancyId,occupancy.revision,arrived===true),arrived?'✅ تم تسجيل الوصول':'تم تصحيح حالة الوصول');
+  return runCanonicalAccommodationOccupancyMutation(current.id,occupancy.occupancyId,function(){
+    return canonicalAccommodationMutation(window.PlatformIntegration.setConferenceAccommodationArrival(current.id,occupancy.occupancyId,occupancy.revision,arrived===true),arrived?'✅ تم تسجيل الوصول':'تم تصحيح حالة الوصول');
+  });
 }
 
 function setCanonicalAccommodationRoomKey(roomId){
