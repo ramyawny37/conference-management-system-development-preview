@@ -3173,7 +3173,7 @@ function openCanonicalAccommodationRoomDetails(roomId){
   ge('rmGuestsCount').textContent=guestOccupancies.length;
   ge('rmChildrenCount').textContent=childOccupancies.length;
   var saveButton=ge('roomModalSaveButton'),moveButton=ge('moveRoomBtn'),addChildButton=ge('roomModalAddChildButton'),childrenSection=ge('roomModalChildrenSection');
-  if(saveButton){saveButton.style.display=canManage?'':'none';saveButton.onclick=saveCanonicalAccommodationRoomData;}
+  if(saveButton){saveButton.disabled=false;saveButton.style.display=canManage?'':'none';saveButton.onclick=saveCanonicalAccommodationRoomData;}
   if(moveButton)moveButton.style.display='none';
   if(addChildButton)addChildButton.style.display='none';
   if(childrenSection)childrenSection.style.display='';
@@ -3182,6 +3182,8 @@ function openCanonicalAccommodationRoomDetails(roomId){
 }
 
 function saveCanonicalAccommodationRoomData(){
+  // Reject repeated clicks while the same central mutation is in flight.
+  if(ge('roomModalSaveButton').disabled)return false;
   var draft=canonicalAccommodationRoomEditorDraft,current=getCurrentConference(),room=draft&&findCanonicalAccommodationEntity('room',draft.roomId);
   if(!draft||!current||String(current.id)!==draft.conferenceId||!room||Number(room.revision)!==draft.revision||!currentConferenceSectionCapability('accommodationManage')){
     showToast('تغيرت بيانات الغرفة أو الصلاحيات. أعد فتح محرر الغرفة.','#E74C3C');return false;
