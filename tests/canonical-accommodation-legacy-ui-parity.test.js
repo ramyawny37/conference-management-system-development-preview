@@ -29,6 +29,23 @@ test('canonical resident projection preserves directory fields and ignores legac
   assert.equal(residents[0].participationId,'p1');
 });
 
+test('canonical child projection carries guardian fields and excludes legacy child rows',()=>{
+  const core=fs.readFileSync(path.join(root,'core.js'),'utf8');
+  const begin=core.indexOf('function getConferenceRoomPeople(room,conference){');
+  const finish=core.indexOf('\nfunction getConferenceOperationalDay(',begin);
+  assert.ok(begin>=0&&finish>begin);
+  const context={getCanonicalConferenceCoreLink:()=>true};
+  vm.runInNewContext(core.slice(begin,finish),context);
+  const room={occupancies:[{occupancyId:'child-occ',participationId:'child-part',extraBedPersonType:'child',guardianParticipationId:'adult-part',guardianPersonId:'adult-person',guardianFullName:'Parent',guardianParticipationStatus:'active',person:{personId:'child-person',fullName:'Child'}}],children:[{name:'Legacy Child'}]};
+  const residents=context.getConferenceRoomPeople(room,{id:'conference1'});
+  assert.equal(residents.length,1);
+  assert.equal(residents[0].guardianParticipationId,'adult-part');
+  assert.equal(residents[0].guardianPersonId,'adult-person');
+  assert.equal(residents[0].guardianFullName,'Parent');
+  assert.equal(residents[0].guardianParticipationStatus,'active');
+  assert.equal(residents[0].isChild,true);
+});
+
 test('one active accommodation renderer, without restoring legacy local UI',()=>{
   assert.ok(start>=0&&end>start);
   const entry=ui.slice(end,ui.indexOf('\nfunction ',end+10));
