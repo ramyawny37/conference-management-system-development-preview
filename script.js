@@ -2927,13 +2927,13 @@ function confirmCanonicalAccommodationAssignment(){
   if(!draft||!error||!draft.selectedParticipationId||button&&button.disabled)return false;
   var interval=getCanonicalAccommodationIntervalDraft(),current=getCurrentConference();
   if(interval.error){error.textContent=interval.error;return false;}
+  if(!current||String(current.id)!==draft.conferenceId||!currentConferenceSectionCapability('accommodationManage')){error.textContent='تغيرت بيانات التسكين أو الصلاحيات. أعد فتح عملية التسكين.';return false;}
   var participationState=window.PlatformIntegration&&window.PlatformIntegration.getConferenceParticipationState(current.id);
   var activeParticipations=(participationState&&participationState.items||[]).filter(function(item){return item.status==='active';});
   var available=getCanonicalAccommodationAvailableParticipations(activeParticipations,canonicalAccommodationState(),interval.arrivalDay,interval.leaveDay,draft.occupancyId);
   if(!available.some(function(item){return String(item.participationId)===String(draft.selectedParticipationId);})){
     error.textContent='تغيرت بيانات التسكين على جهاز آخر أو توجد إقامة متداخلة. أعد اختيار الفترة والشخص.';renderCanonicalAccommodationAssignmentCandidates();return false;
   }
-  if(!current||String(current.id)!==draft.conferenceId||!currentConferenceSectionCapability('accommodationManage')){error.textContent='تغيرت بيانات التسكين أو الصلاحيات. أعد فتح عملية التسكين.';return false;}
   var payload={roomId:draft.roomId,participationId:draft.selectedParticipationId,arrivalDay:interval.arrivalDay,leaveDay:interval.leaveDay,bedType:ge('canonicalAccommodationBedType').value,extraBedPersonType:ge('canonicalAccommodationBedType').value==='extra'?ge('canonicalAccommodationExtraPersonType').value:null};
   if(draft.mode==='edit'){
     var occupancy=findCanonicalAccommodationEntity('occupancy',draft.occupancyId);
