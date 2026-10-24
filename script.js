@@ -2963,12 +2963,10 @@ function confirmCanonicalAccommodationAssignment(){
     :Promise.resolve().then(executeAssignmentMutation);
   return Promise.resolve(saved).then(function(result){
     if(result){if(canonicalAccommodationAssignmentDraft===draft)closeCanonicalAccommodationAssignmentDialog();return result;}
-    button.disabled=false;
-    if(canonicalAccommodationAssignmentDraft===draft)error.textContent='تعذر حفظ بيانات التسكين.';
+    if(canonicalAccommodationAssignmentDraft===draft){button.disabled=false;error.textContent='تعذر حفظ بيانات التسكين.';}
     return false;
   },function(){
-    button.disabled=false;
-    if(canonicalAccommodationAssignmentDraft===draft)error.textContent='تعذر حفظ بيانات التسكين.';
+    if(canonicalAccommodationAssignmentDraft===draft){button.disabled=false;error.textContent='تعذر حفظ بيانات التسكين.';}
     return false;
   });
 }
