@@ -14,7 +14,7 @@ test('canonical accommodation source parses',()=>assert.doesNotThrow(()=>new vm.
 test('canonical resident projection preserves directory fields and ignores legacy guests when linked',()=>{
   const core=fs.readFileSync(path.join(root,'core.js'),'utf8');
   const begin=core.indexOf('function getConferenceRoomPeople(room,conference){');
-  const finish=core.indexOf('\\nfunction getConferenceOperationalDay(',begin);
+  const finish=core.indexOf('\nfunction getConferenceOperationalDay(',begin);
   assert.ok(begin>=0&&finish>begin);
   const projection=core.slice(begin,finish);
   const context={getCanonicalConferenceCoreLink:()=>true};
