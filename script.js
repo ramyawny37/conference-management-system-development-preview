@@ -6706,6 +6706,7 @@ function renderModernBannerCard(card){
   h+='<div class="welcome-card-person modern-banner-person"><strong>'+esc(card.name)+'</strong></div>';
   var bedLabel=conferenceCardBedLabel(card);
   if(bedLabel)h+='<div class="modern-banner-welcome">'+esc(bedLabel)+'</div>';
+  if(card.members&&card.members.length)h+='<div class="welcome-card-room-guests">'+card.members.map(function(member){return '<div>'+esc(conferenceRoomMemberText(member))+'</div>';}).join('')+'</div>';
   h+='<div class="modern-banner-location">';
   if(card.houseName)h+='<span class="modern-banner-location-item">'+esc(card.houseName)+'</span>';
   if(card.room)h+='<span class="modern-banner-location-item">'+esc(card.room)+'</span>';
@@ -6736,6 +6737,7 @@ function renderPersonConferenceCard(card){
   h+='<div class="welcome-card-person"><span class="welcome-card-person-label">ضيف المؤتمر</span><strong>'+esc(card.name)+'</strong></div>';
   var bedLabel=conferenceCardBedLabel(card);
   if(bedLabel)h+='<div class="welcome-card-person-label" style="text-align:center">'+esc(bedLabel)+'</div>';
+  if(card.members&&card.members.length)h+='<div class="welcome-card-room-guests">'+card.members.map(function(member){return '<div>'+esc(conferenceRoomMemberText(member))+'</div>';}).join('')+'</div>';
   h+='<div class="welcome-card-location">';
   if(card.houseName)h+='<div class="welcome-card-location-item"><span class="welcome-card-location-label">البيت</span><strong>'+esc(card.houseName)+'</strong></div>';
   if(card.room)h+='<div class="welcome-card-location-item"><span class="welcome-card-location-label">الغرفة</span><strong>'+esc(card.room)+'</strong></div>';
@@ -6827,23 +6829,7 @@ function renderCards(){
       h+=renderPersonConferenceCard(it);
       return;
     }
-    if(normalizeConferenceCardTheme((it.branding||{}).cardTheme)==='modern-banner'){
-      h+=renderModernBannerRoomCard(it);
-      return;
-    }
-    h+='<div class="guest-card" data-key="'+esc(it.key)+'" style="'+(checked?'box-shadow:0 0 0 3px #27AE60':'')+';position:relative">';
-    if(cardsSelectionMode)h+='<label class="no-print" style="position:absolute;top:5px;left:5px;background:#fff;border-radius:4px;padding:1px 5px;font-size:9px;display:flex;align-items:center;gap:2px;z-index:2;cursor:pointer"><input type="checkbox" '+(checked?'checked':'')+' onchange="toggleCard(\''+handlerKey+'\')" style="width:auto"> تحديد</label>';
-    h+='<div class="gc-head">🪪 '+(it.members?'بطاقة غرفة':'بطاقة ضيف')+'</div>';
-    h+='<div class="gc-body">';
-    h+='<div class="gc-row"><span style="color:#6C3483;font-weight:700;font-size:10px">'+(it.members?'الغرفة':'الاسم')+'</span><span style="font-weight:700">'+esc(it.name)+'</span></div>';
-    h+='<div class="gc-row"><span style="color:#6C3483;font-weight:700;font-size:10px">الغرفة/الدور</span><span>غرفة '+esc(it.room)+' — دور '+esc(it.floor)+'</span></div>';
-    if(!it.members)h+='<div class="gc-row"><span style="color:#6C3483;font-weight:700;font-size:10px">النوع</span><span>'+esc(it.type)+'</span></div>';
-    else{h+='<div style="margin-top:4px">';it.members.forEach(function(m){h+='<div class="gc-row" style="font-size:10px"><span>'+esc(conferenceRoomMemberText(m))+'</span></div>'});h+='</div>';}
-    if(it.note)h+='<div class="gc-row"><span style="color:#6C3483;font-weight:700;font-size:10px">ملاحظة</span><span style="font-size:10px;color:#7D4E00">'+esc(it.note)+'</span></div>';
-    if(it.transportText)h+='<div class="gc-row"><span style="color:#6C3483;font-weight:700;font-size:10px">المواصلة</span><span style="font-size:10px">'+esc(it.transportText)+'</span></div>';
-    h+='</div><div class="gc-foot">أهلاً وسهلاً 🌟</div>';
-    h+='<div class="no-print" style="display:flex;gap:4px;padding:6px;background:#FAF5FF"><button class="btn btn-blue btn-sm" style="flex:1" onclick="shareCard(\''+handlerKey+'\')">🔗</button><button class="btn btn-purple btn-sm" style="flex:1" onclick="printOne(\''+handlerKey+'\')">🖨️</button></div>';
-    h+='</div>';
+    h+=renderPersonConferenceCard(it);
   });
   h+='</div>';
   tab.innerHTML=h;
