@@ -74,3 +74,11 @@ test('room details use canonical actions for guests and children, and keep histo
   assert.match(room,/saveButton\.onclick=saveCanonicalAccommodationRoomData/);
   assert.match(script,/function closeRM\(\)\{[\s\S]*?resetCanonicalAccommodationRoomDetails\(\)/);
 });
+
+
+test('canonical room details have isolated responsive styles instead of inheriting legacy editor grids',()=>{
+  const css=fs.readFileSync('style.css','utf8');
+  assert.match(css,/#roomModal\.canonical-room-readonly \.canonical-room-guest-actions\{display:flex;flex-wrap:wrap/);
+  assert.match(css,/@media\(max-width:820px\)\{[\s\S]*?#roomModal\.canonical-room-readonly \.canonical-room-guest\{grid-template-columns:minmax\(0,1fr\) minmax\(0,1fr\);grid-template-areas:none/);
+  assert.match(css,/@media\(max-width:600px\)\{[\s\S]*?#roomModal\.canonical-room-readonly \.canonical-room-guest\{grid-template-columns:minmax\(0,1fr\);grid-template-areas:none/);
+});
