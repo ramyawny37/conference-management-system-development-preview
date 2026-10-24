@@ -402,3 +402,11 @@ test('failed central room save restores action without closing the editor',()=>{
   const rejection=save.slice(save.indexOf('},function(error){'));
   assert.doesNotMatch(rejection,/closeRM\(/);
 });
+
+test('canonical room save rejects duplicate clicks and new editor starts enabled',()=>{
+  const save=ui.slice(ui.indexOf('function saveCanonicalAccommodationRoomData('),ui.indexOf('\nfunction renderCanonicalAccommodation('));
+  assert.match(save,/if\(ge\('roomModalSaveButton'\)\.disabled\)return false/);
+  assert.ok(save.indexOf("if(ge('roomModalSaveButton').disabled)return false")<save.indexOf("mutateConferenceAccommodationStructure("));
+  const open=ui.slice(ui.indexOf('function openCanonicalAccommodationRoomDetails('),ui.indexOf('\nfunction saveCanonicalAccommodationRoomData('));
+  assert.match(open,/saveButton\.disabled=false/);
+});
