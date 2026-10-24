@@ -8,7 +8,7 @@ const CACHE_NAMESPACE = IS_DEVELOPMENT
   : '';
 const CACHE_PREFIX = CACHE_NAMESPACE + 'conference-manager-core-';
 const CACHE_REVISION = IS_DEVELOPMENT
-  ? 'development-room-modal-readonly-scroll-v3'
+  ? 'development-room-heading-v4'
   : 'production-3-6-0-release-v6';
 // Reinstall the Development worker so the canonical accommodation parity assets refresh atomically.
 const CACHE_NAME = CACHE_PREFIX + 'v' + APP_VERSION + '-' + CACHE_REVISION;
@@ -17,7 +17,7 @@ const CORE_ASSETS = [
   './index.html',
   './design-system-reference.html',
   './shared-design-tokens.css?rev=platform-design-system-consolidation-v2',
-  './style.css?rev=conference-room-modal-readonly-scroll-v3',
+  './style.css?rev=conference-room-heading-v4',
   './canonical-platform-shell.css?rev=platform-administration-canonical-sidebar-navigation-v2',
   './modules/reservations/reservations-module.css?rev=reservations-person-live-0d9db39-v1',
   './js/application-routing.js?rev=conference-room-assignments-v1',
