@@ -1342,7 +1342,7 @@ tr:nth-child(even) td{background:#F7FBFF}
 #conferenceCardPrintRoot{display:none}
 @media print{
  body:has(> #conferenceCardPrintRoot)>:not(#conferenceCardPrintRoot){display:none!important}
- body>#conferenceCardPrintRoot{display:grid!important;position:static!important;visibility:visible!important;width:100%!important;max-width:none!important;margin:0!important;padding:0!important;gap:2mm!important;grid-template-columns:repeat(3,90mm)!important;justify-content:center!important;align-content:start!important}
+ body>#conferenceCardPrintRoot{display:grid!important;position:static!important;visibility:visible!important;width:100%!important;max-width:none!important;margin:0!important;padding:0!important;gap:2mm!important;grid-template-columns:repeat(2,90mm)!important;justify-content:center!important;align-content:start!important}
  body>#conferenceCardPrintRoot.conference-card-print-single{display:flex!important;justify-content:center!important;align-items:flex-start!important}
  #conferenceCardPrintRoot>.guest-card{display:block!important;width:90mm!important;min-width:90mm!important;max-width:90mm!important;box-shadow:none!important;margin:0!important;break-inside:avoid!important;print-color-adjust:exact!important;-webkit-print-color-adjust:exact!important}
  #conferenceCardPrintRoot.conference-card-print-single>.guest-card{width:90mm!important;max-width:90mm!important;flex:0 0 90mm!important}
