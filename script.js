@@ -5710,7 +5710,7 @@ function openSM(transId,seatNum){
   var list=isSharedSeat?allGuestsForPick():unassigned(s.name);
   list.forEach(function(g){
     var opt=document.createElement('option');opt.value=g.participationId||'';opt.textContent=g.name+' (غرفة '+g.room+')';
-    opt.dataset.room=g.room;opt.dataset.child=g.guardianParticipationId?'1':'0';opt.dataset.personId=g.personId||'';opt.dataset.participationId=g.participationId||'';
+    opt.dataset.name=g.name;opt.dataset.room=g.room;opt.dataset.child=g.guardianParticipationId?'1':'0';opt.dataset.personId=g.personId||'';opt.dataset.participationId=g.participationId||'';
     if(s.participationId&&s.participationId===g.participationId)opt.selected=true;sel.appendChild(opt);
   });
   ge('s_name').value=s.name||'';ge('s_room').value=s.room||'';ge('s_type').value=s.type||'adult';ge('s_note').value=s.note||'';ge('s_person_id').value=isCanonicalTransportConference(current)?(s.participationId||''):(s.personId||getSeatEditorPersonId(s.name||''));ge('s_child_seat_number').value=seatNum;ge('s_manual_child_name').value='';
@@ -5734,7 +5734,7 @@ function openTransportRiderEditor(transId,seatNum,riderIndex){
 function closeSM(){ge('seatModal').style.display='none'}
 function pickGuest(){
   var sel=ge('s_pick');var opt=sel.options[sel.selectedIndex];if(!opt||!opt.value)return;
-  ge('s_name').value=opt.textContent.replace(/ \(غرفة .*\)$/,'');ge('s_room').value=opt.dataset.room||'';ge('s_person_id').value=isCanonicalTransportConference(getCurrentConference())?(opt.dataset.participationId||''):(opt.dataset.personId||'');
+  ge('s_name').value=opt.dataset.name||'';ge('s_room').value=opt.dataset.room||'';ge('s_person_id').value=opt.dataset.participationId||'';
   // auto-set type: child from room children → child_seat by default
   ge('s_type').value=opt.dataset.child==='1'?'child_seat':'adult';
   toggleSeatNote();
