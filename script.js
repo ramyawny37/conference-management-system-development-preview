@@ -5784,15 +5784,18 @@ function toggleSeatNote(){
 function saveSeat(){
   var current = getCurrentConference();
   var transports = getConferenceTransportVehicles(current);
-  var name=ge('s_name').value.trim();var room=ge('s_room').value.trim();var type=ge('s_type').value;var note=ge('s_note').value.trim();var personId=ge('s_person_id').value||getSeatEditorPersonId(name);
+  var name=ge('s_name').value.trim();var type=ge('s_type').value;
   var t = null;
   for (var i = 0; i < transports.length; i++) { if (transports[i].id === editSeatTransId) { t = transports[i]; break; } }
   if (!t) return;
 
   if(isCanonicalTransportConference(current)){
+    var transportState=window.CanonicalConferenceTransport.getState(conferenceId);
+    if(!transportState||!transportState.canManage){showToast('ليست لديك صلاحية إدارة المواصلات','#E74C3C');return false;}
     if(!name){alert('أدخل الاسم');return false;}
     var sourceSeat=(t.seats||[]).find(function(item){return item.seat===editSeatNum;});
     var selectedParticipationId=ge('s_person_id').value||sourceSeat&&sourceSeat.participationId||'';
+    var conferenceId=String(current.id);
     var existingAssignment=editSeatRiderIndex!==null&&sourceSeat&&sourceSeat.riders&&getTransportRiderData(sourceSeat.riders[editSeatRiderIndex])||sourceSeat;
     var guardianSeatNumber=type==='child_shared'||type==='infant'?normalizeTransportSeatNumber(ge('s_guardian_select').value||note):null;
     var guardianSeat=guardianSeatNumber!==null&&(t.seats||[]).find(function(item){return item.seat===guardianSeatNumber;});
@@ -5803,16 +5806,16 @@ function saveSeat(){
       if((type==='child_shared'||type==='infant')){
         var participationState=window.PlatformIntegration.getConferenceParticipationState(current.id),child=(participationState.items||[]).find(function(item){return item.participationId===participationId;});
         if(child&&child.guardianParticipationId===guardianSeat.participationId)return participationId;
-        return window.PlatformIntegration.setConferenceParticipationGuardian(current.id,participationId,guardianSeat.participationId).then(function(){return participationId;});
+        return window.PlatformIntegration.setConferenceParticipationGuardian(conferenceId,participationId,guardianSeat.participationId).then(function(){return participationId;});
       }
       return participationId;
-    }).then(function(participationId){return window.CanonicalConferenceTransport.setAssignment(current.id,{participationId:participationId,vehicleId:t.id,mode:type==='child_shared'||type==='infant'?'shared':'independent',riderKind:type==='adult'?'adult':type==='infant'?'infant':'child',seatNumber:type==='child_shared'||type==='infant'?null:(type==='child_seat'?normalizeTransportSeatNumber(ge('s_child_seat_number').value)||editSeatNum:editSeatNum),expectedRevision:existingAssignment&&existingAssignment.assignmentId?existingAssignment.revision:null}).then(function(){return participationId;});}).then(function(adultParticipationId){
+    }).then(function(participationId){return window.CanonicalConferenceTransport.setAssignment(conferenceId,{participationId:participationId,vehicleId:t.id,mode:type==='child_shared'||type==='infant'?'shared':'independent',riderKind:type==='adult'?'adult':type==='infant'?'infant':'child',seatNumber:type==='child_shared'||type==='infant'?null:(type==='child_seat'?normalizeTransportSeatNumber(ge('s_child_seat_number').value)||editSeatNum:editSeatNum),expectedRevision:existingAssignment&&existingAssignment.assignmentId?existingAssignment.revision:null}).then(function(){return participationId;});}).then(function(adultParticipationId){
       if(type!=='adult')return null;
       var childDrafts=[];
-      var transportState=window.CanonicalConferenceTransport.getState(current.id);
+      var transportState=window.CanonicalConferenceTransport.getState(conferenceId);
       ge('s_shared_children_list').querySelectorAll('.s-shared-child:checked').forEach(function(checkbox){var row=checkbox.closest('.transport-child-assignment-row'),mode=row.querySelector('.transport-child-mode').value,childParticipationId=checkbox.getAttribute('data-participation-id'),prior=(transportState.assignments||[]).find(function(item){return item.participationId===childParticipationId;});if(childParticipationId)childDrafts.push({participationId:childParticipationId,vehicleId:t.id,mode:mode==='independent'?'independent':'shared',riderKind:'child',seatNumber:mode==='independent'?normalizeTransportSeatNumber(row.querySelector('.transport-child-seat-number').value):null,expectedRevision:prior?prior.revision:null});});
-      return childDrafts.reduce(function(sequence,draft){return sequence.then(function(){return window.CanonicalConferenceTransport.setAssignment(current.id,draft);});},Promise.resolve());
-    }).then(function(){closeSM();renderTransports();showToast('✅ تم حفظ تسكين الراكب');},function(){showToast('تعذر حفظ تسكين الراكب');});
+      return childDrafts.reduce(function(sequence,draft){return sequence.then(function(){return window.CanonicalConferenceTransport.setAssignment(conferenceId,draft);});},Promise.resolve());
+    }).then(function(){var active=getCurrentConference();if(!active||String(active.id)!==conferenceId)return;closeSM();if(currentTab===1)renderTransports();showToast('✅ تم حفظ تسكين الراكب');},function(){showToast('تعذر حفظ تسكين الراكب','#E74C3C');});
     return false;
   }
 
