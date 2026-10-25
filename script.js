@@ -5709,9 +5709,9 @@ function openSM(transId,seatNum){
   var isSharedSeat=s.type==='child_shared'||s.type==='infant';
   var list=isSharedSeat?allGuestsForPick():unassigned(s.name);
   list.forEach(function(g){
-    var opt=document.createElement('option');opt.value=g.name;opt.textContent=g.name+' (غرفة '+g.room+')';
+    var opt=document.createElement('option');opt.value=g.participationId||'';opt.textContent=g.name+' (غرفة '+g.room+')';
     opt.dataset.room=g.room;opt.dataset.child=g.guardianParticipationId?'1':'0';opt.dataset.personId=g.personId||'';opt.dataset.participationId=g.participationId||'';
-    if(s.name===g.name)opt.selected=true;sel.appendChild(opt);
+    if(s.participationId&&s.participationId===g.participationId)opt.selected=true;sel.appendChild(opt);
   });
   ge('s_name').value=s.name||'';ge('s_room').value=s.room||'';ge('s_type').value=s.type||'adult';ge('s_note').value=s.note||'';ge('s_person_id').value=isCanonicalTransportConference(current)?(s.participationId||''):(s.personId||getSeatEditorPersonId(s.name||''));ge('s_child_seat_number').value=seatNum;ge('s_manual_child_name').value='';
   (s.riders||[]).forEach(function(storedRider){var rider=getTransportRiderData(storedRider);if(rider.type==='child_shared'&&!rider.personId&&rider.name)seatManualSharedChildren.push({name:rider.name});});
@@ -5727,14 +5727,14 @@ function openTransportRiderEditor(transId,seatNum,riderIndex){
   editSeatRiderIndex=riderIndex;seatManualSharedChildren=[];
   ge('smTitle').textContent='تعديل الطفل — '+rider.name;
   ge('s_name').value=rider.name||'';ge('s_room').value=rider.room||'';ge('s_person_id').value=isCanonicalTransportConference(getCurrentConference())?(rider.participationId||''):(rider.personId||'');ge('s_type').value=rider.type||'child_shared';ge('s_note').value=rider.note||'';ge('s_child_seat_number').value='';
-  Array.prototype.forEach.call(ge('s_pick').options,function(option){option.selected=option.value===rider.name;});
+  Array.prototype.forEach.call(ge('s_pick').options,function(option){option.selected=option.value===rider.participationId;});
   toggleSeatNote();renderSeatGuardianOptions(getSharedRiderGuardianSeat(rider,seatNum));
   ge('clearSeatBtn').style.display='none';
 }
 function closeSM(){ge('seatModal').style.display='none'}
 function pickGuest(){
   var sel=ge('s_pick');var opt=sel.options[sel.selectedIndex];if(!opt||!opt.value)return;
-  ge('s_name').value=opt.value;ge('s_room').value=opt.dataset.room||'';ge('s_person_id').value=isCanonicalTransportConference(getCurrentConference())?(opt.dataset.participationId||''):(opt.dataset.personId||'');
+  ge('s_name').value=opt.textContent.replace(/ \(غرفة .*\)$/,'');ge('s_room').value=opt.dataset.room||'';ge('s_person_id').value=isCanonicalTransportConference(getCurrentConference())?(opt.dataset.participationId||''):(opt.dataset.personId||'');
   // auto-set type: child from room children → child_seat by default
   ge('s_type').value=opt.dataset.child==='1'?'child_seat':'adult';
   toggleSeatNote();
