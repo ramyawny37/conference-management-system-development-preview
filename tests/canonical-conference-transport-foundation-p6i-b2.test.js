@@ -55,3 +55,14 @@ test('22 projection retains an unhoused assignment without operationally display
   context.PlatformDeviceSession={invokeModuleProtected:()=>Promise.resolve({conferenceId:'c1',canManage:true,vehicles:[{vehicleId:'v1',name:'Bus',capacity:1,revision:1}],assignments:[{assignmentId:'a1',vehicleId:'v1',participationId:'p1',mode:'independent',riderKind:'adult',seatNumber:1,revision:1,person:{personId:'person1',fullName:'Transport only'},roomNumber:null}]})};
   vm.runInNewContext(runtime,context);await context.CanonicalConferenceTransport.hydrate('local','c1');const state=context.CanonicalConferenceTransport.getState('local'),seat=state.vehicles[0].seats[0];assert.equal(state.assignments[0].participationId,'p1');assert.equal(seat.name,'');assert.equal(seat.participationId,undefined);
 });
+
+test('canonical transport recognition is independent of hydration and never falls back for a UUID conference',()=>{
+ const context={window:{},crypto:{randomUUID:()=> 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'},Promise,JSON,Object,String,Number,Array,Error,Date,Math};
+ context.window=context;
+ vm.runInNewContext(runtime,context);
+ const transport=context.CanonicalConferenceTransport;
+ assert.equal(transport.isLinked('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'),true);
+ assert.equal(transport.getState('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'),null);
+ assert.equal(transport.isLinked('legacy-local-id'),false);
+ assert.match(script,/function hydrateCanonicalConferenceTransport\(/);
+});
