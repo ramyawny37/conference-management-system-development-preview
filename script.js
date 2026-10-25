@@ -5707,7 +5707,7 @@ function openSM(transId,seatNum){
   var sel=ge('s_pick');sel.innerHTML='<option value="">— اختر —</option>';
   // for child_shared/infant show ALL guests (including assigned) since they share a seat
   var isSharedSeat=s.type==='child_shared'||s.type==='infant';
-  var list=isSharedSeat?allGuestsForPick():unassigned(s.name);
+  var list=isSharedSeat?allGuestsForPick():unassigned(s.participationId||'');
   list.forEach(function(g){
     var opt=document.createElement('option');opt.value=g.participationId||'';opt.textContent=g.name+' (غرفة '+g.room+')';
     opt.dataset.name=g.name;opt.dataset.room=g.room;opt.dataset.child=g.guardianParticipationId?'1':'0';opt.dataset.personId=g.personId||'';opt.dataset.participationId=g.participationId||'';
