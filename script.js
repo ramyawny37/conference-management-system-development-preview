@@ -6877,7 +6877,8 @@ function waitForCardCaptureAssets(element){
 function captureCardElementAsPng(element,options){
   if(typeof html2canvas!=='function')return Promise.reject(new Error('html2canvas unavailable'));
   if(!element)return Promise.reject(new Error('card element unavailable'));
-  var exportWidth=350;
+  // Match the canonical 90 mm on-screen and print width at CSS 96 dpi.
+  var exportWidth=90*96/25.4;
   var stage=document.createElement('div');
   var exportCard=element.cloneNode(true);
   stage.setAttribute('aria-hidden','true');
