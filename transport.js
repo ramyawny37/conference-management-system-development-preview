@@ -41,11 +41,11 @@ function activeGuests(day){
   return {adults:adults,children:children};
 }
 
-function unassigned(curName){
+function unassigned(currentParticipationId){
   var current=getCurrentConference();
   if(!isCanonicalTransportConference(current))return [];
   var assigned=assignedNames(),active=activeGuests(),all=active.adults.concat(active.children);
-  return all.filter(function(item){return !assigned[item.participationId]||item.name===curName;});
+  return all.filter(function(item){return !assigned[item.participationId]||item.participationId===currentParticipationId;});
 }
 
 function allGuestsForPick(){
