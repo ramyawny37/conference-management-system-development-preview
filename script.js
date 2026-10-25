@@ -5849,7 +5849,8 @@ function removeTransportSeatRider(transportId,seatNumber,riderIndex){
   if(!confirm(confirmation))return false;
   if(isCanonicalTransportConference(current)){
     if(!rider.assignmentId)return false;
-    window.CanonicalConferenceTransport.removeAssignment(current.id,rider.assignmentId,rider.revision).then(function(){renderTransports();showToast('تمت إزالة '+riderName+' من الكرسي','#E74C3C');},function(){showToast('تعذر إزالة الراكب');});
+    var conferenceId=String(current.id);
+    window.CanonicalConferenceTransport.removeAssignment(conferenceId,rider.assignmentId,rider.revision).then(function(){var active=getCurrentConference();if(!active||String(active.id)!==conferenceId)return;closeSM();if(currentTab===1)renderTransports();showToast('تمت إزالة '+riderName+' من الكرسي','#E74C3C');},function(){showToast('تعذر إزالة الراكب','#E74C3C');});
     return false;
   }
   return false;
