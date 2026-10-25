@@ -5784,7 +5784,7 @@ function toggleSeatNote(){
 function saveSeat(){
   var current = getCurrentConference();
   var transports = getConferenceTransportVehicles(current);
-  var name=ge('s_name').value.trim();var type=ge('s_type').value;
+  var name=ge('s_name').value.trim();var type=ge('s_type').value;var note=ge('s_note').value.trim();
   var t = null;
   for (var i = 0; i < transports.length; i++) { if (transports[i].id === editSeatTransId) { t = transports[i]; break; } }
   if (!t) return;
