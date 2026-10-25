@@ -5219,6 +5219,9 @@ function renderTransports(){
     h+='<button class="btn transport-action-primary" onclick="openTM(null)">'+accommodationIcon('plus')+'<span>إضافة وسيلة</span></button>';
     h+='</div>';
   }
+  if(!canEditTransport){
+    h+='<div class="transport-permission-notice" role="status">إدارة المواصلات غير متاحة لهذا الحساب في المؤتمر الحالي. يتطلب إنشاء وتعديل وسائل النقل صلاحية conference.transport.manage. يمكن عرض البيانات الحالية فقط.</div>';
+  }
   h+='</section>';
   h+='<section class="transport-vehicles-workspace">';
   if(!transports.length){
