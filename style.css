@@ -1351,5 +1351,9 @@ tr:nth-child(even) td{background:#F7FBFF}
 
 
 /* Room occupants share the personal card layout, colors and fixed print geometry. */
-.welcome-card-room-guests{display:grid;gap:4px;min-width:0;max-height:100px;overflow:hidden;margin:8px 0;text-align:center;font-size:11px;line-height:1.35;color:var(--welcome-text)}
-.welcome-card-room-guests>div{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* A single 90 mm card geometry for room and individual, independent of identity settings. */
+#tab4 #cardsGrid{grid-template-columns:repeat(auto-fill,minmax(min(100%,90mm),90mm));justify-content:start;overflow:visible}
+#tab4 #cardsGrid>.welcome-card{width:90mm;min-width:90mm;max-width:90mm;min-height:300px}
+.welcome-card-room-guests{display:grid;gap:4px;min-width:0;max-height:none;overflow:visible;margin:8px 0;text-align:center;font-size:11px;line-height:1.35;color:var(--welcome-text)}
+.welcome-card-room-guests>div{overflow-wrap:anywhere;white-space:normal}
+@media(max-width:390px){#tab4 #cardsGrid>.welcome-card{max-width:100%;min-width:0}}
