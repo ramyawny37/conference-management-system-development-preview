@@ -5190,7 +5190,8 @@ function renderTransports(){
   var canonicalState=canonicalTransport&&window.CanonicalConferenceTransport.getState(current.id);
   if(canonicalTransport&&!canonicalState){
     ge('tab1').innerHTML='<div class="transport-empty-state transport-empty-state-standalone"><strong>جاري تحميل بيانات المواصلات…</strong></div>';
-    window.CanonicalConferenceTransport.hydrate(current.id).then(function(){renderTransports();},function(){ge('tab1').innerHTML='<div class="transport-empty-state transport-empty-state-standalone"><strong>تعذر تحميل بيانات المواصلات المعتمدة.</strong></div>';});
+    var requestedConferenceId=String(current.id);
+    window.CanonicalConferenceTransport.hydrate(requestedConferenceId).then(function(){var active=getCurrentConference();if(active&&String(active.id)===requestedConferenceId&&currentTab===1)renderTransports();},function(){var active=getCurrentConference();if(active&&String(active.id)===requestedConferenceId&&currentTab===1)ge('tab1').innerHTML='<div class="transport-empty-state transport-empty-state-standalone"><strong>تعذر تحميل بيانات المواصلات المعتمدة.</strong></div>';});
     return;
   }
   var transports = getConferenceTransportVehicles(current);
