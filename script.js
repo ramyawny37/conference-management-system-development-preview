@@ -5794,6 +5794,11 @@ function saveSeat(){
     var transportState=window.CanonicalConferenceTransport.getState(conferenceId);
     if(!transportState||!transportState.canManage){showToast('ليست لديك صلاحية إدارة المواصلات','#E74C3C');return false;}
     if(!name){alert('أدخل الاسم');return false;}
+    // Manual names have no canonical participation; never acknowledge them as persisted.
+    if(seatManualSharedChildren.length){
+      showToast('الأطفال المضافون بالاسم فقط لم يُسجلوا في المؤتمر. سجّل الطفل واربطه بالمرافق والإقامة أولاً، ثم اختره من الأطفال المسجلين.','#E74C3C');
+      return false;
+    }
     var sourceSeat=(t.seats||[]).find(function(item){return item.seat===editSeatNum;});
     var selectedParticipationId=ge('s_person_id').value||sourceSeat&&sourceSeat.participationId||'';
     var eligibleResident=getConferenceOperationalResidents(current).byParticipationId[String(selectedParticipationId)];
