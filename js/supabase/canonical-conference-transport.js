@@ -4,7 +4,7 @@
   function copy(value){return value==null?value:JSON.parse(JSON.stringify(value));}
   function operationId(){return global.crypto&&global.crypto.randomUUID?global.crypto.randomUUID():String(Date.now())+'-0000-4000-8000-'+Math.random().toString(16).slice(2,14).padEnd(12,'0');}
   // Canonical conference ID is the sole identity; no local/cloud link lookup.
-  function isLinked(conferenceId){return !!states[String(conferenceId||'')];}
+  function isLinked(conferenceId){return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(conferenceId||''));}
   function remoteId(conferenceId){
     var id=String(conferenceId||'');
     if(!id||!states[id])throw new Error('CANONICAL_CONFERENCE_NOT_HYDRATED');
