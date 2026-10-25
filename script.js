@@ -10076,10 +10076,10 @@ function renderBulkGuests(){
   });
 
   var guests = unassigned(''); // all unassigned across all transports
-  ge('bulk_info').textContent = 'كراسي فارغة: ' + freeSeats + ' | أفراد لم يُسكَّنوا: ' + guests.length;
+  ge('bulk_info').textContent = 'كراسي فارغة: ' + freeSeats + ' | أفراد لم يُوزَّعوا: ' + guests.length;
 
   if(!guests.length){
-    ge('bulk_guests').innerHTML = '<div style="color:#27AE60;text-align:center;padding:14px;font-size:11px">✅ كل الأفراد تم تسكينهم في مواصلات</div>';
+    ge('bulk_guests').innerHTML = '<div style="color:#27AE60;text-align:center;padding:14px;font-size:11px">✅ كل الأفراد تم توزيعهم على المواصلات</div>';
     return;
   }
   // group by room
@@ -10092,9 +10092,9 @@ function renderBulkGuests(){
   Object.keys(byRoom).sort().forEach(function(roomNum){
     h += '<div style="font-size:10px;font-weight:700;color:#1F4E79;margin:6px 0 3px;padding:3px 5px;background:#EAF4FC;border-radius:5px">🏨 غرفة ' + esc(roomNum) + '</div>';
     byRoom[roomNum].forEach(function(g){
-      var checked = bulkSelected[g.name] !== false; // default selected
-      if(bulkSelected[g.name] === undefined) bulkSelected[g.name] = true;
-      h += '<label style="display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:6px;cursor:pointer;margin-bottom:2px;background:'+(checked?'#D5F5E3':'#F8F9FA')+';border:1px solid '+(checked?'#27AE60':'#E0E0E0')+'" id="blbl_'+esc(g.name.replace(/\s/g,'_'))+'">';
+      var checked = bulkSelected[g.participationId] !== false; // default selected
+      if(bulkSelected[g.participationId] === undefined) bulkSelected[g.participationId] = true;
+      h += '<label style="display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:6px;cursor:pointer;margin-bottom:2px;background:'+(checked?'#D5F5E3':'#F8F9FA')+';border:1px solid '+(checked?'#27AE60':'#E0E0E0')+'" id="blbl_'+esc(g.participationId)+'">';
       h += '<input type="checkbox" '+(checked?'checked':'')+' style="width:auto" onchange="toggleBulk(\''+esc(g.name)+'\',this.checked)">';
       h += '<span style="font-size:12px;font-weight:'+(checked?'700':'400')+'">'+(g.guardian?'🧒':'👤')+' '+esc(g.name)+'</span>';
       if(g.guardian) h += '<span style="font-size:9px;color:#7D4E00">مع '+esc(g.guardian)+'</span>';
@@ -10105,8 +10105,8 @@ function renderBulkGuests(){
   updateBulkCount();
 }
 
-function toggleBulk(name, val){
-  bulkSelected[name] = val;
+function toggleBulk(participationId, val){
+  bulkSelected[participationId] = val;
   updateBulkCount();
 }
 function bulkSelectAll(val){
@@ -10142,7 +10142,7 @@ function doBulkAssign(){
   var allUnassigned = unassigned('');
   var toAssign = [];
   for (var i = 0; i < allUnassigned.length; i++) {
-    if (bulkSelected[allUnassigned[i].name]) {
+    if (bulkSelected[allUnassigned[i].participationId]) {
       toAssign.push(allUnassigned[i]);
     }
   }
@@ -10152,24 +10152,19 @@ function doBulkAssign(){
     if(!window.confirm('الكراسي الفارغة ('+freeSeats.length+') أقل من المحدد ('+toAssign.length+'). سيُسكَّن أول '+freeSeats.length+' فقط. تأكيد؟')) return;
     toAssign = toAssign.slice(0, freeSeats.length);
   }
-  if(isCanonicalTransportConference(current)){
-    toAssign.reduce(function(sequence,guest,index){return sequence.then(function(){return window.CanonicalConferenceTransport.setAssignment(current.id,{participationId:guest.participationId,vehicleId:t.id,mode:'independent',riderKind:guest.guardianParticipationId?'child':'adult',seatNumber:freeSeats[index].seat,expectedRevision:null});});},Promise.resolve()).then(function(){closeBulk();renderTransports();showToast('⚡ تم تسكين '+toAssign.length+' شخص تلقائياً','#1F4E79');},function(){showToast('تعذر إكمال التسكين الجماعي');});
-    return false;
-  }
-  var assigned = 0;
-  toAssign.forEach(function(g){
-    var seat = freeSeats[assigned];
-    if(!seat) return;
-    seat.name = g.name;
-    seat.room = g.room;
-    seat.type = g.guardian ? 'child_seat' : 'adult';
-    seat.note = '';
-    assigned++;
-  });
-  if(!save())return false;
-  closeBulk();
-  renderTransports();
-  showToast('⚡ تم تسكين ' + assigned + ' شخص تلقائياً', '#1F4E79');
+  if(!isCanonicalTransportConference(current))return false;
+  var state=window.CanonicalConferenceTransport.getState(current.id);
+  if(!state||!state.canManage){showToast('ليست لديك صلاحية إدارة المواصلات','#E74C3C');return false;}
+  var conferenceId=String(current.id);
+  toAssign.reduce(function(sequence,guest,index){
+    return sequence.then(function(){
+      return window.CanonicalConferenceTransport.setAssignment(conferenceId,{participationId:guest.participationId,vehicleId:t.id,mode:'independent',riderKind:guest.guardianParticipationId?'child':'adult',seatNumber:freeSeats[index].seat,expectedRevision:null});
+    });
+  },Promise.resolve()).then(function(){
+    var active=getCurrentConference();if(!active||String(active.id)!==conferenceId)return;
+    closeBulk();if(currentTab===1)renderTransports();showToast('⚡ تم توزيع '+toAssign.length+' شخص','#1F4E79');
+  },function(){showToast('تعذر إكمال التوزيع الجماعي','#E74C3C');});
+  return false;
 }
 
 // ═══════════════════════════════════════════════════════
