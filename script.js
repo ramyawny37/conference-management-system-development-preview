@@ -5790,12 +5790,12 @@ function saveSeat(){
   if (!t) return;
 
   if(isCanonicalTransportConference(current)){
+    var conferenceId=String(current.id);
     var transportState=window.CanonicalConferenceTransport.getState(conferenceId);
     if(!transportState||!transportState.canManage){showToast('ليست لديك صلاحية إدارة المواصلات','#E74C3C');return false;}
     if(!name){alert('أدخل الاسم');return false;}
     var sourceSeat=(t.seats||[]).find(function(item){return item.seat===editSeatNum;});
     var selectedParticipationId=ge('s_person_id').value||sourceSeat&&sourceSeat.participationId||'';
-    var conferenceId=String(current.id);
     var existingAssignment=editSeatRiderIndex!==null&&sourceSeat&&sourceSeat.riders&&getTransportRiderData(sourceSeat.riders[editSeatRiderIndex])||sourceSeat;
     var guardianSeatNumber=type==='child_shared'||type==='infant'?normalizeTransportSeatNumber(ge('s_guardian_select').value||note):null;
     var guardianSeat=guardianSeatNumber!==null&&(t.seats||[]).find(function(item){return item.seat===guardianSeatNumber;});
