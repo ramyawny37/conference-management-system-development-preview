@@ -10095,7 +10095,7 @@ function renderBulkGuests(){
       var checked = bulkSelected[g.participationId] !== false; // default selected
       if(bulkSelected[g.participationId] === undefined) bulkSelected[g.participationId] = true;
       h += '<label style="display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:6px;cursor:pointer;margin-bottom:2px;background:'+(checked?'#D5F5E3':'#F8F9FA')+';border:1px solid '+(checked?'#27AE60':'#E0E0E0')+'" id="blbl_'+esc(g.participationId)+'">';
-      h += '<input type="checkbox" '+(checked?'checked':'')+' style="width:auto" onchange="toggleBulk(\''+esc(g.name)+'\',this.checked)">';
+      h += '<input type="checkbox" '+(checked?'checked':'')+' style="width:auto" onchange="toggleBulk(\''+esc(g.participationId)+'\',this.checked)">';
       h += '<span style="font-size:12px;font-weight:'+(checked?'700':'400')+'">'+(g.guardian?'🧒':'👤')+' '+esc(g.name)+'</span>';
       if(g.guardian) h += '<span style="font-size:9px;color:#7D4E00">مع '+esc(g.guardian)+'</span>';
       h += '</label>';
