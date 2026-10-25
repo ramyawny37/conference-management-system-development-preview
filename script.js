@@ -5499,16 +5499,12 @@ function removeManualSharedChildFromSeat(index){
 }
 
 function getSeatEditorPersonId(name){
-  var personId = '';
   var current=getCurrentConference();
-  getAllRooms().some(function(room){
-    return getConferenceRoomPeopleOnDay(room,undefined,current).some(function(person){
-      if(person.isChild||(person.name||gn(person)) !== name) return false;
-      personId = person.personId || '';
-      return true;
-    });
+  if(!isCanonicalTransportConference(current))return '';
+  var match=getConferenceOperationalResidents(current).all.filter(function(person){
+    return !person.isChild&&person.name===name;
   });
-  return personId;
+  return match.length===1?String(match[0].participationId||''):'';
 }
 
 function isSharedChildAssignedToTransport(child, excludedTransportId, excludedSeatNumber){
