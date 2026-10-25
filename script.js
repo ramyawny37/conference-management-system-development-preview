@@ -5796,6 +5796,8 @@ function saveSeat(){
     if(!name){alert('أدخل الاسم');return false;}
     var sourceSeat=(t.seats||[]).find(function(item){return item.seat===editSeatNum;});
     var selectedParticipationId=ge('s_person_id').value||sourceSeat&&sourceSeat.participationId||'';
+    var eligibleResident=getConferenceOperationalResidents(current).byParticipationId[String(selectedParticipationId)];
+    if(!eligibleResident){showToast('يجب اختيار مشارك لديه تسكين فعلي نشط','#E74C3C');return false;}
     var existingAssignment=editSeatRiderIndex!==null&&sourceSeat&&sourceSeat.riders&&getTransportRiderData(sourceSeat.riders[editSeatRiderIndex])||sourceSeat;
     var guardianSeatNumber=type==='child_shared'||type==='infant'?normalizeTransportSeatNumber(ge('s_guardian_select').value||note):null;
     var guardianSeat=guardianSeatNumber!==null&&(t.seats||[]).find(function(item){return item.seat===guardianSeatNumber;});
