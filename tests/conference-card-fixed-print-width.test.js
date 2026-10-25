@@ -10,3 +10,13 @@ test('print cards retain the same fixed physical width for individual and bulk o
  assert.match(js,/copy\.classList\.remove\('print-page-break','welcome-card-selected'\)/);
  assert.match(js,/copy\.style\.boxShadow='none'/);
 });
+
+test('room and personal cards share 90mm screen width without hiding occupants, and PNG matches',()=>{
+ const css=fs.readFileSync(path.join(__dirname,'..','style.css'),'utf8');
+ const js=fs.readFileSync(path.join(__dirname,'..','script.js'),'utf8');
+ assert.match(css,/#tab4 #cardsGrid>\.welcome-card\{width:90mm;min-width:90mm;max-width:90mm/);
+ assert.match(css,/\.welcome-card-room-guests\{[^}]*max-height:none;overflow:visible/);
+ assert.match(css,/\.welcome-card-room-guests>div\{overflow-wrap:anywhere;white-space:normal\}/);
+ assert.match(js,/var exportWidth=90\*96\/25\.4;/);
+ assert.match(js,/h\+=renderPersonConferenceCard\(it\)/);
+});
