@@ -35,8 +35,8 @@ test('the canonical shell is the only active global shell stylesheet',()=>{
   const canonicalAsset='canonical-platform-shell.css?rev=conference-header-content-offset-v1';
   assert.match(html,new RegExp(canonicalAsset.replace(/[.?]/g,'\\$&')));
   assert.match(worker,new RegExp(canonicalAsset.replace(/[.?]/g,'\\$&')));
-  assert.match(html,/js\/platform-integration\.js\?rev=canonical-accommodation-room-details-v4/);
-  assert.match(worker,/js\/platform-integration\.js\?rev=canonical-accommodation-room-details-v4/);
+  assert.match(html,/js\/platform-integration\.js\?rev=canonical-guardian-child-v1/);
+  assert.match(worker,/js\/platform-integration\.js\?rev=canonical-guardian-child-v1/);
   assert.doesNotMatch(html,/platform-shell-v2\.css|class="platform-shell-v2"/);
   assert.doesNotMatch(worker,/platform-shell-v2\.css/);
   assert.strictEqual(fs.existsSync(path.join(root,'platform-shell-v2.css')),false);
@@ -96,7 +96,7 @@ test('module workspaces do not reintroduce a second brand, topbar, or account sh
 });
 
 test('Development installs the canonical foundation cache without changing Production revision',()=>{
-  assert.match(worker,/\? 'development-canonical-cards-no-legacy-people-v1'/);
+  assert.match(worker,/\? 'development-canonical-guardian-child-v1'/);
   assert.doesNotMatch(worker,/conference-owner-preflight-correction-v1/);
   assert.match(worker,/: 'production-3-6-0-release-v6'/);
 });

@@ -87,7 +87,7 @@ test('Development PWA serves the same revisioned canonical administration visibi
   const asset='style.css?rev=canonical-accommodation-room-details-v4';
   assert.ok(index.includes(asset),'HTML must request revised workspace stylesheet');
   assert.ok(worker.includes("'./"+asset+"'"),'service worker must precache the revised stylesheet');
-  assert.match(worker,/development-canonical-cards-no-legacy-people-v1/);
+  assert.match(worker,/development-canonical-guardian-child-v1/);
 });
 
 
