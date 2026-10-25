@@ -5210,7 +5210,7 @@ function renderTransports(){
   h+='<article class="transport-stat transport-stat-primary"><span class="transport-stat-icon">'+accommodationIcon('building')+'</span><div><strong>'+totalSeats+'</strong><span>إجمالي المقاعد</span></div></article>';
   h+='<article class="transport-stat transport-stat-success"><span class="transport-stat-icon">'+accommodationIcon('user')+'</span><div><strong>'+totalUsed+'</strong><span>المقاعد المشغولة</span></div></article>';
   h+='<article class="transport-stat transport-stat-success"><span class="transport-stat-icon">'+accommodationIcon('checkCircle')+'</span><div><strong>'+totalAvailable+'</strong><span>المقاعد المتاحة</span></div></article>';
-  h+='<article class="transport-stat transport-stat-warning"><span class="transport-stat-icon">'+accommodationIcon('users')+'</span><div><strong>'+totalUnassigned+'</strong><span>غير المسكنين</span></div></article>';
+  h+='<article class="transport-stat transport-stat-warning"><span class="transport-stat-icon">'+accommodationIcon('users')+'</span><div><strong>'+totalUnassigned+'</strong><span>غير الموزعين على وسائل النقل</span></div></article>';
   h+='</section>';
   h+='<section class="transport-toolbar no-print"><div class="transport-toolbar-title"><span>'+accommodationIcon('bus')+'</span><div><strong>إدارة المواصلات</strong><small>وسائل النقل وتوزيع المقاعد</small></div></div>';
   if(canEditTransport){
@@ -5225,7 +5225,7 @@ function renderTransports(){
   h+='</section>';
   h+='<section class="transport-vehicles-workspace">';
   if(!transports.length){
-    h+='<div class="transport-empty-state">'+accommodationIcon('bus')+'<strong>لا توجد وسائل مواصلات</strong><span>أضف وسيلة نقل لبدء توزيع المشاركين على المقاعد.</span>';
+    h+='<div class="transport-empty-state">'+accommodationIcon('bus')+'<strong>لا توجد وسائل مواصلات</strong><span>'+(canEditTransport?'أضف وسيلة نقل لبدء توزيع المشاركين على المقاعد.':'لا توجد وسائل مسجلة حاليًا. إنشاء الوسائل يتطلب صلاحية إدارة المواصلات.')+'</span>';
     if(canEditTransport)h+='<button class="btn transport-action-primary" onclick="openTM(null)">'+accommodationIcon('plus')+'<span>إضافة وسيلة</span></button>';
     h+='</div>';
   }
