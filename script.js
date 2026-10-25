@@ -5978,18 +5978,7 @@ function removeTransportSeatRider(transportId,seatNumber,riderIndex){
     window.CanonicalConferenceTransport.removeAssignment(current.id,rider.assignmentId,rider.revision).then(function(){renderTransports();showToast('تمت إزالة '+riderName+' من الكرسي','#E74C3C');},function(){showToast('تعذر إزالة الراكب');});
     return false;
   }
-  if(isNested){
-    seat.riders.splice(riderIndex,1);
-  }else{
-    if(linkedSharedChildren.length){
-      var linkedIndexes={};linkedSharedChildren.forEach(function(child){linkedIndexes[child.index]=true;});
-      seat.riders=(seat.riders||[]).filter(function(storedRider,index){return !linkedIndexes[index];});
-    }
-    seat.name='';seat.room='';seat.type='adult';seat.note='';seat.personId='';
-  }
-  if(!save())return false;
-  renderTransports();showToast('تمت إزالة '+riderName+' من الكرسي','#E74C3C');
-  return true;
+  return false;
 }
 function clearSeat(){
   if(removeTransportSeatRider(editSeatTransId,editSeatNum,null))closeSM();
