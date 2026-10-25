@@ -5325,86 +5325,42 @@ function openTM(id){
 }
 function closeTM(){ge('transportModal').style.display='none'}
 function saveTransport(){
-  var current = getCurrentConference();
-  var transports = getConferenceTransportVehicles(current);
-  var name=ge('t_name').value.trim();var icon=ge('t_icon').value;var cap=parseInt(ge('t_cap').value);
-  if(!name){alert('أدخل الاسم');return}if(!cap||cap<1||cap>300){alert('العدد 1-300');return}
-  if(isCanonicalTransportConference(current)){
-    var existing=editTransId&&transports.find(function(item){return item.id===editTransId;});
-    var removeOverflow=false;
-    if(existing&&cap<existing.capacity){
-      var overflow=(existing.seats||[]).filter(function(seat){return seat.seat>cap&&seat.name;});
-      if(overflow.length&&!confirm('تقليل السعة سيحذف '+overflow.length+' مقعد مشغول. سيتم حذف بيانات الركاب الموجودين عليها. هل تريد المتابعة؟'))return false;
-      removeOverflow=overflow.length>0;
-    }
-    window.CanonicalConferenceTransport.mutateVehicle(current.id,{operation:existing?'update':'create',vehicleId:existing&&existing.id,expectedRevision:existing&&existing.revision,name:name,icon:icon,capacity:cap,position:existing?existing.position:transports.length,removeOverflow:removeOverflow}).then(function(){closeTM();renderTransports();showToast(existing?'✅ تم التعديل':'✅ أُضيفت '+name);},function(){showToast('تعذر حفظ وسيلة المواصلات');});
-    return false;
+  var current=getCurrentConference();
+  if(!isCanonicalTransportConference(current))return false;
+  var state=window.CanonicalConferenceTransport.getState(current.id);
+  if(!state||!state.canManage){showToast('ليست لديك صلاحية إدارة المواصلات','#E74C3C');return false;}
+  var transports=getConferenceTransportVehicles(current);
+  var name=ge('t_name').value.trim(),icon=ge('t_icon').value,cap=parseInt(ge('t_cap').value,10);
+  if(!name){alert('أدخل الاسم');return false;}
+  if(!cap||cap<1||cap>300){alert('العدد 1-300');return false;}
+  var existing=editTransId&&transports.find(function(item){return item.id===editTransId;});
+  if(editTransId&&!existing){showToast('وسيلة المواصلات لم تعد متاحة','#E74C3C');return false;}
+  var removeOverflow=false;
+  if(existing&&cap<existing.capacity){
+    var overflow=(existing.seats||[]).filter(function(seat){return seat.seat>cap&&seat.name;});
+    if(overflow.length&&!confirm('تقليل السعة سيحذف '+overflow.length+' مقعد مشغول. سيتم حذف بيانات الركاب الموجودين عليها. هل تريد المتابعة؟'))return false;
+    removeOverflow=overflow.length>0;
   }
-  var successMessage='';
-  if(editTransId){
-    var t = null;
-    for (var i = 0; i < transports.length; i++) {
-      if (transports[i].id === editTransId) { t = transports[i]; break; }
-    }
-    if(t){
-      if(cap < t.capacity){
-        var removedSeats = (t.seats || []).filter(function(seat){ return seat.seat > cap; });
-        var removedPassengers = removedSeats.filter(function(seat){ return !!seat.name; });
-        if(removedPassengers.length && !confirm('تقليل السعة سيحذف ' + removedSeats.length + ' مقعد، منها ' + removedPassengers.length + ' مقعد مشغول. سيتم حذف بيانات الركاب الموجودين عليها. هل تريد المتابعة؟')) return;
-      }
-      t.name=name;t.icon=icon;
-      if(cap!==t.capacity){
-        var old=t.seats;t.seats=[];
-        for(var i=1;i<=cap;i++){
-          var ex = null;
-          for (var j = 0; j < old.length; j++) { if (old[j].seat === i) { ex = old[j]; break; } }
-          t.seats.push(ex||{seat:i,name:'',room:'',type:'adult',note:''});
-        }
-        t.capacity=cap;
-      }
-    }
-    successMessage='✅ تم التعديل';
-  } else {
-    var seats=[];for(var i=1;i<=cap;i++)seats.push({seat:i,name:'',room:'',type:'adult',note:''});
-    transports.push({id:uid(), name:name, icon:icon, capacity:cap, seats:seats});
-    successMessage='✅ أُضيفت '+name;
-  }
-  if(!save())return false;
-  closeTM();
-  renderTransports();
-  showToast(successMessage);
-  return true;
+  var conferenceId=String(current.id);
+  window.CanonicalConferenceTransport.mutateVehicle(conferenceId,{operation:existing?'update':'create',vehicleId:existing&&existing.id,expectedRevision:existing&&existing.revision,name:name,icon:icon,capacity:cap,position:existing?existing.position:transports.length,removeOverflow:removeOverflow}).then(function(){
+    var active=getCurrentConference();if(!active||String(active.id)!==conferenceId)return;
+    closeTM();if(currentTab===1)renderTransports();showToast(existing?'✅ تم التعديل':'✅ أُضيفت '+name);
+  },function(){showToast('تعذر حفظ وسيلة المواصلات','#E74C3C');});
+  return false;
 }
 function deleteTransport(){
-  var current = getCurrentConference();
-  var transports = getConferenceTransportVehicles(current);
-  var t = null, tIndex = -1;
-  for (var i = 0; i < transports.length; i++) {
-    if (transports[i].id === editTransId) {
-      t = transports[i];
-      tIndex = i;
-      break;
-    }
-  }
-
-  if(!t || !confirm('حذف ' + t.name + '؟')) return;
-
-  if(isCanonicalTransportConference(current)){
-    window.CanonicalConferenceTransport.mutateVehicle(current.id,{operation:'delete',vehicleId:t.id,expectedRevision:t.revision,name:null,icon:null,capacity:null,position:null,removeOverflow:false}).then(function(){closeTM();renderTransports();showToast('🗑️ تم حذف وسيلة المواصلات','#E74C3C');},function(){showToast('تعذر حذف وسيلة المواصلات');});
-    return false;
-  }
-
-  var index = tIndex;
-
-  if(index !== -1){
-    current.transports.splice(index,1);
-  }
-
-  if(!save())return false;
-  closeTM();
-  renderTransports();
-  showToast('🗑️ تم حذف وسيلة المواصلات', '#E74C3C');
-  return true;
+  var current=getCurrentConference();
+  if(!isCanonicalTransportConference(current))return false;
+  var state=window.CanonicalConferenceTransport.getState(current.id);
+  if(!state||!state.canManage){showToast('ليست لديك صلاحية إدارة المواصلات','#E74C3C');return false;}
+  var t=getConferenceTransportVehicles(current).find(function(item){return item.id===editTransId;});
+  if(!t||!confirm('حذف '+t.name+'؟'))return false;
+  var conferenceId=String(current.id);
+  window.CanonicalConferenceTransport.mutateVehicle(conferenceId,{operation:'delete',vehicleId:t.id,expectedRevision:t.revision,removeOverflow:false}).then(function(){
+    var active=getCurrentConference();if(!active||String(active.id)!==conferenceId)return;
+    closeTM();if(currentTab===1)renderTransports();showToast('🗑️ تم حذف وسيلة المواصلات','#E74C3C');
+  },function(){showToast('تعذر حذف وسيلة المواصلات','#E74C3C');});
+  return false;
 }
 // ── Seat Modal ───────────────────────────────────────────
 var editSeatRiderIndex = null;
