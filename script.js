@@ -5483,6 +5483,11 @@ function addManualSharedChildToSeat(){
   var input = ge('s_manual_child_name');
   var name = input ? input.value.trim() : '';
   if(!name) return;
+  var current=getCurrentConference();
+  if(isCanonicalTransportConference(current)){
+    showToast('لا يمكن إضافة طفل بالاسم فقط: سجّله أولاً في الأشخاص واربطه بالمرافق والتسكين، ثم اختره من قائمة الأطفال المسجلين.','#E74C3C');
+    return false;
+  }
   var duplicate = seatManualSharedChildren.some(function(child){ return child.name === name; });
   if(!duplicate) ge('s_shared_children_list').querySelectorAll('.s-shared-child:checked').forEach(function(checkbox){ if(checkbox.getAttribute('data-name') === name) duplicate = true; });
   if(duplicate){ alert('هذا الطفل مضاف بالفعل'); return; }
