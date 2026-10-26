@@ -1,0 +1,7 @@
+Source repository: ramyawny37/conference-management-system-v1
+Source branch: develop
+Source commit: e75027676bc92b5432b5125d35a07586c7629e1e
+
+Purpose: deploy the canonical accommodation guardian/child replacement and child-removal UI fix to Development Preview.
+
+Supabase Development ref: gppwltrifgfxrkzvvxoe
