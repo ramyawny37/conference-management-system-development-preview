@@ -1,0 +1,4 @@
+Requested platform develop SHA: c0afb02341fd2282f2ec2d77cb480172fc6ae988
+Scope: Development Preview only.
+Reason: previous successful run pinned older 0080ef0ac683e522c65739807dc35a3f077808d3.
+Workflow push event checks out current platform develop.
