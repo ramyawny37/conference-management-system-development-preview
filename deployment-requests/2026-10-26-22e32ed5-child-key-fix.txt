@@ -1,0 +1,7 @@
+Source repository: ramyawny37/conference-management-system-v1
+Source branch: develop
+Source commit: 22e32ed5d14a5fc34c86e5b3e79bedf184e87817
+
+Purpose: deploy the latest canonical accommodation child arrival/key rule fix to Development Preview so child occupants are excluded from room key recipient selection.
+
+Supabase Development ref: gppwltrifgfxrkzvvxoe
