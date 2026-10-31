@@ -1,0 +1,7 @@
+Source repository: ramyawny37/conference-management-system-v1
+Source branch: develop
+Source commit: 3f42b290b22d063529fe05f71630aa7797fd4299
+
+Purpose: publish the approved conference lifecycle, dynamic attendance-period compatibility, and PostgreSQL integration verification changes to Development Preview.
+
+Supabase Development ref: gppwltrifgfxrkzvvxoe
