@@ -1,0 +1,4 @@
+Platform source: ramyawny37/conference-management-system-v1
+Platform ref: develop
+Platform SHA: f271f40ba0ecdc5952a2b7b58452a4232e136be8
+Purpose: deploy Development Preview with corrected canonical accommodation CSS regression assertion escaping. Source main and Production remain unchanged.
