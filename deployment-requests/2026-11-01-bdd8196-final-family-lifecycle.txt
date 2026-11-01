@@ -1,0 +1,4 @@
+Platform source: ramyawny37/conference-management-system-v1
+Platform ref: develop
+Platform SHA: bdd8196abcbffe3416d165d21eef9152818be6c6
+Purpose: publish the final canonical family lifecycle and cross-room child projection to Development Preview.
