@@ -1,0 +1,5 @@
+Platform source: ramyawny37/conference-management-system-v1
+Platform ref: develop
+Platform SHA: a2003b5a4bab31385ed9d8219e2429f018a02808
+Purpose: publish canonical linked-child guardian selector restriction alongside child bed status and mismatch feedback.
+Development Preview only. No source main or Production changes.
