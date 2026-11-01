@@ -1,0 +1,5 @@
+Source: ramyawny37/conference-management-system-v1
+Branch: develop
+SHA: bf9348692e980a06f6065c0a573dc997d12641eb
+Purpose: Development Preview of atomic extra bed capacity and child draft UI guidance.
+No source main or Production changes.
