@@ -1,0 +1,4 @@
+Platform source: ramyawny37/conference-management-system-v1
+Platform ref: develop
+Platform SHA: b07081bcd71d9d5c5ee10ddb788c43878b270542
+Purpose: publish Development Preview after aligning canonical accommodation responsive layout tests with the current unified family editor. No Production or source main changes.
