@@ -1,0 +1,4 @@
+Platform source: ramyawny37/conference-management-system-v1
+Platform ref: develop
+Platform SHA: 21bde40c13556504a081fb5c87798646d3a6c497
+Purpose: publish the validated final canonical family lifecycle after cache contract alignment.
