@@ -1,0 +1,5 @@
+Source repository: ramyawny37/conference-management-system-v1
+Source branch: develop
+Source SHA: 4910016b1dcd384cd82537f3e0780f1890ecba15
+Purpose: Development Preview for child draft eligible guardian selection explanation, cross-room child labels, and extra bed validation.
+No Production changes.
