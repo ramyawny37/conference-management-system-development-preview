@@ -1,0 +1,4 @@
+Development Preview deployment request
+Platform develop source SHA: 7d518041d042c00f4e3bfb9d6a90547f169e7525
+Reason: validate canonical automatic extra-bed total UI.
+This file is not part of the deployed site artifact.
