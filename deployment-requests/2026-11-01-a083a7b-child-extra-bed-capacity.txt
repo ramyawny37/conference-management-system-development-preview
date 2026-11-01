@@ -1,0 +1,5 @@
+Platform source: ramyawny37/conference-management-system-v1
+Platform ref: develop
+Platform SHA: a083a7bf8b9fa1a0eed011da77cb790c64e90f7a
+Purpose: Development Preview validation of linked child guardian guard, room card bed labels, and extra-bed configuration validation.
+No source main or Production changes.
