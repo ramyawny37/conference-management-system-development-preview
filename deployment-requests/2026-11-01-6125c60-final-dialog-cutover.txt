@@ -1,0 +1,4 @@
+Platform source: ramyawny37/conference-management-system-v1
+Platform ref: develop
+Platform SHA: 6125c600b14ec3e18b33648a12926a64d4237bde
+Purpose: publish the final accommodation family editor and booking type dialog cutover to Development Preview.
