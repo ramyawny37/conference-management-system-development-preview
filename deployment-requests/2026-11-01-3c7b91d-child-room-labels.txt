@@ -1,0 +1,5 @@
+Platform source: ramyawny37/conference-management-system-v1
+Platform ref: develop
+Platform SHA: 3c7b91db1b58eefa3dc32205497118ebfb2a45c4
+Purpose: Development Preview for canonical child guardian validation and independent bed status in room details and compact cards.
+No source main or Production changes.
