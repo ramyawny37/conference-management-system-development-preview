@@ -1,0 +1,4 @@
+Platform source: ramyawny37/conference-management-system-v1
+Platform ref: develop
+Platform SHA: 9126ccf2c64f92da6527cd7993e9dbd289de3753
+Purpose: Development Preview validation of canonical child guardian mismatch feedback and independent bed labeling. No source main or Production changes.
