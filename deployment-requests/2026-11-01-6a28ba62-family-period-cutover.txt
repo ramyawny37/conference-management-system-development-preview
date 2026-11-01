@@ -1,0 +1,8 @@
+Source repository: ramyawny37/conference-management-system-v1
+Source branch: develop
+Source commit: 6a28ba62d5e58fbd4d9e07dadd7b9db3adead5ac
+
+Purpose: publish the atomic Family Draft child interaction and event-defined attendance-period UI cutover to Development Preview.
+
+Reservations source commit: 16dadd181d015143371186b4e4a9d4f13550f780
+Supabase Development ref: gppwltrifgfxrkzvvxoe
