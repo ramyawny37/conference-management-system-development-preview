@@ -1,0 +1,4 @@
+Platform source: ramyawny37/conference-management-system-v1
+Branch: develop
+Commit: 9cb05707d8b821fc7e6c17a565cfcb946b229d42
+Purpose: Publish canonical automatic child extra beds and guardian-stay validation to Development Preview.
