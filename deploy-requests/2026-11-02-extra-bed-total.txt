@@ -1,4 +1,4 @@
 Development Preview deployment request
-Platform develop source SHA: c588e2910ced6e469d92bd1a8ea132b0664b3ce8
-Reason: canonical event periods persistence readback and pricing tab refresh.
+Platform develop source SHA: 64dd6f9faee455f8909a781b63b52029224c60d0
+Reason: reservations canonical gender create/edit and filtering
 This request file is excluded from published site.
