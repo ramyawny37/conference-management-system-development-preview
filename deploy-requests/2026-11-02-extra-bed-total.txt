@@ -1,4 +1,4 @@
 Development Preview deployment request
-Platform develop source SHA: 0e5d379596685ae447c86b757b38d59da498219f
-Reason: canonical booking projection and dynamic attendance filters; Development migration applied.
+Platform develop source SHA: 2458443a5aca6c1f36d3a749600b2069c66c736b
+Reason: fix update_event_period unexpected p_event_id (422).
 This request file is excluded from published site.
