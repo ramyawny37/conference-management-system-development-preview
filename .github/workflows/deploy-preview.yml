@@ -1,8 +1,6 @@
 name: Deploy development preview
 
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
     inputs:
       platform_sha:
@@ -28,6 +26,39 @@ jobs:
       platform_sha: ${{ steps.source_meta.outputs.platform_sha }}
 
     steps:
+      - name: Require successful Reservations validation for exact Platform SHA
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REQUESTED_PLATFORM_SHA: ${{ inputs.platform_sha }}
+        run: |
+          set -euo pipefail
+          API="https://api.github.com/repos/ramyawny37/conference-management-system-v1"
+          CURRENT_SHA="$(curl --fail --silent --show-error --retry 3 \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            "$API/branches/develop" | jq -r '.commit.sha')"
+          if ! [[ "$CURRENT_SHA" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "Unable to resolve Platform develop SHA"
+            exit 1
+          fi
+          REQUESTED_SHA="${REQUESTED_PLATFORM_SHA:-$CURRENT_SHA}"
+          if [ "$REQUESTED_SHA" != "$CURRENT_SHA" ]; then
+            echo "Refusing to deploy stale or unverified Platform SHA"
+            exit 1
+          fi
+          RUNS="$(curl --fail --silent --show-error --retry 3 \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            "$API/actions/workflows/validate-reservations-integration.yml/runs?branch=develop&per_page=30")"
+          if ! jq -e --arg sha "$REQUESTED_SHA" \
+            '[.workflow_runs[] | select(.head_sha == $sha and .status == "completed" and .conclusion == "success")] | length > 0' \
+            <<<"$RUNS" >/dev/null; then
+            echo "No successful Reservations validation found for Platform SHA $REQUESTED_SHA"
+            exit 1
+          fi
+          echo "Approved validated Platform develop SHA: $REQUESTED_SHA"
+
       - name: Checkout Platform Development source
         uses: actions/checkout@v4
         with:
