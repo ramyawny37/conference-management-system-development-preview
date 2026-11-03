@@ -1,0 +1,5 @@
+Platform source: ramyawny37/conference-management-system-v1
+Platform ref: develop
+Platform SHA: 5d29f6f98700a847409c04713454d3cb56f3c4d0
+Purpose: publish the Issue #18 canonical reservations save lifecycle to Development Preview only.
+Supabase Development ref: gppwltrifgfxrkzvvxoe
