@@ -1,0 +1,6 @@
+Development Preview deployment request
+Platform repository: ramyawny37/conference-management-system-v1
+Platform branch: develop
+Platform source SHA: 8458b8972d4656cb7ad562760dee057bdee7df10
+Purpose: publish canonical manual person identity resolution for Reservations.
+Target: GitHub Pages Development Preview only.
